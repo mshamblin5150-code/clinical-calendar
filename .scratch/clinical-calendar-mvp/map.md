@@ -89,11 +89,13 @@ Produce a decision-complete MVP product and architecture specification for an in
 
 - [Implement the scheduling invariant engine](issues/62-implement-scheduling-invariant-engine.md) — Use one pure engine for half-open active-commitment overlap, local Protected Day coverage, configurable continuous calendar weeks, cross-month completeness, and immutable all-errors/all-or-nothing batch validation.
 
+- [Implement the Clinical Placement progress engine](issues/63-implement-placement-progress-engine.md) — Derive one exact-minute placement ledger with Scheduled/Awaiting/Completed and Historical Hours, Preceptor plus Unattributed reconciliation, target-crossing projection or required weekly pace, over-target floors, and aggregate eight-segment Total Progress.
+
 ## Transition status
 
 - The MVP product and architecture are decision-complete in [`spec.md`](spec.md).
 - Ticket 58 approved Flutter for continued implementation after Windows and Android physical-device evidence. The iPhone leg remains explicitly deferred to tickets 87 and 88 until Mac/iPhone hardware is available.
-- Ticket 62 established the shared scheduling invariant engine. Tickets 63 and 69 remain in progress as explicitly parallelized workstreams; Ticket 64 remains blocked by 63.
+- Ticket 63 established the shared progress ledger and unblocked Ticket 64 as the next numbered production-foundation frontier. Ticket 69 remains in progress as an explicitly parallelized presentation workstream.
 - Public distribution and comprehensive keyboard-first optimization remain deferred beyond the first MVP implementation plan.
 
 ## Implementation backlog

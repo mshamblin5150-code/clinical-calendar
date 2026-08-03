@@ -16,5 +16,6 @@ export 'src/placement/historical_hours_entry.dart';
 export 'src/placement/placement_completion_evidence.dart';
 export 'src/placement/preceptor.dart';
 export 'src/placement/target_hours.dart';
+export 'src/progress/clinical_placement_progress.dart';
 export 'src/scheduling/calendar_week.dart';
 export 'src/scheduling/scheduling_invariant_engine.dart';
