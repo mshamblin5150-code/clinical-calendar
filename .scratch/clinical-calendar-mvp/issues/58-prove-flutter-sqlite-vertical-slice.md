@@ -39,3 +39,10 @@ Prove the production stack on physical Windows, iPhone, and Android tablet targe
   required on physical Windows, Android tablet, and iPhone targets. iPhone
   compilation and provisioning require macOS/Xcode and cannot be performed on
   this Windows host.
+- Physical Windows host pass completed on 2026-08-03 using the release build:
+  the Variant F week rendered without clipping, saving Tuesday 07:00–19:00
+  produced one 12-hour Clinical Session, the same-time attempt was rejected as
+  a Schedule Conflict, and Thursday was rejected as a Protected Day. After the
+  native process was closed and relaunched offline, the app restored exactly
+  one session from encrypted SQLite. Remaining physical targets are the Android
+  tablet and iPhone.
