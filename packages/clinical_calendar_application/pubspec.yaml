@@ -1,0 +1,16 @@
+name: clinical_calendar_application
+description: Application use-case and dependency-port boundary.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  clinical_calendar_domain:
+    path: ../clinical_calendar_domain
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6

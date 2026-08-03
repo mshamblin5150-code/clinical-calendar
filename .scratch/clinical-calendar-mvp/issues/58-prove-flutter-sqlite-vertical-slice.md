@@ -1,7 +1,7 @@
 # Prove the Flutter and SQLite Vertical Slice
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: 57
 
 ## Objective
@@ -61,3 +61,17 @@ Prove the production stack on physical Windows, iPhone, and Android tablet targe
   shared code, SQLCipher hook, Keychain-backed secure-storage dependency, and
   reproducible Mac/Xcode handoff remain in place; no iPhone result is inferred
   from the Windows or Android passes.
+
+## Answer
+
+Flutter with encrypted SQLCipher persistence is approved for continued MVP
+implementation. The same production-shaped vertical slice passed automated
+domain/encryption/responsive tests, a physical Windows release run, and a
+physical Samsung SM-X920 Android 16 tablet run, including offline process
+restart and encrypted restoration. No framework-specific failure was found.
+
+The owner approved a hardware-deferred exception for the iPhone leg on
+2026-08-03 so production foundations may proceed. This exception does not count
+as iPhone acceptance: ticket 87 and final cross-platform ticket 88 remain
+responsible for Xcode signing, Simulator coverage, and physical iPhone evidence
+when the Mac and iPhone hardware are available.

@@ -1,0 +1,19 @@
+name: clinical_calendar_workspace
+description: Production workspace for the Clinical Calendar MVP.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.12.2
+
+workspace:
+  - apps/clinical_calendar
+  - packages/clinical_calendar_domain
+  - packages/clinical_calendar_application
+  - packages/clinical_calendar_local_data
+  - packages/clinical_calendar_sync
+  - packages/clinical_calendar_presentation
+  - packages/clinical_calendar_platform
+
+dev_dependencies:
+  lints: ^6.0.0

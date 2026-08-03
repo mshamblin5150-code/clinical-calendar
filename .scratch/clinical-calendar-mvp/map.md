@@ -79,10 +79,15 @@ Produce a decision-complete MVP product and architecture specification for an in
 
 - [Decompose the MVP into implementation tickets](issues/57-decompose-mvp-implementation.md) — Create a dependency-ordered production backlog from the physical-device Flutter/SQLite gate through domain, persistence, Variant F presentation, synchronization, recovery, packaging, and cross-platform acceptance.
 
+- [Prove the Flutter and SQLite vertical slice](issues/58-prove-flutter-sqlite-vertical-slice.md) — Approve Flutter and encrypted SQLCipher persistence after automated, physical Windows, and physical Android tablet passes; allow production foundations to proceed under an owner-approved iPhone hardware deferment without treating the iPhone gate as passed.
+
+- [Establish the production Flutter workspace](issues/59-establish-production-flutter-workspace.md) — Enforce inward-only Dart/Flutter package boundaries, explicit application dependency ports, one local/CI quality command, source credential policy, and native Windows/Android builds; retain the approved iOS build deferment for ticket 87.
+
 ## Transition status
 
 - The MVP product and architecture are decision-complete in [`spec.md`](spec.md).
-- The implementation backlog is decomposed below. Its first and only initial frontier is ticket 58, the physical-device Flutter/SQLite vertical-slice gate.
+- Ticket 58 approved Flutter for continued implementation after Windows and Android physical-device evidence. The iPhone leg remains explicitly deferred to tickets 87 and 88 until Mac/iPhone hardware is available.
+- Ticket 59 established and validated the production workspace. Ticket 60 is the next implementation frontier.
 - Public distribution and comprehensive keyboard-first optimization remain deferred beyond the first MVP implementation plan.
 
 ## Implementation backlog
