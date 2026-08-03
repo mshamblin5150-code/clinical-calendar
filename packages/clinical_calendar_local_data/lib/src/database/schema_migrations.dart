@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 3;
+  static const latestVersion = 4;
 
   final MigrationTestHook? _testHook;
 
@@ -357,5 +357,10 @@ final Map<int, List<String>> _statements = {
     'CREATE INDEX trash_purge_index ON trash(student_id, purge_after_utc) WHERE permanently_deleted_at_utc IS NULL',
     'CREATE INDEX outbox_pending_index ON outbox_operations(student_id, created_at_utc) WHERE acknowledged_at_utc IS NULL',
     'CREATE INDEX sync_conflicts_open_index ON sync_conflicts(student_id, detected_at_utc) WHERE resolved_at_utc IS NULL',
+  ],
+  4: [
+    '''ALTER TABLE evaluation_requirements
+      ADD COLUMN is_currently_required INTEGER NOT NULL DEFAULT 1
+      CHECK (is_currently_required IN (0, 1))''',
   ],
 };

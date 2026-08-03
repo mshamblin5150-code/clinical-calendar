@@ -8,4 +8,24 @@ final class DeferredRepositoryRegistry implements RepositoryRegistry {
   Future<void> initialize() async {
     _isInitialized = true;
   }
+
+  @override
+  Future<R> mutate<R>(
+    R Function(LocalWriteRepositories repositories) callback,
+  ) async {
+    throw const RepositoryException(
+      RepositoryFailureKind.uninitialized,
+      'Local write repositories are unavailable until persistence is installed.',
+    );
+  }
+
+  @override
+  Future<R> read<R>(
+    R Function(LocalReadRepositories repositories) callback,
+  ) async {
+    throw const RepositoryException(
+      RepositoryFailureKind.uninitialized,
+      'Local read repositories are unavailable until persistence is installed.',
+    );
+  }
 }

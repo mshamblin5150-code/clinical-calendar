@@ -1,7 +1,3 @@
-abstract interface class RepositoryRegistry {
-  Future<void> initialize();
-}
-
 abstract interface class Clock {
   DateTime nowUtc();
 }

@@ -89,7 +89,10 @@ void main() {
         database
             .select('SELECT version FROM schema_migrations ORDER BY version')
             .map((row) => row['version']),
-        [1, 2, 3],
+        List<int>.generate(
+          DatabaseMigrationRunner.latestVersion,
+          (index) => index + 1,
+        ),
       );
 
       expect(
@@ -380,7 +383,7 @@ void main() {
       second
           .select('SELECT count(*) AS count FROM schema_migrations')
           .single['count'],
-      3,
+      DatabaseMigrationRunner.latestVersion,
     );
     await second.close();
   });

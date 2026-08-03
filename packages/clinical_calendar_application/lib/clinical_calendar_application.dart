@@ -4,3 +4,4 @@ library;
 
 export 'src/application_dependencies.dart';
 export 'src/ports.dart';
+export 'src/repositories.dart';

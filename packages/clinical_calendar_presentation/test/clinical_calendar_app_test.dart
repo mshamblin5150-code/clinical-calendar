@@ -164,6 +164,16 @@ ApplicationDependencies _dependencies() => ApplicationDependencies(
 final class _Repositories implements RepositoryRegistry {
   @override
   Future<void> initialize() async {}
+
+  @override
+  Future<R> read<R>(
+    R Function(LocalReadRepositories repositories) callback,
+  ) async => throw UnimplementedError();
+
+  @override
+  Future<R> mutate<R>(
+    R Function(LocalWriteRepositories repositories) callback,
+  ) async => throw UnimplementedError();
 }
 
 final class _Clock implements Clock {

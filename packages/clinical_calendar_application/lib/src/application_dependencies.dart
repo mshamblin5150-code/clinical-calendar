@@ -1,4 +1,5 @@
 import 'ports.dart';
+import 'repositories.dart';
 
 /// Explicit composition contract for every side effect used by application
 /// use cases. The Flutter app is the only production composition root.
