@@ -83,11 +83,13 @@ Produce a decision-complete MVP product and architecture specification for an in
 
 - [Establish the production Flutter workspace](issues/59-establish-production-flutter-workspace.md) — Enforce inward-only Dart/Flutter package boundaries, explicit application dependency ports, one local/CI quality command, source credential policy, and native Windows/Android builds; retain the approved iOS build deferment for ticket 87.
 
+- [Implement the time and commitment domain](issues/60-implement-time-and-commitment-domain.md) — Use validated local dates and military times plus immutable time-zone boundary snapshots for deterministic DST-aware elapsed minutes; define Work Shift, Clinical Session, Protected Day, Schedule Template, overnight coverage, and guarded Clinical Session lifecycle transitions in the dependency-free domain package.
+
 ## Transition status
 
 - The MVP product and architecture are decision-complete in [`spec.md`](spec.md).
 - Ticket 58 approved Flutter for continued implementation after Windows and Android physical-device evidence. The iPhone leg remains explicitly deferred to tickets 87 and 88 until Mac/iPhone hardware is available.
-- Ticket 59 established and validated the production workspace. Ticket 60 is the next implementation frontier.
+- Ticket 60 established the time and commitment domain with repository-wide quality evidence. Ticket 61 is the next implementation frontier; Ticket 69 is also unblocked but remains later in the numbered implementation sequence.
 - Public distribution and comprehensive keyboard-first optimization remain deferred beyond the first MVP implementation plan.
 
 ## Implementation backlog
