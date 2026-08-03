@@ -91,11 +91,13 @@ Produce a decision-complete MVP product and architecture specification for an in
 
 - [Implement the Clinical Placement progress engine](issues/63-implement-placement-progress-engine.md) — Derive one exact-minute placement ledger with Scheduled/Awaiting/Completed and Historical Hours, Preceptor plus Unattributed reconciliation, target-crossing projection or required weekly pace, over-target floors, and aggregate eight-segment Total Progress.
 
+- [Build the Variant F responsive application shell](issues/69-build-variant-f-responsive-shell.md) — Compose semantic Borg Tactical Console theme tokens, replaceable visual-theme and Help-guide contracts, fit-gated desktop and compact mobile/short-landscape shells, complete menu destinations, and contextual Back/direct Close navigation with seven-viewport widget coverage.
+
 ## Transition status
 
 - The MVP product and architecture are decision-complete in [`spec.md`](spec.md).
 - Ticket 58 approved Flutter for continued implementation after Windows and Android physical-device evidence. The iPhone leg remains explicitly deferred to tickets 87 and 88 until Mac/iPhone hardware is available.
-- Ticket 63 established the shared progress ledger and unblocked Ticket 64 as the next numbered production-foundation frontier. Ticket 69 remains in progress as an explicitly parallelized presentation workstream.
+- Ticket 63 established the shared progress ledger, and the parallel Ticket 69 established the responsive Variant F application shell. Ticket 64 is the next numbered production-foundation frontier.
 - Public distribution and comprehensive keyboard-first optimization remain deferred beyond the first MVP implementation plan.
 
 ## Implementation backlog

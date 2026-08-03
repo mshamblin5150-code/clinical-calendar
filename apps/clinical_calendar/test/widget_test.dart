@@ -10,6 +10,7 @@ void main() {
 
     expect(find.text('CLINICAL CALENDAR'), findsOneWidget);
     expect(find.text('PRODUCTION FOUNDATION'), findsOneWidget);
+    expect(find.text('PLANNING'), findsOneWidget);
     expect(find.textContaining('Clinical Session'), findsNothing);
   });
 }
