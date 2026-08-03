@@ -46,3 +46,18 @@ Prove the production stack on physical Windows, iPhone, and Android tablet targe
   native process was closed and relaunched offline, the app restored exactly
   one session from encrypted SQLite. Remaining physical targets are the Android
   tablet and iPhone.
+- Physical Android tablet pass completed on 2026-08-03 on a Samsung SM-X920
+  running Android 16 (API 36), arm64-v8a, at 1848x2960 / 280 dpi. The 20.7 MB
+  split ARM64 release APK installed over authorized USB ADB and cold-launched in
+  659 ms. Portrait and landscape rendered the complete two-column Variant F
+  week and evidence panel without clipping. Saving Tuesday 07:00–19:00 created
+  exactly one 12-hour session; duplicate and Protected Day attempts were
+  rejected without changing the persisted count. With Wi-Fi temporarily
+  disabled, a force-stop and cold launch restored exactly one session from
+  encrypted SQLite in 211 ms; the Android crash buffer was empty. Wi-Fi and
+  automatic rotation were restored after testing.
+- The iPhone portion is explicitly deferred at the owner's request until the
+  required Mac and physical iPhone hardware are available. The iOS runner,
+  shared code, SQLCipher hook, Keychain-backed secure-storage dependency, and
+  reproducible Mac/Xcode handoff remain in place; no iPhone result is inferred
+  from the Windows or Android passes.
