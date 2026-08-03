@@ -6,6 +6,11 @@ version: 0.1.0
 environment:
   sdk: ^3.12.2
 
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlcipher
+
 workspace:
   - apps/clinical_calendar
   - packages/clinical_calendar_domain

@@ -1,7 +1,7 @@
 # Build the Encrypted SQLite Schema and Migrations
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: 60, 61, 64
 
 ## Objective
@@ -17,3 +17,8 @@ Create the complete encrypted local source-of-truth schema required by [`spec.md
 - Forward-only schema migrations preserve data and fail atomically from every supported prior schema fixture.
 - Restart, interrupted migration, wrong-key, and corruption tests leave recoverable state and clear diagnostics without exposing private contents.
 
+## Answer
+
+Implemented a SQLCipher-backed local database with its random 256-bit key supplied through the application `SecureStorage` port. Three atomic, forward-only migrations create the complete STRICT SQLite source-of-truth schema, owner-scoped relationships, synchronization metadata, conflicts, Trash, and transactional outbox storage. The public database boundary rejects missing or invalid keys, unavailable SQLCipher, newer schemas, wrong keys, corruption, and failed migrations with typed diagnostics that retain no SQL, keys, or Student content.
+
+Thirteen native SQLCipher tests prove encrypted file headers, offline restart persistence, wrong/missing/invalid-key recovery, corruption preservation, ownership constraints, v1 and v2 fixture upgrades, repeated-open idempotence, newer-version rejection, and complete rollback after an interrupted migration. The full workspace quality gate passed, followed by successful Windows release and Android release APK builds. iPhone compilation remains intentionally deferred to ticket 87 and the approved Mac hardware gate.

@@ -93,13 +93,15 @@ Produce a decision-complete MVP product and architecture specification for an in
 
 - [Implement the Evaluation Plan engine](issues/64-implement-evaluation-plan-engine.md) — Generate stable boundary and two-part Interim requirements below Target Hours, derive deterministic Not Due/Approaching/Due/Documented state, preserve documented history through previewed plan and Primary changes, and feed current documentation completeness into placement completion evidence.
 
+- [Build the encrypted SQLite schema and migrations](issues/65-build-encrypted-sqlite-schema-and-migrations.md) — Use SQLCipher with a platform-secured random key, a complete owner-scoped STRICT schema, and three atomic forward migrations whose native tests prove encryption, recovery, prior-version upgrades, constraint enforcement, and interrupted-migration rollback.
+
 - [Build the Variant F responsive application shell](issues/69-build-variant-f-responsive-shell.md) — Compose semantic Borg Tactical Console theme tokens, replaceable visual-theme and Help-guide contracts, fit-gated desktop and compact mobile/short-landscape shells, complete menu destinations, and contextual Back/direct Close navigation with seven-viewport widget coverage.
 
 ## Transition status
 
 - The MVP product and architecture are decision-complete in [`spec.md`](spec.md).
 - Ticket 58 approved Flutter for continued implementation after Windows and Android physical-device evidence. The iPhone leg remains explicitly deferred to tickets 87 and 88 until Mac/iPhone hardware is available.
-- Ticket 64 established the Evaluation Plan engine and unblocked Ticket 65 as the next numbered production-foundation frontier. The parallel Variant F shell remains available for later presentation workflows.
+- Ticket 65 established the encrypted local source of truth and unblocked Ticket 66, local repositories and the transactional outbox, as the next numbered production-foundation frontier. The parallel Variant F shell remains available for later presentation workflows.
 - Public distribution and comprehensive keyboard-first optimization remain deferred beyond the first MVP implementation plan.
 
 ## Implementation backlog
