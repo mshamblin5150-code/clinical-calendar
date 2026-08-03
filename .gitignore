@@ -1,0 +1,34 @@
+# Workspace-local toolchains and package caches
+.tooling/
+**/node_modules/
+**/.dart_tool/
+**/.gradle/
+**/.pub-cache/
+
+# Generated application output
+**/build/
+**/dist/
+**/coverage/
+**/ephemeral/
+**/.flutter-plugins-dependencies
+
+# Local data, signing material, and environment secrets
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+.env
+.env.*
+!.env.example
+
+# Editor and operating-system state
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,41 @@
+# Prove the Flutter and SQLite Vertical Slice
+
+Type: task
+Status: claimed
+Blocked by: 57
+
+## Objective
+
+Prove the production stack on physical Windows, iPhone, and Android tablet targets before feature-scale implementation, as required by [`spec.md`](../spec.md#10-packaging-and-installation-gate).
+
+## Acceptance criteria
+
+- One Flutter workspace renders a responsive week view on all three target platforms.
+- A Clinical Session entered in military time persists in encrypted SQLite after an offline process and device restart.
+- Shared domain code rejects one Schedule Conflict and one commitment touching a Protected Day.
+- Installable Windows, signed Android APK, and provisioned iPhone artifacts run on physical target devices.
+- Build steps, toolchain versions, signing/provisioning prerequisites, and observed platform blockers are documented reproducibly.
+- A written gate decision either approves Flutter for the MVP or records a framework-specific failure and triggers the specified .NET MAUI reassessment.
+
+## Comments
+
+- Implementation started on 2026-08-03 from the sole unblocked frontier.
+- Created one Flutter workspace with Windows, Android, and iOS runners; shared
+  domain validation rejects exact-minute overlaps and commitments touching a
+  Protected Day.
+- Added SQLCipher-backed SQLite storage with a random 256-bit key held through
+  platform secure storage. Automated tests prove encrypted offline reopen and
+  wrong-key rejection.
+- `flutter analyze` and all seven domain, encryption, and responsive widget
+  tests pass on Flutter 3.44.8 / Dart 3.12.2.
+- Windows release build passed with Visual Studio 2022 17.12 and Windows SDK
+  10.0.22621. Android debug APK build passed with Android SDK 36, Build Tools
+  36.0.0, Platform Tools 37.0.1, NDK 28.2.13676358, CMake 3.22.1, and JDK 17.
+- Android OS backup is disabled for the application so the encrypted database
+  is not copied independently of its platform-protected key.
+- Reproducible commands and the Mac/iPhone signing and device handoff are in
+  `vertical-slice/README.md`.
+- Gate remains open: install/run/force-quit/offline-reopen evidence is still
+  required on physical Windows, Android tablet, and iPhone targets. iPhone
+  compilation and provisioning require macOS/Xcode and cannot be performed on
+  this Windows host.
