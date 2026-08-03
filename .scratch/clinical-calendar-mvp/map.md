@@ -85,11 +85,13 @@ Produce a decision-complete MVP product and architecture specification for an in
 
 - [Implement the time and commitment domain](issues/60-implement-time-and-commitment-domain.md) — Use validated local dates and military times plus immutable time-zone boundary snapshots for deterministic DST-aware elapsed minutes; define Work Shift, Clinical Session, Protected Day, Schedule Template, overnight coverage, and guarded Clinical Session lifecycle transitions in the dependency-free domain package.
 
+- [Implement the Clinical Placement and Preceptor domain](issues/61-implement-placement-and-preceptor-domain.md) — Model reusable Preceptors, exact Target Hours, attributed or Unattributed Historical Hours, attached/Primary relationship validity, inclusive Clinical Session windows, guarded completion evidence, Completed Placement locking and reopening, and empty-only permanent deletion.
+
 ## Transition status
 
 - The MVP product and architecture are decision-complete in [`spec.md`](spec.md).
 - Ticket 58 approved Flutter for continued implementation after Windows and Android physical-device evidence. The iPhone leg remains explicitly deferred to tickets 87 and 88 until Mac/iPhone hardware is available.
-- Ticket 60 established the time and commitment domain with repository-wide quality evidence. Ticket 61 is the next implementation frontier; Ticket 69 is also unblocked but remains later in the numbered implementation sequence.
+- Ticket 61 established the Clinical Placement and Preceptor aggregate with repository-wide quality evidence. Tickets 62 and 63 are the next production-foundation frontiers; Ticket 69 is also in progress as an explicitly parallelized presentation workstream.
 - Public distribution and comprehensive keyboard-first optimization remain deferred beyond the first MVP implementation plan.
 
 ## Implementation backlog

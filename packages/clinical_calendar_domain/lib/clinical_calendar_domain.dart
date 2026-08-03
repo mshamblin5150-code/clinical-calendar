@@ -11,3 +11,8 @@ export 'src/commitments/clinical_session.dart';
 export 'src/commitments/protected_day.dart';
 export 'src/commitments/schedule_template.dart';
 export 'src/commitments/work_shift.dart';
+export 'src/placement/clinical_placement.dart';
+export 'src/placement/historical_hours_entry.dart';
+export 'src/placement/placement_completion_evidence.dart';
+export 'src/placement/preceptor.dart';
+export 'src/placement/target_hours.dart';
