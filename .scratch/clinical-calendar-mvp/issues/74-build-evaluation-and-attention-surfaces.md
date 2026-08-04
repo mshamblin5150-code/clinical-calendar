@@ -1,7 +1,7 @@
 # Build Evaluation Plan and Attention Surfaces
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: 68, 69, 73
 
 ## Objective
@@ -17,4 +17,3 @@ Implement Clinical Placement Evaluation Plan configuration, documentation, and a
 - Every attention row opens the exact workflow required to resolve its underlying state.
 - Resolving underlying state updates counts and removes the row without a reload.
 - Phone evaluation and notification surfaces remain within the viewport and preserve contextual Back navigation.
-

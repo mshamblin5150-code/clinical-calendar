@@ -1,7 +1,7 @@
 # Build the Staged Batch Scheduling Flow
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: 67, 70
 
 ## Objective
@@ -17,4 +17,3 @@ Implement the responsive staged creation tray and all-or-nothing review workflow
 - Review lists every selected date and conflict and cannot apply until all conflicts are corrected or removed.
 - Apply invokes one application transaction and shows the persisted result; failure retains the unsaved batch.
 - The mobile tray stays in document flow, provides 44 px touch targets, and does not overlap the progress wheel or bottom navigation.
-

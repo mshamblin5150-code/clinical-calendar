@@ -1,7 +1,7 @@
 # Build Commitment and Protected Day Lifecycle Surfaces
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: 67, 70
 
 ## Objective
@@ -17,4 +17,3 @@ Implement detail, movement, correction, confirmation, cancellation, missed, remo
 - Completed Sessions moved to today/future and Scheduled Sessions moved into the past visibly adopt the required state.
 - Protected Days support Move and Remove with immediate Planning Incomplete recalculation.
 - Permanent delete actions identify erroneous-entry semantics, confirm the action, and never substitute for Cancelled or Missed history.
-
