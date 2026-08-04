@@ -250,6 +250,10 @@ void main() {
       identityGateway: gateway,
       connectivitySource: _ConnectivitySource(initial: false),
       repositoryBootstrap: (_, _, _) async => _Repositories(),
+      currentDevice: DeviceDescriptor(
+        name: 'Test device',
+        platform: DevicePlatform.windows,
+      ),
     );
     await tester.pumpWidget(root);
 

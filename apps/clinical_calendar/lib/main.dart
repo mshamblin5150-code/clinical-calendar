@@ -291,6 +291,7 @@ Future<Widget> buildProductionRoot({
   ProductionRepositoryBootstrap? repositoryBootstrap,
   PasswordlessIdentityGateway? identityGateway,
   ConnectivityStatusSource? connectivitySource,
+  DeviceDescriptor? currentDevice,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
   final identifierGenerator = identifiers ?? ProcessIdentifierGenerator();
@@ -316,10 +317,9 @@ Future<Widget> buildProductionRoot({
     secureStorage: storage,
     identifiers: identifierGenerator,
     clock: applicationClock,
-    currentDevice: DeviceDescriptor(
-      name: _deviceName(),
-      platform: _devicePlatform(),
-    ),
+    currentDevice:
+        currentDevice ??
+        DeviceDescriptor(name: _deviceName(), platform: _devicePlatform()),
     localCopy: localCopy,
   );
   return _ProductionIdentityGate(
