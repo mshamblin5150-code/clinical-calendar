@@ -101,10 +101,16 @@ final class ProductionNotificationService implements NotificationService {
 
   Future<void> _reconcile() async {
     final now = clock.nowUtc().toUtc();
-    final plan = await source.load(now);
     final device =
         await devicePolicies.read(deviceClass) ??
         NotificationDevicePolicy(deviceClass: deviceClass);
+    // Permission prompting is a device-policy concern and must not be skipped
+    // when candidate discovery encounters an unrelated repository failure.
+    await reconciler.ensurePermission(
+      device: device,
+      requestPermission: device.effectiveEnabled,
+    );
+    final plan = await source.load(now);
     final snoozes = await states.synchronizedSnoozes(studentId: studentId);
     final desired = policy.build(
       candidates: plan.candidates,
@@ -119,11 +125,7 @@ final class ProductionNotificationService implements NotificationService {
       for (final occurrence in desired)
         occurrence.synchronizationKey: occurrence,
     };
-    await reconciler.reconcile(
-      desired: desired,
-      device: device,
-      requestPermission: device.effectiveEnabled,
-    );
+    await reconciler.reconcile(desired: desired, device: device);
   }
 
   Future<void> _serialized(Future<void> Function() action) {

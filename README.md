@@ -55,3 +55,6 @@ See [the architecture guide](docs/architecture.md) for dependency direction,
 test locations, configuration, and platform-test commands.
 See [the release security checklist](docs/release-security-checklist.md) before
 publishing any privately distributed build.
+Use the dedicated [Windows private-release guide](docs/windows-private-release.md)
+and [Android private-release guide](docs/android-private-release.md) for signed
+CI artifacts, verification, installation, upgrade, rollback, and recovery.

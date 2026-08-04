@@ -1,0 +1,86 @@
+name: Windows private release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-sign-verify:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    environment: windows-private-release
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+
+      - name: Require release signing secrets
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
+          WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
+          WINDOWS_SIGNING_PUBLISHER: ${{ vars.WINDOWS_SIGNING_PUBLISHER }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_PFX_BASE64) -or
+              [string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_PFX_PASSWORD) -or
+              [string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_PUBLISHER)) {
+            throw 'Windows release signing secrets and the pinned Publisher variable are required.'
+          }
+
+      - name: Resolve workspace and run quality gate
+        run: |
+          flutter pub get
+          dart run tool/quality.dart
+
+      - name: Import ephemeral signing certificate
+        id: certificate
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
+          WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
+        run: |
+          $pfxPath = Join-Path $env:RUNNER_TEMP 'clinical-calendar-signing.pfx'
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_PFX_BASE64))
+          $password = ConvertTo-SecureString $env:WINDOWS_SIGNING_PFX_PASSWORD -AsPlainText -Force
+          $certificate = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $password -Exportable:$false
+          if (-not $certificate.HasPrivateKey) {
+            throw 'Imported Windows signing certificate has no private key.'
+          }
+          "thumbprint=$($certificate.Thumbprint)" >> $env:GITHUB_OUTPUT
+          Remove-Item -LiteralPath $pfxPath -Force
+
+      - name: Build, package, sign, and verify MSIX
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_PUBLISHER: ${{ vars.WINDOWS_SIGNING_PUBLISHER }}
+        run: |
+          ./tool/windows/package_msix.ps1 `
+            -SigningThumbprint '${{ steps.certificate.outputs.thumbprint }}' `
+            -Publisher $env:WINDOWS_SIGNING_PUBLISHER `
+            -WindowsSdkVersion '10.0.26100.0' `
+            -FlutterExecutable (Get-Command flutter).Source
+
+      - name: Upload signed private release
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: clinical-calendar-windows-${{ github.sha }}
+          path: |
+            apps/clinical_calendar/build/windows/msix/*.msix
+            apps/clinical_calendar/build/windows/msix/*.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Remove ephemeral signing certificate
+        if: always() && steps.certificate.outputs.thumbprint != ''
+        shell: pwsh
+        run: |
+          $certificatePath = "Cert:\CurrentUser\My\${{ steps.certificate.outputs.thumbprint }}"
+          if (Test-Path -LiteralPath $certificatePath) {
+            Remove-Item -LiteralPath $certificatePath -Force
+          }

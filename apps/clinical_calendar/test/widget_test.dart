@@ -292,6 +292,42 @@ void main() {
     expect(gradle, contains('releaseSigningConfigured'));
   });
 
+  test('Windows release workflow requires signed versioned MSIX output', () {
+    final workflow = File(
+      '../../.github/workflows/windows-release.yml',
+    ).readAsStringSync();
+    final packager = File(
+      '../../tool/windows/package_msix.ps1',
+    ).readAsStringSync();
+    final manifest = File(
+      '../../tool/windows/AppxManifest.template.xml',
+    ).readAsStringSync();
+
+    expect(workflow, contains('runs-on: windows-2025'));
+    expect(workflow, contains('flutter-version: 3.44.8'));
+    expect(workflow, contains("-WindowsSdkVersion '10.0.26100.0'"));
+    expect(workflow, contains('WINDOWS_SIGNING_PFX_BASE64'));
+    expect(workflow, contains('WINDOWS_SIGNING_PFX_PASSWORD'));
+    expect(workflow, contains('WINDOWS_SIGNING_PUBLISHER'));
+    expect(workflow, contains('Import-PfxCertificate'));
+    expect(workflow, contains('Remove ephemeral signing certificate'));
+    expect(workflow, isNot(contains('-AllowUnsigned')));
+    expect(packager, contains("throw 'A CurrentUser signing certificate"));
+    expect(packager, contains('Publisher must exactly match'));
+    expect(packager, contains('signtool.exe'));
+    expect(packager, contains('verify /pa /all /v'));
+    expect(
+      packager,
+      contains(r'''$suffix = if ($certificate) { '' } else { '.unsigned' }'''),
+    );
+    expect(manifest, contains('Name="ClinicalCalendar"'));
+    expect(manifest, contains('Version="__VERSION__"'));
+    expect(manifest, contains('uap10:PackageIntegrity'));
+    expect(manifest, contains('rescap:Capability Name="runFullTrust"'));
+    expect(manifest, contains('Assets\\AppIcon44.png'));
+    expect(manifest, contains('Assets\\AppIcon150.png'));
+  });
+
   testWidgets('startup failure is sanitized and leaves recovery guidance', (
     tester,
   ) async {
