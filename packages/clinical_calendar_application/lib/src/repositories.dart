@@ -1,8 +1,10 @@
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 
 import 'support/support_models.dart';
+import 'reminders/reminder_state.dart';
 
 export 'support/support_models.dart';
+export 'reminders/reminder_state.dart';
 
 enum RepositoryFailureKind {
   notFound,
@@ -350,6 +352,101 @@ enum RemoteSynchronizationApplyDisposition {
   conflict,
 }
 
+enum SynchronizationConflictResolutionChoice {
+  localVersion,
+  remoteVersion,
+  correctedVersion,
+  deleteVersion,
+}
+
+final class SynchronizationConflictEntityReference {
+  SynchronizationConflictEntityReference({
+    required String entityType,
+    required String entityId,
+  }) : entityType = _requireText(entityType, 'Entity type'),
+       entityId = _requireUuid(entityId, 'Entity id');
+
+  final String entityType;
+  final String entityId;
+}
+
+/// The immutable evidence for one synchronization conflict. Resolution marks
+/// this record complete but never replaces either original snapshot.
+final class SynchronizationConflictRecord {
+  SynchronizationConflictRecord({
+    required String id,
+    required String studentId,
+    required String entityType,
+    required String entityId,
+    required this.localRevision,
+    required this.remoteRevision,
+    required String localSnapshotJson,
+    required String remoteSnapshotJson,
+    required String rejectionCode,
+    required String rejectionJson,
+    required DateTime detectedAtUtc,
+    required List<SynchronizationConflictEntityReference> affectedRecords,
+    this.planningWeekStartDate,
+    DateTime? resolvedAtUtc,
+    String? resolutionJson,
+  }) : id = _requireUuid(id, 'Conflict id'),
+       studentId = _requireUuid(studentId, 'Student id'),
+       entityType = _requireText(entityType, 'Entity type'),
+       entityId = _requireUuid(entityId, 'Entity id'),
+       localSnapshotJson = _requireText(
+         localSnapshotJson,
+         'Local snapshot JSON',
+       ),
+       remoteSnapshotJson = _requireText(
+         remoteSnapshotJson,
+         'Remote snapshot JSON',
+       ),
+       rejectionCode = _requireText(rejectionCode, 'Rejection code'),
+       rejectionJson = _requireText(rejectionJson, 'Rejection JSON'),
+       detectedAtUtc = _requireUtc(detectedAtUtc, 'Detected time'),
+       affectedRecords = List.unmodifiable(affectedRecords),
+       resolvedAtUtc = resolvedAtUtc == null
+           ? null
+           : _requireUtc(resolvedAtUtc, 'Resolved time'),
+       resolutionJson = resolutionJson == null
+           ? null
+           : _requireText(resolutionJson, 'Resolution JSON') {
+    if (localRevision < 0 || remoteRevision < 0) {
+      throw ArgumentError('Conflict revisions must not be negative.');
+    }
+  }
+
+  final String id;
+  final String studentId;
+  final String entityType;
+  final String entityId;
+  final int localRevision;
+  final int remoteRevision;
+  final String localSnapshotJson;
+  final String remoteSnapshotJson;
+  final String rejectionCode;
+  final String rejectionJson;
+  final DateTime detectedAtUtc;
+  final List<SynchronizationConflictEntityReference> affectedRecords;
+  final LocalDate? planningWeekStartDate;
+  final DateTime? resolvedAtUtc;
+  final String? resolutionJson;
+
+  bool get isResolved => resolvedAtUtc != null;
+  bool get keepsPlanningIncomplete =>
+      !isResolved && planningWeekStartDate != null;
+}
+
+final class SynchronizationConflictResolutionReceipt {
+  const SynchronizationConflictResolutionReceipt({
+    required this.conflict,
+    required this.operation,
+  });
+
+  final SynchronizationConflictRecord conflict;
+  final OutboxOperation operation;
+}
+
 /// Local synchronization persistence used only inside a registry callback.
 /// Implementations atomically pair inbound record application with cursor
 /// advancement and pair terminal outbox rejection with conflict persistence.
@@ -381,6 +478,24 @@ abstract interface class SynchronizationLocalRepository {
     required String remoteScope,
     required RemoteSynchronizationChange change,
     required DateTime appliedAtUtc,
+  });
+
+  List<SynchronizationConflictRecord> listConflicts({
+    required String studentId,
+    bool includeResolved = false,
+  });
+
+  SynchronizationConflictRecord? findConflict({
+    required String studentId,
+    required String conflictId,
+  });
+
+  SynchronizationConflictResolutionReceipt resolveConflict({
+    required String studentId,
+    required String conflictId,
+    required SynchronizationConflictResolutionChoice choice,
+    String? correctedValueJson,
+    required MutationToken mutation,
   });
 }
 
@@ -494,6 +609,19 @@ abstract interface class SupportLocalWriteRepositories
   StudentProfileRepository get studentProfile;
   @override
   StudentSettingsRepository get studentSettings;
+}
+
+/// Optional synchronized reminder capability. Native permission, preview, and
+/// delivery records remain per-device and are intentionally not exposed here.
+abstract interface class ReminderLocalReadRepositories
+    implements LocalReadRepositories {
+  ReadRepository<ReminderState> get reminderStates;
+}
+
+abstract interface class ReminderLocalWriteRepositories
+    implements LocalWriteRepositories, ReminderLocalReadRepositories {
+  @override
+  MutableRepository<ReminderState> get reminderStates;
 }
 
 /// Owns local repository transactions.

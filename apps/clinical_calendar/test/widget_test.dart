@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:clinical_calendar/main.dart' as app;
 import 'package:clinical_calendar/config/app_environment.dart';
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
+import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
+import 'package:clinical_calendar_local_data/clinical_calendar_local_data.dart';
 import 'package:clinical_calendar_platform/clinical_calendar_platform.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:clinical_calendar_sync/clinical_calendar_sync.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -42,6 +46,78 @@ void main() {
       expect(repositoryStudentId, studentId);
       expect(repositoryStorage, same(storage));
       expect(storage.values[StableStudentOwner.storageKey], studentId);
+    },
+  );
+
+  test(
+    'production local removal closes SQLCipher before deleting exact files',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'clinical-calendar-local-removal-',
+      );
+      final databasePath =
+          '${directory.path}${Platform.pathSeparator}clinical_calendar.sqlite3';
+      final storage = _MemorySecureStorage();
+      LocalDeviceCopyController? localCopy;
+      try {
+        await storage.write(
+          PasswordlessIdentityService.sessionStorageKey,
+          'session',
+        );
+        await storage.write(
+          PasswordlessIdentityService.deviceIdStorageKey,
+          _deviceId,
+        );
+        await app.buildProductionApplication(
+          secureStorage: storage,
+          identifiers: const _Identifiers(_identityStudentId),
+          repositoryBootstrap: (owner, secureStorage, identifiers) async {
+            final database = await ClinicalCalendarDatabase.open(
+              path: databasePath,
+              secureStorage: secureStorage,
+            );
+            final registry = SqliteRepositoryRegistry(
+              studentId: owner,
+              database: database,
+              identifierGenerator: identifiers,
+            );
+            await registry.initialize();
+            return registry;
+          },
+          onLocalCopyControllerReady: (value) => localCopy = value,
+        );
+        await File(
+          '${directory.path}${Platform.pathSeparator}keep.txt',
+        ).writeAsString('keep');
+
+        expect((await localCopy!.previewRemoval()).pendingChangeCount, 0);
+        await localCopy!.removeLocalCopy();
+
+        expect(await File(databasePath).exists(), isFalse);
+        expect(await File('$databasePath-wal').exists(), isFalse);
+        expect(await File('$databasePath-shm').exists(), isFalse);
+        expect(
+          await File(
+            '${directory.path}${Platform.pathSeparator}keep.txt',
+          ).readAsString(),
+          'keep',
+        );
+        expect(
+          storage.values,
+          isNot(contains(ClinicalCalendarDatabase.encryptionKeyStorageKey)),
+        );
+        expect(storage.values, isNot(contains(StableStudentOwner.storageKey)));
+        expect(
+          storage.values,
+          isNot(contains(PasswordlessIdentityService.sessionStorageKey)),
+        );
+        expect(
+          storage.values,
+          isNot(contains(PasswordlessIdentityService.deviceIdStorageKey)),
+        );
+      } finally {
+        if (await directory.exists()) await directory.delete(recursive: true);
+      }
     },
   );
 
@@ -108,7 +184,9 @@ void main() {
         isA<OfflineSynchronizationService>(),
       );
       expect(root.dependencies.repositories, isA<_Repositories>());
-      expect(root.onLaunchOrResume, isNull);
+      // Native reminder reconciliation still runs on launch while durable
+      // synchronization remains offline.
+      expect(root.onLaunchOrResume, isNotNull);
       expect(root.connectivityChanges, isNull);
       expect(connectivity.currentCalls, 0);
     },
@@ -153,6 +231,58 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('sensitive adapter detail'), findsNothing);
+  });
+
+  testWidgets('configured first launch requires passwordless email OTP', (
+    tester,
+  ) async {
+    final storage = _MemorySecureStorage();
+    final gateway = _IdentityGateway();
+    final root = await app.buildProductionRoot(
+      secureStorage: storage,
+      identifiers: const _Identifiers(_deviceId),
+      clock: _FixedClock(),
+      environment: const AppEnvironment(
+        name: 'test',
+        supabaseUrl: 'https://project.supabase.co',
+        supabasePublishableKey: 'public-client-key',
+      ),
+      identityGateway: gateway,
+      connectivitySource: _ConnectivitySource(initial: false),
+      repositoryBootstrap: (_, _, _) async => _Repositories(),
+    );
+    await tester.pumpWidget(root);
+
+    expect(
+      find.textContaining('No password or Google account'),
+      findsOneWidget,
+    );
+    await tester.enterText(
+      find.byKey(const Key('identity-email')),
+      'student@example.com',
+    );
+    await tester.tap(find.byKey(const Key('send-identity-code')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('identity-otp')), '123456');
+    await tester.tap(find.byKey(const Key('verify-identity-code')));
+    for (var attempt = 0; attempt < 50; attempt++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      if (find.byType(ClinicalCalendarApp).evaluate().isNotEmpty) break;
+    }
+
+    expect(find.byKey(const Key('identity-email')), findsNothing);
+    expect(find.text('Clinical Calendar could not start.'), findsNothing);
+    final application = tester.widget<ClinicalCalendarApp>(
+      find.byType(ClinicalCalendarApp),
+    );
+    expect(application.identity, isNotNull);
+    expect(application.identityEmail, 'student@example.com');
+    expect(application.onLocalCopyRemoved, isNotNull);
+    expect(storage.values[StableStudentOwner.storageKey], _identityStudentId);
+    expect(
+      storage.values,
+      contains(PasswordlessIdentityService.sessionStorageKey),
+    );
   });
 }
 
@@ -229,3 +359,59 @@ final class _RetryScheduler implements SynchronizationRetryScheduler {
   @override
   void schedule(DateTime atUtc, Future<void> Function() callback) {}
 }
+
+final class _FixedClock implements Clock {
+  @override
+  DateTime nowUtc() => DateTime.utc(2026, 8, 3, 12);
+}
+
+final class _IdentityGateway implements PasswordlessIdentityGateway {
+  @override
+  Future<void> sendSignInCode(String email) async {}
+
+  @override
+  Future<IdentitySession> verifySignInCode(String email, String code) async =>
+      IdentitySession(
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        studentId: _identityStudentId,
+        sessionId: _identitySessionId,
+        email: email,
+        expiresAtUtc: DateTime.utc(2026, 8, 3, 13),
+      );
+
+  @override
+  Future<IdentitySession> refreshSession(String refreshToken) async =>
+      throw const IdentityException('network_unavailable', offline: true);
+
+  @override
+  Future<bool> registerCurrentDevice({
+    required String accessToken,
+    required String deviceId,
+    required DeviceDescriptor descriptor,
+  }) async => true;
+
+  @override
+  Future<List<ConnectedDevice>> listConnectedDevices(
+    String accessToken,
+  ) async => const [];
+
+  @override
+  Future<String> revokeConnectedDevice(
+    String accessToken,
+    String deviceId,
+  ) async => 'revoked';
+
+  @override
+  Future<void> requestEmailChange(String accessToken, String newEmail) async {}
+
+  @override
+  Future<void> signOutCurrentSession(String accessToken) async {}
+
+  @override
+  Future<bool> markCurrentDeviceSynchronized(String accessToken) async => true;
+}
+
+const _identityStudentId = '10000000-0000-4000-8000-000000000001';
+const _identitySessionId = '20000000-0000-4000-8000-000000000001';
+const _deviceId = '30000000-0000-4000-8000-000000000001';

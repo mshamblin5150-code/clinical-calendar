@@ -8,27 +8,159 @@ enum SynchronizationPreference { enabled, paused }
 
 final class NotificationPreferences {
   const NotificationPreferences({
-    this.upcomingCommitmentsEnabled = true,
+    bool upcomingCommitmentsEnabled = true,
+    bool? upcomingWorkShiftsEnabled,
+    bool? upcomingClinicalSessionsEnabled,
     this.weeklySummaryEnabled = true,
     this.backupRemindersEnabled = true,
-  });
+    this.workShiftFirstLeadMinutes = 1440,
+    this.workShiftSecondLeadMinutes = 120,
+    this.clinicalSessionFirstLeadMinutes = 1440,
+    this.clinicalSessionSecondLeadMinutes = 120,
+    this.confirmationFirstDelayMinutes = 30,
+    this.confirmationRepeatDays = 3,
+    this.evaluationApproachingHours = 10,
+    this.evaluationRepeatDays = 3,
+    this.protectedDayFirstLeadDays = 3,
+    this.protectedDaySecondLeadDays = 1,
+    this.weeklySummaryWeekday = DateTime.sunday,
+    this.weeklySummaryHour = 18,
+    this.noBackupReminderDays = 7,
+    this.staleBackupReminderDays = 30,
+  }) : upcomingWorkShiftsEnabled =
+           upcomingWorkShiftsEnabled ?? upcomingCommitmentsEnabled,
+       upcomingClinicalSessionsEnabled =
+           upcomingClinicalSessionsEnabled ?? upcomingCommitmentsEnabled;
 
-  factory NotificationPreferences.fromJson(Map<String, Object?> json) =>
-      NotificationPreferences(
-        upcomingCommitmentsEnabled:
-            json['upcomingCommitmentsEnabled'] as bool? ?? true,
-        weeklySummaryEnabled: json['weeklySummaryEnabled'] as bool? ?? true,
-        backupRemindersEnabled: json['backupRemindersEnabled'] as bool? ?? true,
-      );
+  factory NotificationPreferences.fromJson(
+    Map<String, Object?> json,
+  ) => NotificationPreferences(
+    upcomingCommitmentsEnabled:
+        json['upcomingCommitmentsEnabled'] as bool? ?? true,
+    upcomingWorkShiftsEnabled: json['upcomingWorkShiftsEnabled'] as bool?,
+    upcomingClinicalSessionsEnabled:
+        json['upcomingClinicalSessionsEnabled'] as bool?,
+    weeklySummaryEnabled: json['weeklySummaryEnabled'] as bool? ?? true,
+    backupRemindersEnabled: json['backupRemindersEnabled'] as bool? ?? true,
+    workShiftFirstLeadMinutes:
+        json['workShiftFirstLeadMinutes'] as int? ?? 1440,
+    workShiftSecondLeadMinutes:
+        json['workShiftSecondLeadMinutes'] as int? ?? 120,
+    clinicalSessionFirstLeadMinutes:
+        json['clinicalSessionFirstLeadMinutes'] as int? ?? 1440,
+    clinicalSessionSecondLeadMinutes:
+        json['clinicalSessionSecondLeadMinutes'] as int? ?? 120,
+    confirmationFirstDelayMinutes:
+        json['confirmationFirstDelayMinutes'] as int? ?? 30,
+    confirmationRepeatDays: json['confirmationRepeatDays'] as int? ?? 3,
+    evaluationApproachingHours:
+        json['evaluationApproachingHours'] as int? ?? 10,
+    evaluationRepeatDays: json['evaluationRepeatDays'] as int? ?? 3,
+    protectedDayFirstLeadDays: json['protectedDayFirstLeadDays'] as int? ?? 3,
+    protectedDaySecondLeadDays: json['protectedDaySecondLeadDays'] as int? ?? 1,
+    weeklySummaryWeekday:
+        json['weeklySummaryWeekday'] as int? ?? DateTime.sunday,
+    weeklySummaryHour: json['weeklySummaryHour'] as int? ?? 18,
+    noBackupReminderDays: json['noBackupReminderDays'] as int? ?? 7,
+    staleBackupReminderDays: json['staleBackupReminderDays'] as int? ?? 30,
+  );
 
-  final bool upcomingCommitmentsEnabled;
+  final bool upcomingWorkShiftsEnabled;
+  final bool upcomingClinicalSessionsEnabled;
   final bool weeklySummaryEnabled;
   final bool backupRemindersEnabled;
+  final int workShiftFirstLeadMinutes;
+  final int workShiftSecondLeadMinutes;
+  final int clinicalSessionFirstLeadMinutes;
+  final int clinicalSessionSecondLeadMinutes;
+  final int confirmationFirstDelayMinutes;
+  final int confirmationRepeatDays;
+  final int evaluationApproachingHours;
+  final int evaluationRepeatDays;
+  final int protectedDayFirstLeadDays;
+  final int protectedDaySecondLeadDays;
+  final int weeklySummaryWeekday;
+  final int weeklySummaryHour;
+  final int noBackupReminderDays;
+  final int staleBackupReminderDays;
+
+  bool get upcomingCommitmentsEnabled =>
+      upcomingWorkShiftsEnabled && upcomingClinicalSessionsEnabled;
+
+  NotificationPreferences copyWith({
+    bool? upcomingWorkShiftsEnabled,
+    bool? upcomingClinicalSessionsEnabled,
+    bool? weeklySummaryEnabled,
+    bool? backupRemindersEnabled,
+    int? workShiftFirstLeadMinutes,
+    int? workShiftSecondLeadMinutes,
+    int? clinicalSessionFirstLeadMinutes,
+    int? clinicalSessionSecondLeadMinutes,
+    int? confirmationFirstDelayMinutes,
+    int? confirmationRepeatDays,
+    int? evaluationApproachingHours,
+    int? evaluationRepeatDays,
+    int? protectedDayFirstLeadDays,
+    int? protectedDaySecondLeadDays,
+    int? weeklySummaryWeekday,
+    int? weeklySummaryHour,
+    int? noBackupReminderDays,
+    int? staleBackupReminderDays,
+  }) => NotificationPreferences(
+    upcomingWorkShiftsEnabled:
+        upcomingWorkShiftsEnabled ?? this.upcomingWorkShiftsEnabled,
+    upcomingClinicalSessionsEnabled:
+        upcomingClinicalSessionsEnabled ?? this.upcomingClinicalSessionsEnabled,
+    weeklySummaryEnabled: weeklySummaryEnabled ?? this.weeklySummaryEnabled,
+    backupRemindersEnabled:
+        backupRemindersEnabled ?? this.backupRemindersEnabled,
+    workShiftFirstLeadMinutes:
+        workShiftFirstLeadMinutes ?? this.workShiftFirstLeadMinutes,
+    workShiftSecondLeadMinutes:
+        workShiftSecondLeadMinutes ?? this.workShiftSecondLeadMinutes,
+    clinicalSessionFirstLeadMinutes:
+        clinicalSessionFirstLeadMinutes ?? this.clinicalSessionFirstLeadMinutes,
+    clinicalSessionSecondLeadMinutes:
+        clinicalSessionSecondLeadMinutes ??
+        this.clinicalSessionSecondLeadMinutes,
+    confirmationFirstDelayMinutes:
+        confirmationFirstDelayMinutes ?? this.confirmationFirstDelayMinutes,
+    confirmationRepeatDays:
+        confirmationRepeatDays ?? this.confirmationRepeatDays,
+    evaluationApproachingHours:
+        evaluationApproachingHours ?? this.evaluationApproachingHours,
+    evaluationRepeatDays: evaluationRepeatDays ?? this.evaluationRepeatDays,
+    protectedDayFirstLeadDays:
+        protectedDayFirstLeadDays ?? this.protectedDayFirstLeadDays,
+    protectedDaySecondLeadDays:
+        protectedDaySecondLeadDays ?? this.protectedDaySecondLeadDays,
+    weeklySummaryWeekday: weeklySummaryWeekday ?? this.weeklySummaryWeekday,
+    weeklySummaryHour: weeklySummaryHour ?? this.weeklySummaryHour,
+    noBackupReminderDays: noBackupReminderDays ?? this.noBackupReminderDays,
+    staleBackupReminderDays:
+        staleBackupReminderDays ?? this.staleBackupReminderDays,
+  );
 
   Map<String, Object?> toJson() => {
     'upcomingCommitmentsEnabled': upcomingCommitmentsEnabled,
+    'upcomingWorkShiftsEnabled': upcomingWorkShiftsEnabled,
+    'upcomingClinicalSessionsEnabled': upcomingClinicalSessionsEnabled,
     'weeklySummaryEnabled': weeklySummaryEnabled,
     'backupRemindersEnabled': backupRemindersEnabled,
+    'workShiftFirstLeadMinutes': workShiftFirstLeadMinutes,
+    'workShiftSecondLeadMinutes': workShiftSecondLeadMinutes,
+    'clinicalSessionFirstLeadMinutes': clinicalSessionFirstLeadMinutes,
+    'clinicalSessionSecondLeadMinutes': clinicalSessionSecondLeadMinutes,
+    'confirmationFirstDelayMinutes': confirmationFirstDelayMinutes,
+    'confirmationRepeatDays': confirmationRepeatDays,
+    'evaluationApproachingHours': evaluationApproachingHours,
+    'evaluationRepeatDays': evaluationRepeatDays,
+    'protectedDayFirstLeadDays': protectedDayFirstLeadDays,
+    'protectedDaySecondLeadDays': protectedDaySecondLeadDays,
+    'weeklySummaryWeekday': weeklySummaryWeekday,
+    'weeklySummaryHour': weeklySummaryHour,
+    'noBackupReminderDays': noBackupReminderDays,
+    'staleBackupReminderDays': staleBackupReminderDays,
   };
 }
 

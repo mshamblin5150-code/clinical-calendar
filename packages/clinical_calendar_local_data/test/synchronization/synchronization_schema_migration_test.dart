@@ -19,7 +19,7 @@ const _legacySettingsId = '00000000-0000-4000-8000-000000000005';
 
 void main() {
   test(
-    'version four upgrades terminal outbox and health state atomically',
+    'version four upgrades sync health and conflict evidence atomically',
     () async {
       final directory = await Directory.systemTemp.createTemp(
         'clinical-calendar-sync-v4-',
@@ -79,7 +79,7 @@ void main() {
         secureStorage: _Storage(),
       );
       try {
-        expect(database.schemaVersion, 5);
+        expect(database.schemaVersion, DatabaseMigrationRunner.latestVersion);
         final outboxColumns = database
             .select('PRAGMA table_info(outbox_operations)')
             .map((row) => row['name'])
@@ -93,6 +93,14 @@ void main() {
             .map((row) => row['name'])
             .toSet();
         expect(stateColumns, contains('failure_started_at_utc'));
+        final conflictColumns = database
+            .select('PRAGMA table_info(sync_conflicts)')
+            .map((row) => row['name'])
+            .toSet();
+        expect(
+          conflictColumns,
+          containsAll(['rejection_code', 'rejection_json']),
+        );
         final indexSql =
             database
                     .select(

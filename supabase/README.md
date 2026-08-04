@@ -3,6 +3,12 @@
 This directory is the complete Supabase/Postgres boundary for the MVP. It has
 no service-role credential, production identity, or Student-owned seed data.
 
+Passwordless sign-in uses the public Auth API and the committed local email
+template renders `{{ .Token }}` as a code rather than a magic link. Hosted
+projects must copy the same template through the Supabase Email Templates
+settings. Auth access and refresh tokens belong only in the platform credential
+store; they must never be written to SQLite, logs, configuration, or source.
+
 ## Contract
 
 `public.apply_sync_operation` accepts the SQLite outbox envelope unchanged:
@@ -38,6 +44,11 @@ Its owner is a non-login, non-bypass-RLS executor with only the four required
 tables. All tables force RLS and cache the JWT `sub` request setting through a
 scalar subquery. The read-only pull RPC is `SECURITY INVOKER`.
 
+Connected Devices binds each installation identifier to the authenticated
+JWT's `session_id`. The public sync RPC wrappers require an active binding, so
+revocation blocks subsequent app-data access even while an already-issued JWT
+has time remaining. It cannot erase a device's offline encrypted database.
+
 ## Local verification
 
 With Docker running, use the Supabase CLI from the repository root:
@@ -56,6 +67,21 @@ SQL files are a two-session test: run `concurrency_setup.sql`,
 launch sessions A and B concurrently with `psql`, run the verifier, then run
 the cleanup. Exactly one update is accepted and the other receives
 `stale_revision`.
+
+`identity_devices_test.sql` covers Connected Device registration and
+same-Student reauthentication, cross-Student isolation, least privilege,
+idempotent revocation, and the rule that a revoked JWT cannot push, pull, or
+reactivate itself. The `identity_revoke_concurrency_*.sql` scripts are a second
+two-session test: run setup, start session A, start session B shortly afterward,
+then run verify and cleanup. Session A deliberately holds the shared
+per-Student transaction lock while revoking; verification asserts that the
+waiting synchronization write is rejected and the original revision remains.
+
+Expired-code and refresh-token response mapping is covered by the Flutter
+platform contract tests. The local Supabase stack provides Inbucket and the
+same committed OTP template for manual end-to-end GoTrue verification; hosted
+email delivery and provider configuration remain deployment checks rather than
+database tests.
 
 These checks run locally through Docker Desktop and the Supabase containers;
 no live project or production credentials are required.

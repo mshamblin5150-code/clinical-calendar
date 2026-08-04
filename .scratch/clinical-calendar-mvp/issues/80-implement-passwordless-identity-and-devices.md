@@ -1,7 +1,7 @@
 # Implement Passwordless Identity and Connected Devices
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: 59, 69, 77, 78
 
 ## Objective
@@ -17,3 +17,7 @@ Implement passwordless email identity, secure sessions, email change, Connected 
 - Revoking a device blocks its future server access without claiming to erase an offline local copy.
 - Sign Out and Remove This Device's Copy reports pending changes, requires explicit confirmation, and removes only that device's local data.
 - Authentication and RLS integration tests cover expired codes, token refresh, revoked devices, offline launch, and cross-Student isolation.
+
+## Answer
+
+Implemented Supabase emailed OTP identity, secure session/refresh handling, offline launch, verified email change, Connected Devices, safe same-device reauthentication, truthful revocation, and guarded device-local sign-out/removal. Revocation blocks sync with live JWTs; local removal reports pending changes, stops sync, closes SQLCipher, deletes only exact database sidecars, and then removes device credentials. Live GoTrue/Mailpit, 25 identity pgTAP, 28 sync pgTAP, RLS/lint, revoke-versus-push concurrency, Windows, and Android gates pass; iOS runtime remains hardware-deferred.

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
+import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 
 import '../database/clinical_calendar_database.dart';
 
@@ -208,6 +209,8 @@ final class SqliteSynchronizationRepository
         remoteRevision: remoteRevision,
         localSnapshotJson: operation.payloadJson,
         remoteSnapshotJson: rejectionJson,
+        rejectionCode: rejectionCode,
+        rejectionJson: rejectionJson,
         detectedAtUtc: rejectedAtUtc,
       );
     }
@@ -233,6 +236,7 @@ final class SqliteSynchronizationRepository
       );
     }
     final envelope = _decodeEnvelope(change);
+    _enrichOpenConflict(change, appliedAtUtc);
     final table = _tableFor(change.entityType);
     final localRows = _database.select(
       'SELECT * FROM $table WHERE student_id = ? AND id = ?',
@@ -261,6 +265,8 @@ final class SqliteSynchronizationRepository
         remoteRevision: change.revision,
         localSnapshotJson: _text(pending.single, 'payload_json'),
         remoteSnapshotJson: change.payloadJson,
+        rejectionCode: 'concurrent_remote_change',
+        rejectionJson: '{"code":"concurrent_remote_change"}',
         detectedAtUtc: appliedAtUtc,
       );
       disposition = RemoteSynchronizationApplyDisposition.conflict;
@@ -274,6 +280,169 @@ final class SqliteSynchronizationRepository
     }
     _putCursor(remoteScope, change.cursor, appliedAtUtc);
     return disposition;
+  }
+
+  @override
+  List<SynchronizationConflictRecord> listConflicts({
+    required String studentId,
+    bool includeResolved = false,
+  }) {
+    _owner(studentId);
+    final rows = _database.select(
+      '''SELECT * FROM sync_conflicts WHERE student_id = ?
+        ${includeResolved ? '' : 'AND resolved_at_utc IS NULL'}
+        ORDER BY detected_at_utc, id''',
+      [_studentId],
+    );
+    return rows.map(_conflictRecord).toList(growable: false);
+  }
+
+  @override
+  SynchronizationConflictRecord? findConflict({
+    required String studentId,
+    required String conflictId,
+  }) {
+    _owner(studentId);
+    final rows = _database.select(
+      'SELECT * FROM sync_conflicts WHERE student_id = ? AND id = ?',
+      [_studentId, _uuid(conflictId)],
+    );
+    return rows.isEmpty ? null : _conflictRecord(rows.single);
+  }
+
+  @override
+  SynchronizationConflictResolutionReceipt resolveConflict({
+    required String studentId,
+    required String conflictId,
+    required SynchronizationConflictResolutionChoice choice,
+    String? correctedValueJson,
+    required MutationToken mutation,
+  }) {
+    _owner(studentId);
+    _requireUtc(mutation.occurredAtUtc, 'mutation.occurredAtUtc');
+    final normalizedConflictId = _uuid(conflictId);
+    final rows = _database.select(
+      'SELECT * FROM sync_conflicts WHERE student_id = ? AND id = ?',
+      [_studentId, normalizedConflictId],
+    );
+    if (rows.isEmpty) {
+      throw const RepositoryException(
+        RepositoryFailureKind.notFound,
+        'The synchronization conflict does not exist.',
+      );
+    }
+    final row = rows.single;
+    if (_nullableText(row, 'resolved_at_utc') != null) {
+      throw const RepositoryException(
+        RepositoryFailureKind.concurrentModification,
+        'The synchronization conflict is already resolved.',
+      );
+    }
+    final local = _snapshot(_text(row, 'local_snapshot_json'));
+    final remote = _snapshot(_text(row, 'remote_snapshot_json'));
+    final selected = switch (choice) {
+      SynchronizationConflictResolutionChoice.localVersion => local,
+      SynchronizationConflictResolutionChoice.remoteVersion => remote,
+      SynchronizationConflictResolutionChoice.correctedVersion => null,
+      SynchronizationConflictResolutionChoice.deleteVersion => local,
+    };
+    if (choice == SynchronizationConflictResolutionChoice.remoteVersion &&
+        !_isEnvelope(remote)) {
+      throw const RepositoryException(
+        RepositoryFailureKind.concurrentModification,
+        'The remote version has not been received yet.',
+      );
+    }
+    final value =
+        choice == SynchronizationConflictResolutionChoice.correctedVersion
+        ? _correctedValue(correctedValueJson)
+        : _snapshotValue(selected!);
+    final baseEnvelope = _isEnvelope(remote) ? remote : local;
+    if (!_isEnvelope(baseEnvelope)) {
+      throw const RepositoryException(
+        RepositoryFailureKind.corruptData,
+        'The conflict does not contain a complete record snapshot.',
+      );
+    }
+    final entityType = _text(row, 'entity_type');
+    final entityId = _text(row, 'entity_id');
+    final remoteRevision = _integer(row, 'remote_revision');
+    final envelope = <String, dynamic>{
+      'schema_version': 1,
+      'entity_type': entityType,
+      'entity_id': entityId,
+      'student_id': _studentId,
+      'revision': remoteRevision + 1,
+      'created_at_utc': baseEnvelope['created_at_utc'],
+      'updated_at_utc': mutation.occurredAtUtc.toIso8601String(),
+      'deleted_at_utc':
+          choice == SynchronizationConflictResolutionChoice.deleteVersion
+          ? mutation.occurredAtUtc.toIso8601String()
+          : selected == null
+          ? null
+          : selected['deleted_at_utc'],
+      'value': value,
+    };
+    final payloadJson = _canonicalJson(envelope);
+    _applyEnvelope(entityType, entityId, envelope);
+    final operationType =
+        choice == SynchronizationConflictResolutionChoice.deleteVersion
+        ? OutboxOperationType.delete
+        : OutboxOperationType.resolveConflict;
+    final operationTypeValue = operationType == OutboxOperationType.delete
+        ? 'delete'
+        : 'resolve_conflict';
+    _database.execute(
+      '''INSERT INTO outbox_operations
+        (id, student_id, idempotency_key, entity_type, entity_id,
+         operation_type, base_revision, payload_json, created_at_utc)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+      [
+        mutation.operationId,
+        _studentId,
+        mutation.idempotencyKey,
+        entityType,
+        entityId,
+        operationTypeValue,
+        remoteRevision,
+        payloadJson,
+        mutation.occurredAtUtc.toIso8601String(),
+      ],
+    );
+    final resolutionJson = _canonicalJson({
+      'choice': choice.name,
+      'operation_id': mutation.operationId,
+      'local_revision': _integer(row, 'local_revision'),
+      'remote_revision': remoteRevision,
+    });
+    _database.execute(
+      '''UPDATE sync_conflicts SET revision = revision + 1,
+        updated_at_utc = ?, resolved_at_utc = ?, resolution_json = ?
+        WHERE student_id = ? AND id = ?''',
+      [
+        mutation.occurredAtUtc.toIso8601String(),
+        mutation.occurredAtUtc.toIso8601String(),
+        resolutionJson,
+        _studentId,
+        normalizedConflictId,
+      ],
+    );
+    final operation = OutboxOperation(
+      mutation: mutation,
+      studentId: _studentId,
+      entityType: entityType,
+      entityId: entityId,
+      type: operationType,
+      baseRevision: remoteRevision,
+      payloadJson: payloadJson,
+    );
+    return SynchronizationConflictResolutionReceipt(
+      conflict: findConflict(
+        studentId: _studentId,
+        conflictId: normalizedConflictId,
+      )!,
+      operation: operation,
+    );
   }
 
   int _cursor(String remoteScope) {
@@ -385,6 +554,11 @@ final class SqliteSynchronizationRepository
         _upsert('settings', {
           ...common,
           for (final key in _settingsColumns) key: value[key],
+        });
+      case 'reminder_state':
+        _upsert('reminder_state', {
+          ...common,
+          for (final key in _reminderColumns) key: value[key],
         });
       default:
         throw const RepositoryException(
@@ -558,6 +732,208 @@ final class SqliteSynchronizationRepository
     );
   }
 
+  void _enrichOpenConflict(
+    RemoteSynchronizationChange change,
+    DateTime appliedAtUtc,
+  ) {
+    final rows = _database.select(
+      '''SELECT id, remote_snapshot_json FROM sync_conflicts
+        WHERE student_id = ? AND entity_type = ? AND entity_id = ?
+        AND remote_revision = ? AND resolved_at_utc IS NULL''',
+      [_studentId, change.entityType, change.entityId, change.revision],
+    );
+    for (final row in rows) {
+      final current = _snapshot(_text(row, 'remote_snapshot_json'));
+      if (_isEnvelope(current)) continue;
+      _database.execute(
+        '''UPDATE sync_conflicts SET remote_snapshot_json = ?,
+          updated_at_utc = ?, revision = revision + 1 WHERE id = ?''',
+        [change.payloadJson, appliedAtUtc.toIso8601String(), _text(row, 'id')],
+      );
+    }
+  }
+
+  SynchronizationConflictRecord _conflictRecord(Map<Object?, Object?> row) {
+    final entityType = _text(row, 'entity_type');
+    final entityId = _text(row, 'entity_id');
+    final rejectionCode = _text(row, 'rejection_code');
+    final localSnapshotJson = _text(row, 'local_snapshot_json');
+    final affected = _affectedRecords(
+      entityType: entityType,
+      entityId: entityId,
+      rejectionCode: rejectionCode,
+      localSnapshotJson: localSnapshotJson,
+    );
+    return SynchronizationConflictRecord(
+      id: _text(row, 'id'),
+      studentId: _studentId,
+      entityType: entityType,
+      entityId: entityId,
+      localRevision: _integer(row, 'local_revision'),
+      remoteRevision: _integer(row, 'remote_revision'),
+      localSnapshotJson: localSnapshotJson,
+      remoteSnapshotJson: _text(row, 'remote_snapshot_json'),
+      rejectionCode: rejectionCode,
+      rejectionJson: _text(row, 'rejection_json'),
+      detectedAtUtc: DateTime.parse(_text(row, 'detected_at_utc')).toUtc(),
+      affectedRecords: affected,
+      planningWeekStartDate: _planningWeekStart(
+        rejectionCode: rejectionCode,
+        entityType: entityType,
+        localSnapshotJson: localSnapshotJson,
+        affected: affected,
+      ),
+      resolvedAtUtc: _nullableDate(row, 'resolved_at_utc'),
+      resolutionJson: _nullableText(row, 'resolution_json'),
+    );
+  }
+
+  List<SynchronizationConflictEntityReference> _affectedRecords({
+    required String entityType,
+    required String entityId,
+    required String rejectionCode,
+    required String localSnapshotJson,
+  }) {
+    final values = <String, SynchronizationConflictEntityReference>{};
+    void add(String type, String id) {
+      final normalized = _uuid(id);
+      values['$type/$normalized'] = SynchronizationConflictEntityReference(
+        entityType: type,
+        entityId: normalized,
+      );
+    }
+
+    add(entityType, entityId);
+    final snapshot = _snapshot(localSnapshotJson);
+    if (!_isEnvelope(snapshot)) return values.values.toList(growable: false);
+    final value = _snapshotValue(snapshot);
+    if (rejectionCode == 'schedule_conflict' &&
+        (entityType == 'work_shift' || entityType == 'clinical_session')) {
+      final start = value['lifecycle_state'] == 'completed'
+          ? value['actual_start_utc']
+          : value['planned_start_utc'];
+      final end = value['lifecycle_state'] == 'completed'
+          ? value['actual_end_utc']
+          : value['planned_end_utc'];
+      if (start is String && end is String) {
+        final rows = _database.select(
+          '''SELECT id, commitment_type FROM commitments
+            WHERE student_id = ? AND id <> ? AND deleted_at_utc IS NULL
+            AND lifecycle_state NOT IN ('cancelled', 'missed')
+            AND (CASE WHEN lifecycle_state = 'completed'
+              THEN actual_start_utc ELSE planned_start_utc END) < ?
+            AND (CASE WHEN lifecycle_state = 'completed'
+              THEN actual_end_utc ELSE planned_end_utc END) > ?''',
+          [_studentId, entityId, end, start],
+        );
+        for (final row in rows) {
+          add(_text(row, 'commitment_type'), _text(row, 'id'));
+        }
+      }
+    }
+    if (rejectionCode == 'protected_day_violation') {
+      if (entityType == 'protected_day') {
+        final date = value['local_date'];
+        final weekStart = value['week_start_date'];
+        if (date is String) {
+          final rows = _database.select(
+            '''SELECT id, commitment_type FROM commitments
+              WHERE student_id = ? AND deleted_at_utc IS NULL
+              AND lifecycle_state NOT IN ('cancelled', 'missed')
+              AND (CASE WHEN lifecycle_state = 'completed'
+                THEN actual_start_date ELSE planned_start_date END) <= ?
+              AND (CASE WHEN lifecycle_state = 'completed'
+                THEN actual_end_date ELSE planned_end_date END) >= ?''',
+            [_studentId, date, date],
+          );
+          for (final row in rows) {
+            add(_text(row, 'commitment_type'), _text(row, 'id'));
+          }
+        }
+        if (weekStart is String) {
+          final rows = _database.select(
+            '''SELECT id FROM protected_days WHERE student_id = ?
+              AND id <> ? AND week_start_date = ? AND deleted_at_utc IS NULL''',
+            [_studentId, entityId, weekStart],
+          );
+          for (final row in rows) {
+            add('protected_day', _text(row, 'id'));
+          }
+        }
+      } else if (entityType == 'work_shift' ||
+          entityType == 'clinical_session') {
+        final startDate = value['lifecycle_state'] == 'completed'
+            ? value['actual_start_date']
+            : value['planned_start_date'];
+        final endDate = value['lifecycle_state'] == 'completed'
+            ? value['actual_end_date']
+            : value['planned_end_date'];
+        if (startDate is String && endDate is String) {
+          final rows = _database.select(
+            '''SELECT id FROM protected_days WHERE student_id = ?
+              AND deleted_at_utc IS NULL AND local_date BETWEEN ? AND ?''',
+            [_studentId, startDate, endDate],
+          );
+          for (final row in rows) {
+            add('protected_day', _text(row, 'id'));
+          }
+        }
+      }
+    }
+    return values.values.toList(growable: false);
+  }
+
+  LocalDate? _planningWeekStart({
+    required String rejectionCode,
+    required String entityType,
+    required String localSnapshotJson,
+    required List<SynchronizationConflictEntityReference> affected,
+  }) {
+    if (rejectionCode != 'protected_day_violation' &&
+        rejectionCode != 'schedule_conflict') {
+      return null;
+    }
+    final snapshot = _snapshot(localSnapshotJson);
+    if (_isEnvelope(snapshot) &&
+        (entityType == 'work_shift' || entityType == 'clinical_session')) {
+      final value = _snapshotValue(snapshot);
+      final date = value['lifecycle_state'] == 'completed'
+          ? value['actual_start_date']
+          : value['planned_start_date'];
+      if (date is String) return _weekContaining(_localDate(date));
+    }
+    if (entityType == 'protected_day') {
+      if (_isEnvelope(snapshot)) {
+        final weekStart = _snapshotValue(snapshot)['week_start_date'];
+        if (weekStart is String) return _localDate(weekStart);
+      }
+    }
+    for (final record in affected) {
+      if (record.entityType != 'protected_day') continue;
+      final rows = _database.select(
+        'SELECT week_start_date FROM protected_days '
+        'WHERE student_id = ? AND id = ?',
+        [_studentId, record.entityId],
+      );
+      if (rows.isNotEmpty) {
+        return _localDate(_text(rows.single, 'week_start_date'));
+      }
+    }
+    return null;
+  }
+
+  LocalDate _weekContaining(LocalDate date) {
+    final rows = _database.select(
+      'SELECT week_start FROM settings WHERE student_id = ?',
+      [_studentId],
+    );
+    final weekStart = rows.isEmpty
+        ? DateTime.sunday
+        : _integer(rows.single, 'week_start');
+    final weekday = DateTime(date.year, date.month, date.day).weekday;
+    return date.addDays(-((weekday - weekStart + 7) % 7));
+  }
+
   void _insertConflict({
     required String entityType,
     required String entityId,
@@ -565,23 +941,41 @@ final class SqliteSynchronizationRepository
     required int remoteRevision,
     required String localSnapshotJson,
     required String remoteSnapshotJson,
+    required String rejectionCode,
+    required String rejectionJson,
     required DateTime detectedAtUtc,
   }) {
     final duplicate = _database.select(
-      '''SELECT 1 FROM sync_conflicts WHERE student_id = ?
+      '''SELECT id, remote_snapshot_json FROM sync_conflicts WHERE student_id = ?
         AND entity_type = ? AND entity_id = ? AND local_revision = ?
         AND remote_revision = ? AND resolved_at_utc IS NULL LIMIT 1''',
       [_studentId, entityType, entityId, localRevision, remoteRevision],
     );
-    if (duplicate.isNotEmpty) return;
+    if (duplicate.isNotEmpty) {
+      final remote = _snapshot(remoteSnapshotJson);
+      final prior = _snapshot(_text(duplicate.single, 'remote_snapshot_json'));
+      if (_isEnvelope(remote) && !_isEnvelope(prior)) {
+        _database.execute(
+          '''UPDATE sync_conflicts SET remote_snapshot_json = ?,
+            updated_at_utc = ?, revision = revision + 1 WHERE id = ?''',
+          [
+            remoteSnapshotJson,
+            detectedAtUtc.toIso8601String(),
+            _text(duplicate.single, 'id'),
+          ],
+        );
+      }
+      return;
+    }
     final id = _uuid(_identifiers.nextIdentifier());
     _database.execute(
       '''INSERT INTO sync_conflicts
         (id, student_id, revision, created_at_utc, updated_at_utc,
          deleted_at_utc, entity_type, entity_id, local_revision,
          remote_revision, local_snapshot_json, remote_snapshot_json,
-         detected_at_utc, resolved_at_utc, resolution_json)
-        VALUES (?, ?, 1, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)''',
+         detected_at_utc, resolved_at_utc, resolution_json,
+         rejection_code, rejection_json)
+        VALUES (?, ?, 1, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)''',
       [
         id,
         _studentId,
@@ -594,6 +988,8 @@ final class SqliteSynchronizationRepository
         localSnapshotJson,
         remoteSnapshotJson,
         detectedAtUtc.toIso8601String(),
+        rejectionCode,
+        rejectionJson,
       ],
     );
   }
@@ -655,6 +1051,15 @@ const _settingsColumns = <String>[
   'notification_preferences_json',
   'active_placement_id',
 ];
+const _reminderColumns = <String>[
+  'reminder_type',
+  'subject_entity_id',
+  'scheduled_for_utc',
+  'snoozed_until_utc',
+  'resolved_at_utc',
+  'resolution_source',
+  'occurrence_key',
+];
 
 String _tableFor(String entityType) => switch (entityType) {
   'student_profile' => 'student_profiles',
@@ -666,6 +1071,7 @@ String _tableFor(String entityType) => switch (entityType) {
   'evaluation_plan' => 'evaluation_plans',
   'schedule_template' => 'schedule_templates',
   'settings' => 'settings',
+  'reminder_state' => 'reminder_state',
   _ => throw const RepositoryException(
     RepositoryFailureKind.corruptData,
     'The remote entity type is unsupported.',
@@ -698,6 +1104,58 @@ String _healthValue(SynchronizationHealthDisposition value) => switch (value) {
 };
 
 String _canonicalJson(Object? value) => jsonEncode(_canonical(value));
+
+Map<String, dynamic> _snapshot(String source) {
+  final decoded = jsonDecode(source);
+  if (decoded is! Map<String, dynamic>) {
+    throw const RepositoryException(
+      RepositoryFailureKind.corruptData,
+      'A synchronization conflict snapshot is invalid.',
+    );
+  }
+  return decoded;
+}
+
+bool _isEnvelope(Map<String, dynamic> value) =>
+    value['schema_version'] == 1 && value['value'] is Map<String, dynamic>;
+
+Map<String, dynamic> _snapshotValue(Map<String, dynamic> snapshot) {
+  final value = snapshot['value'];
+  if (value is! Map<String, dynamic>) {
+    throw const RepositoryException(
+      RepositoryFailureKind.corruptData,
+      'A synchronization conflict version is incomplete.',
+    );
+  }
+  return Map<String, dynamic>.from(value);
+}
+
+Map<String, dynamic> _correctedValue(String? source) {
+  if (source == null) {
+    throw const RepositoryException(
+      RepositoryFailureKind.corruptData,
+      'A corrected conflict version is required.',
+    );
+  }
+  final decoded = jsonDecode(source);
+  if (decoded is! Map<String, dynamic>) {
+    throw const RepositoryException(
+      RepositoryFailureKind.corruptData,
+      'The corrected conflict version must be a JSON object.',
+    );
+  }
+  return decoded;
+}
+
+LocalDate _localDate(String value) {
+  final parts = value.split('-');
+  if (parts.length != 3) throw const FormatException('Invalid local date.');
+  return LocalDate(
+    int.parse(parts[0]),
+    int.parse(parts[1]),
+    int.parse(parts[2]),
+  );
+}
 
 Object? _canonical(Object? value) {
   if (value is Map) {

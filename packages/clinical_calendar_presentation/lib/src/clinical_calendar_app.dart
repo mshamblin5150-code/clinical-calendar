@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
+import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
@@ -9,9 +10,12 @@ import 'calendar/calendar_models.dart';
 import 'calendar/calendar_period_view.dart';
 import 'commitments/commitment_lifecycle_controller.dart';
 import 'commitments/commitment_lifecycle_surface.dart';
+import 'conflict_resolution/conflict_resolution_controller.dart';
+import 'conflict_resolution/conflict_resolution_surface.dart';
 import 'evaluation_attention/attention_surfaces.dart';
 import 'evaluation_attention/evaluation_attention_controller.dart';
 import 'evaluation_attention/evaluation_plan_surface.dart';
+import 'identity/identity_devices_surface.dart';
 import 'placements/placement_management_surface.dart';
 import 'placements/placement_progress_controller.dart';
 import 'placements/placement_progress_widgets.dart';
@@ -37,6 +41,12 @@ final class ClinicalCalendarApp extends StatelessWidget {
     this.connectivityChanges,
     this.onConnectivityChanged,
     this.onRealtimeHint,
+    this.notificationInteractions,
+    this.notificationDevicePolicyStore,
+    this.notificationDeviceClass,
+    this.identity,
+    this.identityEmail,
+    this.onLocalCopyRemoved,
     super.key,
   });
 
@@ -53,6 +63,12 @@ final class ClinicalCalendarApp extends StatelessWidget {
   /// Reserved for the realtime subscription owned by the authentication
   /// integration. Realtime is only a wake hint; durable pull remains truth.
   final Future<void> Function()? onRealtimeHint;
+  final Stream<NotificationInteraction>? notificationInteractions;
+  final NotificationDevicePolicyStore? notificationDevicePolicyStore;
+  final NotificationDeviceClass? notificationDeviceClass;
+  final PasswordlessIdentityService? identity;
+  final String? identityEmail;
+  final Future<void> Function()? onLocalCopyRemoved;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -70,6 +86,12 @@ final class ClinicalCalendarApp extends StatelessWidget {
         chooseAvatar: chooseAvatar,
         themeId: visualTheme.id,
         helpGuides: helpGuides ?? ThemeHelpGuideRegistry.standard(),
+        identity: identity,
+        identityEmail: identityEmail,
+        onLocalCopyRemoved: onLocalCopyRemoved,
+        notificationInteractions: notificationInteractions,
+        notificationDevicePolicyStore: notificationDevicePolicyStore,
+        notificationDeviceClass: notificationDeviceClass,
       ),
     ),
   );
@@ -157,6 +179,12 @@ final class _ApplicationHost extends StatefulWidget {
     required this.chooseAvatar,
     required this.themeId,
     required this.helpGuides,
+    required this.identity,
+    required this.identityEmail,
+    required this.onLocalCopyRemoved,
+    required this.notificationInteractions,
+    required this.notificationDevicePolicyStore,
+    required this.notificationDeviceClass,
   });
 
   final ApplicationDependencies dependencies;
@@ -165,6 +193,12 @@ final class _ApplicationHost extends StatefulWidget {
   final AvatarChooser? chooseAvatar;
   final String themeId;
   final ThemeHelpGuideRegistry helpGuides;
+  final PasswordlessIdentityService? identity;
+  final String? identityEmail;
+  final Future<void> Function()? onLocalCopyRemoved;
+  final Stream<NotificationInteraction>? notificationInteractions;
+  final NotificationDevicePolicyStore? notificationDevicePolicyStore;
+  final NotificationDeviceClass? notificationDeviceClass;
 
   @override
   State<_ApplicationHost> createState() => _ApplicationHostState();
@@ -178,6 +212,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   late final PlacementProgressController _placementController;
   late final CommitmentLifecycleController _commitmentController;
   late final EvaluationAttentionController _attentionController;
+  late final ConflictResolutionController _conflictController;
   BatchSchedulingController? _batchController;
   late final SupportApplicationService _supportService;
   Set<LocalDate> _selectedDates = const {};
@@ -185,6 +220,8 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   SupportSnapshot? _support;
   Object? _supportError;
   bool _supportLoading = true;
+  StreamSubscription<NotificationInteraction>? _notificationSubscription;
+  NotificationDevicePolicy? _notificationDevicePolicy;
 
   @override
   void initState() {
@@ -221,11 +258,23 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       studentId: widget.studentId,
       onChanged: _reloadSchedulingSurfaces,
     );
+    _conflictController = ConflictResolutionController(
+      ConflictResolutionApplicationService(
+        repositories: dependencies.repositories,
+        clock: dependencies.clock,
+        identifiers: dependencies.identifiers,
+        studentId: widget.studentId,
+        synchronization: dependencies.synchronization,
+      ),
+    );
     _supportService = SupportApplicationService(
       repositories: dependencies.repositories,
       clock: dependencies.clock,
       identifiers: dependencies.identifiers,
       studentId: widget.studentId,
+    );
+    _notificationSubscription = widget.notificationInteractions?.listen(
+      (interaction) => unawaited(_handleNotificationInteraction(interaction)),
     );
     unawaited(_initializeScheduling());
   }
@@ -235,7 +284,9 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     _batchController?.dispose();
     _commitmentController.dispose();
     _attentionController.dispose();
+    _conflictController.dispose();
     _placementController.dispose();
+    unawaited(_notificationSubscription?.cancel());
     super.dispose();
   }
 
@@ -244,6 +295,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       _placementController.load(),
       _attentionController.load(),
       _loadSupport(),
+      _loadNotificationDevicePolicy(),
     ]);
     if (!mounted) return;
     _replaceBatchController();
@@ -314,7 +366,111 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     await Future.wait([
       _placementController.load(),
       _attentionController.load(),
+      _reconcileNotifications(),
     ]);
+  }
+
+  Future<void> _reconcileNotifications() async {
+    try {
+      await widget.dependencies.notifications.reconcileScheduledNotifications();
+    } on Object {
+      // Native delivery availability must never block the student workflow.
+    }
+  }
+
+  Future<void> _loadNotificationDevicePolicy() async {
+    final store = widget.notificationDevicePolicyStore;
+    final deviceClass = widget.notificationDeviceClass;
+    if (store == null || deviceClass == null) return;
+    final stored = await store.read(deviceClass);
+    if (!mounted) return;
+    setState(
+      () => _notificationDevicePolicy =
+          stored ?? NotificationDevicePolicy(deviceClass: deviceClass),
+    );
+  }
+
+  Future<void> _saveNotificationDevicePreferences(
+    DeviceNotificationPreferences preferences,
+  ) async {
+    final store = widget.notificationDevicePolicyStore;
+    final deviceClass = widget.notificationDeviceClass;
+    if (store == null || deviceClass == null) return;
+    final policy = NotificationDevicePolicy(
+      deviceClass: deviceClass,
+      enabled: preferences.deliveryEnabled,
+      detailedPreview: preferences.detailedPreview,
+      quietStartsAtHour: preferences.quietStartsAtHour,
+      quietEndsAtHour: preferences.quietEndsAtHour,
+    );
+    await store.write(policy);
+    if (mounted) setState(() => _notificationDevicePolicy = policy);
+    await _reconcileNotifications();
+  }
+
+  Future<void> _handleNotificationInteraction(
+    NotificationInteraction interaction,
+  ) async {
+    if (!mounted) return;
+    final route = Uri.tryParse(interaction.route);
+    final segments = route?.pathSegments ?? const <String>[];
+    if (segments.length < 2 || segments.first != 'reminders') return;
+    switch (segments[1]) {
+      case 'summary':
+        _openAttentionCenter();
+      case 'commitment':
+        if (segments.length != 4) return;
+        final kind = switch (segments[2]) {
+          'work' => CommitmentLifecycleKind.workShift,
+          'clinical' => CommitmentLifecycleKind.clinicalSession,
+          _ => null,
+        };
+        if (kind != null) {
+          await _openCommitmentLifecycle(kind: kind, id: segments[3]);
+        }
+      case 'planning':
+        if (segments.length != 3) return;
+        final parts = segments[2].split('-').map(int.tryParse).toList();
+        if (parts.length != 3 || parts.any((value) => value == null)) return;
+        final date = LocalDate(parts[0]!, parts[1]!, parts[2]!);
+        _updateCalendarSelection({..._selectedDates, date});
+        if (!mounted) return;
+        setState(() => _destination = null);
+        _resetPlanning(BatchSchedulingReset.planningIncomplete);
+      case 'evaluation':
+        if (segments.length != 3) return;
+        _attentionController.selectPlacement(segments[2]);
+        await _openContextualRoute(
+          title: 'Evaluation Plan',
+          child: EvaluationPlanSurface(controller: _attentionController),
+        );
+        await _reloadSchedulingSurfaces();
+      case 'backup':
+        await _openContextualRoute(
+          title: 'Portable Backup',
+          child: const _UnavailableAttentionWorkflow(
+            message:
+                'Portable backup is not available in this build. No backup '
+                'state was changed.',
+          ),
+        );
+      case 'synchronization':
+        await _conflictController.load();
+        if (!mounted) return;
+        final conflicts = _conflictController.snapshot;
+        await _openContextualRoute(
+          title: 'Synchronization',
+          child: conflicts != null && conflicts.hasConflicts
+              ? SynchronizationConflictResolutionSurface(
+                  controller: _conflictController,
+                  onOpenRecordAction: _openConflictRecord,
+                )
+              : SynchronizationAttentionSurface(
+                  synchronization: widget.dependencies.synchronization,
+                ),
+        );
+        await _reloadSchedulingSurfaces();
+    }
   }
 
   Future<void> _openCommitment(CalendarItemReference reference) async {
@@ -404,12 +560,37 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
           ),
         );
       case AttentionDestination.resolveSynchronization:
+        await _conflictController.load();
+        if (!mounted) return;
+        final conflicts = _conflictController.snapshot;
         await _openContextualRoute(
           title: 'Synchronization',
-          child: SynchronizationAttentionSurface(
-            synchronization: widget.dependencies.synchronization,
-          ),
+          child: conflicts != null && conflicts.hasConflicts
+              ? SynchronizationConflictResolutionSurface(
+                  controller: _conflictController,
+                  onOpenRecordAction: _openConflictRecord,
+                )
+              : SynchronizationAttentionSurface(
+                  synchronization: widget.dependencies.synchronization,
+                ),
         );
+        await _reloadSchedulingSurfaces();
+    }
+  }
+
+  void _openConflictRecord(
+    SynchronizationConflictEntityReference record,
+    CrossRecordResolutionAction action,
+  ) {
+    if (action != CrossRecordResolutionAction.move) return;
+    final kind = switch (record.entityType) {
+      'work_shift' => CommitmentLifecycleKind.workShift,
+      'clinical_session' => CommitmentLifecycleKind.clinicalSession,
+      'protected_day' => CommitmentLifecycleKind.protectedDay,
+      _ => null,
+    };
+    if (kind != null) {
+      unawaited(_openCommitmentLifecycle(kind: kind, id: record.entityId));
     }
   }
 
@@ -492,6 +673,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       ),
     );
     _replaceBatchController();
+    await _reconcileNotifications();
   }
 
   Future<void> _saveTemplate(ScheduleTemplate template) async {
@@ -724,7 +906,20 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             onSave: _saveProfile,
           ),
         );
+      case ClinicalCalendarDestination.connectedDevices:
+        final identity = widget.identity;
+        final email = widget.identityEmail;
+        final onLocalCopyRemoved = widget.onLocalCopyRemoved;
+        if (identity == null || email == null || onLocalCopyRemoved == null) {
+          return const _IdentityUnavailable();
+        }
+        return IdentityDevicesSurface(
+          identity: identity,
+          email: email,
+          onLocalCopyRemoved: onLocalCopyRemoved,
+        );
       case ClinicalCalendarDestination.settings:
+        final devicePolicy = _notificationDevicePolicy;
         return _supportBody(
           (snapshot) => SettingsTemplatesSurface(
             settings: snapshot.settings.value,
@@ -736,6 +931,17 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             onSaveSettings: _saveSettings,
             onSaveTemplate: _saveTemplate,
             onRemoveTemplate: _removeTemplate,
+            deviceNotifications: devicePolicy == null
+                ? null
+                : DeviceNotificationPreferences(
+                    deliveryEnabled: devicePolicy.effectiveEnabled,
+                    detailedPreview: devicePolicy.detailedPreview,
+                    quietStartsAtHour: devicePolicy.quietStartsAtHour,
+                    quietEndsAtHour: devicePolicy.quietEndsAtHour,
+                  ),
+            onSaveDeviceNotifications: devicePolicy == null
+                ? null
+                : _saveNotificationDevicePreferences,
           ),
         );
       case ClinicalCalendarDestination.help:
@@ -946,6 +1152,21 @@ final class _UnavailableAttentionWorkflow extends StatelessWidget {
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: ShellPanel(label: 'Workflow unavailable', child: Text(message)),
+    ),
+  );
+}
+
+final class _IdentityUnavailable extends StatelessWidget {
+  const _IdentityUnavailable();
+
+  @override
+  Widget build(BuildContext context) => const Center(
+    child: Padding(
+      padding: EdgeInsets.all(16),
+      child: Text(
+        'Connected Devices becomes available after passwordless sign-in.',
+        key: Key('identity-unavailable'),
+      ),
     ),
   );
 }

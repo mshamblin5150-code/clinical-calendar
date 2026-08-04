@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
+import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_local_data/clinical_calendar_local_data.dart';
 import 'package:clinical_calendar_platform/clinical_calendar_platform.dart';
+import 'package:clinical_calendar_platform/clinical_calendar_identity_platform.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_presentation/clinical_calendar_identity_presentation.dart';
 import 'package:clinical_calendar_sync/clinical_calendar_sync.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +42,7 @@ final class ConnectivityPlusStatusSource implements ConnectivityStatusSource {
       _connectivity.onConnectivityChanged.map(_isConnected).distinct();
 }
 
-Future<void> main() => runClinicalCalendar(buildProductionApplication);
+Future<void> main() => runClinicalCalendar(buildProductionRoot);
 
 Future<void> runClinicalCalendar(Future<Widget> Function() bootstrap) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,15 +64,29 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   ConnectivityStatusSource? connectivitySource,
   SynchronizationTriggerFailureObserver? onSynchronizationFailure,
   Clock? clock,
+  String? authenticatedStudentId,
+  Future<void> Function()? onSuccessfulSynchronization,
+  void Function(LocalDeviceCopyController controller)?
+  onLocalCopyControllerReady,
+  PasswordlessIdentityService? identity,
+  String? identityEmail,
+  Future<void> Function()? onLocalCopyRemoved,
+  NotificationPlatform? notificationPlatform,
+  NotificationDeliveryStore? notificationDeliveryStore,
+  NotificationDevicePolicyStore? notificationDevicePolicyStore,
+  String? deviceTimeZoneId,
+  NotificationDeviceClass? notificationDeviceClass,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
   final identifierGenerator = identifiers ?? ProcessIdentifierGenerator();
   final applicationClock = clock ?? const SystemClock();
   final configuredEnvironment = environment ?? AppEnvironment.fromCompileTime();
-  final studentId = await StableStudentOwner.loadOrCreate(
-    secureStorage: storage,
-    identifiers: identifierGenerator,
-  );
+  final studentId = authenticatedStudentId == null
+      ? await StableStudentOwner.loadOrCreate(
+          secureStorage: storage,
+          identifiers: identifierGenerator,
+        )
+      : await _bindAuthenticatedStudentOwner(storage, authenticatedStudentId);
   final baseRepositories =
       await (repositoryBootstrap ?? _openProductionRepositories)(
         studentId,
@@ -82,6 +100,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   Future<void> Function(bool connected)? onConnectivityChanged;
   Future<void> Function()? onRealtimeHint;
   Stream<bool>? connectivityChanges;
+  DurableSynchronizationService? durableSynchronization;
 
   final hasSession = await _hasCurrentSynchronizationSession(
     configuredEnvironment,
@@ -96,6 +115,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
           projectUri: configuredEnvironment.synchronizationProjectUri!,
           publishableKey: configuredEnvironment.supabasePublishableKey,
           accessTokenProvider: accessTokenProvider!,
+          onSuccessfulServerAccess: onSuccessfulSynchronization,
         );
     final durable = DurableSynchronizationService(
       repositories: baseRepositories,
@@ -105,6 +125,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
       studentId: studentId,
       initiallyConnected: initiallyConnected,
     );
+    durableSynchronization = durable;
     final coordinator = SynchronizationTriggerCoordinator(durable);
     applicationRepositories = SynchronizationTriggeringRepositoryRegistry(
       base: baseRepositories,
@@ -125,15 +146,108 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     connectivityChanges = source.changes;
   }
 
+  final resolvedDeviceClass =
+      notificationDeviceClass ?? _notificationDeviceClass();
+  final resolvedTimeZoneId = deviceTimeZoneId ?? await _loadDeviceTimeZoneId();
+  final deviceId =
+      await storage.read(PasswordlessIdentityService.deviceIdStorageKey) ??
+      'local-device';
+  final nativeNotifications =
+      notificationPlatform ?? FlutterLocalNotificationPlatform();
+  final deliveryStore =
+      notificationDeliveryStore ??
+      SecureNotificationDeliveryStore.applicationStorage(
+        storage: storage,
+        deviceId: deviceId,
+      );
+  final devicePolicyStore =
+      notificationDevicePolicyStore ??
+      SecureNotificationDevicePolicyStore.applicationStorage(
+        storage: storage,
+        deviceId: deviceId,
+      );
+  final timeZones = TimeZonePackageReminderResolver();
+  final interactions = StreamController<NotificationInteraction>.broadcast();
+  late final ProductionNotificationService notificationService;
+  notificationService = ProductionNotificationService(
+    source: RepositoryReminderCandidateSource(
+      repositories: applicationRepositories,
+      placements: PlacementApplicationService(
+        repositories: applicationRepositories,
+        clock: applicationClock,
+        identifiers: identifierGenerator,
+        studentId: studentId,
+      ),
+      studentId: studentId,
+      deviceId: deviceId,
+      deviceTimeZoneId: resolvedTimeZoneId,
+      timeZones: timeZones,
+    ),
+    policy: ReminderPolicy(timeZones),
+    reconciler: NotificationReconciler(nativeNotifications, deliveryStore),
+    states: ReminderStateApplicationService(applicationRepositories),
+    devicePolicies: devicePolicyStore,
+    clock: applicationClock,
+    identifiers: identifierGenerator,
+    studentId: studentId,
+    deviceClass: resolvedDeviceClass,
+    deviceTimeZoneId: resolvedTimeZoneId,
+    onBodyTap: interactions.add,
+  );
+  if (nativeNotifications case final FlutterLocalNotificationPlatform native) {
+    try {
+      await native
+          .initialize(
+            onInteraction: (interaction) =>
+                unawaited(notificationService.handleInteraction(interaction)),
+          )
+          .timeout(const Duration(seconds: 1));
+    } on Object {
+      // The app remains usable when the OS notification plugin is unavailable.
+    }
+  }
+  final synchronizationLaunchOrResume = onLaunchOrResume;
+  onLaunchOrResume = () async {
+    await synchronizationLaunchOrResume?.call();
+    await notificationService.reconcileScheduledNotifications();
+  };
+
   final dependencies = ApplicationDependencies(
     repositories: applicationRepositories,
     clock: applicationClock,
     identifiers: identifierGenerator,
     synchronization: synchronization,
-    notifications: const DeferredNotificationService(),
+    notifications: notificationService,
     secureStorage: storage,
     files: const DartIoFileService(),
   );
+  if (baseRepositories is SqliteRepositoryRegistry &&
+      onLocalCopyControllerReady != null) {
+    final sqliteRepositories = baseRepositories;
+    onLocalCopyControllerReady(
+      ProductionLocalDeviceCopyController(
+        databasePath: sqliteRepositories.databasePath,
+        secureStorage: storage,
+        preview: () async {
+          final preview = await sqliteRepositories.localRemovalPreview();
+          return LocalRemovalPreview(
+            pendingChangeCount: preview.count,
+            oldestPendingAtUtc: preview.oldestAtUtc,
+          );
+        },
+        stopLifecycleAndCloseDatabase: () async {
+          await durableSynchronization?.shutdown();
+          await sqliteRepositories.close();
+        },
+        credentialKeys: const {
+          ClinicalCalendarDatabase.encryptionKeyStorageKey,
+          StableStudentOwner.storageKey,
+          PasswordlessIdentityService.sessionStorageKey,
+          PasswordlessIdentityService.deviceIdStorageKey,
+        },
+      ),
+    );
+  }
   return ClinicalCalendarApp(
     dependencies: dependencies,
     environmentName: configuredEnvironment.name,
@@ -142,7 +256,225 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     connectivityChanges: connectivityChanges,
     onConnectivityChanged: onConnectivityChanged,
     onRealtimeHint: onRealtimeHint,
+    identity: identity,
+    identityEmail: identityEmail,
+    onLocalCopyRemoved: onLocalCopyRemoved,
+    notificationInteractions: interactions.stream,
+    notificationDevicePolicyStore: devicePolicyStore,
+    notificationDeviceClass: resolvedDeviceClass,
   );
+}
+
+Future<String> _loadDeviceTimeZoneId() async {
+  try {
+    return await const FlutterDeviceTimeZoneProvider()
+        .currentTimeZoneId()
+        .timeout(const Duration(seconds: 1));
+  } on Object {
+    return 'UTC';
+  }
+}
+
+NotificationDeviceClass _notificationDeviceClass() {
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    return NotificationDeviceClass.desktop;
+  }
+  if (Platform.isAndroid) return NotificationDeviceClass.tablet;
+  return NotificationDeviceClass.phone;
+}
+
+Future<Widget> buildProductionRoot({
+  SecureStorage? secureStorage,
+  IdentifierGenerator? identifiers,
+  Clock? clock,
+  AppEnvironment? environment,
+  ProductionRepositoryBootstrap? repositoryBootstrap,
+  PasswordlessIdentityGateway? identityGateway,
+  ConnectivityStatusSource? connectivitySource,
+}) async {
+  final storage = secureStorage ?? const FlutterSecureStorageService();
+  final identifierGenerator = identifiers ?? ProcessIdentifierGenerator();
+  final applicationClock = clock ?? const SystemClock();
+  final configuredEnvironment = environment ?? AppEnvironment.fromCompileTime();
+  if (!configuredEnvironment.hasSynchronizationConfiguration) {
+    return buildProductionApplication(
+      secureStorage: storage,
+      identifiers: identifierGenerator,
+      clock: applicationClock,
+      environment: configuredEnvironment,
+      repositoryBootstrap: repositoryBootstrap,
+    );
+  }
+  final localCopy = _DeferredLocalDeviceCopyController();
+  final identity = PasswordlessIdentityService(
+    gateway:
+        identityGateway ??
+        SupabasePasswordlessIdentityGateway(
+          projectUri: configuredEnvironment.synchronizationProjectUri!,
+          publishableKey: configuredEnvironment.supabasePublishableKey,
+        ),
+    secureStorage: storage,
+    identifiers: identifierGenerator,
+    clock: applicationClock,
+    currentDevice: DeviceDescriptor(
+      name: _deviceName(),
+      platform: _devicePlatform(),
+    ),
+    localCopy: localCopy,
+  );
+  return _ProductionIdentityGate(
+    identity: identity,
+    secureStorage: storage,
+    identifiers: identifierGenerator,
+    clock: applicationClock,
+    environment: configuredEnvironment,
+    repositoryBootstrap: repositoryBootstrap,
+    initialSession: await identity.restoreForOfflineLaunch(),
+    localCopy: localCopy,
+    connectivitySource: connectivitySource,
+  );
+}
+
+final class _ProductionIdentityGate extends StatefulWidget {
+  const _ProductionIdentityGate({
+    required this.identity,
+    required this.secureStorage,
+    required this.identifiers,
+    required this.clock,
+    required this.environment,
+    required this.initialSession,
+    required this.localCopy,
+    required this.connectivitySource,
+    this.repositoryBootstrap,
+  });
+
+  final PasswordlessIdentityService identity;
+  final SecureStorage secureStorage;
+  final IdentifierGenerator identifiers;
+  final Clock clock;
+  final AppEnvironment environment;
+  final IdentitySession? initialSession;
+  final _DeferredLocalDeviceCopyController localCopy;
+  final ConnectivityStatusSource? connectivitySource;
+  final ProductionRepositoryBootstrap? repositoryBootstrap;
+
+  @override
+  State<_ProductionIdentityGate> createState() =>
+      _ProductionIdentityGateState();
+}
+
+final class _ProductionIdentityGateState
+    extends State<_ProductionIdentityGate> {
+  Future<ClinicalCalendarApp>? _application;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSession case final session?) _open(session);
+  }
+
+  void _open(IdentitySession session) {
+    _application = buildProductionApplication(
+      secureStorage: widget.secureStorage,
+      identifiers: widget.identifiers,
+      clock: widget.clock,
+      environment: widget.environment,
+      repositoryBootstrap: widget.repositoryBootstrap,
+      authenticatedStudentId: session.studentId,
+      accessTokenProvider: widget.identity.currentAccessToken,
+      onSuccessfulSynchronization: () async {
+        await widget.identity.markSynchronized();
+      },
+      onLocalCopyControllerReady: widget.localCopy.attach,
+      connectivitySource: widget.connectivitySource,
+      identity: widget.identity,
+      identityEmail: session.email,
+      onLocalCopyRemoved: _onLocalCopyRemoved,
+    );
+  }
+
+  Future<void> _onLocalCopyRemoved() async {
+    if (!mounted) return;
+    setState(() => _application = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final application = _application;
+    if (application == null) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: PasswordlessSignInSurface(
+          identity: widget.identity,
+          onSignedIn: (session) async => setState(() => _open(session)),
+        ),
+      );
+    }
+    return FutureBuilder<ClinicalCalendarApp>(
+      future: application,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return const _StartupFailureApplication();
+        if (snapshot.data case final app?) return app;
+        return const MaterialApp(
+          home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        );
+      },
+    );
+  }
+}
+
+final class _DeferredLocalDeviceCopyController
+    implements LocalDeviceCopyController {
+  LocalDeviceCopyController? _delegate;
+
+  void attach(LocalDeviceCopyController controller) {
+    _delegate = controller;
+  }
+
+  LocalDeviceCopyController get _requiredDelegate =>
+      _delegate ?? (throw const IdentityException('local_copy_unavailable'));
+
+  @override
+  Future<LocalRemovalPreview> previewRemoval() =>
+      _requiredDelegate.previewRemoval();
+
+  @override
+  Future<void> removeLocalCopy() async {
+    await _requiredDelegate.removeLocalCopy();
+    _delegate = null;
+  }
+}
+
+Future<String> _bindAuthenticatedStudentOwner(
+  SecureStorage storage,
+  String authenticatedStudentId,
+) async {
+  final normalized = authenticatedStudentId.trim().toLowerCase();
+  final existing = await storage.read(StableStudentOwner.storageKey);
+  if (existing != null && existing.trim().toLowerCase() != normalized) {
+    throw StateError('The authenticated Student does not own this local copy.');
+  }
+  await storage.write(StableStudentOwner.storageKey, normalized);
+  return normalized;
+}
+
+DevicePlatform _devicePlatform() {
+  if (Platform.isWindows) return DevicePlatform.windows;
+  if (Platform.isIOS) return DevicePlatform.ios;
+  if (Platform.isAndroid) return DevicePlatform.android;
+  throw UnsupportedError(
+    'Clinical Calendar supports Windows, iOS, and Android.',
+  );
+}
+
+String _deviceName() {
+  final host = Platform.localHostname.trim();
+  if (host.isNotEmpty) return host;
+  return switch (_devicePlatform()) {
+    DevicePlatform.windows => 'Windows device',
+    DevicePlatform.ios => 'iPhone or iPad',
+    DevicePlatform.android => 'Android device',
+  };
 }
 
 Future<bool> _hasCurrentSynchronizationSession(

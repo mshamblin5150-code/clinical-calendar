@@ -5,6 +5,36 @@ import 'package:flutter/material.dart';
 import '../responsive_shell.dart';
 import '../variant_f_theme.dart';
 
+final class DeviceNotificationPreferences {
+  const DeviceNotificationPreferences({
+    required this.deliveryEnabled,
+    this.detailedPreview = false,
+    this.quietStartsAtHour = 21,
+    this.quietEndsAtHour = 7,
+  }) : assert(quietStartsAtHour >= 0 && quietStartsAtHour <= 23),
+       assert(quietEndsAtHour >= 0 && quietEndsAtHour <= 23);
+
+  final bool deliveryEnabled;
+  final bool detailedPreview;
+  final int quietStartsAtHour;
+  final int quietEndsAtHour;
+
+  DeviceNotificationPreferences copyWith({
+    bool? deliveryEnabled,
+    bool? detailedPreview,
+    int? quietStartsAtHour,
+    int? quietEndsAtHour,
+  }) => DeviceNotificationPreferences(
+    deliveryEnabled: deliveryEnabled ?? this.deliveryEnabled,
+    detailedPreview: detailedPreview ?? this.detailedPreview,
+    quietStartsAtHour: quietStartsAtHour ?? this.quietStartsAtHour,
+    quietEndsAtHour: quietEndsAtHour ?? this.quietEndsAtHour,
+  );
+}
+
+typedef SaveDeviceNotificationPreferences =
+    Future<void> Function(DeviceNotificationPreferences preferences);
+
 final class ClinicalTemplateDefaultOption {
   const ClinicalTemplateDefaultOption({
     required this.clinicalPlacementId,
@@ -28,8 +58,14 @@ final class SettingsTemplatesSurface extends StatefulWidget {
     required this.onSaveTemplate,
     required this.onRemoveTemplate,
     this.clinicalDefaults = const [],
+    this.deviceNotifications,
+    this.onSaveDeviceNotifications,
     super.key,
-  });
+  }) : assert(
+         (deviceNotifications == null) == (onSaveDeviceNotifications == null),
+         'Device notification preferences and save callback must be provided '
+         'together.',
+       );
 
   final StudentSettings settings;
   final List<ScheduleTemplate> scheduleTemplates;
@@ -38,6 +74,8 @@ final class SettingsTemplatesSurface extends StatefulWidget {
   final Future<void> Function(ScheduleTemplate template) onSaveTemplate;
   final Future<void> Function(String templateId) onRemoveTemplate;
   final List<ClinicalTemplateDefaultOption> clinicalDefaults;
+  final DeviceNotificationPreferences? deviceNotifications;
+  final SaveDeviceNotificationPreferences? onSaveDeviceNotifications;
 
   @override
   State<SettingsTemplatesSurface> createState() =>
@@ -51,6 +89,7 @@ final class _SettingsTemplatesSurfaceState
   late String _themeId;
   late SynchronizationPreference _synchronization;
   late NotificationPreferences _notifications;
+  DeviceNotificationPreferences? _deviceNotifications;
   late List<_TemplateDraft> _templates;
   final Set<String> _removedTemplateIds = {};
   bool _saving = false;
@@ -64,6 +103,7 @@ final class _SettingsTemplatesSurfaceState
     _themeId = settings.themeId;
     _synchronization = settings.synchronization;
     _notifications = settings.notifications;
+    _deviceNotifications = widget.deviceNotifications;
     _templates = widget.scheduleTemplates
         .map(_TemplateDraft.fromTemplate)
         .toList(growable: true);
@@ -84,6 +124,10 @@ final class _SettingsTemplatesSurfaceState
           notifications: _notifications,
         ),
       );
+      final deviceNotifications = _deviceNotifications;
+      if (deviceNotifications != null) {
+        await widget.onSaveDeviceNotifications!(deviceNotifications);
+      }
       for (final templateId in _removedTemplateIds) {
         await widget.onRemoveTemplate(templateId);
       }
@@ -221,19 +265,64 @@ final class _SettingsTemplatesSurfaceState
             Material(
               color: Colors.transparent,
               child: SwitchListTile(
-                key: const Key('upcoming-notifications-setting'),
+                key: const Key('work-shift-notifications-setting'),
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Upcoming commitment reminders'),
-                value: _notifications.upcomingCommitmentsEnabled,
+                title: const Text('Work Shift reminders'),
+                value: _notifications.upcomingWorkShiftsEnabled,
                 onChanged: (value) => setState(
-                  () => _notifications = NotificationPreferences(
-                    upcomingCommitmentsEnabled: value,
-                    weeklySummaryEnabled: _notifications.weeklySummaryEnabled,
-                    backupRemindersEnabled:
-                        _notifications.backupRemindersEnabled,
+                  () => _notifications = _notifications.copyWith(
+                    upcomingWorkShiftsEnabled: value,
                   ),
                 ),
               ),
+            ),
+            Material(
+              color: Colors.transparent,
+              child: SwitchListTile(
+                key: const Key('clinical-session-notifications-setting'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Clinical Session reminders'),
+                value: _notifications.upcomingClinicalSessionsEnabled,
+                onChanged: (value) => setState(
+                  () => _notifications = _notifications.copyWith(
+                    upcomingClinicalSessionsEnabled: value,
+                  ),
+                ),
+              ),
+            ),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _minutesField(
+                  key: const Key('work-shift-first-lead-setting'),
+                  label: 'Work Shift first lead (minutes)',
+                  value: _notifications.workShiftFirstLeadMinutes,
+                  onChanged: (value) => _notifications = _notifications
+                      .copyWith(workShiftFirstLeadMinutes: value),
+                ),
+                _minutesField(
+                  key: const Key('work-shift-second-lead-setting'),
+                  label: 'Work Shift second lead (minutes)',
+                  value: _notifications.workShiftSecondLeadMinutes,
+                  onChanged: (value) => _notifications = _notifications
+                      .copyWith(workShiftSecondLeadMinutes: value),
+                ),
+                _minutesField(
+                  key: const Key('clinical-session-first-lead-setting'),
+                  label: 'Clinical Session first lead (minutes)',
+                  value: _notifications.clinicalSessionFirstLeadMinutes,
+                  onChanged: (value) => _notifications = _notifications
+                      .copyWith(clinicalSessionFirstLeadMinutes: value),
+                ),
+                _minutesField(
+                  key: const Key('clinical-session-second-lead-setting'),
+                  label: 'Clinical Session second lead (minutes)',
+                  value: _notifications.clinicalSessionSecondLeadMinutes,
+                  onChanged: (value) => _notifications = _notifications
+                      .copyWith(clinicalSessionSecondLeadMinutes: value),
+                ),
+              ],
             ),
             Material(
               color: Colors.transparent,
@@ -243,15 +332,67 @@ final class _SettingsTemplatesSurfaceState
                 title: const Text('Weekly summary'),
                 value: _notifications.weeklySummaryEnabled,
                 onChanged: (value) => setState(
-                  () => _notifications = NotificationPreferences(
-                    upcomingCommitmentsEnabled:
-                        _notifications.upcomingCommitmentsEnabled,
+                  () => _notifications = _notifications.copyWith(
                     weeklySummaryEnabled: value,
-                    backupRemindersEnabled:
-                        _notifications.backupRemindersEnabled,
                   ),
                 ),
               ),
+            ),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _field(
+                  DropdownButtonFormField<int>(
+                    key: const Key('weekly-summary-weekday-setting'),
+                    isExpanded: true,
+                    initialValue: _notifications.weeklySummaryWeekday,
+                    decoration: const InputDecoration(labelText: 'Summary day'),
+                    items: const [
+                      DropdownMenuItem(
+                        value: DateTime.monday,
+                        child: Text('Monday'),
+                      ),
+                      DropdownMenuItem(
+                        value: DateTime.tuesday,
+                        child: Text('Tuesday'),
+                      ),
+                      DropdownMenuItem(
+                        value: DateTime.wednesday,
+                        child: Text('Wednesday'),
+                      ),
+                      DropdownMenuItem(
+                        value: DateTime.thursday,
+                        child: Text('Thursday'),
+                      ),
+                      DropdownMenuItem(
+                        value: DateTime.friday,
+                        child: Text('Friday'),
+                      ),
+                      DropdownMenuItem(
+                        value: DateTime.saturday,
+                        child: Text('Saturday'),
+                      ),
+                      DropdownMenuItem(
+                        value: DateTime.sunday,
+                        child: Text('Sunday'),
+                      ),
+                    ],
+                    onChanged: (value) => setState(
+                      () => _notifications = _notifications.copyWith(
+                        weeklySummaryWeekday: value!,
+                      ),
+                    ),
+                  ),
+                ),
+                _hourField(
+                  key: const Key('weekly-summary-hour-setting'),
+                  label: 'Summary time',
+                  value: _notifications.weeklySummaryHour,
+                  onChanged: (value) => _notifications = _notifications
+                      .copyWith(weeklySummaryHour: value),
+                ),
+              ],
             ),
             Material(
               color: Colors.transparent,
@@ -261,15 +402,90 @@ final class _SettingsTemplatesSurfaceState
                 title: const Text('Portable backup reminders'),
                 value: _notifications.backupRemindersEnabled,
                 onChanged: (value) => setState(
-                  () => _notifications = NotificationPreferences(
-                    upcomingCommitmentsEnabled:
-                        _notifications.upcomingCommitmentsEnabled,
-                    weeklySummaryEnabled: _notifications.weeklySummaryEnabled,
+                  () => _notifications = _notifications.copyWith(
                     backupRemindersEnabled: value,
                   ),
                 ),
               ),
             ),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _minutesField(
+                  key: const Key('no-backup-reminder-days-setting'),
+                  label: 'First backup reminder (days)',
+                  value: _notifications.noBackupReminderDays,
+                  onChanged: (value) => _notifications = _notifications
+                      .copyWith(noBackupReminderDays: value),
+                ),
+                _minutesField(
+                  key: const Key('stale-backup-reminder-days-setting'),
+                  label: 'Stale backup reminder (days)',
+                  value: _notifications.staleBackupReminderDays,
+                  onChanged: (value) => _notifications = _notifications
+                      .copyWith(staleBackupReminderDays: value),
+                ),
+              ],
+            ),
+            if (_deviceNotifications case final device?) ...[
+              const SizedBox(height: 12),
+              Text(
+                'THIS DEVICE',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Material(
+                color: Colors.transparent,
+                child: SwitchListTile(
+                  key: const Key('device-notification-delivery-setting'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('System notification delivery'),
+                  value: device.deliveryEnabled,
+                  onChanged: (value) => setState(
+                    () => _deviceNotifications = device.copyWith(
+                      deliveryEnabled: value,
+                    ),
+                  ),
+                ),
+              ),
+              Material(
+                color: Colors.transparent,
+                child: SwitchListTile(
+                  key: const Key('device-detailed-preview-setting'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Detailed lock-screen previews'),
+                  subtitle: const Text(
+                    'May include Clinical Placement details on this device.',
+                  ),
+                  value: device.detailedPreview,
+                  onChanged: (value) => setState(
+                    () => _deviceNotifications = device.copyWith(
+                      detailedPreview: value,
+                    ),
+                  ),
+                ),
+              ),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _hourField(
+                    key: const Key('device-quiet-start-setting'),
+                    label: 'Quiet hours start',
+                    value: device.quietStartsAtHour,
+                    onChanged: (value) => _deviceNotifications = device
+                        .copyWith(quietStartsAtHour: value),
+                  ),
+                  _hourField(
+                    key: const Key('device-quiet-end-setting'),
+                    label: 'Quiet hours end',
+                    value: device.quietEndsAtHour,
+                    onChanged: (value) => _deviceNotifications = device
+                        .copyWith(quietEndsAtHour: value),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -317,6 +533,49 @@ final class _SettingsTemplatesSurfaceState
   );
 
   Widget _field(Widget child) => SizedBox(width: 230, child: child);
+
+  Widget _minutesField({
+    required Key key,
+    required String label,
+    required int value,
+    required ValueChanged<int> onChanged,
+  }) => _field(
+    TextFormField(
+      key: key,
+      initialValue: '$value',
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(labelText: label),
+      onChanged: (text) {
+        final parsed = int.tryParse(text);
+        if (parsed != null && parsed > 0) setState(() => onChanged(parsed));
+      },
+    ),
+  );
+
+  Widget _hourField({
+    required Key key,
+    required String label,
+    required int value,
+    required ValueChanged<int> onChanged,
+  }) => _field(
+    DropdownButtonFormField<int>(
+      key: key,
+      isExpanded: true,
+      initialValue: value,
+      decoration: InputDecoration(labelText: label),
+      items: [
+        for (var hour = 0; hour < 24; hour++)
+          DropdownMenuItem(value: hour, child: Text(_hourLabel(hour))),
+      ],
+      onChanged: (next) => setState(() => onChanged(next!)),
+    ),
+  );
+}
+
+String _hourLabel(int hour) {
+  final suffix = hour < 12 ? 'AM' : 'PM';
+  final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+  return '$displayHour:00 $suffix';
 }
 
 final class _TemplateEditor extends StatelessWidget {

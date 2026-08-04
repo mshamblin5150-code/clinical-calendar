@@ -17,6 +17,10 @@ insert into auth.users (
 
 set local role authenticated;
 set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000001';
+set local request.jwt.claim.session_id = '15000000-0000-4000-8000-000000000001';
+select public.register_current_device(
+  '16000000-0000-4000-8000-000000000001', 'Test Windows device', 'windows'
+);
 
 select ok(
   (public.apply_sync_operation(
@@ -77,6 +81,7 @@ select is(
   'a stale base revision is rejected'
 );
 
+reset role;
 select is(
   (select count(*) from clinical_calendar_sync.records
     where student_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid),
@@ -89,6 +94,7 @@ select is(
   1::bigint,
   'a rejected mutation writes no change event'
 );
+set local role authenticated;
 
 select is(
   public.apply_sync_operation(
@@ -277,10 +283,15 @@ select is(
 );
 
 set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000002';
-select is(
-  (select count(*) from clinical_calendar_sync.records),
-  0::bigint,
-  'RLS hides another Student records'
+set local request.jwt.claim.session_id = '15000000-0000-4000-8000-000000000002';
+select public.register_current_device(
+  '16000000-0000-4000-8000-000000000002', 'Test Android device', 'android'
+);
+select throws_ok(
+  $$ select count(*) from clinical_calendar_sync.records $$,
+  '42501',
+  'permission denied for table records',
+  'authenticated clients cannot directly read private records'
 );
 select is(
   (select count(*) from public.pull_changes_after(0, 100)),
@@ -305,12 +316,14 @@ select is(
   'a globally owned entity identity cannot be claimed by another Student'
 );
 
+reset role;
 select is(
   (select count(*) from clinical_calendar_sync.operation_receipts
    where result is null),
   0::bigint,
   'every persisted operation receipt has a durable result'
 );
+set local role authenticated;
 
 select ok(
   (select relrowsecurity and relforcerowsecurity

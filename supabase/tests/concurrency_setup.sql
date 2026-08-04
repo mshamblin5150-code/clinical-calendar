@@ -14,6 +14,10 @@ insert into auth.users (
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000001';
+set local request.jwt.claim.session_id = '15000000-0000-4000-8000-000000000010';
+select public.register_current_device(
+  '16000000-0000-4000-8000-000000000010', 'Concurrency device', 'windows'
+);
 select public.apply_sync_operation(
   '20000000-0000-4000-8000-000000000001',
   'preceptor', '30000000-0000-4000-8000-000000000001', 'upsert', 0,

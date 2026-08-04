@@ -115,16 +115,23 @@ void main() {
 
       expect(find.textContaining('4 hours automatically'), findsOneWidget);
       expect(find.text('Family Medicine / Jordan Lee'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('weekly-summary-setting')));
       final settingsScrollable = find.descendant(
         of: find.byKey(const Key('settings-templates-surface')),
         matching: find.byType(Scrollable),
       );
+      await _bringIntoView(
+        tester,
+        find.byKey(const Key('weekly-summary-setting')),
+        settingsScrollable.first,
+      );
+      await tester.tap(find.byKey(const Key('weekly-summary-setting')));
       await tester.scrollUntilVisible(
         find.byKey(const Key('add-template-action')),
         300,
         scrollable: settingsScrollable.first,
       );
+      await tester.ensureVisible(find.byKey(const Key('add-template-action')));
+      await tester.pump();
       await tester.tap(find.byKey(const Key('add-template-action')));
       await tester.pump();
       await tester.scrollUntilVisible(
@@ -132,6 +139,8 @@ void main() {
         300,
         scrollable: settingsScrollable.first,
       );
+      await tester.ensureVisible(find.byKey(const Key('template-start-1')));
+      await tester.pump();
       await tester.enterText(
         find.byKey(const Key('template-start-1')),
         '19:00',
@@ -145,6 +154,10 @@ void main() {
         300,
         scrollable: settingsScrollable.first,
       );
+      await tester.ensureVisible(
+        find.byKey(const Key('save-settings-templates-action')),
+      );
+      await tester.pump();
       await tester.tap(find.byKey(const Key('save-settings-templates-action')));
       await tester.pumpAndSettle();
       expect(savedSettings, isNotNull);
@@ -156,6 +169,160 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'Settings persists reminder defaults and this-device preferences',
+    (tester) async {
+      StudentSettings? savedSettings;
+      DeviceNotificationPreferences? savedDeviceNotifications;
+      final initialNotifications = const NotificationPreferences(
+        upcomingWorkShiftsEnabled: true,
+        upcomingClinicalSessionsEnabled: false,
+        confirmationFirstDelayMinutes: 45,
+        evaluationRepeatDays: 5,
+      );
+      await _pump(
+        tester,
+        SettingsTemplatesSurface(
+          settings: StudentSettings(notifications: initialNotifications),
+          scheduleTemplates: const [],
+          deviceNotifications: const DeviceNotificationPreferences(
+            deliveryEnabled: false,
+          ),
+          newTemplateId: () => _id(30),
+          onSaveSettings: (settings) async => savedSettings = settings,
+          onSaveDeviceNotifications: (preferences) async =>
+              savedDeviceNotifications = preferences,
+          onSaveTemplate: (_) async {},
+          onRemoveTemplate: (_) async {},
+        ),
+        size: const Size(768, 1024),
+      );
+
+      final scrollable = find.descendant(
+        of: find.byKey(const Key('settings-templates-surface')),
+        matching: find.byType(Scrollable),
+      );
+
+      await tester.tap(
+        find.byKey(const Key('work-shift-notifications-setting')),
+      );
+      await tester.enterText(
+        find.byKey(const Key('work-shift-first-lead-setting')),
+        '720',
+      );
+      await _bringIntoView(
+        tester,
+        find.byKey(const Key('weekly-summary-weekday-setting')),
+        scrollable.first,
+      );
+      await tester.tap(find.byKey(const Key('weekly-summary-weekday-setting')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Monday').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('weekly-summary-hour-setting')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('5:00 PM').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('no-backup-reminder-days-setting')),
+        '10',
+      );
+      await tester.enterText(
+        find.byKey(const Key('stale-backup-reminder-days-setting')),
+        '45',
+      );
+      await _bringIntoView(
+        tester,
+        find.byKey(const Key('device-notification-delivery-setting')),
+        scrollable.first,
+      );
+      await tester.tap(
+        find.byKey(const Key('device-notification-delivery-setting')),
+      );
+      await _bringIntoView(
+        tester,
+        find.byKey(const Key('device-detailed-preview-setting')),
+        scrollable.first,
+      );
+      await tester.tap(
+        find.byKey(const Key('device-detailed-preview-setting')),
+      );
+      await _bringIntoView(
+        tester,
+        find.byKey(const Key('device-quiet-start-setting')),
+        scrollable.first,
+      );
+      await tester.tap(find.byKey(const Key('device-quiet-start-setting')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('10:00 PM').last);
+      await tester.pumpAndSettle();
+
+      await _bringIntoView(
+        tester,
+        find.byKey(const Key('save-settings-templates-action')),
+        scrollable.first,
+      );
+      await tester.tap(find.byKey(const Key('save-settings-templates-action')));
+      await tester.pumpAndSettle();
+
+      expect(savedSettings, isNotNull);
+      expect(savedSettings!.notifications.upcomingWorkShiftsEnabled, isFalse);
+      expect(
+        savedSettings!.notifications.upcomingClinicalSessionsEnabled,
+        isFalse,
+      );
+      expect(savedSettings!.notifications.workShiftFirstLeadMinutes, 720);
+      expect(
+        savedSettings!.notifications.weeklySummaryWeekday,
+        DateTime.monday,
+      );
+      expect(savedSettings!.notifications.weeklySummaryHour, 17);
+      expect(savedSettings!.notifications.noBackupReminderDays, 10);
+      expect(savedSettings!.notifications.staleBackupReminderDays, 45);
+      expect(savedSettings!.notifications.confirmationFirstDelayMinutes, 45);
+      expect(savedSettings!.notifications.evaluationRepeatDays, 5);
+      expect(savedDeviceNotifications, isNotNull);
+      expect(savedDeviceNotifications!.deliveryEnabled, isTrue);
+      expect(savedDeviceNotifications!.detailedPreview, isTrue);
+      expect(savedDeviceNotifications!.quietStartsAtHour, 22);
+      expect(savedDeviceNotifications!.quietEndsAtHour, 7);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Settings notification controls do not overflow at 320px', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      SettingsTemplatesSurface(
+        settings: StudentSettings(),
+        scheduleTemplates: const [],
+        deviceNotifications: const DeviceNotificationPreferences(
+          deliveryEnabled: true,
+        ),
+        newTemplateId: () => _id(31),
+        onSaveSettings: (_) async {},
+        onSaveDeviceNotifications: (_) async {},
+        onSaveTemplate: (_) async {},
+        onRemoveTemplate: (_) async {},
+      ),
+      size: const Size(320, 700),
+    );
+
+    final scrollable = find.descendant(
+      of: find.byKey(const Key('settings-templates-surface')),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('save-settings-templates-action')),
+      300,
+      scrollable: scrollable.first,
+    );
+    expect(find.byKey(const Key('device-quiet-end-setting')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('Help keeps shared workflows separate from theme fallback', (
     tester,
@@ -197,6 +364,16 @@ Future<void> _pump(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+Future<void> _bringIntoView(
+  WidgetTester tester,
+  Finder target,
+  Finder scrollable,
+) async {
+  await tester.scrollUntilVisible(target, 250, scrollable: scrollable);
+  await tester.ensureVisible(target);
+  await tester.pump();
 }
 
 String _id(int value) =>

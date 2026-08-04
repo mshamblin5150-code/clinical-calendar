@@ -120,6 +120,34 @@ void main() {
       ),
     );
   });
+
+  test(
+    'revoked device rejection is an auth failure and keeps the outbox pending',
+    () async {
+      final transport = _transport(
+        MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'accepted': false,
+              'rejection': {'code': 'revoked_device'},
+            }),
+            200,
+          ),
+        ),
+      );
+
+      await expectLater(
+        transport.push(_operation()),
+        throwsA(
+          isA<SynchronizationTransportException>().having(
+            (error) => error.code,
+            'code',
+            'unauthenticated',
+          ),
+        ),
+      );
+    },
+  );
 }
 
 SupabaseRpcSynchronizationTransport _transport(http.Client client) =>

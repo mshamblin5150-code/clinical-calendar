@@ -12,13 +12,17 @@ final class SupabaseRpcSynchronizationTransport
     required this._projectUri,
     required String publishableKey,
     required this._accessTokenProvider,
+    Future<void> Function()? onSuccessfulServerAccess,
     http.Client? client,
   }) : _publishableKey = _required(publishableKey, 'publishableKey'),
+       // ignore: prefer_initializing_formals, preserves the public name.
+       _onSuccessfulServerAccess = onSuccessfulServerAccess,
        _client = client ?? http.Client();
 
   final Uri _projectUri;
   final String _publishableKey;
   final SynchronizationAccessTokenProvider _accessTokenProvider;
+  final Future<void> Function()? _onSuccessfulServerAccess;
   final http.Client _client;
 
   @override
@@ -55,6 +59,12 @@ final class SupabaseRpcSynchronizationTransport
     if (rejection is! Map<String, dynamic> || rejection['code'] is! String) {
       throw const SynchronizationTransportException(
         'invalid_push_response',
+        offline: false,
+      );
+    }
+    if (rejection['code'] == 'revoked_device') {
+      throw const SynchronizationTransportException(
+        'unauthenticated',
         offline: false,
       );
     }
@@ -162,7 +172,13 @@ final class SupabaseRpcSynchronizationTransport
       );
     }
     try {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      try {
+        await _onSuccessfulServerAccess?.call();
+      } on Object {
+        // Last-sync display is best effort and cannot invalidate durable sync.
+      }
+      return decoded;
     } on Object catch (error) {
       throw SynchronizationTransportException(
         'invalid_rpc_response',

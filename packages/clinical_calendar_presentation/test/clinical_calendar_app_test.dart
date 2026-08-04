@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
@@ -113,6 +116,32 @@ void main() {
     await tester.tap(find.byKey(const Key('back-action')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('application-menu')), findsOneWidget);
+  });
+
+  testWidgets('notification body tap opens the exact summary workflow', (
+    tester,
+  ) async {
+    final interactions = StreamController<NotificationInteraction>.broadcast();
+    addTearDown(interactions.close);
+    await _pumpAt(
+      tester,
+      const Size(1024, 768),
+      notificationInteractions: interactions.stream,
+    );
+
+    interactions.add(
+      const NotificationInteraction(
+        occurrenceKey: 'weekly:occurrence',
+        synchronizationKey: 'weekly',
+        route: ReminderWorkflowRoutes.summary,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('notification-center-surface')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('direct Help entry uses Close', (tester) async {
@@ -359,6 +388,46 @@ void main() {
     expect(find.byKey(const Key('contextual-back-action')), findsOneWidget);
   });
 
+  testWidgets(
+    'synchronization conflict opens resolution and preserves originals',
+    (tester) async {
+      final repositories = _Repositories(
+        seedSynchronization: true,
+        seedConflict: true,
+      );
+      await _pumpAt(
+        tester,
+        const Size(390, 844),
+        dependencies: _dependencies(repositories: repositories),
+      );
+
+      await tester.tap(find.text('Settings').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Notifications'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Synchronization needs attention'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('synchronization-conflict-resolution-surface')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('This device version'), findsOneWidget);
+      expect(find.textContaining('Other device version'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('choose-local-conflict-version')));
+      await tester.pumpAndSettle();
+      expect(find.text('No Sync Conflicts need attention.'), findsOneWidget);
+      expect(repositories.synchronization.originalsPreserved, isTrue);
+
+      await tester.tap(find.byKey(const Key('contextual-back-action')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('notification-center-surface')),
+        findsOneWidget,
+      );
+    },
+  );
+
   test('theme Help registry supplies a safe unknown-theme fallback', () {
     final guide = ThemeHelpGuideRegistry.standard().resolve('future-theme');
 
@@ -399,6 +468,7 @@ Future<void> _pumpAt(
   WidgetTester tester,
   Size size, {
   ApplicationDependencies? dependencies,
+  Stream<NotificationInteraction>? notificationInteractions,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -407,6 +477,7 @@ Future<void> _pumpAt(
       dependencies: dependencies ?? _dependencies(),
       environmentName: 'test',
       studentId: studentId,
+      notificationInteractions: notificationInteractions,
     ),
   );
   await tester.pumpAndSettle();
@@ -424,13 +495,21 @@ ApplicationDependencies _dependencies({_Repositories? repositories}) =>
     );
 
 final class _Repositories implements RepositoryRegistry {
-  _Repositories({bool seedLifecycle = false, bool seedSynchronization = false})
-    : repositories = _ReadRepositories(
-        seedLifecycle: seedLifecycle,
-        seedSynchronization: seedSynchronization,
-      );
+  _Repositories({
+    bool seedLifecycle = false,
+    bool seedSynchronization = false,
+    bool seedConflict = false,
+  }) {
+    synchronization = _ConflictSynchronizationRepository(seedConflict);
+    repositories = _ReadRepositories(
+      seedLifecycle: seedLifecycle,
+      seedSynchronization: seedSynchronization,
+      synchronization: synchronization,
+    );
+  }
 
-  final _ReadRepositories repositories;
+  late final _ReadRepositories repositories;
+  late final _ConflictSynchronizationRepository synchronization;
 
   @override
   Future<void> initialize() async {}
@@ -443,13 +522,17 @@ final class _Repositories implements RepositoryRegistry {
   @override
   Future<R> mutate<R>(
     R Function(LocalWriteRepositories repositories) callback,
-  ) async => throw UnimplementedError();
+  ) async => callback(_ConflictWriteRepositories(synchronization));
 }
 
-final class _ReadRepositories implements SupportLocalReadRepositories {
+final class _ReadRepositories
+    implements
+        SupportLocalReadRepositories,
+        SynchronizationLocalReadRepositories {
   _ReadRepositories({
     required bool seedLifecycle,
     required bool seedSynchronization,
+    required this.synchronization,
   }) : _workShifts = _EmptyReadRepository(),
        _clinicalSessions = seedLifecycle
            ? _StaticReadRepository([_sessionRecord()], (value) => value.id)
@@ -479,6 +562,9 @@ final class _ReadRepositories implements SupportLocalReadRepositories {
   final _EmptyReadRepository<HistoricalHoursEntry> _historicalHoursEntries =
       _EmptyReadRepository();
   final ReadRepository<EvaluationPlan> _evaluationPlans;
+
+  @override
+  final SynchronizationLocalRepository synchronization;
 
   @override
   ReadRepository<WorkShift> get workShifts => _workShifts;
@@ -521,6 +607,142 @@ final class _ReadRepositories implements SupportLocalReadRepositories {
 
   @override
   StudentSettingsReadRepository get studentSettings => const _SettingsRead();
+}
+
+final class _ConflictWriteRepositories
+    implements SynchronizationLocalWriteRepositories {
+  _ConflictWriteRepositories(this.synchronization);
+
+  @override
+  final SynchronizationLocalRepository synchronization;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+final class _ConflictSynchronizationRepository
+    implements SynchronizationLocalRepository {
+  _ConflictSynchronizationRepository(bool seeded)
+    : _record = seeded ? _conflictRecord() : null,
+      originalLocal = seeded ? _conflictRecord().localSnapshotJson : null,
+      originalRemote = seeded ? _conflictRecord().remoteSnapshotJson : null;
+
+  SynchronizationConflictRecord? _record;
+  final String? originalLocal;
+  final String? originalRemote;
+
+  bool get originalsPreserved =>
+      _record?.localSnapshotJson == originalLocal &&
+      _record?.remoteSnapshotJson == originalRemote;
+
+  @override
+  SynchronizationHealthSnapshot inspect({
+    required String studentId,
+    required String remoteScope,
+  }) => SynchronizationHealthSnapshot(
+    disposition: _record != null && !_record!.isResolved
+        ? SynchronizationHealthDisposition.conflictNeedsAttention
+        : SynchronizationHealthDisposition.synced,
+    pendingCount: 0,
+    unresolvedConflictCount: _record != null && !_record!.isResolved ? 1 : 0,
+  );
+
+  @override
+  List<SynchronizationConflictRecord> listConflicts({
+    required String studentId,
+    bool includeResolved = false,
+  }) {
+    final record = _record;
+    if (record == null || (record.isResolved && !includeResolved)) return [];
+    return [record];
+  }
+
+  @override
+  SynchronizationConflictRecord? findConflict({
+    required String studentId,
+    required String conflictId,
+  }) => _record?.id == conflictId ? _record : null;
+
+  @override
+  SynchronizationConflictResolutionReceipt resolveConflict({
+    required String studentId,
+    required String conflictId,
+    required SynchronizationConflictResolutionChoice choice,
+    String? correctedValueJson,
+    required MutationToken mutation,
+  }) {
+    final record = _record!;
+    _record = SynchronizationConflictRecord(
+      id: record.id,
+      studentId: record.studentId,
+      entityType: record.entityType,
+      entityId: record.entityId,
+      localRevision: record.localRevision,
+      remoteRevision: record.remoteRevision,
+      localSnapshotJson: record.localSnapshotJson,
+      remoteSnapshotJson: record.remoteSnapshotJson,
+      rejectionCode: record.rejectionCode,
+      rejectionJson: record.rejectionJson,
+      detectedAtUtc: record.detectedAtUtc,
+      affectedRecords: record.affectedRecords,
+      resolvedAtUtc: mutation.occurredAtUtc,
+      resolutionJson: jsonEncode({'choice': choice.name}),
+    );
+    return SynchronizationConflictResolutionReceipt(
+      conflict: _record!,
+      operation: OutboxOperation(
+        mutation: mutation,
+        studentId: studentId,
+        entityType: record.entityType,
+        entityId: record.entityId,
+        type: OutboxOperationType.resolveConflict,
+        baseRevision: record.remoteRevision,
+        payloadJson:
+            choice == SynchronizationConflictResolutionChoice.remoteVersion
+            ? record.remoteSnapshotJson
+            : record.localSnapshotJson,
+      ),
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+SynchronizationConflictRecord _conflictRecord() {
+  const entityId = '90000000-0000-4000-8000-000000000001';
+  const conflictId = '90000000-0000-4000-8000-000000000002';
+  String envelope(String name) => jsonEncode({
+    'schema_version': 1,
+    'entity_type': 'preceptor',
+    'entity_id': entityId,
+    'student_id': studentId,
+    'revision': 2,
+    'created_at_utc': DateTime.utc(2026).toIso8601String(),
+    'updated_at_utc': DateTime.utc(2026).toIso8601String(),
+    'deleted_at_utc': null,
+    'value': {'name': name},
+  });
+
+  return SynchronizationConflictRecord(
+    id: conflictId,
+    studentId: studentId,
+    entityType: 'preceptor',
+    entityId: entityId,
+    localRevision: 2,
+    remoteRevision: 2,
+    localSnapshotJson: envelope('This device version'),
+    remoteSnapshotJson: envelope('Other device version'),
+    rejectionCode: 'stale_revision',
+    rejectionJson: '{"code":"stale_revision"}',
+    detectedAtUtc: DateTime.utc(2026),
+    affectedRecords: [
+      SynchronizationConflictEntityReference(
+        entityType: 'preceptor',
+        entityId: entityId,
+      ),
+    ],
+  );
 }
 
 final class _EmptyReadRepository<T> implements ReadRepository<T> {
@@ -718,8 +940,11 @@ final class _Clock implements Clock {
 }
 
 final class _Identifiers implements IdentifierGenerator {
+  int _next = 1;
+
   @override
-  String nextIdentifier() => 'test';
+  String nextIdentifier() =>
+      '91000000-0000-4000-8000-${(_next++).toString().padLeft(12, '0')}';
 }
 
 final class _Synchronization implements SynchronizationService {

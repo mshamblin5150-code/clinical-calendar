@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
+// ignore: implementation_imports
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 
 import '../backup/portable_backup_crypto.dart';
@@ -35,9 +36,16 @@ final class SqliteRepositoryRegistry implements RepositoryRegistry {
   final IdentifierGenerator _identifierGenerator;
   Future<void> _tail = Future<void>.value();
   bool _initialized = false;
+  bool _closed = false;
 
   @override
   Future<void> initialize() => _enqueue(() {
+    if (_closed) {
+      throw const RepositoryException(
+        RepositoryFailureKind.closed,
+        'The local repository database is closed.',
+      );
+    }
     if (_initialized) return;
     final now = _utc(DateTime.now().toUtc());
     _database.execute(
@@ -97,6 +105,39 @@ final class SqliteRepositoryRegistry implements RepositoryRegistry {
     );
   });
 
+  /// Counts every local mutation that has not been acknowledged by the
+  /// synchronization service, including delayed retries and conflicts that
+  /// still require the Student's attention.
+  Future<({int count, DateTime? oldestAtUtc})> localRemovalPreview() =>
+      _enqueue(() {
+        _requireInitialized();
+        final row = _database
+            .select(
+              '''SELECT count(*) AS pending_count,
+                    min(created_at_utc) AS oldest_at_utc
+             FROM outbox_operations
+             WHERE student_id = ? AND acknowledged_at_utc IS NULL''',
+              [studentId],
+            )
+            .single;
+        final oldest = row['oldest_at_utc'] as String?;
+        return (
+          count: row['pending_count'] as int,
+          oldestAtUtc: oldest == null ? null : DateTime.parse(oldest).toUtc(),
+        );
+      });
+
+  String get databasePath => _database.path;
+
+  /// Waits behind all repository work, then closes the SQLCipher connection.
+  /// The registry cannot be reused after this succeeds.
+  Future<void> close() => _enqueue(() async {
+    if (_closed) return;
+    _initialized = false;
+    await _database.close();
+    _closed = true;
+  });
+
   Future<R> _enqueue<R>(FutureOr<R> Function() action) {
     final completer = Completer<R>();
     _tail = _tail.then((_) async {
@@ -121,6 +162,12 @@ final class SqliteRepositoryRegistry implements RepositoryRegistry {
   }
 
   void _requireInitialized() {
+    if (_closed) {
+      throw const RepositoryException(
+        RepositoryFailureKind.closed,
+        'The local repository database is closed.',
+      );
+    }
     if (!_initialized) {
       throw const RepositoryException(
         RepositoryFailureKind.uninitialized,
@@ -343,6 +390,7 @@ Map<String, Object?> _restorePayloadValue(
 final class _Repositories
     implements
         SupportLocalWriteRepositories,
+        ReminderLocalWriteRepositories,
         SynchronizationLocalWriteRepositories {
   _Repositories(this.registry, {required this.writable});
 
@@ -428,6 +476,15 @@ final class _Repositories
   late final studentProfile = _StudentProfileRepository(this);
   @override
   late final studentSettings = _StudentSettingsRepository(this);
+  @override
+  late final reminderStates = _EntityRepository<ReminderState>(
+    this,
+    table: 'reminder_state',
+    entityType: 'reminder_state',
+    idOf: (value) => value.id,
+    encode: _encodeReminderState,
+    decode: _decodeReminderState,
+  );
 
   void requireWritable() {
     requireActive();
@@ -1123,6 +1180,31 @@ Preceptor _decodePreceptor(Map<String, Object?> row) => Preceptor(
   phone: _nullableText(row, 'phone'),
   email: _nullableText(row, 'email'),
   schedulingNotes: _nullableText(row, 'scheduling_notes'),
+);
+
+Map<String, Object?> _encodeReminderState(ReminderState value) => {
+  'reminder_type': value.kind.name,
+  'subject_entity_id': value.subjectEntityId,
+  'scheduled_for_utc': _utc(value.scheduledForUtc),
+  'snoozed_until_utc': value.snoozedUntilUtc == null
+      ? null
+      : _utc(value.snoozedUntilUtc!),
+  'resolved_at_utc': value.resolvedAtUtc == null
+      ? null
+      : _utc(value.resolvedAtUtc!),
+  'resolution_source': value.resolutionSource,
+  'occurrence_key': value.occurrenceKey,
+};
+
+ReminderState _decodeReminderState(Map<String, Object?> row) => ReminderState(
+  id: _identifier(_text(row, 'id')),
+  occurrenceKey: _text(row, 'occurrence_key'),
+  kind: ReminderKind.values.byName(_text(row, 'reminder_type')),
+  subjectEntityId: _text(row, 'subject_entity_id'),
+  scheduledForUtc: _dateTime(row, 'scheduled_for_utc'),
+  snoozedUntilUtc: _nullableDateTime(row, 'snoozed_until_utc'),
+  resolvedAtUtc: _nullableDateTime(row, 'resolved_at_utc'),
+  resolutionSource: _nullableText(row, 'resolution_source'),
 );
 
 Map<String, Object?> _encodeHistoricalHours(HistoricalHoursEntry value) => {

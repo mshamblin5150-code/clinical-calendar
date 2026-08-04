@@ -49,6 +49,7 @@ final class DurableSynchronizationService
   final String remoteScope;
 
   bool _connected;
+  bool _shutDown = false;
   bool _rerunRequested = false;
   Future<SynchronizationResult>? _active;
 
@@ -80,6 +81,9 @@ final class DurableSynchronizationService
 
   @override
   Future<SynchronizationResult> onConnectivityChanged(bool connected) async {
+    if (_shutDown) {
+      return const SynchronizationResult(SynchronizationDisposition.offline);
+    }
     _connected = connected;
     if (connected) return request(SynchronizationTrigger.reconnection);
     _retryScheduler.cancel();
@@ -92,6 +96,11 @@ final class DurableSynchronizationService
   }
 
   Future<SynchronizationResult> request(SynchronizationTrigger trigger) {
+    if (_shutDown) {
+      return Future.value(
+        const SynchronizationResult(SynchronizationDisposition.offline),
+      );
+    }
     final active = _active;
     if (active != null) {
       _rerunRequested = true;
@@ -105,6 +114,17 @@ final class DurableSynchronizationService
           .whenComplete(() => _active = null),
     );
     return completer.future;
+  }
+
+  /// Stops new synchronization work, cancels retries, and waits for any
+  /// in-flight transaction to finish before a local database is closed.
+  Future<void> shutdown() async {
+    if (_shutDown) return;
+    _shutDown = true;
+    _connected = false;
+    _rerunRequested = false;
+    _retryScheduler.cancel();
+    await _active;
   }
 
   Future<SynchronizationResult> _drain() async {

@@ -45,6 +45,22 @@ void main() {
     }
   });
 
+  test('local removal preview is FIFO-safe and close is final', () async {
+    await registry.initialize();
+
+    final preview = await registry.localRemovalPreview();
+    expect(preview.count, 0);
+    expect(preview.oldestAtUtc, isNull);
+    expect(registry.databasePath, databasePath);
+
+    await registry.close();
+    databaseIsOpen = false;
+    await expectLater(
+      registry.read((_) => null),
+      throwsA(_repositoryFailure(RepositoryFailureKind.closed)),
+    );
+  });
+
   test(
     'initialize gates access and all eight domain types round-trip',
     () async {

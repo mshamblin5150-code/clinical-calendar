@@ -9,7 +9,7 @@ const _key =
     '0123456789abcdef0123456789abcdef'
     '0123456789abcdef0123456789abcdef';
 const _studentId = '00000000-0000-4000-8000-000000000001';
-final _baseTime = DateTime.utc(2026, 8, 4, 12);
+final _baseTime = DateTime.now().toUtc().add(const Duration(hours: 1));
 
 void main() {
   late Directory temporaryDirectory;

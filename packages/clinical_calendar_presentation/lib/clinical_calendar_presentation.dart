@@ -7,6 +7,8 @@ export 'src/calendar/calendar_models.dart';
 export 'src/calendar/calendar_period_view.dart';
 export 'src/commitments/commitment_lifecycle_controller.dart';
 export 'src/commitments/commitment_lifecycle_surface.dart';
+export 'src/conflict_resolution/conflict_resolution_controller.dart';
+export 'src/conflict_resolution/conflict_resolution_surface.dart';
 export 'src/backup/backup_restore_surface.dart';
 export 'src/exports/export_surface.dart';
 export 'src/evaluation_attention/attention_surfaces.dart';

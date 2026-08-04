@@ -2,6 +2,7 @@
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000001';
+set local request.jwt.claim.session_id = '15000000-0000-4000-8000-000000000010';
 select public.apply_sync_operation(
   '21000000-0000-4000-8000-000000000002',
   'preceptor', '30000000-0000-4000-8000-000000000001', 'upsert', 1,

@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 5;
+  static const latestVersion = 7;
 
   final MigrationTestHook? _testHook;
 
@@ -402,5 +402,21 @@ final Map<int, List<String>> _statements = {
       ON outbox_operations(student_id, created_at_utc)
       WHERE acknowledged_at_utc IS NULL
         AND terminal_rejected_at_utc IS NULL''',
+  ],
+  6: [
+    '''ALTER TABLE sync_conflicts
+      ADD COLUMN rejection_code TEXT NOT NULL DEFAULT 'legacy_conflict' ''',
+    '''ALTER TABLE sync_conflicts
+      ADD COLUMN rejection_json TEXT NOT NULL DEFAULT '{"code":"legacy_conflict"}' ''',
+  ],
+  7: [
+    '''ALTER TABLE reminder_state
+      ADD COLUMN occurrence_key TEXT NOT NULL DEFAULT '' ''',
+    '''UPDATE reminder_state
+      SET occurrence_key = reminder_type || ':' || id
+      WHERE occurrence_key = '' ''',
+    '''CREATE UNIQUE INDEX reminder_occurrence_index
+      ON reminder_state(student_id, occurrence_key)
+      WHERE deleted_at_utc IS NULL''',
   ],
 };

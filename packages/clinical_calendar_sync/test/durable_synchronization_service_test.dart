@@ -66,6 +66,24 @@ void main() {
     expect((await secondSync.health()).pendingCount, 0);
   });
 
+  test('shutdown cancels work and never touches a closed repository', () async {
+    final scheduler = _Scheduler();
+    final service = _service(first, server, clock, scheduler: scheduler);
+
+    await service.shutdown();
+    await first.registry.close();
+
+    expect(
+      (await service.syncNow()).disposition,
+      SynchronizationDisposition.offline,
+    );
+    expect(
+      (await service.onConnectivityChanged(true)).disposition,
+      SynchronizationDisposition.offline,
+    );
+    expect(scheduler.callback, isNull);
+  });
+
   test(
     'fresh devices share one canonical Settings aggregate identity',
     () async {
@@ -356,6 +374,68 @@ void main() {
     expect(conflict['local_snapshot_json'], contains('Second Preserved'));
     expect(await _preceptorName(second.registry), 'Second Preserved');
   });
+
+  test(
+    'two offline originals survive resolution and both devices converge',
+    () async {
+      await _putPreceptor(first.registry, 'Shared', 40, clock.nowUtc());
+      await _service(first, server, clock).syncNow();
+      await _service(second, server, clock).syncNow();
+
+      clock.advance(const Duration(minutes: 1));
+      await _putPreceptor(first.registry, 'First Original', 41, clock.nowUtc());
+      await _putPreceptor(
+        second.registry,
+        'Second Original',
+        42,
+        clock.nowUtc(),
+      );
+      await _service(first, server, clock).syncNow();
+      await _service(second, server, clock).syncNow();
+
+      final open = await second.registry.read((repositories) {
+        final sync = repositories as SynchronizationLocalReadRepositories;
+        return sync.synchronization.listConflicts(studentId: _studentId);
+      });
+      expect(open, hasLength(1));
+      expect(open.single.localSnapshotJson, contains('Second Original'));
+      expect(open.single.remoteSnapshotJson, contains('First Original'));
+      expect(open.single.rejectionCode, 'stale_revision');
+
+      clock.advance(const Duration(minutes: 1));
+      final receipt = await second.registry.mutate((repositories) {
+        final sync = repositories as SynchronizationLocalWriteRepositories;
+        return sync.synchronization.resolveConflict(
+          studentId: _studentId,
+          conflictId: open.single.id,
+          choice: SynchronizationConflictResolutionChoice.localVersion,
+          mutation: MutationToken(
+            operationId: _id(9900),
+            idempotencyKey: _id(9901),
+            occurredAtUtc: clock.nowUtc(),
+          ),
+        );
+      });
+      expect(receipt.operation.type, OutboxOperationType.resolveConflict);
+      expect(receipt.operation.baseRevision, 2);
+      expect(receipt.conflict.isResolved, isTrue);
+      expect(receipt.conflict.localSnapshotJson, contains('Second Original'));
+      expect(receipt.conflict.remoteSnapshotJson, contains('First Original'));
+
+      await _service(second, server, clock).syncNow();
+      await _service(first, server, clock).syncNow();
+      expect(await _preceptorName(first.registry), 'Second Original');
+      expect(await _preceptorName(second.registry), 'Second Original');
+      expect(server.records['preceptor/$_preceptorId']!['revision'], 3);
+      expect(
+        await second.registry.read((repositories) {
+          final sync = repositories as SynchronizationLocalReadRepositories;
+          return sync.synchronization.listConflicts(studentId: _studentId);
+        }),
+        isEmpty,
+      );
+    },
+  );
 
   test(
     'legacy Evaluation Plan without an association stops at its cursor after restart',
