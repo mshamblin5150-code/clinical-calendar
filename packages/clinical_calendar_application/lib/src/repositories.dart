@@ -143,6 +143,8 @@ final class OutboxOperation {
     this.acknowledgedCursor,
     DateTime? acknowledgedAtUtc,
     this.lastFailureCode,
+    this.terminalRejectionCode,
+    DateTime? terminalRejectedAtUtc,
   }) : studentId = _requireText(studentId, 'Student id'),
        entityType = _requireText(entityType, 'Entity type'),
        entityId = _requireText(entityId, 'Entity id'),
@@ -152,7 +154,10 @@ final class OutboxOperation {
            : _requireUtc(nextAttemptAtUtc, 'Next attempt time'),
        acknowledgedAtUtc = acknowledgedAtUtc == null
            ? null
-           : _requireUtc(acknowledgedAtUtc, 'Acknowledgement time') {
+           : _requireUtc(acknowledgedAtUtc, 'Acknowledgement time'),
+       terminalRejectedAtUtc = terminalRejectedAtUtc == null
+           ? null
+           : _requireUtc(terminalRejectedAtUtc, 'Terminal rejection time') {
     if (baseRevision < 0) {
       throw ArgumentError.value(
         baseRevision,
@@ -179,6 +184,16 @@ final class OutboxOperation {
         'Acknowledged cursor and acknowledgement time must be supplied together.',
       );
     }
+    if ((terminalRejectionCode == null) != (terminalRejectedAtUtc == null)) {
+      throw ArgumentError(
+        'Terminal rejection code and time must be supplied together.',
+      );
+    }
+    if (acknowledgedAtUtc != null && terminalRejectedAtUtc != null) {
+      throw ArgumentError(
+        'An operation cannot be both acknowledged and terminally rejected.',
+      );
+    }
   }
 
   final MutationToken mutation;
@@ -193,8 +208,11 @@ final class OutboxOperation {
   final int? acknowledgedCursor;
   final DateTime? acknowledgedAtUtc;
   final String? lastFailureCode;
+  final String? terminalRejectionCode;
+  final DateTime? terminalRejectedAtUtc;
 
   bool get isAcknowledged => acknowledgedAtUtc != null;
+  bool get isTerminallyRejected => terminalRejectedAtUtc != null;
 }
 
 abstract interface class OutboxReadRepository {
@@ -254,6 +272,128 @@ abstract interface class SyncCursorReadRepository {
 abstract interface class SyncCursorRepository
     implements SyncCursorReadRepository {
   void put(SyncCursor cursor);
+}
+
+enum SynchronizationHealthDisposition {
+  synced,
+  offline,
+  syncing,
+  conflictNeedsAttention,
+  failed,
+}
+
+final class SynchronizationHealthSnapshot {
+  const SynchronizationHealthSnapshot({
+    required this.disposition,
+    required this.pendingCount,
+    required this.unresolvedConflictCount,
+    this.lastSuccessAtUtc,
+    this.lastAttemptAtUtc,
+    this.failureStartedAtUtc,
+    this.failureCode,
+    this.oldestPendingAtUtc,
+    this.nextRetryAtUtc,
+  });
+
+  final SynchronizationHealthDisposition disposition;
+  final int pendingCount;
+  final int unresolvedConflictCount;
+  final DateTime? lastSuccessAtUtc;
+  final DateTime? lastAttemptAtUtc;
+  final DateTime? failureStartedAtUtc;
+  final String? failureCode;
+  final DateTime? oldestPendingAtUtc;
+  final DateTime? nextRetryAtUtc;
+
+  bool continuousFailureForAtLeast(DateTime nowUtc, Duration duration) =>
+      failureStartedAtUtc != null &&
+      !nowUtc.difference(failureStartedAtUtc!).isNegative &&
+      nowUtc.difference(failureStartedAtUtc!) >= duration;
+
+  bool pendingForAtLeast(DateTime nowUtc, Duration duration) =>
+      oldestPendingAtUtc != null &&
+      !nowUtc.difference(oldestPendingAtUtc!).isNegative &&
+      nowUtc.difference(oldestPendingAtUtc!) >= duration;
+}
+
+final class RemoteSynchronizationChange {
+  RemoteSynchronizationChange({
+    required this.cursor,
+    required String entityType,
+    required String entityId,
+    required this.revision,
+    required this.operationType,
+    required String payloadJson,
+  }) : entityType = _requireText(entityType, 'Entity type'),
+       entityId = _requireUuid(entityId, 'Entity id'),
+       payloadJson = _requireText(payloadJson, 'Payload JSON') {
+    if (cursor <= 0) {
+      throw ArgumentError.value(cursor, 'cursor', 'must be positive');
+    }
+    if (revision <= 0) {
+      throw ArgumentError.value(revision, 'revision', 'must be positive');
+    }
+  }
+
+  final int cursor;
+  final String entityType;
+  final String entityId;
+  final int revision;
+  final OutboxOperationType operationType;
+  final String payloadJson;
+}
+
+enum RemoteSynchronizationApplyDisposition {
+  applied,
+  duplicate,
+  keptNewerLocal,
+  conflict,
+}
+
+/// Local synchronization persistence used only inside a registry callback.
+/// Implementations atomically pair inbound record application with cursor
+/// advancement and pair terminal outbox rejection with conflict persistence.
+abstract interface class SynchronizationLocalRepository {
+  SynchronizationHealthSnapshot inspect({
+    required String studentId,
+    required String remoteScope,
+  });
+
+  void markHealth({
+    required String studentId,
+    required SynchronizationHealthDisposition disposition,
+    required DateTime attemptedAtUtc,
+    DateTime? succeededAtUtc,
+    String? failureCode,
+  });
+
+  void recordTerminalRejection({
+    required String studentId,
+    required OutboxOperation operation,
+    required String rejectionCode,
+    required String rejectionJson,
+    required DateTime rejectedAtUtc,
+    required bool createsConflict,
+  });
+
+  RemoteSynchronizationApplyDisposition applyRemoteAndAdvanceCursor({
+    required String studentId,
+    required String remoteScope,
+    required RemoteSynchronizationChange change,
+    required DateTime appliedAtUtc,
+  });
+}
+
+/// Optional capability so existing repository fakes remain source-compatible.
+abstract interface class SynchronizationLocalReadRepositories
+    implements LocalReadRepositories {
+  SynchronizationLocalRepository get synchronization;
+}
+
+abstract interface class SynchronizationLocalWriteRepositories
+    implements LocalWriteRepositories, SynchronizationLocalReadRepositories {
+  @override
+  SynchronizationLocalRepository get synchronization;
 }
 
 /// The one persisted Clinical Placement selection shared by management,

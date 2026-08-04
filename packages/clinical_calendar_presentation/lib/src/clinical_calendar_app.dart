@@ -5,11 +5,19 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import 'calendar/calendar_data_source.dart';
+import 'calendar/calendar_models.dart';
 import 'calendar/calendar_period_view.dart';
+import 'commitments/commitment_lifecycle_controller.dart';
+import 'commitments/commitment_lifecycle_surface.dart';
+import 'evaluation_attention/attention_surfaces.dart';
+import 'evaluation_attention/evaluation_attention_controller.dart';
+import 'evaluation_attention/evaluation_plan_surface.dart';
 import 'placements/placement_management_surface.dart';
 import 'placements/placement_progress_controller.dart';
 import 'placements/placement_progress_widgets.dart';
 import 'responsive_shell.dart';
+import 'scheduling/batch_scheduling_controller.dart';
+import 'scheduling/staged_batch_scheduling_tray.dart';
 import 'support/profile_avatar_button.dart';
 import 'support/settings_templates_surface.dart';
 import 'support/student_profile_surface.dart';
@@ -25,6 +33,10 @@ final class ClinicalCalendarApp extends StatelessWidget {
     this.chooseAvatar,
     this.visualTheme = const VariantFVisualTheme(),
     this.helpGuides,
+    this.onLaunchOrResume,
+    this.connectivityChanges,
+    this.onConnectivityChanged,
+    this.onRealtimeHint,
     super.key,
   });
 
@@ -34,21 +46,107 @@ final class ClinicalCalendarApp extends StatelessWidget {
   final AvatarChooser? chooseAvatar;
   final ClinicalCalendarVisualTheme visualTheme;
   final ThemeHelpGuideRegistry? helpGuides;
+  final Future<void> Function()? onLaunchOrResume;
+  final Stream<bool>? connectivityChanges;
+  final Future<void> Function(bool connected)? onConnectivityChanged;
+
+  /// Reserved for the realtime subscription owned by the authentication
+  /// integration. Realtime is only a wake hint; durable pull remains truth.
+  final Future<void> Function()? onRealtimeHint;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
     title: 'Clinical Calendar',
     theme: visualTheme.createThemeData(),
-    home: _ApplicationHost(
-      dependencies: dependencies,
-      environmentName: environmentName,
-      studentId: studentId,
-      chooseAvatar: chooseAvatar,
-      themeId: visualTheme.id,
-      helpGuides: helpGuides ?? ThemeHelpGuideRegistry.standard(),
+    home: ClinicalCalendarLifecycleHost(
+      onLaunchOrResume: onLaunchOrResume,
+      connectivityChanges: connectivityChanges,
+      onConnectivityChanged: onConnectivityChanged,
+      child: _ApplicationHost(
+        dependencies: dependencies,
+        environmentName: environmentName,
+        studentId: studentId,
+        chooseAvatar: chooseAvatar,
+        themeId: visualTheme.id,
+        helpGuides: helpGuides ?? ThemeHelpGuideRegistry.standard(),
+      ),
     ),
   );
+}
+
+/// Bridges Flutter host lifecycle/connectivity events into synchronization.
+final class ClinicalCalendarLifecycleHost extends StatefulWidget {
+  const ClinicalCalendarLifecycleHost({
+    required this.child,
+    this.onLaunchOrResume,
+    this.connectivityChanges,
+    this.onConnectivityChanged,
+    super.key,
+  });
+
+  final Widget child;
+  final Future<void> Function()? onLaunchOrResume;
+  final Stream<bool>? connectivityChanges;
+  final Future<void> Function(bool connected)? onConnectivityChanged;
+
+  @override
+  State<ClinicalCalendarLifecycleHost> createState() =>
+      _ClinicalCalendarLifecycleHostState();
+}
+
+final class _ClinicalCalendarLifecycleHostState
+    extends State<ClinicalCalendarLifecycleHost>
+    with WidgetsBindingObserver {
+  StreamSubscription<bool>? _connectivitySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _subscribeConnectivity();
+    _invoke(widget.onLaunchOrResume);
+  }
+
+  @override
+  void didUpdateWidget(ClinicalCalendarLifecycleHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.connectivityChanges != widget.connectivityChanges) {
+      unawaited(_connectivitySubscription?.cancel());
+      _subscribeConnectivity();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _invoke(widget.onLaunchOrResume);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_connectivitySubscription?.cancel());
+    super.dispose();
+  }
+
+  void _subscribeConnectivity() {
+    final changes = widget.connectivityChanges;
+    final callback = widget.onConnectivityChanged;
+    if (changes == null || callback == null) return;
+    _connectivitySubscription = changes.listen(
+      (connected) => _invoke(() => callback(connected)),
+    );
+  }
+
+  void _invoke(Future<void> Function()? callback) {
+    if (callback == null) return;
+    unawaited(callback().catchError((Object _) {}));
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 final class _ApplicationHost extends StatefulWidget {
@@ -75,9 +173,15 @@ final class _ApplicationHost extends StatefulWidget {
 final class _ApplicationHostState extends State<_ApplicationHost> {
   ClinicalCalendarDestination? _destination;
   DestinationEntry _entry = DestinationEntry.direct;
+  late final SchedulingApplicationService _schedulingService;
   late final SchedulingCalendarDataSource _calendarDataSource;
   late final PlacementProgressController _placementController;
+  late final CommitmentLifecycleController _commitmentController;
+  late final EvaluationAttentionController _attentionController;
+  BatchSchedulingController? _batchController;
   late final SupportApplicationService _supportService;
+  Set<LocalDate> _selectedDates = const {};
+  int _calendarRevision = 0;
   SupportSnapshot? _support;
   Object? _supportError;
   bool _supportLoading = true;
@@ -86,21 +190,36 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   void initState() {
     super.initState();
     final dependencies = widget.dependencies;
-    _calendarDataSource = SchedulingCalendarDataSource(
-      SchedulingApplicationService(
-        dependencies.repositories,
-        dependencies.clock,
-        dependencies.identifiers,
-      ),
+    _schedulingService = SchedulingApplicationService(
+      dependencies.repositories,
+      dependencies.clock,
+      dependencies.identifiers,
+    );
+    _calendarDataSource = SchedulingCalendarDataSource(_schedulingService);
+    final placementService = PlacementApplicationService(
+      repositories: dependencies.repositories,
+      clock: dependencies.clock,
+      identifiers: dependencies.identifiers,
+      studentId: widget.studentId,
     );
     _placementController = PlacementProgressController(
-      service: PlacementApplicationService(
-        repositories: dependencies.repositories,
+      service: placementService,
+      studentId: widget.studentId,
+    );
+    _attentionController = EvaluationAttentionController(
+      service: EvaluationAttentionApplicationService(
+        placements: PlacementEvaluationGateway(placementService),
+        attentionSource: LocalAttentionRepositorySource(
+          dependencies.repositories,
+        ),
         clock: dependencies.clock,
-        identifiers: dependencies.identifiers,
         studentId: widget.studentId,
       ),
+    );
+    _commitmentController = CommitmentLifecycleController(
+      service: _schedulingService,
       studentId: widget.studentId,
+      onChanged: _reloadSchedulingSurfaces,
     );
     _supportService = SupportApplicationService(
       repositories: dependencies.repositories,
@@ -108,14 +227,210 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       identifiers: dependencies.identifiers,
       studentId: widget.studentId,
     );
-    unawaited(_placementController.load());
-    unawaited(_loadSupport());
+    unawaited(_initializeScheduling());
   }
 
   @override
   void dispose() {
+    _batchController?.dispose();
+    _commitmentController.dispose();
+    _attentionController.dispose();
     _placementController.dispose();
     super.dispose();
+  }
+
+  Future<void> _initializeScheduling() async {
+    await Future.wait([
+      _placementController.load(),
+      _attentionController.load(),
+      _loadSupport(),
+    ]);
+    if (!mounted) return;
+    _replaceBatchController();
+  }
+
+  void _replaceBatchController({
+    BatchSchedulingReset reset = BatchSchedulingReset.addSchedule,
+  }) {
+    final previous = _batchController;
+    previous?.removeListener(_synchronizeSelectedDatesFromBatch);
+    previous?.dispose();
+    final controller = BatchSchedulingController(
+      operations: _ReloadingBatchOperations(
+        SchedulingBatchCoordinator(_schedulingService),
+        _reloadSchedulingSurfaces,
+      ),
+      studentId: widget.studentId,
+      placements: _batchPlacementOptions,
+      templates:
+          _support?.scheduleTemplates.map((record) => record.value) ?? const [],
+      selectedDates: _selectedDates.map(_zonedScheduleDate),
+      useTwelveHourTime:
+          (_support?.settings.value.timeDisplay ??
+              TimeDisplayPreference.military) ==
+          TimeDisplayPreference.twelveHour,
+      activeClinicalPlacementId: _placementController.activePlacementId,
+      reset: reset,
+    );
+    controller.addListener(_synchronizeSelectedDatesFromBatch);
+    setState(() => _batchController = controller);
+  }
+
+  void _synchronizeSelectedDatesFromBatch() {
+    final controller = _batchController;
+    if (!mounted || controller == null) return;
+    final next = controller.selectedDates.map((value) => value.date).toSet();
+    if (_sameDates(_selectedDates, next)) return;
+    setState(() => _selectedDates = Set.unmodifiable(next));
+  }
+
+  void _updateCalendarSelection(Set<LocalDate> dates) {
+    final next = Set<LocalDate>.unmodifiable(dates);
+    if (!_sameDates(_selectedDates, next)) {
+      setState(() => _selectedDates = next);
+    }
+    final controller = _batchController;
+    if (controller == null) return;
+    final current = controller.selectedDates.map((value) => value.date).toSet();
+    for (final date in current.difference(next)) {
+      controller.toggleDate(_zonedScheduleDate(date));
+    }
+    for (final date in next.difference(current)) {
+      controller.toggleDate(_zonedScheduleDate(date));
+    }
+  }
+
+  void _resetPlanning(BatchSchedulingReset reset) {
+    final controller = _batchController;
+    if (controller == null) return;
+    controller.reset(
+      reset,
+      activeClinicalPlacementId: _placementController.activePlacementId,
+    );
+  }
+
+  Future<void> _reloadSchedulingSurfaces() async {
+    if (mounted) setState(() => _calendarRevision++);
+    await Future.wait([
+      _placementController.load(),
+      _attentionController.load(),
+    ]);
+  }
+
+  Future<void> _openCommitment(CalendarItemReference reference) async {
+    final kind = switch (reference.kind) {
+      CalendarEntryKind.workShift => CommitmentLifecycleKind.workShift,
+      CalendarEntryKind.clinicalSession =>
+        CommitmentLifecycleKind.clinicalSession,
+      CalendarEntryKind.protectedDay => CommitmentLifecycleKind.protectedDay,
+    };
+    await _openCommitmentLifecycle(kind: kind, id: reference.id);
+  }
+
+  Future<void> _openCommitmentLifecycle({
+    required CommitmentLifecycleKind kind,
+    required String id,
+  }) async {
+    await _commitmentController.open(kind: kind, id: id);
+    if (!mounted || _commitmentController.snapshot == null) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final size = MediaQuery.sizeOf(dialogContext);
+        return Dialog(
+          insetPadding: const EdgeInsets.all(12),
+          child: SizedBox(
+            width: size.width < 720 ? size.width - 24 : 700,
+            height: size.height * .9,
+            child: CommitmentLifecycleSurface(
+              controller: _commitmentController,
+              studentId: widget.studentId,
+              twelveHourTime:
+                  (_support?.settings.value.timeDisplay ??
+                      TimeDisplayPreference.military) ==
+                  TimeDisplayPreference.twelveHour,
+              onClose: () => Navigator.pop(dialogContext),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openAttentionItem(AttentionItem item) async {
+    switch (item.destination) {
+      case AttentionDestination.confirmClinicalSession:
+        final id = item.clinicalSessionId;
+        if (id == null) return;
+        await _openCommitmentLifecycle(
+          kind: CommitmentLifecycleKind.clinicalSession,
+          id: id,
+        );
+      case AttentionDestination.planProtectedDay:
+        final date = item.suggestedDate;
+        if (date != null) {
+          _updateCalendarSelection({..._selectedDates, date});
+        }
+        if (!mounted) return;
+        setState(() => _destination = null);
+        _resetPlanning(BatchSchedulingReset.planningIncomplete);
+      case AttentionDestination.documentEvaluation:
+        final placementId = item.clinicalPlacementId;
+        if (placementId != null) {
+          _attentionController.selectPlacement(placementId);
+        }
+        await _openContextualRoute(
+          title: 'Evaluation Plan',
+          child: EvaluationPlanSurface(controller: _attentionController),
+        );
+        await _reloadSchedulingSurfaces();
+      case AttentionDestination.manageClinicalPlacement:
+        final placementId = item.clinicalPlacementId;
+        if (placementId != null) {
+          await _placementController.selectPlacement(placementId);
+        }
+        if (!mounted) return;
+        setState(() {
+          _destination = ClinicalCalendarDestination.clinicalPlacements;
+          _entry = DestinationEntry.direct;
+        });
+      case AttentionDestination.createPortableBackup:
+        await _openContextualRoute(
+          title: 'Portable Backup',
+          child: const _UnavailableAttentionWorkflow(
+            message:
+                'Portable backup is not available in this build. No backup '
+                'state was changed.',
+          ),
+        );
+      case AttentionDestination.resolveSynchronization:
+        await _openContextualRoute(
+          title: 'Synchronization',
+          child: SynchronizationAttentionSurface(
+            synchronization: widget.dependencies.synchronization,
+          ),
+        );
+    }
+  }
+
+  Future<void> _openContextualRoute({
+    required String title,
+    required Widget child,
+  }) async {
+    if (!mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) =>
+            _ContextualRouteSurface(title: title, child: child),
+      ),
+    );
+  }
+
+  void _openAttentionCenter() {
+    setState(() {
+      _destination = ClinicalCalendarDestination.notifications;
+      _entry = DestinationEntry.direct;
+    });
   }
 
   Future<void> _loadSupport() async {
@@ -176,6 +491,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         scheduleTemplates: snapshot.scheduleTemplates,
       ),
     );
+    _replaceBatchController();
   }
 
   Future<void> _saveTemplate(ScheduleTemplate template) async {
@@ -218,6 +534,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         ],
       ),
     );
+    _replaceBatchController();
   }
 
   Future<void> _removeTemplate(String templateId) async {
@@ -242,6 +559,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             .toList(growable: false),
       ),
     );
+    _replaceBatchController();
   }
 
   Future<void> _showMenu() async {
@@ -269,6 +587,11 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       setState(() => _destination = null);
       return;
     }
+    if (destination == ClinicalCalendarDestination.planning) {
+      setState(() => _destination = null);
+      _resetPlanning(BatchSchedulingReset.addSchedule);
+      return;
+    }
     if (destination == ClinicalCalendarDestination.settings) {
       _showMenu();
       return;
@@ -281,9 +604,24 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
 
   void _exitDestination() {
     final returnToMenu = _entry == DestinationEntry.applicationMenu;
+    final exited = _destination;
     setState(() => _destination = null);
+    if (exited == ClinicalCalendarDestination.clinicalPlacements ||
+        exited == ClinicalCalendarDestination.settings) {
+      unawaited(_refreshAfterDestinationExit(exited!));
+    }
     if (returnToMenu) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _showMenu());
+    }
+  }
+
+  Future<void> _refreshAfterDestinationExit(
+    ClinicalCalendarDestination destination,
+  ) async {
+    await _attentionController.load();
+    if (!mounted) return;
+    if (destination == ClinicalCalendarDestination.clinicalPlacements) {
+      _replaceBatchController();
     }
   }
 
@@ -316,19 +654,36 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
           ),
         ),
         centralContent: CalendarPeriodView(
+          key: ValueKey('calendar-period-view-$_calendarRevision'),
           dataSource: _calendarDataSource,
           studentId: widget.studentId,
           today: _today(widget.dependencies.clock),
           weekStartsOn: settings.weekStart,
           twelveHourTime:
               settings.timeDisplay == TimeDisplayPreference.twelveHour,
+          initialSelectedDates: _selectedDates,
+          onSelectionChanged: _updateCalendarSelection,
+          onOpenItem: _openCommitment,
         ),
-        insightRail: _PlacementLoadState(
-          controller: _placementController,
-          onRetry: _placementController.load,
-          child: PlacementProgressRail(
-            controller: _placementController,
-            studentId: widget.studentId,
+        insightRail: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _PlacementLoadState(
+                controller: _placementController,
+                onRetry: _placementController.load,
+                child: PlacementProgressRail(
+                  controller: _placementController,
+                  studentId: widget.studentId,
+                ),
+              ),
+              const SizedBox(height: 10),
+              AttentionRail(
+                controller: _attentionController,
+                onOpenAction: _openAttentionItem,
+                onOpenAll: _openAttentionCenter,
+              ),
+            ],
           ),
         ),
         mobilePlacementSummary: _PlacementLoadState(
@@ -339,7 +694,12 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             studentId: widget.studentId,
           ),
         ),
-        planningRegion: const _PlanningRegion(),
+        planningRegion: _PlanningRegion(
+          controller: _batchController,
+          onAddSchedule: () => _resetPlanning(BatchSchedulingReset.addSchedule),
+          onPlanningIncomplete: () =>
+              _resetPlanning(BatchSchedulingReset.planningIncomplete),
+        ),
         profileAvatar: ProfileAvatarButton(
           profile: _headerProfile,
           onPressed: () =>
@@ -382,9 +742,14 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         return SupportHelpSurface(
           themeGuide: widget.helpGuides.resolve(widget.themeId),
         );
+      case ClinicalCalendarDestination.notifications:
+        return AttentionCenterSurface(
+          controller: _attentionController,
+          notificationMode: true,
+          onOpenAction: _openAttentionItem,
+        );
       case ClinicalCalendarDestination.calendar:
       case ClinicalCalendarDestination.planning:
-      case ClinicalCalendarDestination.notifications:
         return _PendingDestination(destination: destination);
     }
   }
@@ -414,10 +779,34 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
               '${attached.isPrimary ? ' (Primary)' : ''}',
         ),
   ];
+
+  List<BatchClinicalPlacementOption> get _batchPlacementOptions => [
+    for (final placement in _placementController.placements)
+      BatchClinicalPlacementOption(
+        id: placement.placement.id,
+        name: placement.placement.name,
+        primaryPreceptorId: placement.placement.primaryPreceptorId,
+        preceptors: [
+          for (final attached in placement.attachedPreceptors)
+            BatchPreceptorOption(
+              id: attached.preceptor.id,
+              name: attached.preceptor.name,
+            ),
+        ],
+      ),
+  ];
 }
 
 final class _PlanningRegion extends StatelessWidget {
-  const _PlanningRegion();
+  const _PlanningRegion({
+    required this.controller,
+    required this.onAddSchedule,
+    required this.onPlanningIncomplete,
+  });
+
+  final BatchSchedulingController? controller;
+  final VoidCallback onAddSchedule;
+  final VoidCallback onPlanningIncomplete;
 
   @override
   Widget build(BuildContext context) => ShellPanel(
@@ -428,15 +817,28 @@ final class _PlanningRegion extends StatelessWidget {
       children: [
         const Text('Build the monthly plan in this in-flow region.'),
         const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FilledButton.icon(
-            key: const Key('primary-planning-action'),
-            onPressed: () {},
-            icon: const Icon(Icons.add),
-            label: const Text('Add schedule'),
-          ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton.icon(
+              key: const Key('primary-planning-action'),
+              onPressed: controller == null ? null : onAddSchedule,
+              icon: const Icon(Icons.add),
+              label: const Text('Add schedule'),
+            ),
+            OutlinedButton.icon(
+              key: const Key('planning-incomplete-action'),
+              onPressed: controller == null ? null : onPlanningIncomplete,
+              icon: const Icon(Icons.shield_outlined),
+              label: const Text('Planning Incomplete'),
+            ),
+          ],
         ),
+        if (controller != null) ...[
+          const SizedBox(height: 12),
+          StagedBatchSchedulingTray(controller: controller!),
+        ],
       ],
     ),
   );
@@ -510,6 +912,44 @@ final class _DestinationFailure extends StatelessWidget {
   );
 }
 
+final class _ContextualRouteSurface extends StatelessWidget {
+  const _ContextualRouteSurface({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    key: const Key('contextual-route-surface'),
+    appBar: AppBar(
+      backgroundColor: context.clinicalColors.structure,
+      leadingWidth: 88,
+      leading: TextButton.icon(
+        key: const Key('contextual-back-action'),
+        onPressed: () => Navigator.pop(context),
+        icon: const Icon(Icons.arrow_back, size: 18),
+        label: const Text('Back'),
+      ),
+      title: Text(title),
+    ),
+    body: SafeArea(child: child),
+  );
+}
+
+final class _UnavailableAttentionWorkflow extends StatelessWidget {
+  const _UnavailableAttentionWorkflow({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: ShellPanel(label: 'Workflow unavailable', child: Text(message)),
+    ),
+  );
+}
+
 final class _PendingDestination extends StatelessWidget {
   const _PendingDestination({required this.destination});
 
@@ -524,6 +964,34 @@ final class _PendingDestination extends StatelessWidget {
     ),
   );
 }
+
+final class _ReloadingBatchOperations implements BatchSchedulingOperations {
+  const _ReloadingBatchOperations(this.delegate, this.onApplied);
+
+  final BatchSchedulingOperations delegate;
+  final Future<void> Function() onApplied;
+
+  @override
+  Future<BatchSchedulingReview> review(BatchSchedulingDraft draft) =>
+      delegate.review(draft);
+
+  @override
+  Future<BatchSchedulingApplyResult> apply(BatchSchedulingDraft draft) async {
+    final result = await delegate.apply(draft);
+    if (result.applied) await onApplied();
+    return result;
+  }
+}
+
+ZonedScheduleDate _zonedScheduleDate(LocalDate date) => ZonedScheduleDate(
+  date: date,
+  timeZone: TimeZoneId('UTC'),
+  startOffset: UtcOffset.utc,
+  endOffset: UtcOffset.utc,
+);
+
+bool _sameDates(Set<LocalDate> left, Set<LocalDate> right) =>
+    left.length == right.length && left.containsAll(right);
 
 LocalDate _today(Clock clock) {
   final now = clock.nowUtc();

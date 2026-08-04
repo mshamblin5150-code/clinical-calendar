@@ -122,6 +122,7 @@ enum SchedulingUseCaseFailureKind {
   completedPlacement,
   templateTypeMismatch,
   incompleteClinicalAssignment,
+  incompleteTimeRange,
   deletionNotConfirmed,
   protectedDayMoveChangesWeek,
 }

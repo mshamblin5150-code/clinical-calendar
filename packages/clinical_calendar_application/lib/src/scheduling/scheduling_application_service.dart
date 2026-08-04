@@ -3,7 +3,10 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import '../ports.dart';
 import '../repositories.dart';
 import 'calendar_period_snapshot.dart';
+import 'commitment_lifecycle_snapshot.dart';
 import 'scheduling_requests.dart';
+
+export 'commitment_lifecycle_snapshot.dart';
 
 /// Transactional scheduling use cases. Every mutation validates and writes in
 /// one synchronous repository callback; synchronization never runs here.
@@ -22,6 +25,78 @@ final class SchedulingApplicationService {
   final IdentifierGenerator _identifiers;
   final SchedulingInvariantEngine _invariants;
   final ClinicalPlacementProgressEngine _progress;
+
+  Future<BatchValidationResult> previewWorkShiftBatch(
+    WorkShiftBatchRequest request,
+  ) => _repositories.read((repositories) {
+    _requireNonempty(request.intervals);
+    _requireUniqueDates(
+      request.intervals.map((interval) => interval.startDate),
+    );
+    return _invariants.validateBatch(
+      existing: _state(repositories, request.studentId),
+      batch: SchedulingBatch(
+        workShifts: [
+          for (var index = 0; index < request.intervals.length; index++)
+            WorkShift(
+              id: 'preview-work-$index',
+              plannedInterval: request.intervals[index],
+            ),
+        ],
+      ),
+    );
+  });
+
+  Future<BatchValidationResult> previewClinicalSessionBatch(
+    ClinicalSessionBatchRequest request,
+  ) => _repositories.read((repositories) {
+    _requireNonempty(request.intervals);
+    _requireUniqueDates(
+      request.intervals.map((interval) => interval.startDate),
+    );
+    final placement = _placement(
+      repositories,
+      request.studentId,
+      request.clinicalPlacementId,
+    ).value;
+    _requirePlacementOpen(placement);
+    final proposed = [
+      for (var index = 0; index < request.intervals.length; index++)
+        ClinicalSession.schedule(
+          id: 'preview-clinical-$index',
+          clinicalPlacementId: request.clinicalPlacementId,
+          preceptorId: request.preceptorId,
+          plannedInterval: request.intervals[index],
+          asOfUtc: _clock.nowUtc(),
+        ),
+    ];
+    for (final session in proposed) {
+      placement.validateClinicalSession(session);
+    }
+    return _invariants.validateBatch(
+      existing: _state(repositories, request.studentId),
+      batch: SchedulingBatch(clinicalSessions: proposed),
+    );
+  });
+
+  Future<BatchValidationResult> previewProtectedDayBatch(
+    ProtectedDayBatchRequest request,
+  ) => _repositories.read((repositories) {
+    _requireNonempty(request.dates);
+    _requireUniqueDates(request.dates);
+    return _invariants.validateBatch(
+      existing: _state(repositories, request.studentId),
+      batch: SchedulingBatch(
+        protectedDays: [
+          for (var index = 0; index < request.dates.length; index++)
+            ProtectedDay(
+              id: 'preview-protected-$index',
+              date: request.dates[index],
+            ),
+        ],
+      ),
+    );
+  });
 
   Future<SchedulingMutationResult<WorkShift>> createWorkShiftBatch(
     WorkShiftBatchRequest request,
@@ -324,6 +399,7 @@ final class SchedulingApplicationService {
     required ZonedInterval actualInterval,
     required String preceptorId,
   }) => _repositories.mutate((repositories) {
+    final now = _clock.nowUtc();
     final current = _required(
       repositories.clinicalSessions.find(studentId: studentId, id: id),
       'Clinical Session',
@@ -334,12 +410,13 @@ final class SchedulingApplicationService {
       current.value.clinicalPlacementId,
     ).value;
     _requirePlacementOpen(placement);
+    final currentValue = current.value.refreshStatus(now);
     final corrected = ClinicalSession.restore(
-      id: current.value.id,
-      clinicalPlacementId: current.value.clinicalPlacementId,
+      id: currentValue.id,
+      clinicalPlacementId: currentValue.clinicalPlacementId,
       preceptorId: preceptorId,
-      plannedInterval: current.value.plannedInterval,
-      state: current.value.state,
+      plannedInterval: currentValue.plannedInterval,
+      state: currentValue.state,
     ).complete(actualInterval);
     placement.validateClinicalSession(corrected);
     final validation = _invariants.validateBatch(
@@ -356,7 +433,7 @@ final class SchedulingApplicationService {
           studentId: studentId,
           value: corrected,
           expectedRevision: current.revision,
-          mutation: _mutation(_clock.nowUtc()),
+          mutation: _mutation(now),
         )
         .record;
     return SchedulingMutationResult<ClinicalSession>.committed([record]);
@@ -385,6 +462,7 @@ final class SchedulingApplicationService {
     required String id,
     required ClinicalSession Function(ClinicalSession) change,
   }) => _repositories.mutate((repositories) {
+    final now = _clock.nowUtc();
     final current = _required(
       repositories.clinicalSessions.find(studentId: studentId, id: id),
       'Clinical Session',
@@ -398,9 +476,9 @@ final class SchedulingApplicationService {
     return repositories.clinicalSessions
         .put(
           studentId: studentId,
-          value: change(current.value),
+          value: change(current.value.refreshStatus(now)),
           expectedRevision: current.revision,
-          mutation: _mutation(_clock.nowUtc()),
+          mutation: _mutation(now),
         )
         .record;
   });
@@ -516,6 +594,66 @@ final class SchedulingApplicationService {
     );
   });
 
+  Future<CommitmentLifecycleSnapshot> readCommitmentLifecycle({
+    required String studentId,
+    required CommitmentLifecycleKind kind,
+    required String id,
+  }) {
+    final asOf = _clock.nowUtc();
+    return _repositories.read((repositories) {
+      switch (kind) {
+        case CommitmentLifecycleKind.workShift:
+          return WorkShiftLifecycleSnapshot(
+            record: _required(
+              repositories.workShifts.find(studentId: studentId, id: id),
+              'Work Shift',
+            ),
+          );
+        case CommitmentLifecycleKind.clinicalSession:
+          final record = _required(
+            repositories.clinicalSessions.find(studentId: studentId, id: id),
+            'Clinical Session',
+          );
+          final refreshed = _recordWithValue(
+            record,
+            record.value.refreshStatus(asOf),
+          );
+          final placement = _placement(
+            repositories,
+            studentId,
+            refreshed.value.clinicalPlacementId,
+          ).value;
+          final preceptors =
+              placement.attachedPreceptorIds.map((preceptorId) {
+                return _required(
+                  repositories.preceptors.find(
+                    studentId: studentId,
+                    id: preceptorId,
+                  ),
+                  'Preceptor',
+                ).value;
+              }).toList()..sort((left, right) {
+                if (left.id == placement.primaryPreceptorId) return -1;
+                if (right.id == placement.primaryPreceptorId) return 1;
+                final name = left.name.compareTo(right.name);
+                return name != 0 ? name : left.id.compareTo(right.id);
+              });
+          return ClinicalSessionLifecycleSnapshot(
+            record: refreshed,
+            clinicalPlacementName: placement.name,
+            attachedPreceptors: preceptors,
+          );
+        case CommitmentLifecycleKind.protectedDay:
+          return ProtectedDayLifecycleSnapshot(
+            record: _required(
+              repositories.protectedDays.find(studentId: studentId, id: id),
+              'Protected Day',
+            ),
+          );
+      }
+    });
+  }
+
   Future<CalendarPeriodSnapshot> readCalendarPeriod({
     required String studentId,
     required LocalDate firstDate,
@@ -526,6 +664,7 @@ final class SchedulingApplicationService {
         'Calendar period end cannot be before its start.',
       );
     }
+    final asOf = _clock.nowUtc();
     return _repositories.read((repositories) {
       final workShifts = repositories.workShifts
           .list(studentId: studentId)
@@ -539,6 +678,10 @@ final class SchedulingApplicationService {
           .toList(growable: false);
       final clinicalSessions = repositories.clinicalSessions
           .list(studentId: studentId)
+          .map(
+            (record) =>
+                _recordWithValue(record, record.value.refreshStatus(asOf)),
+          )
           .where((record) {
             final session = record.value;
             final interval = session.state == ClinicalSessionState.completed
@@ -606,23 +749,26 @@ final class SchedulingApplicationService {
     required String studentId,
     required String clinicalPlacementId,
     required LocalDate today,
-  }) => _repositories.read((repositories) {
-    final placement = _placement(
-      repositories,
-      studentId,
-      clinicalPlacementId,
-    ).value;
-    return _progress.derivePlacement(
-      placement: placement,
-      sessions: repositories.clinicalSessions
-          .list(studentId: studentId)
-          .map((record) => record.value),
-      historicalHoursEntries: repositories.historicalHoursEntries
-          .list(studentId: studentId)
-          .map((record) => record.value),
-      today: today,
-    );
-  });
+  }) {
+    final asOf = _clock.nowUtc();
+    return _repositories.read((repositories) {
+      final placement = _placement(
+        repositories,
+        studentId,
+        clinicalPlacementId,
+      ).value;
+      return _progress.derivePlacement(
+        placement: placement,
+        sessions: repositories.clinicalSessions
+            .list(studentId: studentId)
+            .map((record) => record.value.refreshStatus(asOf)),
+        historicalHoursEntries: repositories.historicalHoursEntries
+            .list(studentId: studentId)
+            .map((record) => record.value),
+        today: today,
+      );
+    });
+  }
 
   SchedulingState _state(
     LocalReadRepositories repositories,
@@ -671,6 +817,18 @@ StoredDomainRecord<T> _required<T>(
   }
   return record;
 }
+
+StoredDomainRecord<T> _recordWithValue<T>(
+  StoredDomainRecord<T> record,
+  T value,
+) => StoredDomainRecord<T>(
+  value: value,
+  studentId: record.studentId,
+  revision: record.revision,
+  createdAtUtc: record.createdAtUtc,
+  updatedAtUtc: record.updatedAtUtc,
+  deletedAtUtc: record.deletedAtUtc,
+);
 
 void _requireNonempty(Iterable<Object> values) {
   if (values.isEmpty) {

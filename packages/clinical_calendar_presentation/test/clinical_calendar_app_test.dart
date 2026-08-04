@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const studentId = '00000000-0000-4000-8000-000000000001';
+const _appSessionId = '40000000-0000-4000-8000-000000000001';
 
 void main() {
   const requiredViewports = <Size>[
@@ -50,6 +51,10 @@ void main() {
         expect(
           find.byType(PlacementMobileSummary),
           desktop ? findsNothing : findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('attention-rail')),
+          desktop ? findsOneWidget : findsNothing,
         );
 
         await tester.ensureVisible(
@@ -100,6 +105,10 @@ void main() {
 
     expect(find.byKey(const Key('back-action')), findsOneWidget);
     expect(find.byKey(const Key('close-action')), findsNothing);
+    expect(
+      find.byKey(const Key('notification-center-surface')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const Key('back-action')));
     await tester.pumpAndSettle();
@@ -174,6 +183,182 @@ void main() {
     expect(find.byKey(const Key('back-action')), findsOneWidget);
   });
 
+  testWidgets('calendar selection feeds staged tray and both reset seams', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(390, 844));
+
+    await tester.tap(
+      find.byKey(const Key('calendar-day-2026-01-02')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('selected-date-count')));
+    expect(find.text('1 selected date'), findsOneWidget);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('planning-incomplete-action')),
+    );
+    await tester.tap(find.byKey(const Key('planning-incomplete-action')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<ChoiceChip>(find.byKey(const Key('batch-type-protectedDay')))
+          .selected,
+      isTrue,
+    );
+
+    await tester.tap(find.byKey(const Key('primary-planning-action')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<ChoiceChip>(
+            find.byKey(const Key('batch-type-clinicalSession')),
+          )
+          .selected,
+      isTrue,
+    );
+  });
+
+  testWidgets('calendar item opens contextual lifecycle surface', (
+    tester,
+  ) async {
+    final repositories = _Repositories(seedLifecycle: true);
+    await _pumpAt(
+      tester,
+      const Size(1024, 768),
+      dependencies: _dependencies(repositories: repositories),
+    );
+
+    await tester.tap(find.byKey(Key('compact-clinicalSession-$_appSessionId')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('commitment-lifecycle-surface')),
+      findsOneWidget,
+    );
+    expect(find.text('CLINICAL SESSION DETAILS'), findsOneWidget);
+    expect(find.textContaining('Family Medicine'), findsWidgets);
+  });
+
+  testWidgets(
+    'Planning Incomplete attention preserves its date and resets the tray',
+    (tester) async {
+      await _pumpAt(tester, const Size(390, 844));
+
+      await tester.tap(find.text('Settings').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Notifications'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('notification-center-surface')),
+        findsOneWidget,
+      );
+      final center = tester.widget<AttentionCenterSurface>(
+        find.byType(AttentionCenterSurface),
+      );
+      expect(
+        center.controller.error,
+        isNull,
+        reason: '${center.controller.error}',
+      );
+
+      await tester.tap(find.text('Planning Incomplete'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CalendarPeriodView), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('selected-date-count')));
+      expect(find.text('1 selected date'), findsOneWidget);
+      expect(
+        tester
+            .widget<ChoiceChip>(
+              find.byKey(const Key('batch-type-protectedDay')),
+            )
+            .selected,
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('evaluation attention opens its selected contextual plan route', (
+    tester,
+  ) async {
+    final repositories = _Repositories(seedLifecycle: true);
+    await _pumpAt(
+      tester,
+      const Size(1024, 768),
+      dependencies: _dependencies(repositories: repositories),
+    );
+
+    await tester.tap(find.byKey(const Key('desktop-menu-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Notifications'));
+    await tester.pumpAndSettle();
+    final center = tester.widget<AttentionCenterSurface>(
+      find.byType(AttentionCenterSurface),
+    );
+    expect(
+      center.controller.error,
+      isNull,
+      reason: '${center.controller.error}',
+    );
+    final evaluationAttention = find.byWidgetPredicate(
+      (widget) =>
+          widget.key is ValueKey<String> &&
+          (widget.key! as ValueKey<String>).value.startsWith(
+            'attention-item-evaluation:',
+          ),
+    );
+    expect(evaluationAttention, findsWidgets);
+    await tester.tap(evaluationAttention.first);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('contextual-route-surface')), findsOneWidget);
+    expect(find.byKey(const Key('evaluation-plan-surface')), findsOneWidget);
+    expect(find.text('Evaluation Plan'), findsWidgets);
+    expect(find.text('Family Medicine'), findsWidgets);
+    expect(find.byKey(const Key('contextual-back-action')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('contextual-back-action')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('notification-center-surface')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('synchronization attention exposes an honest Sync Now route', (
+    tester,
+  ) async {
+    final repositories = _Repositories(seedSynchronization: true);
+    await _pumpAt(
+      tester,
+      const Size(390, 844),
+      dependencies: _dependencies(repositories: repositories),
+    );
+
+    await tester.tap(find.text('Settings').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Notifications'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Synchronization needs attention'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('contextual-route-surface')), findsOneWidget);
+    expect(
+      find.byKey(const Key('synchronization-attention-surface')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('sync-now-action')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Synchronization is offline. Local changes remain queued.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('contextual-back-action')), findsOneWidget);
+  });
+
   test('theme Help registry supplies a safe unknown-theme fallback', () {
     final guide = ThemeHelpGuideRegistry.standard().resolve('future-theme');
 
@@ -210,12 +395,16 @@ void main() {
   });
 }
 
-Future<void> _pumpAt(WidgetTester tester, Size size) async {
+Future<void> _pumpAt(
+  WidgetTester tester,
+  Size size, {
+  ApplicationDependencies? dependencies,
+}) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     ClinicalCalendarApp(
-      dependencies: _dependencies(),
+      dependencies: dependencies ?? _dependencies(),
       environmentName: 'test',
       studentId: studentId,
     ),
@@ -223,18 +412,25 @@ Future<void> _pumpAt(WidgetTester tester, Size size) async {
   await tester.pumpAndSettle();
 }
 
-ApplicationDependencies _dependencies() => ApplicationDependencies(
-  repositories: _Repositories(),
-  clock: _Clock(),
-  identifiers: _Identifiers(),
-  synchronization: _Synchronization(),
-  notifications: _Notifications(),
-  secureStorage: _SecureStorage(),
-  files: _Files(),
-);
+ApplicationDependencies _dependencies({_Repositories? repositories}) =>
+    ApplicationDependencies(
+      repositories: repositories ?? _Repositories(),
+      clock: _Clock(),
+      identifiers: _Identifiers(),
+      synchronization: _Synchronization(),
+      notifications: _Notifications(),
+      secureStorage: _SecureStorage(),
+      files: _Files(),
+    );
 
 final class _Repositories implements RepositoryRegistry {
-  final _ReadRepositories repositories = _ReadRepositories();
+  _Repositories({bool seedLifecycle = false, bool seedSynchronization = false})
+    : repositories = _ReadRepositories(
+        seedLifecycle: seedLifecycle,
+        seedSynchronization: seedSynchronization,
+      );
+
+  final _ReadRepositories repositories;
 
   @override
   Future<void> initialize() async {}
@@ -251,20 +447,38 @@ final class _Repositories implements RepositoryRegistry {
 }
 
 final class _ReadRepositories implements SupportLocalReadRepositories {
-  final _EmptyReadRepository<WorkShift> _workShifts = _EmptyReadRepository();
-  final _EmptyReadRepository<ClinicalSession> _clinicalSessions =
-      _EmptyReadRepository();
-  final _EmptyReadRepository<ProtectedDay> _protectedDays =
-      _EmptyReadRepository();
-  final _EmptyReadRepository<ScheduleTemplate> _scheduleTemplates =
-      _EmptyReadRepository();
-  final _EmptyReadRepository<Preceptor> _preceptors = _EmptyReadRepository();
-  final _EmptyReadRepository<ClinicalPlacement> _clinicalPlacements =
-      _EmptyReadRepository();
+  _ReadRepositories({
+    required bool seedLifecycle,
+    required bool seedSynchronization,
+  }) : _workShifts = _EmptyReadRepository(),
+       _clinicalSessions = seedLifecycle
+           ? _StaticReadRepository([_sessionRecord()], (value) => value.id)
+           : _EmptyReadRepository(),
+       _protectedDays = _EmptyReadRepository(),
+       _scheduleTemplates = _EmptyReadRepository(),
+       _preceptors = seedLifecycle
+           ? _StaticReadRepository([_preceptorRecord()], (value) => value.id)
+           : _EmptyReadRepository(),
+       _clinicalPlacements = seedLifecycle
+           ? _StaticReadRepository([_placementRecord()], (value) => value.id)
+           : _EmptyReadRepository(),
+       _evaluationPlans = seedLifecycle
+           ? _StaticReadRepository([
+               _evaluationPlanRecord(),
+             ], (value) => value.id)
+           : _EmptyReadRepository(),
+       _outbox = seedSynchronization ? _PendingOutbox() : const _EmptyOutbox();
+
+  final ReadRepository<WorkShift> _workShifts;
+  final ReadRepository<ClinicalSession> _clinicalSessions;
+  final ReadRepository<ProtectedDay> _protectedDays;
+  final ReadRepository<ScheduleTemplate> _scheduleTemplates;
+  final ReadRepository<Preceptor> _preceptors;
+  final ReadRepository<ClinicalPlacement> _clinicalPlacements;
+  final OutboxReadRepository _outbox;
   final _EmptyReadRepository<HistoricalHoursEntry> _historicalHoursEntries =
       _EmptyReadRepository();
-  final _EmptyReadRepository<EvaluationPlan> _evaluationPlans =
-      _EmptyReadRepository();
+  final ReadRepository<EvaluationPlan> _evaluationPlans;
 
   @override
   ReadRepository<WorkShift> get workShifts => _workShifts;
@@ -293,7 +507,7 @@ final class _ReadRepositories implements SupportLocalReadRepositories {
   ReadRepository<EvaluationPlan> get evaluationPlans => _evaluationPlans;
 
   @override
-  OutboxReadRepository get outbox => const _EmptyOutbox();
+  OutboxReadRepository get outbox => _outbox;
 
   @override
   SyncCursorReadRepository get syncCursors => const _EmptySyncCursors();
@@ -323,6 +537,108 @@ final class _EmptyReadRepository<T> implements ReadRepository<T> {
     bool includeDeleted = false,
   }) => <StoredDomainRecord<T>>[];
 }
+
+final class _StaticReadRepository<T> implements ReadRepository<T> {
+  _StaticReadRepository(Iterable<StoredDomainRecord<T>> records, this.idOf)
+    : records = List.unmodifiable(records);
+
+  final List<StoredDomainRecord<T>> records;
+  final String Function(T value) idOf;
+
+  @override
+  StoredDomainRecord<T>? find({
+    required String studentId,
+    required String id,
+    bool includeDeleted = false,
+  }) {
+    for (final record in records) {
+      if (record.studentId == studentId && idOf(record.value) == id) {
+        return record;
+      }
+    }
+    return null;
+  }
+
+  @override
+  List<StoredDomainRecord<T>> list({
+    required String studentId,
+    bool includeDeleted = false,
+  }) => records
+      .where((record) => record.studentId == studentId)
+      .toList(growable: false);
+}
+
+StoredDomainRecord<ClinicalSession> _sessionRecord() => StoredDomainRecord(
+  value: ClinicalSession.schedule(
+    id: _appSessionId,
+    clinicalPlacementId: '20000000-0000-4000-8000-000000000001',
+    preceptorId: '30000000-0000-4000-8000-000000000001',
+    plannedInterval: ZonedInterval(
+      startDate: LocalDate(2026, 1, 1),
+      startTime: LocalTime(13, 0),
+      endTime: LocalTime(16, 0),
+      timeZone: TimeZoneId('UTC'),
+      startOffset: UtcOffset.utc,
+      endOffset: UtcOffset.utc,
+    ),
+    asOfUtc: DateTime.utc(2026, 1, 1, 12),
+  ),
+  studentId: studentId,
+  revision: 1,
+  createdAtUtc: DateTime.utc(2026),
+  updatedAtUtc: DateTime.utc(2026),
+);
+
+StoredDomainRecord<ClinicalPlacement> _placementRecord() => StoredDomainRecord(
+  value: ClinicalPlacement.create(
+    id: '20000000-0000-4000-8000-000000000001',
+    name: 'Family Medicine',
+    targetHours: TargetHours.fromWholeHours(270),
+    startDate: LocalDate(2026, 1, 1),
+    completionDeadline: LocalDate(2026, 12, 31),
+    attachedPreceptorIds: const ['30000000-0000-4000-8000-000000000001'],
+    primaryPreceptorId: '30000000-0000-4000-8000-000000000001',
+    evaluationPlanId: '70000000-0000-4000-8000-000000000001',
+  ),
+  studentId: studentId,
+  revision: 1,
+  createdAtUtc: DateTime.utc(2026),
+  updatedAtUtc: DateTime.utc(2026),
+);
+
+StoredDomainRecord<EvaluationPlan> _evaluationPlanRecord() {
+  final plan = const EvaluationPlanEngine().create(
+    evaluationPlanId: '70000000-0000-4000-8000-000000000001',
+    configuration: EvaluationPlanConfiguration(),
+    context: EvaluationPlanContext(
+      completedMinutes: 0,
+      targetMinutes: 270 * 60,
+      startDate: LocalDate(2026, 1, 1),
+      completionDeadline: LocalDate(2026, 12, 31),
+      today: LocalDate(2026, 1, 1),
+      futureScheduledSessionMinutes: const [3 * 60],
+    ),
+    primaryPreceptorId: '30000000-0000-4000-8000-000000000001',
+  );
+  return StoredDomainRecord(
+    value: plan,
+    studentId: studentId,
+    revision: 1,
+    createdAtUtc: DateTime.utc(2026),
+    updatedAtUtc: DateTime.utc(2026),
+  );
+}
+
+StoredDomainRecord<Preceptor> _preceptorRecord() => StoredDomainRecord(
+  value: Preceptor(
+    id: '30000000-0000-4000-8000-000000000001',
+    name: 'Dr. Rivera',
+  ),
+  studentId: studentId,
+  revision: 1,
+  createdAtUtc: DateTime.utc(2026),
+  updatedAtUtc: DateTime.utc(2026),
+);
 
 final class _ProfileRead implements StudentProfileReadRepository {
   const _ProfileRead();
@@ -362,7 +678,30 @@ final class _EmptyOutbox implements OutboxReadRepository {
     required String studentId,
     required DateTime asOfUtc,
     int limit = 100,
-  }) => const [];
+  }) => <OutboxOperation>[];
+}
+
+final class _PendingOutbox implements OutboxReadRepository {
+  @override
+  List<OutboxOperation> pending({
+    required String studentId,
+    required DateTime asOfUtc,
+    int limit = 100,
+  }) => [
+    OutboxOperation(
+      mutation: MutationToken(
+        operationId: '80000000-0000-4000-8000-000000000001',
+        idempotencyKey: '80000000-0000-4000-8000-000000000002',
+        occurredAtUtc: DateTime.utc(2025, 12, 30),
+      ),
+      studentId: studentId,
+      entityType: 'work_shift',
+      entityId: '80000000-0000-4000-8000-000000000003',
+      type: OutboxOperationType.upsert,
+      baseRevision: 0,
+      payloadJson: '{}',
+    ),
+  ];
 }
 
 final class _EmptySyncCursors implements SyncCursorReadRepository {

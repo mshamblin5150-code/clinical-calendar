@@ -14,5 +14,7 @@ dependencies:
     path: ../clinical_calendar_domain
 
 dev_dependencies:
+  clinical_calendar_local_data:
+    path: ../clinical_calendar_local_data
   lints: ^6.0.0
   test: ^1.25.6

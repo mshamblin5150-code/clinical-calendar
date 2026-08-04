@@ -2,3 +2,4 @@
 library;
 
 export 'src/offline_synchronization_service.dart';
+export 'synchronization.dart';

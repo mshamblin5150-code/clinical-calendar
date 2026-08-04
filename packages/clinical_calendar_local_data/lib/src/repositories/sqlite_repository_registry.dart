@@ -8,6 +8,7 @@ import '../backup/portable_backup_crypto.dart';
 import '../backup/portable_backup_models.dart';
 import '../backup/portable_backup_service.dart';
 import '../database/clinical_calendar_database.dart';
+import '../synchronization/sqlite_synchronization_repository.dart';
 
 typedef _Encoder<T> = Map<String, Object?> Function(T value);
 typedef _Decoder<T> = T Function(Map<String, Object?> row);
@@ -321,6 +322,7 @@ Map<String, Object?> _restorePayloadValue(
     _decodeHistoricalHours(row),
   ),
   'evaluation_plans' => _encodeEvaluationPlanPayload(
+    repositories,
     _decodeEvaluationPlan(repositories, row),
   ),
   'schedule_templates' => _encodeScheduleTemplate(_decodeScheduleTemplate(row)),
@@ -338,7 +340,10 @@ Map<String, Object?> _restorePayloadValue(
   _ => throw StateError('Unmapped restore payload table: ${target.table}'),
 };
 
-final class _Repositories implements SupportLocalWriteRepositories {
+final class _Repositories
+    implements
+        SupportLocalWriteRepositories,
+        SynchronizationLocalWriteRepositories {
   _Repositories(this.registry, {required this.writable});
 
   final SqliteRepositoryRegistry registry;
@@ -409,6 +414,12 @@ final class _Repositories implements SupportLocalWriteRepositories {
   late final outbox = _OutboxRepository(this);
   @override
   late final syncCursors = _SyncCursorRepository(this);
+  @override
+  late final synchronization = SqliteSynchronizationRepository(
+    database: registry._database,
+    identifiers: registry._identifierGenerator,
+    studentId: registry.studentId,
+  );
   @override
   late final activePlacementSelection = _ActivePlacementSelectionRepository(
     this,
@@ -1271,14 +1282,19 @@ final class _EvaluationPlanRepository
         entityType: 'evaluation_plan',
         idOf: (value) => value.id,
         encode: (value) => _encodeEvaluationPlan(repositories, value),
-        payloadEncode: _encodeEvaluationPlanPayload,
+        payloadEncode: (value) =>
+            _encodeEvaluationPlanPayload(repositories, value),
         decode: (row) => _decodeEvaluationPlan(repositories, row),
         afterWrite: (value, occurredAtUtc) =>
             _writeEvaluationRequirements(repositories, value, occurredAtUtc),
       );
 }
 
-Map<String, Object?> _encodeEvaluationPlanPayload(EvaluationPlan value) => {
+Map<String, Object?> _encodeEvaluationPlanPayload(
+  _Repositories repositories,
+  EvaluationPlan value,
+) => {
+  'placement_id': _encodeEvaluationPlan(repositories, value)['placement_id'],
   'configuration': {
     'initial_self_assessment_required':
         value.configuration.initialSelfAssessmentRequired,
@@ -1560,6 +1576,7 @@ final class _OutboxRepository implements OutboxMaintenanceRepository {
     final rows = repositories.registry._database.select(
       '''SELECT * FROM outbox_operations
         WHERE student_id = ? AND acknowledged_at_utc IS NULL
+        AND terminal_rejected_at_utc IS NULL
         AND (next_attempt_at_utc IS NULL OR next_attempt_at_utc <= ?)
         ORDER BY created_at_utc, id LIMIT ?''',
       [repositories.registry.studentId, _utc(asOfUtc), limit],
@@ -1677,6 +1694,8 @@ OutboxOperation _decodeOutbox(Map<String, Object?> row) => OutboxOperation(
   acknowledgedCursor: _nullableInt(row, 'acknowledged_cursor'),
   acknowledgedAtUtc: _nullableDateTime(row, 'acknowledged_at_utc'),
   lastFailureCode: _nullableText(row, 'last_failure_code'),
+  terminalRejectionCode: _nullableText(row, 'terminal_rejection_code'),
+  terminalRejectedAtUtc: _nullableDateTime(row, 'terminal_rejected_at_utc'),
 );
 
 final class _SyncCursorRepository implements SyncCursorRepository {
@@ -1818,9 +1837,7 @@ final class _ActivePlacementSelectionRepository
     );
     final existing = existingRows.isEmpty ? null : existingRows.single;
     final settingsId = existing == null
-        ? _identifier(
-            repositories.registry._identifierGenerator.nextIdentifier(),
-          )
+        ? _identifier(_studentId)
         : _identifier(_text(existing, 'id'));
     if (_isReplay(
       mutation: mutation,
@@ -2196,9 +2213,7 @@ final class _StudentSettingsRepository implements StudentSettingsRepository {
     );
     final existing = rows.isEmpty ? null : rows.single;
     final settingsId = existing == null
-        ? _identifier(
-            repositories.registry._identifierGenerator.nextIdentifier(),
-          )
+        ? _identifier(_studentId)
         : _identifier(_text(existing, 'id'));
     final baseRevision = existing == null ? 0 : _int(existing, 'revision');
     final revision = expectedRevision + 1;

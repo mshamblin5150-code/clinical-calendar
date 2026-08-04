@@ -30,8 +30,8 @@ $assertionCount = (
   Select-String -Path (Join-Path $PSScriptRoot 'sync_backend_test.sql') `
     -Pattern '^select (ok|is|results_eq|throws_ok)\(' -CaseSensitive
 ).Count
-if ($assertionCount -ne 27) {
-  throw "pgTAP plan is 27 but found $assertionCount assertions."
+if ($assertionCount -ne 28) {
+  throw "pgTAP plan is 28 but found $assertionCount assertions."
 }
 
 Write-Output 'Static synchronization contract checks passed.'

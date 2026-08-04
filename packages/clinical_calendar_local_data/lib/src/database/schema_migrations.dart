@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 4;
+  static const latestVersion = 5;
 
   final MigrationTestHook? _testHook;
 
@@ -362,5 +362,45 @@ final Map<int, List<String>> _statements = {
     '''ALTER TABLE evaluation_requirements
       ADD COLUMN is_currently_required INTEGER NOT NULL DEFAULT 1
       CHECK (is_currently_required IN (0, 1))''',
+  ],
+  5: [
+    '''ALTER TABLE outbox_operations
+      ADD COLUMN terminal_rejection_code TEXT''',
+    '''ALTER TABLE outbox_operations
+      ADD COLUMN terminal_rejected_at_utc TEXT''',
+    '''ALTER TABLE sync_state
+      ADD COLUMN failure_started_at_utc TEXT''',
+    // Pre-release random Settings identities are safe to rewrite only before
+    // the idempotency key could have reached the server. Otherwise opening
+    // fails atomically and the pre-release database must be reset.
+    '''CREATE TEMP TABLE settings_identity_migration_guard (
+      invalid INTEGER NOT NULL CHECK (invalid = 0)
+    ) STRICT''',
+    '''INSERT INTO settings_identity_migration_guard (invalid)
+      SELECT 1 FROM outbox_operations
+      WHERE entity_type = 'settings'
+        AND entity_id <> student_id
+        AND (attempt_count > 0 OR acknowledged_at_utc IS NOT NULL)
+      LIMIT 1''',
+    r'''UPDATE outbox_operations
+      SET entity_id = student_id,
+          payload_json = json_set(payload_json, '$.entity_id', student_id)
+      WHERE entity_type = 'settings' AND entity_id <> student_id''',
+    r'''UPDATE sync_conflicts
+      SET entity_id = student_id,
+          local_snapshot_json = json_set(
+            local_snapshot_json, '$.entity_id', student_id
+          ),
+          remote_snapshot_json = json_set(
+            remote_snapshot_json, '$.entity_id', student_id
+          )
+      WHERE entity_type = 'settings' AND entity_id <> student_id''',
+    'UPDATE settings SET id = student_id WHERE id <> student_id',
+    'DROP TABLE settings_identity_migration_guard',
+    'DROP INDEX outbox_pending_index',
+    '''CREATE INDEX outbox_pending_index
+      ON outbox_operations(student_id, created_at_utc)
+      WHERE acknowledged_at_utc IS NULL
+        AND terminal_rejected_at_utc IS NULL''',
   ],
 };

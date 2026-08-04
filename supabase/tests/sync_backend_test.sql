@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(27);
+select plan(28);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -88,6 +88,27 @@ select is(
     where student_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid),
   1::bigint,
   'a rejected mutation writes no change event'
+);
+
+select is(
+  public.apply_sync_operation(
+    '20000000-0000-4000-8000-000000000010',
+    'settings', '30000000-0000-4000-8000-000000000010', 'upsert', 0,
+    jsonb_build_object(
+      'schema_version', 1, 'entity_type', 'settings',
+      'entity_id', '30000000-0000-4000-8000-000000000010',
+      'student_id', '10000000-0000-4000-8000-000000000001',
+      'revision', 1, 'created_at_utc', '2026-08-03T12:00:00.000Z',
+      'updated_at_utc', '2026-08-03T12:00:00.000Z', 'deleted_at_utc', null,
+      'value', jsonb_build_object(
+        'week_start', 7, 'time_display', 'military',
+        'theme', 'variant-f', 'synchronization_mode', 'enabled',
+        'notification_preferences_json', '{}', 'active_placement_id', null
+      )
+    )
+  ) #>> '{rejection,field}',
+  'settings_identity',
+  'Settings identity must equal the authenticated Student identity'
 );
 
 select ok(

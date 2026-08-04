@@ -519,6 +519,10 @@ begin
       'revision', 'created_at_utc', 'updated_at_utc', 'deleted_at_utc', 'value'
     ]) then
     v_rejection := jsonb_build_object('code', 'invalid_payload', 'field', 'envelope');
+  elsif p_entity_type = 'settings' and p_entity_id <> v_student_id then
+    v_rejection := jsonb_build_object(
+      'code', 'invalid_payload', 'field', 'settings_identity'
+    );
   else
     begin
       v_revision := (p_payload ->> 'revision')::bigint;

@@ -22,6 +22,7 @@ dependencies:
     path: ../../packages/clinical_calendar_presentation
   clinical_calendar_sync:
     path: ../../packages/clinical_calendar_sync
+  connectivity_plus: ^7.3.1
 
 dev_dependencies:
   flutter_test:
