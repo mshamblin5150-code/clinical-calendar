@@ -50,6 +50,17 @@ void main() {
     expect(csv, contains('Unattributed'));
   });
 
+  test('CSV treats formula-prefixed strings as literal text', () async {
+    final artifact = await encoder.encodePlacementCsv(
+      placementExportFixture(name: '=HYPERLINK("https://example.test")'),
+    );
+    final csv = utf8.decode(artifact.bytes);
+
+    expect(csv, contains("'=HYPERLINK"));
+    expect(csv, isNot(contains(',=HYPERLINK')));
+    expect(csv, contains('-240'));
+  });
+
   test(
     'JSON is indented, versioned, non-ASCII safe, and adds no secrets',
     () async {

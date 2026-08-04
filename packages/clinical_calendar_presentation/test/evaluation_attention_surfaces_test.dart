@@ -45,13 +45,30 @@ void main() {
             .text,
         'Medatrax',
       );
+      expect(
+        find.text('External record reference (no patient information)'),
+        findsOneWidget,
+      );
       await tester.enterText(
         find.byKey(const Key('evaluation-documented-date')),
         '2026-08-03',
       );
       await tester.enterText(
-        find.byKey(const Key('evaluation-reference-note')),
-        'School portal confirmation',
+        find.byKey(const Key('evaluation-external-reference')),
+        'Patient Jane Doe clinical note',
+      );
+      await tester.tap(
+        find.byKey(const Key('save-evaluation-documentation-action')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Do not enter patient information'),
+        findsOneWidget,
+      );
+      expect(harness.gateway.lastDocumentation, isNull);
+      await tester.enterText(
+        find.byKey(const Key('evaluation-external-reference')),
+        'MEDATRAX-2026-0042',
       );
       await tester.tap(
         find.byKey(const Key('save-evaluation-documentation-action')),
@@ -70,7 +87,7 @@ void main() {
       expect(harness.gateway.lastDocumentation!.location, 'Medatrax');
       expect(
         harness.gateway.lastDocumentation!.referenceOrNote,
-        'School portal confirmation',
+        'MEDATRAX-2026-0042',
       );
       expect(harness.controller.attentionItems.length, beforeCount - 1);
       expect(

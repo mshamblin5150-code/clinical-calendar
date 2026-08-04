@@ -2,6 +2,7 @@ import 'dart:collection';
 
 enum PortableBackupFailureKind {
   weakPassphrase,
+  tooLarge,
   invalidContainer,
   wrongPassphraseOrDamaged,
   checksumMismatch,
@@ -30,12 +31,41 @@ final class PortableBackupCryptoPolicy {
     this.iterations = 3,
     this.parallelism = 2,
     this.minimumPassphraseCharacters = 12,
-  });
+    this.maximumContainerBytes = 48 * 1024 * 1024,
+    this.maximumPlaintextBytes = 32 * 1024 * 1024,
+  }) : assert(memoryKib > 0),
+       assert(iterations > 0),
+       assert(parallelism > 0),
+       assert(minimumPassphraseCharacters > 0),
+       assert(maximumContainerBytes > 0),
+       assert(maximumPlaintextBytes > 0);
 
   final int memoryKib;
   final int iterations;
   final int parallelism;
   final int minimumPassphraseCharacters;
+  final int maximumContainerBytes;
+  final int maximumPlaintextBytes;
+}
+
+final class PortableBackupDatasetLimits {
+  const PortableBackupDatasetLimits({
+    this.maximumRows = 100000,
+    this.maximumFieldsPerRow = 128,
+    this.maximumStringCellCharacters = 64 * 1024,
+    this.maximumBinaryCellBytes = 1024 * 1024,
+    this.maximumAggregateBinaryBytes = 8 * 1024 * 1024,
+  }) : assert(maximumRows > 0),
+       assert(maximumFieldsPerRow > 0),
+       assert(maximumStringCellCharacters > 0),
+       assert(maximumBinaryCellBytes > 0),
+       assert(maximumAggregateBinaryBytes > 0);
+
+  final int maximumRows;
+  final int maximumFieldsPerRow;
+  final int maximumStringCellCharacters;
+  final int maximumBinaryCellBytes;
+  final int maximumAggregateBinaryBytes;
 }
 
 final class BackupRecordIdentity implements Comparable<BackupRecordIdentity> {

@@ -6,6 +6,8 @@
 grant clinical_calendar_sync_executor to postgres;
 grant create on schema clinical_calendar_sync to clinical_calendar_sync_executor;
 grant create on schema public to clinical_calendar_sync_executor;
+grant delete on clinical_calendar_sync.change_feed,
+  clinical_calendar_sync.operation_receipts to clinical_calendar_sync_executor;
 
 -- Permanent Trash purge is a synchronization operation, but the deleted
 -- entity contents must not survive merely to prevent stale resurrection.
@@ -164,35 +166,9 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_receipt clinical_calendar_sync.operation_receipts%rowtype;
   v_marker clinical_calendar_sync.purge_markers%rowtype;
   v_result jsonb;
 begin
-  insert into clinical_calendar_sync.operation_receipts (
-    student_id, idempotency_key, entity_type, entity_id, operation_type,
-    base_revision, request_payload
-  ) values (
-    p_student_id, p_idempotency_key, p_entity_type, p_entity_id,
-    p_operation_type, p_base_revision, p_payload
-  ) on conflict (student_id, idempotency_key) do nothing;
-  if not found then
-    select * into strict v_receipt
-    from clinical_calendar_sync.operation_receipts
-    where student_id = p_student_id and idempotency_key = p_idempotency_key
-    for update;
-    if v_receipt.entity_type <> p_entity_type
-      or v_receipt.entity_id <> p_entity_id
-      or v_receipt.operation_type <> p_operation_type
-      or v_receipt.base_revision <> p_base_revision
-      or v_receipt.request_payload <> p_payload then
-      return jsonb_build_object(
-        'accepted', false,
-        'rejection', jsonb_build_object('code', 'idempotency_conflict')
-      );
-    end if;
-    return v_receipt.result;
-  end if;
-
   select * into strict v_marker
   from clinical_calendar_sync.purge_markers
   where student_id = p_student_id
@@ -206,8 +182,6 @@ begin
       'current_revision', v_marker.revision
     )
   );
-  update clinical_calendar_sync.operation_receipts set result = v_result
-  where student_id = p_student_id and idempotency_key = p_idempotency_key;
   return v_result;
 end
 $$;
@@ -424,6 +398,13 @@ begin
     p_entity_type, p_entity_id, p_student_id, v_revision, v_created_at,
     v_purged_at, v_cursor
   );
+  delete from clinical_calendar_sync.change_feed
+  where student_id = p_student_id
+    and entity_type = p_entity_type and entity_id = p_entity_id;
+  delete from clinical_calendar_sync.operation_receipts
+  where student_id = p_student_id
+    and entity_type = p_entity_type and entity_id = p_entity_id
+    and idempotency_key <> p_idempotency_key;
   delete from clinical_calendar_sync.records
   where student_id = p_student_id
     and entity_type = p_entity_type and entity_id = p_entity_id;

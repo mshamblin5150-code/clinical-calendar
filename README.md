@@ -31,12 +31,27 @@ Build the composition app from `apps/clinical_calendar`:
 
 ```text
 flutter build windows --release
-flutter build apk --release --split-per-abi
 flutter build ios --no-codesign
 ```
+
+Android release builds fail closed unless the maintainer supplies the private
+signing material through these process-local environment variables:
+
+```text
+CLINICAL_CALENDAR_ANDROID_KEYSTORE_PATH
+CLINICAL_CALENDAR_ANDROID_KEYSTORE_PASSWORD
+CLINICAL_CALENDAR_ANDROID_KEY_ALIAS
+CLINICAL_CALENDAR_ANDROID_KEY_PASSWORD
+flutter build apk --release --split-per-abi
+```
+
+Do not write these values to source, Dart defines, Gradle project files, CI
+logs, or distributable artifacts.
 
 The iOS command requires macOS and Xcode. No privileged server credential may
 be supplied through Dart defines, source files, or application artifacts.
 
 See [the architecture guide](docs/architecture.md) for dependency direction,
 test locations, configuration, and platform-test commands.
+See [the release security checklist](docs/release-security-checklist.md) before
+publishing any privately distributed build.

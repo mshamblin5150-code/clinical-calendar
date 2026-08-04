@@ -24,6 +24,7 @@ final class PortableBackupCrypto {
     required String passphrase,
   }) async {
     _checkPassphrase(passphrase);
+    _checkPlaintextSize(plaintext.length);
     final salt = _randomBytes(16);
     final nonce = _randomBytes(12);
     final header = <String, Object?>{
@@ -46,13 +47,15 @@ final class PortableBackupCrypto {
         nonce: nonce,
         aad: aad,
       );
-      return utf8.encode(
+      final container = utf8.encode(
         canonicalJson({
           ...header,
           'ciphertext': base64Url.encode(box.cipherText),
           'authentication_tag': base64Url.encode(box.mac.bytes),
         }),
       );
+      _checkContainerSize(container.length);
+      return container;
     } finally {
       if (key case final SecretKeyData data) data.destroy();
     }
@@ -63,6 +66,7 @@ final class PortableBackupCrypto {
     required String passphrase,
   }) async {
     _checkPassphrase(passphrase);
+    _checkContainerSize(containerBytes.length);
     Map<String, Object?> container;
     try {
       final decoded = jsonDecode(utf8.decode(containerBytes));
@@ -89,23 +93,20 @@ final class PortableBackupCrypto {
           container['cipher'] != 'aes-256-gcm') {
         throw const FormatException();
       }
-      final parameters = PortableBackupCryptoPolicy(
-        memoryKib: container['memory_kib'] as int,
-        iterations: container['iterations'] as int,
-        parallelism: container['parallelism'] as int,
-        minimumPassphraseCharacters: policy.minimumPassphraseCharacters,
-      );
-      if (parameters.memoryKib < policy.memoryKib ||
-          parameters.iterations < policy.iterations ||
-          parameters.parallelism < 1 ||
-          parameters.memoryKib > 1024 * 1024 ||
-          parameters.iterations > 20 ||
-          parameters.parallelism > 16) {
+      if (container['memory_kib'] != policy.memoryKib ||
+          container['iterations'] != policy.iterations ||
+          container['parallelism'] != policy.parallelism) {
         throw const FormatException();
       }
       final salt = base64Url.decode(container['salt'] as String);
       final nonce = base64Url.decode(container['nonce'] as String);
-      final ciphertext = base64Url.decode(container['ciphertext'] as String);
+      final encodedCiphertext = container['ciphertext'] as String;
+      if (encodedCiphertext.length >
+          _maximumBase64UrlCharacters(policy.maximumPlaintextBytes)) {
+        _throwTooLarge();
+      }
+      final ciphertext = base64Url.decode(encodedCiphertext);
+      _checkPlaintextSize(ciphertext.length);
       final tag = base64Url.decode(container['authentication_tag'] as String);
       if (salt.length != 16 || nonce.length != 12 || tag.length != 16) {
         throw const FormatException();
@@ -113,7 +114,7 @@ final class PortableBackupCrypto {
       final header = Map<String, Object?>.from(container)
         ..remove('ciphertext')
         ..remove('authentication_tag');
-      final key = await _deriveKey(passphrase, salt, parameters);
+      final key = await _deriveKey(passphrase, salt, policy);
       try {
         return await _cipher.decrypt(
           SecretBox(ciphertext, nonce: nonce, mac: Mac(tag)),
@@ -161,10 +162,25 @@ final class PortableBackupCrypto {
     }
   }
 
+  void _checkContainerSize(int length) {
+    if (length > policy.maximumContainerBytes) _throwTooLarge();
+  }
+
+  void _checkPlaintextSize(int length) {
+    if (length > policy.maximumPlaintextBytes) _throwTooLarge();
+  }
+
+  Never _throwTooLarge() => throw const PortableBackupException(
+    PortableBackupFailureKind.tooLarge,
+    'The selected backup exceeds the supported safety limits.',
+  );
+
   Uint8List _randomBytes(int length) => Uint8List.fromList(
     List<int>.generate(length, (_) => _random.nextInt(256)),
   );
 }
+
+int _maximumBase64UrlCharacters(int byteLength) => ((byteLength + 2) ~/ 3) * 4;
 
 String canonicalJson(Object? value) => jsonEncode(_canonical(value));
 
