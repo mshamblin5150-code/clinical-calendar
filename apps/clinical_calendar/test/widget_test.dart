@@ -170,6 +170,60 @@ void main() {
   });
 
   test(
+    'production backup picker previews and safely reapplies encrypted data',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'clinical-calendar-portable-restore-',
+      );
+      final databasePath =
+          '${directory.path}${Platform.pathSeparator}clinical_calendar.sqlite3';
+      final storage = _MemorySecureStorage();
+      final saver = _NativeSaver();
+      final picker = _BackupPicker();
+      SqliteRepositoryRegistry? registry;
+      try {
+        final root = await app.buildProductionApplication(
+          secureStorage: storage,
+          identifiers: const _Identifiers(_identityStudentId),
+          accountBackupFileSaver: saver,
+          portableBackupFilePicker: picker,
+          repositoryBootstrap: (owner, secureStorage, identifiers) async {
+            final database = await ClinicalCalendarDatabase.open(
+              path: databasePath,
+              secureStorage: secureStorage,
+            );
+            registry = SqliteRepositoryRegistry(
+              studentId: owner,
+              database: database,
+              identifierGenerator: identifiers,
+            );
+            await registry!.initialize();
+            return registry!;
+          },
+        );
+        final workflows = root.portableBackupWorkflows!;
+        expect(await workflows.create('correct horse battery staple'), isTrue);
+        picker.bytes = saver.request!.bytes;
+
+        final preview = await workflows.choose('correct horse battery staple');
+        expect(preview, isNotNull);
+        expect(preview!.localRecordsKept, greaterThan(0));
+        expect(preview.conflicts, isEmpty);
+        await workflows.apply(const {});
+        expect(picker.calls, 1);
+
+        await expectLater(
+          workflows.choose('wrong passphrase'),
+          throwsA(isA<PortableBackupException>()),
+        );
+      } finally {
+        await registry?.close();
+        if (await directory.exists()) await directory.delete(recursive: true);
+      }
+    },
+  );
+
+  test(
     'configured authenticated composition decorates only application writes',
     () async {
       const studentId = '00000000-0000-4000-8000-000000000021';
@@ -487,6 +541,17 @@ final class _NativeSaver implements NativeByteFileSaver {
   Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request) async {
     this.request = request;
     return NativeFileSaveOutcome.saved;
+  }
+}
+
+final class _BackupPicker implements BackupByteFilePicker {
+  List<int>? bytes;
+  var calls = 0;
+
+  @override
+  Future<List<int>?> pickBackupBytes() async {
+    calls++;
+    return bytes;
   }
 }
 

@@ -10,7 +10,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: BackupRestoreSurface(
-          onCreateBackup: (_) async => created = true,
+          onCreateBackup: (_) async {
+            created = true;
+            return true;
+          },
           onChooseBackup: (_) async => null,
           onApplyRestore: (_) async {},
         ),
@@ -46,7 +49,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: BackupRestoreSurface(
-            onCreateBackup: (_) async {},
+            onCreateBackup: (_) async => true,
             onChooseBackup: (_) async => const BackupRestorePreviewViewModel(
               additions: 2,
               backupUpdates: 1,
@@ -120,5 +123,78 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('private schedule data'), findsNothing);
+  });
+
+  testWidgets('cancelled selection clears a stale restore preview', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var selections = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BackupRestoreSurface(
+          onCreateBackup: (_) async => true,
+          onChooseBackup: (_) async {
+            selections++;
+            return selections == 1
+                ? const BackupRestorePreviewViewModel(
+                    additions: 1,
+                    backupUpdates: 0,
+                    localRecordsKept: 0,
+                  )
+                : null;
+          },
+          onApplyRestore: (_) async {},
+        ),
+      ),
+    );
+    await tester.enterText(
+      find.byKey(const Key('backup-passphrase')),
+      'long secure passphrase',
+    );
+    await tester.enterText(
+      find.byKey(const Key('backup-passphrase-confirmation')),
+      'long secure passphrase',
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('choose-backup-file')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('apply-restore')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('choose-backup-file')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('apply-restore')), findsNothing);
+    expect(find.text('No backup selected.'), findsOneWidget);
+  });
+
+  testWidgets('cancelled creation is not reported as a created backup', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BackupRestoreSurface(
+          onCreateBackup: (_) async => false,
+          onChooseBackup: (_) async => null,
+          onApplyRestore: (_) async {},
+        ),
+      ),
+    );
+    await tester.enterText(
+      find.byKey(const Key('backup-passphrase')),
+      'long secure passphrase',
+    );
+    await tester.enterText(
+      find.byKey(const Key('backup-passphrase-confirmation')),
+      'long secure passphrase',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('create-encrypted-backup')));
+    await tester.pumpAndSettle();
+    expect(find.text('Backup creation cancelled.'), findsOneWidget);
+    expect(find.text('Encrypted backup created.'), findsNothing);
   });
 }

@@ -213,6 +213,46 @@ void main() {
     expect(find.byKey(const Key('back-action')), findsOneWidget);
   });
 
+  testWidgets('menu routes backup and exports to production surfaces', (
+    tester,
+  ) async {
+    await _pumpAt(
+      tester,
+      const Size(1024, 768),
+      portableBackupWorkflows: PortableBackupWorkflows(
+        create: (_) async => true,
+        choose: (_) async => null,
+        apply: (_) async {},
+      ),
+      exportWorkflowFactory: (gate) => ExportWorkflowService(
+        data: const _ExportSource(),
+        encoder: const _ExportEncoder(),
+        reauthentication: gate,
+        fileSaver: const _ExportSaver(),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('desktop-menu-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Backup & Restore'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BackupRestoreSurface), findsOneWidget);
+    expect(find.byKey(const Key('back-action')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('back-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Exports'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('export-surface')), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('export-placement-pdf')))
+          .onPressed,
+      isNull,
+    );
+    expect(find.byKey(const Key('export-complete-json')), findsOneWidget);
+  });
+
   testWidgets('menu exposes the production Trash and recovery destination', (
     tester,
   ) async {
@@ -560,6 +600,8 @@ Future<void> _pumpAt(
   OneShotRecoveryReauthenticationGate? recoveryProofGate,
   PasswordlessIdentityService? identity,
   String? identityEmail,
+  PortableBackupWorkflows? portableBackupWorkflows,
+  ExportWorkflowFactory? exportWorkflowFactory,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -574,6 +616,8 @@ Future<void> _pumpAt(
       recoveryProofGate: recoveryProofGate,
       identity: identity,
       identityEmail: identityEmail,
+      portableBackupWorkflows: portableBackupWorkflows,
+      exportWorkflowFactory: exportWorkflowFactory,
     ),
   );
   await tester.pumpAndSettle();
@@ -668,6 +712,42 @@ final class _RecoveryOtpGateway implements PasswordlessIdentityGateway {
 final class _RecoveryGate implements RecoveryReauthenticationGate {
   @override
   Future<bool> reauthenticate({required String reason}) async => true;
+}
+
+final class _ExportSource implements ExportSnapshotSource {
+  const _ExportSource();
+
+  @override
+  Future<PortableExportSnapshot> completePortableData() =>
+      throw UnimplementedError();
+
+  @override
+  Future<PlacementExportSnapshot> placement(String placementId) =>
+      throw UnimplementedError();
+}
+
+final class _ExportEncoder implements ExportEncoder {
+  const _ExportEncoder();
+
+  @override
+  Future<ExportArtifact> encodeCompleteJson(PortableExportSnapshot snapshot) =>
+      throw UnimplementedError();
+
+  @override
+  Future<ExportArtifact> encodePlacementCsv(PlacementExportSnapshot snapshot) =>
+      throw UnimplementedError();
+
+  @override
+  Future<ExportArtifact> encodePlacementPdf(PlacementExportSnapshot snapshot) =>
+      throw UnimplementedError();
+}
+
+final class _ExportSaver implements NativeByteFileSaver {
+  const _ExportSaver();
+
+  @override
+  Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request) =>
+      throw UnimplementedError();
 }
 
 ApplicationDependencies _dependencies({_Repositories? repositories}) =>
