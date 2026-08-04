@@ -1,7 +1,7 @@
 # Implement Trash, Recovery, and Account Erasure
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: 66, 78, 80
 
 ## Objective
@@ -17,4 +17,3 @@ Implement synchronized soft deletion, 30-day recovery, operational snapshot reco
 - Delete Account and All Data is distinct from sign-out, requires reauthentication, offers backup first, and supports cancellation during a 30-day grace period.
 - Grace-period expiry removes active data, Trash, device registrations, and authentication records; residual encrypted snapshots expire within 30 additional days.
 - Automated time-controlled tests cover restoration, expiry, cancellation, purge retries, and invariant-prohibited deletion.
-
