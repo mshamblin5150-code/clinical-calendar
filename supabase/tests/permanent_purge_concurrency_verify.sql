@@ -24,6 +24,13 @@ begin
       where entity_id = '82800000-0000-4000-8000-000000000001') <> 1 then
     raise exception 'expected one minimal convergence marker';
   end if;
+  if exists (
+    select 1 from clinical_calendar_sync.operation_receipts
+    where entity_id = '82800000-0000-4000-8000-000000000001'
+      and request_payload::text like '%Concurrent resurrection%'
+  ) then
+    raise exception 'concurrent rejected payload survived in receipts';
+  end if;
 end
 $$;
 

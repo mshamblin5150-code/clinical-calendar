@@ -257,13 +257,40 @@ void main() {
         supabaseUrl: 'not a URI',
         supabasePublishableKey: 'public-client-key',
       );
+      const cleartextProduction = AppEnvironment(
+        name: 'production',
+        supabaseUrl: 'http://project.supabase.co',
+        supabasePublishableKey: 'public-client-key',
+      );
+      const cleartextRemoteTest = AppEnvironment(
+        name: 'test',
+        supabaseUrl: 'http://project.example.test',
+        supabasePublishableKey: 'public-client-key',
+      );
+      const localEmulator = AppEnvironment(
+        name: 'local',
+        supabaseUrl: 'http://127.0.0.1:54321',
+        supabasePublishableKey: 'public-client-key',
+      );
 
       expect(valid.hasSynchronizationConfiguration, isTrue);
       expect(valid.synchronizationProjectUri?.host, 'project.supabase.co');
       expect(missingKey.hasSynchronizationConfiguration, isFalse);
       expect(invalidUri.hasSynchronizationConfiguration, isFalse);
+      expect(cleartextProduction.hasSynchronizationConfiguration, isFalse);
+      expect(cleartextRemoteTest.hasSynchronizationConfiguration, isFalse);
+      expect(localEmulator.hasSynchronizationConfiguration, isTrue);
     },
   );
+
+  test('Android release builds require private signing material', () {
+    final gradle = File('android/app/build.gradle.kts').readAsStringSync();
+
+    expect(gradle, isNot(contains('signingConfigs.getByName("debug")')));
+    expect(gradle, contains('signingConfigs.getByName("release")'));
+    expect(gradle, contains('CLINICAL_CALENDAR_ANDROID_KEYSTORE_PATH'));
+    expect(gradle, contains('releaseSigningConfigured'));
+  });
 
   testWidgets('startup failure is sanitized and leaves recovery guidance', (
     tester,

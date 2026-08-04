@@ -63,6 +63,7 @@ final class PortableBackupService {
     required RestoreSynchronizationIntentSink synchronizationIntentSink,
     PortableBackupCrypto? crypto,
     this.migrator = const DefaultPortableBackupMigrator(),
+    this.datasetLimits = const PortableBackupDatasetLimits(),
   }) : _studentId = _uuid(studentId),
        _intentSink = synchronizationIntentSink,
        _crypto = crypto ?? PortableBackupCrypto();
@@ -72,6 +73,7 @@ final class PortableBackupService {
   final RestoreSynchronizationIntentSink _intentSink;
   final PortableBackupCrypto _crypto;
   final PortableBackupMigrator migrator;
+  final PortableBackupDatasetLimits datasetLimits;
 
   /// Revalidates the complete logical dataset through an isolated in-memory
   /// schema copy. Callers use this immediately before committing recovery.
@@ -104,7 +106,7 @@ final class PortableBackupService {
         throw const FormatException();
       }
       final migrated = migrator.migrate(Map<String, Object?>.from(raw));
-      final tables = _decodeTables(migrated['tables']);
+      final tables = _decodeTables(migrated['tables'], datasetLimits);
       _validateDataset(tables);
       final decoded = _DecodedBackup(
         _studentId,
@@ -340,7 +342,7 @@ final class PortableBackupService {
       final created = DateTime.parse(
         migrated['created_at_utc'] as String,
       ).toUtc();
-      final tables = _decodeTables(migrated['tables']);
+      final tables = _decodeTables(migrated['tables'], datasetLimits);
       _validateDataset(tables);
       return _DecodedBackup(owner, created, tables);
     } on PortableBackupException {
@@ -548,36 +550,89 @@ Object? _encodeCell(Object? value) {
   return value;
 }
 
-Map<String, List<Map<String, Object?>>> _decodeTables(Object? value) {
+Map<String, List<Map<String, Object?>>> _decodeTables(
+  Object? value,
+  PortableBackupDatasetLimits limits,
+) {
   if (value is! Map<String, dynamic>) throw const FormatException();
   if (value.keys.any(excludedPortableBackupTables.contains)) {
     throw const FormatException('Operational table included.');
   }
-  return {for (final table in _logicalTables) table: _decodeRows(value[table])};
+  final budget = _BackupDecodeBudget(limits);
+  return {
+    for (final table in _logicalTables)
+      table: _decodeRows(value[table], budget),
+  };
 }
 
-List<Map<String, Object?>> _decodeRows(Object? value) {
+List<Map<String, Object?>> _decodeRows(
+  Object? value,
+  _BackupDecodeBudget budget,
+) {
   if (value is! List) throw const FormatException();
+  budget.addRows(value.length);
   return value
       .map((row) {
         if (row is! Map<String, dynamic>) throw const FormatException();
+        budget.checkFieldCount(row.length);
         return <String, Object?>{
-          for (final entry in row.entries) entry.key: _decodeCell(entry.value),
+          for (final entry in row.entries)
+            entry.key: _decodeCell(entry.value, budget),
         };
       })
       .toList(growable: false);
 }
 
-Object? _decodeCell(Object? value) {
+Object? _decodeCell(Object? value, _BackupDecodeBudget budget) {
   if (value is Map<String, dynamic> &&
       value.length == 1 &&
       value['binary_base64'] is String) {
-    return Uint8List.fromList(
-      base64Url.decode(value['binary_base64'] as String),
-    );
+    final encoded = value['binary_base64'] as String;
+    budget.checkEncodedBinaryLength(encoded.length);
+    final decoded = base64Url.decode(encoded);
+    budget.addBinaryBytes(decoded.length);
+    return Uint8List.fromList(decoded);
   }
   if (value is Map || value is List) throw const FormatException();
+  if (value is String) budget.checkStringLength(value.length);
   return value;
+}
+
+final class _BackupDecodeBudget {
+  _BackupDecodeBudget(this.limits);
+
+  final PortableBackupDatasetLimits limits;
+  int _rows = 0;
+  int _binaryBytes = 0;
+
+  void addRows(int count) {
+    _rows += count;
+    if (_rows > limits.maximumRows) _throwTooLarge();
+  }
+
+  void checkFieldCount(int count) {
+    if (count > limits.maximumFieldsPerRow) _throwTooLarge();
+  }
+
+  void checkStringLength(int count) {
+    if (count > limits.maximumStringCellCharacters) _throwTooLarge();
+  }
+
+  void checkEncodedBinaryLength(int count) {
+    final maximum = ((limits.maximumBinaryCellBytes + 2) ~/ 3) * 4;
+    if (count > maximum) _throwTooLarge();
+  }
+
+  void addBinaryBytes(int count) {
+    if (count > limits.maximumBinaryCellBytes) _throwTooLarge();
+    _binaryBytes += count;
+    if (_binaryBytes > limits.maximumAggregateBinaryBytes) _throwTooLarge();
+  }
+
+  Never _throwTooLarge() => throw const PortableBackupException(
+    PortableBackupFailureKind.tooLarge,
+    'The selected backup exceeds the supported safety limits.',
+  );
 }
 
 Map<BackupRecordIdentity, Map<String, Object?>> _byIdentity(

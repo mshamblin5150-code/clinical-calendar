@@ -1,7 +1,7 @@
 # Package and Verify the Windows Application
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: 71, 72, 73, 74, 75, 76, 78, 79, 80, 81, 82, 83, 84
 
 ## Objective
@@ -17,3 +17,6 @@ Produce a repeatable privately installable Windows release and verify install, u
 - Reinstallation can reconnect to synchronized data or restore an encrypted backup.
 - Artifact signing, verification, rollback, and private-delivery instructions contain no secret material and are reproducible by the maintainer.
 
+## Comments
+
+- 2026-08-04: Claimed after Ticket 84 resolved. The repository-pinned Flutter 3.44.8 toolchain successfully produced the baseline Windows release executable at `apps/clinical_calendar/build/windows/x64/runner/Release/clinical_calendar.exe`. Next work is the versioned signed installer/CI path and install-upgrade-recovery verification; the unsigned runner bundle is not being treated as the deliverable.

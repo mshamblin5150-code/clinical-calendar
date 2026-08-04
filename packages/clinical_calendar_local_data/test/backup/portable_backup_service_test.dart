@@ -140,6 +140,65 @@ void main() {
     },
   );
 
+  test(
+    'unauthenticated KDF cost changes are rejected before derivation',
+    () async {
+      final encrypted = await crypto.encrypt(
+        plaintext: utf8.encode('{"safe":true}'),
+        passphrase: _passphrase,
+      );
+      final container =
+          jsonDecode(utf8.decode(encrypted)) as Map<String, dynamic>;
+      container['memory_kib'] = 65;
+
+      await expectLater(
+        crypto.decrypt(
+          containerBytes: utf8.encode(jsonEncode(container)),
+          passphrase: _passphrase,
+        ),
+        throwsA(_failure(PortableBackupFailureKind.invalidContainer)),
+      );
+    },
+  );
+
+  test('backup container and decoded row budgets fail closed', () async {
+    final boundedCrypto = PortableBackupCrypto(
+      policy: const PortableBackupCryptoPolicy(
+        memoryKib: 64,
+        iterations: 1,
+        parallelism: 1,
+        minimumPassphraseCharacters: 1,
+        maximumContainerBytes: 128,
+        maximumPlaintextBytes: 64,
+      ),
+      secureRandom: Random(42),
+    );
+    await expectLater(
+      boundedCrypto.decrypt(
+        containerBytes: List<int>.filled(129, 0),
+        passphrase: _passphrase,
+      ),
+      throwsA(_failure(PortableBackupFailureKind.tooLarge)),
+    );
+
+    _insertPreceptor(source, name: 'Dr. Backup', revision: 1);
+    final encrypted = await _service(source, sink, crypto)
+        .createEncryptedBackup(
+          passphrase: _passphrase,
+          createdAtUtc: DateTime.parse(_createdAt),
+        );
+    await expectLater(
+      _service(
+        target,
+        sink,
+        crypto,
+        datasetLimits: const PortableBackupDatasetLimits(maximumRows: 1),
+      ).previewRestore(encryptedBytes: encrypted, passphrase: _passphrase),
+      throwsA(_failure(PortableBackupFailureKind.tooLarge)),
+    );
+    expect(_profileName(target), 'Local Student');
+  });
+
   test('checksum and record validation happen before current writes', () async {
     final current = await _service(source, sink, crypto).createEncryptedBackup(
       passphrase: _passphrase,
@@ -504,12 +563,15 @@ void main() {
 PortableBackupService _service(
   ClinicalCalendarDatabase database,
   RestoreSynchronizationIntentSink sink,
-  PortableBackupCrypto crypto,
-) => PortableBackupService(
+  PortableBackupCrypto crypto, {
+  PortableBackupDatasetLimits datasetLimits =
+      const PortableBackupDatasetLimits(),
+}) => PortableBackupService(
   database: database,
   studentId: _studentId,
   synchronizationIntentSink: sink,
   crypto: crypto,
+  datasetLimits: datasetLimits,
 );
 
 Future<ClinicalCalendarDatabase> _open(Directory directory, String name) =>

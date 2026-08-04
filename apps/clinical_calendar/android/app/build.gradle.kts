@@ -4,6 +4,25 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val releaseKeystorePath = providers.environmentVariable(
+    "CLINICAL_CALENDAR_ANDROID_KEYSTORE_PATH",
+)
+val releaseKeystorePassword = providers.environmentVariable(
+    "CLINICAL_CALENDAR_ANDROID_KEYSTORE_PASSWORD",
+)
+val releaseKeyAlias = providers.environmentVariable(
+    "CLINICAL_CALENDAR_ANDROID_KEY_ALIAS",
+)
+val releaseKeyPassword = providers.environmentVariable(
+    "CLINICAL_CALENDAR_ANDROID_KEY_PASSWORD",
+)
+val releaseSigningConfigured = listOf(
+    releaseKeystorePath,
+    releaseKeystorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { it.isPresent && it.get().isNotBlank() }
+
 android {
     namespace = "com.clinicalcalendar.clinical_calendar"
     compileSdk = flutter.compileSdkVersion
@@ -26,13 +45,31 @@ android {
         versionName = flutter.versionName
     }
 
-    buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+    signingConfigs {
+        create("release") {
+            if (releaseSigningConfigured) {
+                storeFile = file(releaseKeystorePath.get())
+                storePassword = releaseKeystorePassword.get()
+                keyAlias = releaseKeyAlias.get()
+                keyPassword = releaseKeyPassword.get()
+            }
         }
     }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+}
+
+val buildsReleaseArtifact = gradle.startParameter.taskNames.any { taskName ->
+    taskName.contains("release", ignoreCase = true)
+}
+if (buildsReleaseArtifact && !releaseSigningConfigured) {
+    throw GradleException(
+        "Release signing requires all CLINICAL_CALENDAR_ANDROID_* signing environment variables.",
+    )
 }
 
 kotlin {

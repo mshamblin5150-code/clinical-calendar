@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(28);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -172,6 +172,32 @@ select ok(
    where student_id = '82000000-0000-4000-8000-000000000001' and cursor = 3),
   'purge feed does not retain deleted private contents'
 );
+select is(
+  (select count(*) from clinical_calendar_sync.change_feed
+   where student_id = '82000000-0000-4000-8000-000000000001'
+     and entity_type = 'schedule_template'
+     and entity_id = '82400000-0000-4000-8000-000000000001'),
+  1::bigint,
+  'purge removes every earlier payload-bearing feed row for the entity'
+);
+select ok(
+  not exists (
+    select 1 from clinical_calendar_sync.change_feed
+    where student_id = '82000000-0000-4000-8000-000000000001'
+      and payload::text like '%Private template contents%'
+  ),
+  'no retained feed payload contains the permanently purged value'
+);
+select ok(
+  (select count(*) = 1
+     and bool_and(request_payload::text not like '%Private template contents%'
+       and request_payload::text not like '%must not survive%')
+   from clinical_calendar_sync.operation_receipts
+   where student_id = '82000000-0000-4000-8000-000000000001'
+     and entity_type = 'schedule_template'
+     and entity_id = '82400000-0000-4000-8000-000000000001'),
+  'purge retains only its content-free idempotency receipt'
+);
 
 set local role authenticated;
 set local request.jwt.claim.sub = '82000000-0000-4000-8000-000000000001';
@@ -246,6 +272,20 @@ select is(
   'permanently_purged',
   'inventing a higher revision cannot reuse a permanently purged identity'
 );
+reset role;
+select ok(
+  not exists (
+    select 1 from clinical_calendar_sync.operation_receipts
+    where student_id = '82000000-0000-4000-8000-000000000001'
+      and entity_type = 'schedule_template'
+      and entity_id = '82400000-0000-4000-8000-000000000001'
+      and (request_payload::text like '%stale resurrection%'
+        or request_payload::text like '%future resurrection%')
+  ),
+  'rejected post-purge operations do not recreate private receipt payloads'
+);
+set local role authenticated;
+set local request.jwt.claim.sub = '82000000-0000-4000-8000-000000000001';
 set local request.jwt.claim.session_id = '82100000-0000-4000-8000-000000000003';
 select ok(
   public.register_current_device(

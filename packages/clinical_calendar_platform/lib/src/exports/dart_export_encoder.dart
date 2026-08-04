@@ -508,10 +508,15 @@ Map<String, Object?> _sessionCsvRow(
 
 String _csv(Object? value) {
   if (value == null) return '';
-  final text = value.toString();
+  final raw = value.toString();
+  final text = value is String && _spreadsheetFormulaPrefix.hasMatch(raw)
+      ? "'$raw"
+      : raw;
   if (!text.contains(RegExp('[,"\\r\\n]'))) return text;
   return '"${text.replaceAll('"', '""')}"';
 }
+
+final _spreadsheetFormulaPrefix = RegExp(r'^[\t\r\n ]*[=+\-@]');
 
 String _minutes(int minutes) {
   final hours = minutes ~/ 60;

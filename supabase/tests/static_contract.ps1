@@ -124,8 +124,8 @@ $permanentPurgeAssertionCount = (
   Select-String -Path (Join-Path $PSScriptRoot 'permanent_purge_test.sql') `
     -Pattern '^select (ok|is|results_eq|throws_ok)\(' -CaseSensitive
 ).Count
-if ($permanentPurgeAssertionCount -ne 24) {
-  throw "Permanent-purge pgTAP plan is 24 but found $permanentPurgeAssertionCount assertions."
+if ($permanentPurgeAssertionCount -ne 28) {
+  throw "Permanent-purge pgTAP plan is 28 but found $permanentPurgeAssertionCount assertions."
 }
 
 $erasureConcurrencyFiles = @(

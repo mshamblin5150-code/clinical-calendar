@@ -414,11 +414,12 @@ class _DocumentationDialogState extends State<_DocumentationDialog> {
           ),
           const SizedBox(height: 10),
           TextField(
-            key: const Key('evaluation-reference-note'),
+            key: const Key('evaluation-external-reference'),
             controller: _note,
-            maxLines: 3,
+            maxLength: 80,
             decoration: const InputDecoration(
-              labelText: 'Optional reference or note',
+              labelText: 'External record reference (no patient information)',
+              hintText: 'Letters, numbers, and . / : # - only',
             ),
           ),
           if (_validation != null)
@@ -443,13 +444,22 @@ class _DocumentationDialogState extends State<_DocumentationDialog> {
   );
 
   void _save() {
+    final reference = _note.text.trim();
+    if (reference.isNotEmpty && !_externalReference.hasMatch(reference)) {
+      setState(
+        () => _validation =
+            'Use a short external record reference only. Do not enter patient '
+            'information or clinical documentation.',
+      );
+      return;
+    }
     try {
       Navigator.pop(
         context,
         EvaluationDocumentation(
           dateDocumented: _parseDate(_date.text),
           location: _location.text,
-          referenceOrNote: _note.text,
+          referenceOrNote: reference.isEmpty ? null : reference,
         ),
       );
     } on Object {
@@ -458,6 +468,10 @@ class _DocumentationDialogState extends State<_DocumentationDialog> {
       );
     }
   }
+
+  static final _externalReference = RegExp(
+    r'^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,79}$',
+  );
 }
 
 final class _LoadFailure extends StatelessWidget {

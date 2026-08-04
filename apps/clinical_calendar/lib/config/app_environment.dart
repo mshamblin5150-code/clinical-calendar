@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 final class AppEnvironment {
   const AppEnvironment({
     required this.name,
@@ -27,8 +29,19 @@ final class AppEnvironment {
   Uri? get synchronizationProjectUri {
     final uri = Uri.tryParse(supabaseUrl.trim());
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
-    if (uri.scheme != 'https' && uri.scheme != 'http') return null;
+    if (uri.scheme == 'https') return uri;
+    if (uri.scheme != 'http' || kReleaseMode || !_allowsLocalHttp(uri)) {
+      return null;
+    }
     return uri;
+  }
+
+  bool _allowsLocalHttp(Uri uri) {
+    final environment = name.trim().toLowerCase();
+    return (environment == 'local' || environment == 'test') &&
+        (uri.host == 'localhost' ||
+            uri.host == '127.0.0.1' ||
+            uri.host == '::1');
   }
 
   bool get hasSynchronizationConfiguration =>
