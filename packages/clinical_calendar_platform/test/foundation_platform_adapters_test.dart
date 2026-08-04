@@ -8,7 +8,17 @@ void main() {
 
   test('process identifiers remain distinct', () {
     final identifiers = ProcessIdentifierGenerator();
-    expect(identifiers.nextIdentifier(), isNot(identifiers.nextIdentifier()));
+    final first = identifiers.nextIdentifier();
+    final second = identifiers.nextIdentifier();
+    expect(first, isNot(second));
+    expect(
+      first,
+      matches(
+        RegExp(
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        ),
+      ),
+    );
   });
 
   test('unconfigured secure storage fails closed', () {

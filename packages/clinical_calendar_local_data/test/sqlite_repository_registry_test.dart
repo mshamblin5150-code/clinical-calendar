@@ -680,6 +680,92 @@ void main() {
       });
     },
   );
+
+  test(
+    'active Clinical Placement selection is durable and synchronized',
+    () async {
+      await registry.initialize();
+      final fixture = _DomainFixture();
+      final selectionMutation = _mutation(103);
+      await registry.mutate((repositories) {
+        repositories.preceptors.put(
+          studentId: _studentId,
+          value: fixture.preceptor,
+          expectedRevision: 0,
+          mutation: _mutation(100),
+        );
+        repositories.clinicalPlacements.put(
+          studentId: _studentId,
+          value: fixture.placement,
+          expectedRevision: 0,
+          mutation: _mutation(101),
+        );
+        repositories.evaluationPlans.put(
+          studentId: _studentId,
+          value: fixture.evaluationPlan,
+          expectedRevision: 0,
+          mutation: _mutation(102),
+        );
+        final selected = repositories.activePlacementSelection.put(
+          studentId: _studentId,
+          clinicalPlacementId: fixture.placement.id,
+          expectedRevision: 0,
+          mutation: selectionMutation,
+        );
+        expect(selected.record.value, fixture.placement.id);
+        expect(selected.record.revision, 1);
+      });
+
+      final replay = await registry.mutate(
+        (repositories) => repositories.activePlacementSelection.put(
+          studentId: _studentId,
+          clinicalPlacementId: fixture.placement.id,
+          expectedRevision: 0,
+          mutation: selectionMutation,
+        ),
+      );
+      expect(replay.replayed, isTrue);
+      expect(replay.record.revision, 1);
+
+      final cleared = await registry.mutate(
+        (repositories) => repositories.activePlacementSelection.put(
+          studentId: _studentId,
+          clinicalPlacementId: null,
+          expectedRevision: 1,
+          mutation: _mutation(104),
+        ),
+      );
+      expect(cleared.record.value, isNull);
+      expect(cleared.record.revision, 2);
+
+      await database.close();
+      databaseIsOpen = false;
+      database = await ClinicalCalendarDatabase.open(
+        path: databasePath,
+        secureStorage: MemorySecureStorage(_key),
+      );
+      databaseIsOpen = true;
+      registry = _registry(database, identifiers);
+      await registry.initialize();
+      await registry.read((repositories) {
+        final selection = repositories.activePlacementSelection.find(
+          studentId: _studentId,
+        );
+        expect(selection, isNotNull);
+        expect(selection!.value, isNull);
+        expect(selection.revision, 2);
+        expect(
+          repositories.outbox
+              .pending(
+                studentId: _studentId,
+                asOfUtc: _baseTime.add(const Duration(days: 1)),
+              )
+              .where((operation) => operation.entityType == 'settings'),
+          hasLength(2),
+        );
+      });
+    },
+  );
 }
 
 SqliteRepositoryRegistry _registry(

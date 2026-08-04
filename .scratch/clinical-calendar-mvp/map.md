@@ -97,13 +97,17 @@ Produce a decision-complete MVP product and architecture specification for an in
 
 - [Implement local repositories and the transactional outbox](issues/66-implement-local-repositories-and-outbox.md) — Expose application-owned typed repository contracts over a FIFO-gated SQLCipher unit of work, atomically pair every domain mutation with a restart-safe idempotent aggregate outbox operation, and preserve revisions, tombstones, Trash, cursor state, and prior-version compatibility.
 
+- [Implement scheduling application use cases](issues/67-implement-scheduling-application-use-cases.md) — Run scheduling workflows through one transactional service with all-errors batch validation, copied templates, guarded moves and lifecycle transitions, exact corrected Completed Hours, and deterministic placement/protected-day queries.
+
+- [Implement Clinical Placement application use cases](issues/68-implement-placement-application-use-cases.md) — Coordinate Placement, Evaluation Plan, Preceptor, Historical Hours, progress, evaluation documentation, completion locks, and a durable shared active-Placement selection through optimistic transactional repositories.
+
 - [Build the Variant F responsive application shell](issues/69-build-variant-f-responsive-shell.md) — Compose semantic Borg Tactical Console theme tokens, replaceable visual-theme and Help-guide contracts, fit-gated desktop and compact mobile/short-landscape shells, complete menu destinations, and contextual Back/direct Close navigation with seven-viewport widget coverage.
 
 ## Transition status
 
 - The MVP product and architecture are decision-complete in [`spec.md`](spec.md).
 - Ticket 58 approved Flutter for continued implementation after Windows and Android physical-device evidence. The iPhone leg remains explicitly deferred to tickets 87 and 88 until Mac/iPhone hardware is available.
-- Ticket 66 established typed local repositories and the transactional outbox. Tickets 67 and 68 are now unblocked; Ticket 67 scheduling application use cases is the next numbered frontier, while the parallel Variant F shell remains available for presentation workflows.
+- Tickets 67 and 68 established the transactional scheduling and Clinical Placement application services over the local repositories, including durable shared active-Placement selection. Tickets 70, 73, and 83 are newly unblocked; tickets 75, 77, and 82 also have no remaining blockers and are available for parallel agents. Ticket 70 calendar period views is the next numbered frontier.
 - Public distribution and comprehensive keyboard-first optimization remain deferred beyond the first MVP implementation plan.
 
 ## Implementation backlog

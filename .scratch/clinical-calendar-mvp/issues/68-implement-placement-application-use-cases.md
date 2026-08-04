@@ -1,7 +1,7 @@
 # Implement Clinical Placement Application Use Cases
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: 66
 
 ## Objective
@@ -19,3 +19,8 @@ Implement transactional application services for Clinical Placement, Preceptor, 
 - Queries expose one shared active Clinical Placement selection for management, progress, and scheduling defaults.
 - Application tests cover all progress and evaluation scenarios in [`spec.md`](../spec.md#122-progress-and-evaluations).
 
+## Answer
+
+Implemented transactional Clinical Placement application workflows for aggregate Placement and Evaluation Plan creation, impact-previewed date and Target Hours edits with stale-confirmation protection, reusable Preceptor editing and attachment rules, Primary changes that preserve documented history, attributed and Unattributed Historical Hours, Evaluation Requirement documentation, derived progress and attention, guarded Completion, locked-state enforcement, and Reopen.
+
+The application repository contract and SQLCipher implementation now persist one owner-scoped active Clinical Placement selection in the existing settings record, synchronize it through the transactional outbox, validate its target, support clearing and restart-safe idempotent replay, and preserve unrelated settings. Six application-level scenario groups and a real-SQLCipher integration test cover aggregate rollback/outboxes, selection durability, previews, progress, evaluation metadata, lifecycle locks, and relationship rules. The full workspace quality gate and Windows and Android release builds pass.

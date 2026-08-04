@@ -175,6 +175,10 @@ final class _Repositories implements LocalWriteRepositories {
   late final outbox = _OutboxRepository(this);
   @override
   late final syncCursors = _SyncCursorRepository(this);
+  @override
+  late final activePlacementSelection = _ActivePlacementSelectionRepository(
+    this,
+  );
 
   void requireWritable() {
     requireActive();
@@ -1501,4 +1505,237 @@ final class _SyncCursorRepository implements SyncCursorRepository {
       ],
     );
   }
+}
+
+final class _ActivePlacementSelectionRepository
+    implements ActivePlacementSelectionRepository {
+  _ActivePlacementSelectionRepository(this.repositories);
+
+  final _Repositories repositories;
+
+  ClinicalCalendarDatabase get _database => repositories.registry._database;
+  String get _studentId => repositories.registry.studentId;
+
+  @override
+  StoredDomainRecord<String?>? find({required String studentId}) {
+    repositories.requireActive();
+    _ownerCheck(studentId);
+    final rows = _database.select(
+      'SELECT id, student_id, revision, created_at_utc, updated_at_utc, '
+      'deleted_at_utc, active_placement_id FROM settings '
+      'WHERE student_id = ?',
+      [_studentId],
+    );
+    if (rows.isEmpty) return null;
+    try {
+      final row = rows.single;
+      final activeId = _nullableText(row, 'active_placement_id');
+      return StoredDomainRecord<String?>(
+        value: activeId == null ? null : _identifier(activeId),
+        studentId: _identifier(_text(row, 'student_id')),
+        revision: _int(row, 'revision'),
+        createdAtUtc: _dateTime(row, 'created_at_utc'),
+        updatedAtUtc: _dateTime(row, 'updated_at_utc'),
+        deletedAtUtc: _nullableDateTime(row, 'deleted_at_utc'),
+      );
+    } on RepositoryException {
+      rethrow;
+    } on Object {
+      throw const RepositoryException(
+        RepositoryFailureKind.corruptData,
+        'The stored active Clinical Placement selection is invalid.',
+      );
+    }
+  }
+
+  @override
+  MutationReceipt<String?> put({
+    required String studentId,
+    required String? clinicalPlacementId,
+    required int expectedRevision,
+    required MutationToken mutation,
+  }) {
+    repositories.requireWritable();
+    _ownerCheck(studentId);
+    final activeId = clinicalPlacementId == null
+        ? null
+        : _identifier(clinicalPlacementId);
+    if (activeId != null) {
+      final placement = _database.select(
+        'SELECT 1 FROM clinical_placements WHERE student_id = ? AND id = ? '
+        'AND deleted_at_utc IS NULL',
+        [_studentId, activeId],
+      );
+      if (placement.isEmpty) {
+        throw const RepositoryException(
+          RepositoryFailureKind.notFound,
+          'The selected Clinical Placement does not exist.',
+        );
+      }
+    }
+
+    final existingRows = _database.select(
+      'SELECT * FROM settings WHERE student_id = ?',
+      [_studentId],
+    );
+    final existing = existingRows.isEmpty ? null : existingRows.single;
+    final settingsId = existing == null
+        ? _identifier(
+            repositories.registry._identifierGenerator.nextIdentifier(),
+          )
+        : _identifier(_text(existing, 'id'));
+    if (_isReplay(
+      mutation: mutation,
+      settingsId: settingsId,
+      activeId: activeId,
+      expectedRevision: expectedRevision,
+    )) {
+      return MutationReceipt<String?>(
+        record: find(studentId: _studentId)!,
+        replayed: true,
+      );
+    }
+
+    final baseRevision = existing == null ? 0 : _int(existing, 'revision');
+    _revision(expectedRevision, baseRevision);
+    final createdAt = existing == null
+        ? mutation.occurredAtUtc
+        : _dateTime(existing, 'created_at_utc');
+    final revision = baseRevision + 1;
+    final weekStart = existing == null
+        ? DateTime.sunday
+        : _int(existing, 'week_start');
+    final timeDisplay = existing == null
+        ? 'military'
+        : _text(existing, 'time_display');
+    final theme = existing == null ? 'borg_tactical' : _text(existing, 'theme');
+    final synchronizationMode = existing == null
+        ? 'enabled'
+        : _text(existing, 'synchronization_mode');
+    final notificationPreferences = existing == null
+        ? '{}'
+        : _text(existing, 'notification_preferences_json');
+    final valuePayload = <String, Object?>{
+      'week_start': weekStart,
+      'time_display': timeDisplay,
+      'theme': theme,
+      'synchronization_mode': synchronizationMode,
+      'notification_preferences_json': notificationPreferences,
+      'active_placement_id': activeId,
+    };
+    final payload = _canonicalJson(<String, Object?>{
+      'schema_version': 1,
+      'entity_type': 'settings',
+      'entity_id': settingsId,
+      'student_id': _studentId,
+      'revision': revision,
+      'created_at_utc': _utc(createdAt),
+      'updated_at_utc': _utc(mutation.occurredAtUtc),
+      'deleted_at_utc': null,
+      'value': valuePayload,
+    });
+    _database.execute(
+      '''INSERT INTO settings
+        (id, student_id, revision, created_at_utc, updated_at_utc,
+         deleted_at_utc, week_start, time_display, theme,
+         synchronization_mode, notification_preferences_json,
+         active_placement_id)
+        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(student_id) DO UPDATE SET
+          revision = excluded.revision,
+          updated_at_utc = excluded.updated_at_utc,
+          deleted_at_utc = NULL,
+          week_start = excluded.week_start,
+          time_display = excluded.time_display,
+          theme = excluded.theme,
+          synchronization_mode = excluded.synchronization_mode,
+          notification_preferences_json = excluded.notification_preferences_json,
+          active_placement_id = excluded.active_placement_id''',
+      [
+        settingsId,
+        _studentId,
+        revision,
+        _utc(createdAt),
+        _utc(mutation.occurredAtUtc),
+        weekStart,
+        timeDisplay,
+        theme,
+        synchronizationMode,
+        notificationPreferences,
+        activeId,
+      ],
+    );
+    _database.execute(
+      '''INSERT INTO outbox_operations
+        (id, student_id, idempotency_key, entity_type, entity_id,
+         operation_type, base_revision, payload_json, created_at_utc)
+        VALUES (?, ?, ?, 'settings', ?, 'upsert', ?, ?, ?)''',
+      [
+        mutation.operationId,
+        _studentId,
+        mutation.idempotencyKey,
+        settingsId,
+        baseRevision,
+        payload,
+        _utc(mutation.occurredAtUtc),
+      ],
+    );
+    return MutationReceipt<String?>(
+      record: StoredDomainRecord<String?>(
+        value: activeId,
+        studentId: _studentId,
+        revision: revision,
+        createdAtUtc: createdAt,
+        updatedAtUtc: mutation.occurredAtUtc,
+      ),
+      replayed: false,
+    );
+  }
+
+  bool _isReplay({
+    required MutationToken mutation,
+    required String settingsId,
+    required String? activeId,
+    required int expectedRevision,
+  }) {
+    final rows = _database.select(
+      'SELECT * FROM outbox_operations WHERE idempotency_key = ?',
+      [mutation.idempotencyKey],
+    );
+    if (rows.isEmpty) return false;
+    final row = rows.single;
+    Object? storedActiveId;
+    try {
+      final payload = jsonDecode(_text(row, 'payload_json'));
+      if (payload is! Map<String, dynamic> ||
+          payload['value'] is! Map<String, dynamic>) {
+        throw const FormatException();
+      }
+      storedActiveId =
+          (payload['value'] as Map<String, dynamic>)['active_placement_id'];
+    } on Object {
+      throw const RepositoryException(
+        RepositoryFailureKind.corruptData,
+        'The stored settings outbox payload is invalid.',
+      );
+    }
+    final identical =
+        _text(row, 'id') == mutation.operationId &&
+        _text(row, 'student_id') == _studentId &&
+        _text(row, 'entity_type') == 'settings' &&
+        _text(row, 'entity_id') == settingsId &&
+        _text(row, 'operation_type') == 'upsert' &&
+        _int(row, 'base_revision') == expectedRevision &&
+        _dateTime(row, 'created_at_utc') == mutation.occurredAtUtc &&
+        storedActiveId == activeId;
+    if (!identical) {
+      throw const RepositoryException(
+        RepositoryFailureKind.idempotencyConflict,
+        'The idempotency key was already used for a different mutation.',
+      );
+    }
+    return true;
+  }
+
+  void _ownerCheck(String studentId) => _owner(studentId, _studentId);
 }

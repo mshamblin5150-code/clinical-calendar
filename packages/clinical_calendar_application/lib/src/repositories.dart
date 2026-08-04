@@ -252,6 +252,22 @@ abstract interface class SyncCursorRepository
   void put(SyncCursor cursor);
 }
 
+/// The one persisted Clinical Placement selection shared by management,
+/// progress, and scheduling defaults. A null value means no active selection.
+abstract interface class ActivePlacementSelectionReadRepository {
+  StoredDomainRecord<String?>? find({required String studentId});
+}
+
+abstract interface class ActivePlacementSelectionRepository
+    implements ActivePlacementSelectionReadRepository {
+  MutationReceipt<String?> put({
+    required String studentId,
+    required String? clinicalPlacementId,
+    required int expectedRevision,
+    required MutationToken mutation,
+  });
+}
+
 abstract interface class LocalReadRepositories {
   ReadRepository<WorkShift> get workShifts;
   ReadRepository<ClinicalSession> get clinicalSessions;
@@ -263,6 +279,7 @@ abstract interface class LocalReadRepositories {
   ReadRepository<EvaluationPlan> get evaluationPlans;
   OutboxReadRepository get outbox;
   SyncCursorReadRepository get syncCursors;
+  ActivePlacementSelectionReadRepository get activePlacementSelection;
 }
 
 abstract interface class LocalWriteRepositories
@@ -287,6 +304,8 @@ abstract interface class LocalWriteRepositories
   OutboxMaintenanceRepository get outbox;
   @override
   SyncCursorRepository get syncCursors;
+  @override
+  ActivePlacementSelectionRepository get activePlacementSelection;
 }
 
 /// Owns local repository transactions.
