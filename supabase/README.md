@@ -38,6 +38,20 @@ including tombstones, ordered by cursor. It uses `cursor > after_cursor` keyset
 pagination and caps a page at 500 rows. Realtime may wake a client, but this
 durable feed remains the correctness mechanism.
 
+Permanent Trash deletion uses the same RPC with `operation_type: purge`. The
+request must name the current tombstone revision as `base_revision`, advance
+the payload revision by exactly one, and send only the versioned identity and
+timestamps plus `purged_at_utc` and an empty `value`. The server accepts purge
+only for an owner-matching tombstone, physically removes its contents, consumes
+the next per-Student cursor, and emits a normalized content-free `purge` feed
+operation. It retains only a private marker containing owner, entity identity,
+revision, created/purged times, and cursor. That marker rejects every later
+upsert, delete, or conflict-resolution attempt for the permanent identity with
+`permanently_purged`, regardless of an invented higher revision. Semantic and
+idempotency-key retries return the original marker cursor without duplicating
+the feed. Clients receiving `purge` physically remove both entity and Trash;
+new devices replaying the retained feed therefore cannot recreate Trash.
+
 The write RPC is necessarily `SECURITY DEFINER`: granting its table writes to
 `authenticated` would allow clients to bypass revision and invariant checks.
 Its owner is a non-login, non-bypass-RLS executor with only the four required
@@ -49,6 +63,26 @@ JWT's `session_id`. The public sync RPC wrappers require an active binding, so
 revocation blocks subsequent app-data access even while an already-issued JWT
 has time remaining. It cannot erase a device's offline encrypted database.
 
+Account erasure is a separate guarded workflow, not sign-out. The request RPC
+accepts an explicit portable-backup outcome, requires a Supabase Auth session
+created within five minutes, records an exact 30-day grace period, and revokes all
+Connected Devices. Retrying the request returns the original pending result.
+A new passwordless session followed by device registration cancels only a
+still-live grace period; refreshing a token keeps its original session and is
+not reauthentication. The requesting session cannot cancel by simply
+re-registering itself, and an expired grace period cannot be extended.
+
+Final purge is intentionally absent from the authenticated API. A trusted
+scheduled backend invokes `clinical_calendar_sync.purge_due_account_erasure`;
+the function serializes with synchronization and device operations, deletes
+active records, Trash tombstones, feed/receipt state, Connected Devices, and
+the Supabase Auth identity in one transaction, and is idempotent on retry. No
+service-role credential is shipped in an application build. Residual recovery
+snapshots contain only externally AES-256-GCM-encrypted bytes and a key
+reference unavailable to ordinary database readers. They are detached from the
+Auth cascade, clamped to expire within 30 days after purge, then removed by the
+private expiry job.
+
 ## Local verification
 
 With Docker running, use the Supabase CLI from the repository root:
@@ -57,6 +91,9 @@ With Docker running, use the Supabase CLI from the repository root:
 supabase db start --yes
 supabase db reset --local --yes
 supabase test db .\supabase\tests\sync_backend_test.sql --local
+supabase test db .\supabase\tests\identity_devices_test.sql --local
+supabase test db .\supabase\tests\account_erasure_test.sql --local
+supabase test db .\supabase\tests\permanent_purge_test.sql --local
 supabase db lint --local --schema public,clinical_calendar_sync --level error --fail-on error
 ```
 
@@ -77,6 +114,24 @@ then run verify and cleanup. Session A deliberately holds the shared
 per-Student transaction lock while revoking; verification asserts that the
 waiting synchronization write is rejected and the original revision remains.
 
+`account_erasure_test.sql` contains time-controlled proof for fresh
+reauthentication, backup cancellation, the exact grace interval, cancellation
+by a genuinely new sign-in, grace expiry, complete active/Trash/device/Auth
+purge, bounded encrypted-snapshot retention, retry safety, RLS, and least
+privilege. The `account_erasure_concurrency_*.sql` scripts use the same
+setup/two-session/verify/cleanup sequence as the other race tests. Exactly one
+scheduler call reports `purged`; the waiter reports the idempotent `complete`
+result, and verification asserts that no active or Auth data survived.
+
+`permanent_purge_test.sql` proves owner authorization, tombstone-only gating,
+the exact content-free envelope, monotonic revision/cursor behavior, physical
+content removal, same-key and semantic retry, RLS/least privilege, replay to a
+new device, and rejection of stale, future-revision, and cross-owner
+resurrection. The `permanent_purge_concurrency_*.sql` race holds the accepted
+purge transaction open while a stale upsert waits on the same Student advisory
+lock; after commit, the waiter must receive `permanently_purged` and no content
+may reappear.
+
 Expired-code and refresh-token response mapping is covered by the Flutter
 platform contract tests. The local Supabase stack provides Inbucket and the
 same committed OTP template for manual end-to-end GoTrue verification; hosted
@@ -95,5 +150,11 @@ no live project or production credentials are required.
 - If an entity payload schema changes, add a new forward migration and payload
   `schema_version`; do not reinterpret existing change-feed snapshots.
 - Retain feed rows and tombstones until every supported device/recovery policy
-  can safely advance beyond them. Purging is a later retention workflow, not a
-  synchronization side effect.
+  can safely advance beyond them. Only the due account-erasure scheduler may
+  remove them as part of the explicit all-data purge.
+- Retain permanent-purge markers and their content-free feed operations for as
+  long as a supported offline or newly connected device could replay an older
+  entity operation. Marker pruning requires a separate device-watermark policy.
+- Schedule both private retention operations from trusted infrastructure:
+  purge due accounts, then delete expired encrypted recovery snapshots. Do not
+  expose either function through PostgREST or a client-held service key.

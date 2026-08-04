@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
@@ -227,6 +228,209 @@ void main() {
       expect(deleted, isNotNull);
       expect(deleted!.isDeleted, isTrue);
       expect(deleted.deletedAtUtc, _now.add(const Duration(minutes: 72)));
+    },
+  );
+
+  test(
+    'inbound tombstones create cross-device Trash once and restore normally',
+    () async {
+      await registry.mutate((repositories) {
+        repositories.preceptors.put(
+          studentId: _studentId,
+          value: Preceptor(id: _firstId, name: 'Remote deletion'),
+          expectedRevision: 0,
+          mutation: _mutation(80),
+        );
+      });
+      final localOperation = await _operation(registry, _firstId);
+      await registry.mutate((repositories) {
+        repositories.outbox.acknowledge(
+          studentId: _studentId,
+          operationId: localOperation.mutation.operationId,
+          serverCursor: 1,
+          acknowledgedAtUtc: _now.add(const Duration(minutes: 80)),
+        );
+      });
+      final deletedAt = _now.add(const Duration(minutes: 81));
+      final payload = jsonEncode({
+        'schema_version': 1,
+        'entity_type': 'preceptor',
+        'entity_id': _firstId,
+        'student_id': _studentId,
+        'revision': 2,
+        'created_at_utc': _mutation(80).occurredAtUtc.toIso8601String(),
+        'updated_at_utc': deletedAt.toIso8601String(),
+        'deleted_at_utc': deletedAt.toIso8601String(),
+        'value': {
+          'name': 'Remote deletion',
+          'organization_or_site': null,
+          'phone': null,
+          'email': null,
+          'scheduling_notes': null,
+        },
+      });
+      final change = RemoteSynchronizationChange(
+        cursor: 1,
+        entityType: 'preceptor',
+        entityId: _firstId,
+        revision: 2,
+        operationType: OutboxOperationType.delete,
+        payloadJson: payload,
+      );
+
+      final first = await registry.mutate((repositories) {
+        final sync = repositories as SynchronizationLocalWriteRepositories;
+        return sync.synchronization.applyRemoteAndAdvanceCursor(
+          studentId: _studentId,
+          remoteScope: 'account',
+          change: change,
+          appliedAtUtc: deletedAt,
+        );
+      });
+      expect(first, RemoteSynchronizationApplyDisposition.applied);
+      final trash = await registry.listTrash(nowUtc: deletedAt);
+      expect(trash, hasLength(1));
+      expect(
+        trash.single.purgeAfterUtc,
+        deletedAt.add(const Duration(days: 30)),
+      );
+
+      final duplicate = await registry.mutate((repositories) {
+        final sync = repositories as SynchronizationLocalWriteRepositories;
+        return sync.synchronization.applyRemoteAndAdvanceCursor(
+          studentId: _studentId,
+          remoteScope: 'account',
+          change: change,
+          appliedAtUtc: deletedAt.add(const Duration(seconds: 1)),
+        );
+      });
+      expect(duplicate, RemoteSynchronizationApplyDisposition.duplicate);
+      expect(await registry.listTrash(nowUtc: deletedAt), hasLength(1));
+
+      await registry.restoreTrash(
+        trashId: trash.single.id,
+        restoredAtUtc: deletedAt.add(const Duration(minutes: 1)),
+        mutation: _mutation(82),
+      );
+      final restored = await registry.read(
+        (repositories) =>
+            repositories.preceptors.find(studentId: _studentId, id: _firstId),
+      );
+      expect(restored?.revision, 3);
+      expect(await registry.listTrash(nowUtc: deletedAt), isEmpty);
+    },
+  );
+
+  test(
+    'inbound permanent purge converges and blocks identity resurrection',
+    () async {
+      await registry.mutate((repositories) {
+        repositories.preceptors.put(
+          studentId: _studentId,
+          value: Preceptor(id: _firstId, name: 'Purged remotely'),
+          expectedRevision: 0,
+          mutation: _mutation(90),
+        );
+      });
+      final localOperation = await _operation(registry, _firstId);
+      await registry.mutate((repositories) {
+        repositories.outbox.acknowledge(
+          studentId: _studentId,
+          operationId: localOperation.mutation.operationId,
+          serverCursor: 1,
+          acknowledgedAtUtc: _now.add(const Duration(minutes: 90)),
+        );
+      });
+      final createdAt = _mutation(90).occurredAtUtc.toIso8601String();
+      final deletedAt = _now.add(const Duration(minutes: 91));
+      final deleteEnvelope = {
+        'schema_version': 1,
+        'entity_type': 'preceptor',
+        'entity_id': _firstId,
+        'student_id': _studentId,
+        'revision': 2,
+        'created_at_utc': createdAt,
+        'updated_at_utc': deletedAt.toIso8601String(),
+        'deleted_at_utc': deletedAt.toIso8601String(),
+        'value': {
+          'name': 'Purged remotely',
+          'organization_or_site': null,
+          'phone': null,
+          'email': null,
+          'scheduling_notes': null,
+        },
+      };
+      await registry.mutate((repositories) {
+        final sync = repositories as SynchronizationLocalWriteRepositories;
+        return sync.synchronization.applyRemoteAndAdvanceCursor(
+          studentId: _studentId,
+          remoteScope: 'account',
+          change: RemoteSynchronizationChange(
+            cursor: 1,
+            entityType: 'preceptor',
+            entityId: _firstId,
+            revision: 2,
+            operationType: OutboxOperationType.delete,
+            payloadJson: jsonEncode(deleteEnvelope),
+          ),
+          appliedAtUtc: deletedAt,
+        );
+      });
+      expect(await registry.listTrash(nowUtc: deletedAt), hasLength(1));
+
+      final purgedAt = deletedAt.add(const Duration(minutes: 1));
+      final purgeEnvelope = {
+        'schema_version': 1,
+        'entity_type': 'preceptor',
+        'entity_id': _firstId,
+        'student_id': _studentId,
+        'revision': 3,
+        'created_at_utc': createdAt,
+        'updated_at_utc': purgedAt.toIso8601String(),
+        'deleted_at_utc': deletedAt.toIso8601String(),
+        'purged_at_utc': purgedAt.toIso8601String(),
+        'value': <String, Object?>{},
+      };
+      final disposition = await registry.mutate((repositories) {
+        final sync = repositories as SynchronizationLocalWriteRepositories;
+        return sync.synchronization.applyRemoteAndAdvanceCursor(
+          studentId: _studentId,
+          remoteScope: 'account',
+          change: RemoteSynchronizationChange(
+            cursor: 2,
+            entityType: 'preceptor',
+            entityId: _firstId,
+            revision: 3,
+            operationType: OutboxOperationType.purge,
+            payloadJson: jsonEncode(purgeEnvelope),
+          ),
+          appliedAtUtc: purgedAt,
+        );
+      });
+      expect(disposition, RemoteSynchronizationApplyDisposition.applied);
+      expect(await registry.listTrash(nowUtc: purgedAt), isEmpty);
+      expect(
+        database.select('SELECT 1 FROM preceptors WHERE id = ?', [_firstId]),
+        isEmpty,
+      );
+      expect(
+        database.select(
+          'SELECT revision FROM permanent_purge_markers WHERE entity_id = ?',
+          [_firstId],
+        ).single['revision'],
+        3,
+      );
+      await expectLater(
+        registry.mutate(
+          (repositories) => repositories.preceptors.put(
+            studentId: _studentId,
+            value: Preceptor(id: _firstId, name: 'Resurrection'),
+            expectedRevision: 0,
+            mutation: _mutation(92),
+          ),
+        ),
+        throwsA(isA<RepositoryException>()),
+      );
     },
   );
 }

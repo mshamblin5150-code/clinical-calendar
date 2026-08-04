@@ -24,7 +24,8 @@ final RegExp _uuid = RegExp(
 ///
 /// Public operations share a FIFO gate. Mutation callbacks are synchronous and
 /// execute inside one `BEGIN IMMEDIATE` transaction.
-final class SqliteRepositoryRegistry implements RepositoryRegistry {
+final class SqliteRepositoryRegistry
+    implements RepositoryRegistry, RecoveryStore {
   SqliteRepositoryRegistry({
     required String studentId,
     required this._database,
@@ -105,6 +106,395 @@ final class SqliteRepositoryRegistry implements RepositoryRegistry {
     );
   });
 
+  @override
+  Future<List<TrashEntry>> listTrash({
+    required DateTime nowUtc,
+  }) => _enqueue(() {
+    _requireInitialized();
+    _database.transaction(() => _purgeExpiredTrash(nowUtc));
+    return _database
+        .select(
+          '''SELECT id, entity_type, entity_id, updated_at_utc, purge_after_utc
+             FROM trash WHERE student_id = ?
+               AND permanently_deleted_at_utc IS NULL
+             ORDER BY updated_at_utc DESC, id''',
+          [studentId],
+        )
+        .map(
+          (row) => TrashEntry(
+            id: _identifier(_text(row, 'id')),
+            entityType: _text(row, 'entity_type'),
+            entityId: _identifier(_text(row, 'entity_id')),
+            deletedAtUtc: _dateTime(row, 'updated_at_utc'),
+            purgeAfterUtc: _dateTime(row, 'purge_after_utc'),
+          ),
+        )
+        .toList(growable: false);
+  });
+
+  @override
+  Future<void> restoreTrash({
+    required String trashId,
+    required DateTime restoredAtUtc,
+    required MutationToken mutation,
+  }) => _enqueue(() {
+    _requireInitialized();
+    _requireUtcRecovery(restoredAtUtc);
+    return _database.transaction(() {
+      final rows = _database.select(
+        '''SELECT * FROM trash WHERE student_id = ? AND id = ?
+           AND permanently_deleted_at_utc IS NULL''',
+        [studentId, _identifier(trashId)],
+      );
+      if (rows.isEmpty) {
+        throw const RecoveryException(
+          RecoveryFailureKind.notFound,
+          'The Trash entry no longer exists.',
+        );
+      }
+      final row = rows.single;
+      if (!_dateTime(row, 'purge_after_utc').isAfter(restoredAtUtc)) {
+        throw const RecoveryException(
+          RecoveryFailureKind.expired,
+          'The Trash entry has expired.',
+        );
+      }
+      final repositories = _Repositories(this, writable: true);
+      try {
+        _restoreTombstone(
+          repositories,
+          entityType: _text(row, 'entity_type'),
+          entityId: _identifier(_text(row, 'entity_id')),
+          mutation: mutation,
+        );
+        _backupService().validateCurrentState();
+      } on RecoveryException {
+        rethrow;
+      } on Object catch (error) {
+        throw RecoveryException(
+          RecoveryFailureKind.invariantViolation,
+          'Restoring this record would violate the current calendar rules.',
+          cause: error,
+        );
+      } finally {
+        repositories.close();
+      }
+    });
+  });
+
+  @override
+  Future<void> permanentlyDelete({
+    required String trashId,
+    required DateTime deletedAtUtc,
+    required MutationToken mutation,
+  }) => _enqueue(() {
+    _requireInitialized();
+    _requireUtcRecovery(deletedAtUtc);
+    _database.transaction(() {
+      final rows = _database.select(
+        'SELECT * FROM trash WHERE student_id = ? AND id = ? '
+        'AND permanently_deleted_at_utc IS NULL',
+        [studentId, _identifier(trashId)],
+      );
+      if (rows.isEmpty) {
+        throw const RecoveryException(
+          RecoveryFailureKind.notFound,
+          'The Trash entry no longer exists.',
+        );
+      }
+      _purgeTrashRow(rows.single, deletedAtUtc, mutation);
+    });
+  });
+
+  @override
+  Future<int> clearTrash({
+    required DateTime deletedAtUtc,
+    required List<MutationToken> mutations,
+  }) => _enqueue(() {
+    _requireInitialized();
+    _requireUtcRecovery(deletedAtUtc);
+    return _database.transaction(() {
+      final rows = _database.select(
+        'SELECT * FROM trash WHERE student_id = ? '
+        'AND permanently_deleted_at_utc IS NULL ORDER BY id',
+        [studentId],
+      );
+      if (rows.length != mutations.length) {
+        throw const RecoveryException(
+          RecoveryFailureKind.concurrentModification,
+          'Trash changed before it could be cleared.',
+        );
+      }
+      for (var index = 0; index < rows.length; index++) {
+        _purgeTrashRow(rows[index], deletedAtUtc, mutations[index]);
+      }
+      return rows.length;
+    });
+  });
+
+  @override
+  Future<int> purgeExpired({required DateTime nowUtc}) => _enqueue(() {
+    _requireInitialized();
+    _requireUtcRecovery(nowUtc);
+    return _database.transaction(() => _purgeExpiredTrash(nowUtc));
+  });
+
+  @override
+  Future<OperationalSnapshotSummary> createDailySnapshot({
+    required DateTime nowUtc,
+  }) => _enqueue(() {
+    _requireInitialized();
+    _requireUtcRecovery(nowUtc);
+    final date = nowUtc.toIso8601String().substring(0, 10);
+    final expires = nowUtc.add(const Duration(days: 30));
+    final existing = _database.select(
+      'SELECT id FROM operational_recovery_snapshots '
+      'WHERE student_id = ? AND snapshot_date = ?',
+      [studentId, date],
+    );
+    final id = existing.isEmpty
+        ? _identifier(_identifierGenerator.nextIdentifier())
+        : _identifier(_text(existing.single, 'id'));
+    final payload = _backupService().createOperationalSnapshotPayload(
+      createdAtUtc: nowUtc,
+    );
+    _database.transaction(() {
+      _database.execute(
+        'DELETE FROM operational_recovery_snapshots '
+        'WHERE student_id = ? AND expires_at_utc <= ?',
+        [studentId, _utc(nowUtc)],
+      );
+      _database.execute(
+        '''INSERT INTO operational_recovery_snapshots
+          (id, student_id, snapshot_date, created_at_utc, expires_at_utc,
+           payload_json) VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT(student_id, snapshot_date) DO UPDATE SET
+            created_at_utc = excluded.created_at_utc,
+            expires_at_utc = excluded.expires_at_utc,
+            payload_json = excluded.payload_json''',
+        [id, studentId, date, _utc(nowUtc), _utc(expires), payload],
+      );
+    });
+    return OperationalSnapshotSummary(
+      id: id,
+      snapshotDate: date,
+      createdAtUtc: nowUtc,
+      expiresAtUtc: expires,
+    );
+  });
+
+  @override
+  Future<List<OperationalSnapshotSummary>> listSnapshots({
+    required DateTime nowUtc,
+  }) => _enqueue(() {
+    _requireInitialized();
+    _requireUtcRecovery(nowUtc);
+    _database.execute(
+      'DELETE FROM operational_recovery_snapshots '
+      'WHERE student_id = ? AND expires_at_utc <= ?',
+      [studentId, _utc(nowUtc)],
+    );
+    return _database
+        .select(
+          '''SELECT * FROM operational_recovery_snapshots
+             WHERE student_id = ? ORDER BY created_at_utc DESC''',
+          [studentId],
+        )
+        .map(_snapshotSummary)
+        .toList(growable: false);
+  });
+
+  @override
+  Future<OperationalRecoveryPreview> previewSnapshot({
+    required String snapshotId,
+    required DateTime nowUtc,
+  }) => _enqueue(() async {
+    _requireInitialized();
+    final row = _snapshotRow(snapshotId, nowUtc);
+    final preview = await _backupService().previewOperationalRestore(
+      payloadJson: _text(row, 'payload_json'),
+    );
+    return _recoveryPreview(_snapshotSummary(row), preview);
+  });
+
+  @override
+  Future<RecoveryApplyResult> restoreSnapshot({
+    required String snapshotId,
+    required Map<String, RecoveryConflictChoice> choices,
+    required DateTime nowUtc,
+  }) => _enqueue(() async {
+    _requireInitialized();
+    final row = _snapshotRow(snapshotId, nowUtc);
+    final service = _backupService();
+    final preview = await service.previewOperationalRestore(
+      payloadJson: _text(row, 'payload_json'),
+    );
+    final byStableIdentity = {
+      for (final item in preview.items)
+        item.identity.stableValue: item.identity,
+    };
+    final converted = <BackupRecordIdentity, RestoreConflictChoice>{};
+    for (final choice in choices.entries) {
+      final identity = byStableIdentity[choice.key];
+      if (identity == null) continue;
+      converted[identity] = choice.value == RecoveryConflictChoice.keepCurrent
+          ? RestoreConflictChoice.keepLocal
+          : RestoreConflictChoice.useBackup;
+    }
+    final result = await service.applyRestore(
+      preview: preview,
+      conflictChoices: converted,
+    );
+    return RecoveryApplyResult(
+      applied: result.applied,
+      unchanged: result.unchanged,
+    );
+  });
+
+  PortableBackupService _backupService() => PortableBackupService(
+    database: _database,
+    studentId: studentId,
+    synchronizationIntentSink: _RestoreOutboxIntentSink(this),
+  );
+
+  int _purgeExpiredTrash(DateTime nowUtc) {
+    final rows = _database.select(
+      '''SELECT * FROM trash WHERE student_id = ?
+         AND permanently_deleted_at_utc IS NULL AND purge_after_utc <= ?
+         ORDER BY purge_after_utc, id''',
+      [studentId, _utc(nowUtc)],
+    );
+    for (final row in rows) {
+      _purgeTrashRow(row, nowUtc, _newRecoveryMutation(nowUtc));
+    }
+    return rows.length;
+  }
+
+  void _purgeTrashRow(
+    Map<String, Object?> row,
+    DateTime deletedAtUtc,
+    MutationToken mutation,
+  ) {
+    final entityType = _text(row, 'entity_type');
+    final table = switch (entityType) {
+      'work_shift' || 'clinical_session' => 'commitments',
+      'protected_day' => 'protected_days',
+      'schedule_template' => 'schedule_templates',
+      'preceptor' => 'preceptors',
+      'clinical_placement' => 'clinical_placements',
+      'historical_hours_entry' => 'historical_hours_entries',
+      'evaluation_plan' => 'evaluation_plans',
+      'reminder_state' => 'reminder_state',
+      _ => throw const RecoveryException(
+        RecoveryFailureKind.invariantViolation,
+        'This type of Trash entry cannot be permanently deleted.',
+      ),
+    };
+    final entityId = _identifier(_text(row, 'entity_id'));
+    try {
+      final entityRows = _database.select(
+        'SELECT revision, created_at_utc, deleted_at_utc FROM $table '
+        'WHERE student_id = ? AND id = ? AND deleted_at_utc IS NOT NULL',
+        [studentId, entityId],
+      );
+      if (entityRows.isEmpty) {
+        throw const RecoveryException(
+          RecoveryFailureKind.concurrentModification,
+          'The tombstone changed before permanent deletion.',
+        );
+      }
+      final entity = entityRows.single;
+      final baseRevision = _int(entity, 'revision');
+      final revision = baseRevision + 1;
+      final payload = _canonicalJson({
+        'schema_version': 1,
+        'entity_type': entityType,
+        'entity_id': entityId,
+        'student_id': studentId,
+        'revision': revision,
+        'created_at_utc': _text(entity, 'created_at_utc'),
+        'updated_at_utc': _utc(deletedAtUtc),
+        'deleted_at_utc': _text(entity, 'deleted_at_utc'),
+        'purged_at_utc': _utc(deletedAtUtc),
+        'value': <String, Object?>{},
+      });
+      _database.execute(
+        'DELETE FROM $table WHERE student_id = ? AND id = ? '
+        'AND deleted_at_utc IS NOT NULL',
+        [studentId, entityId],
+      );
+      _database.execute('DELETE FROM trash WHERE student_id = ? AND id = ?', [
+        studentId,
+        _identifier(_text(row, 'id')),
+      ]);
+      _database.execute(
+        '''INSERT INTO permanent_purge_markers
+          (student_id, entity_type, entity_id, revision, purged_at_utc)
+          VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT(student_id, entity_type, entity_id) DO UPDATE SET
+            revision = max(revision, excluded.revision),
+            purged_at_utc = max(purged_at_utc, excluded.purged_at_utc)''',
+        [studentId, entityType, entityId, revision, _utc(deletedAtUtc)],
+      );
+      _database.execute(
+        '''INSERT INTO outbox_operations
+          (id, student_id, idempotency_key, entity_type, entity_id,
+           operation_type, base_revision, payload_json, created_at_utc)
+          VALUES (?, ?, ?, ?, ?, 'purge', ?, ?, ?)''',
+        [
+          mutation.operationId,
+          studentId,
+          mutation.idempotencyKey,
+          entityType,
+          entityId,
+          baseRevision,
+          payload,
+          _utc(mutation.occurredAtUtc),
+        ],
+      );
+    } on Object catch (error) {
+      throw RecoveryException(
+        RecoveryFailureKind.invariantViolation,
+        'Related records prevent permanent deletion.',
+        cause: error,
+      );
+    }
+  }
+
+  MutationToken _newRecoveryMutation(DateTime occurredAtUtc) => MutationToken(
+    operationId: _identifierGenerator.nextIdentifier(),
+    idempotencyKey: _identifierGenerator.nextIdentifier(),
+    occurredAtUtc: occurredAtUtc,
+  );
+
+  Map<String, Object?> _snapshotRow(String snapshotId, DateTime nowUtc) {
+    _requireUtcRecovery(nowUtc);
+    final rows = _database.select(
+      'SELECT * FROM operational_recovery_snapshots '
+      'WHERE student_id = ? AND id = ?',
+      [studentId, _identifier(snapshotId)],
+    );
+    if (rows.isEmpty) {
+      throw const RecoveryException(
+        RecoveryFailureKind.notFound,
+        'The recovery snapshot no longer exists.',
+      );
+    }
+    final row = Map<String, Object?>.from(rows.single);
+    if (!_dateTime(row, 'expires_at_utc').isAfter(nowUtc)) {
+      _database.execute(
+        'DELETE FROM operational_recovery_snapshots '
+        'WHERE student_id = ? AND id = ?',
+        [studentId, _identifier(snapshotId)],
+      );
+      throw const RecoveryException(
+        RecoveryFailureKind.expired,
+        'The recovery snapshot has expired.',
+      );
+    }
+    return row;
+  }
+
   /// Counts every local mutation that has not been acknowledged by the
   /// synchronization service, including delayed retries and conflicts that
   /// still require the Student's attention.
@@ -175,6 +565,146 @@ final class SqliteRepositoryRegistry implements RepositoryRegistry {
       );
     }
   }
+}
+
+void _requireUtcRecovery(DateTime value) {
+  if (!value.isUtc) {
+    throw ArgumentError.value(value, 'time', 'must be UTC');
+  }
+}
+
+OperationalSnapshotSummary _snapshotSummary(Map<String, Object?> row) =>
+    OperationalSnapshotSummary(
+      id: _identifier(_text(row, 'id')),
+      snapshotDate: _text(row, 'snapshot_date'),
+      createdAtUtc: _dateTime(row, 'created_at_utc'),
+      expiresAtUtc: _dateTime(row, 'expires_at_utc'),
+    );
+
+OperationalRecoveryPreview _recoveryPreview(
+  OperationalSnapshotSummary snapshot,
+  PortableRestorePreview preview,
+) => OperationalRecoveryPreview(
+  snapshot: snapshot,
+  items: preview.items
+      .map(
+        (item) => RecoveryMergeItem(
+          identity: item.identity.stableValue,
+          disposition: switch (item.disposition) {
+            RestoreMergeDisposition.add => RecoveryMergeDisposition.add,
+            RestoreMergeDisposition.keepLocal =>
+              RecoveryMergeDisposition.keepCurrent,
+            RestoreMergeDisposition.useBackup =>
+              RecoveryMergeDisposition.useSnapshot,
+            RestoreMergeDisposition.conflict =>
+              RecoveryMergeDisposition.conflict,
+          },
+        ),
+      )
+      .toList(growable: false),
+);
+
+void _restoreTombstone(
+  _Repositories repositories, {
+  required String entityType,
+  required String entityId,
+  required MutationToken mutation,
+}) {
+  switch (entityType) {
+    case 'work_shift':
+      _restoreRecord(
+        repositories.workShifts,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
+    case 'clinical_session':
+      _restoreRecord(
+        repositories.clinicalSessions,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
+    case 'protected_day':
+      _restoreRecord(
+        repositories.protectedDays,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
+    case 'schedule_template':
+      _restoreRecord(
+        repositories.scheduleTemplates,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
+    case 'preceptor':
+      _restoreRecord(
+        repositories.preceptors,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
+    case 'clinical_placement':
+      _restoreRecord(
+        repositories.clinicalPlacements,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
+    case 'historical_hours_entry':
+      _restoreRecord(
+        repositories.historicalHoursEntries,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
+    case 'evaluation_plan':
+      _restoreRecord(
+        repositories.evaluationPlans,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
+    case 'reminder_state':
+      _restoreRecord(
+        repositories.reminderStates,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
+    default:
+      throw const RecoveryException(
+        RecoveryFailureKind.invariantViolation,
+        'This type of record cannot be restored.',
+      );
+  }
+}
+
+void _restoreRecord<T>(
+  MutableRepository<T> repository,
+  String studentId,
+  String entityId,
+  MutationToken mutation,
+) {
+  final record = repository.find(
+    studentId: studentId,
+    id: entityId,
+    includeDeleted: true,
+  );
+  if (record == null || !record.isDeleted) {
+    throw const RecoveryException(
+      RecoveryFailureKind.concurrentModification,
+      'The deleted record changed before it could be restored.',
+    );
+  }
+  repository.put(
+    studentId: studentId,
+    value: record.value,
+    expectedRevision: record.revision,
+    mutation: mutation,
+  );
 }
 
 const _restoreLocalOnlyTables = {'reminder_state', 'trash'};
@@ -585,6 +1115,17 @@ final class _EntityRepository<T> implements MutableRepository<T> {
     repositories.requireWritable();
     _owner(studentId, owner);
     final id = _identifier(idOf(value));
+    final purgeMarker = db.select(
+      'SELECT 1 FROM permanent_purge_markers WHERE student_id = ? '
+      'AND entity_type = ? AND entity_id = ?',
+      [owner, entityType, id],
+    );
+    if (purgeMarker.isNotEmpty) {
+      throw const RepositoryException(
+        RepositoryFailureKind.notFound,
+        'A permanently deleted identity cannot be reused.',
+      );
+    }
     final content = encode(value);
     final payloadContent = payloadEncode(value);
     if (_tryReplay(
@@ -951,6 +1492,7 @@ String _operation(OutboxOperationType type) => switch (type) {
   OutboxOperationType.upsert => 'upsert',
   OutboxOperationType.delete => 'delete',
   OutboxOperationType.resolveConflict => 'resolve_conflict',
+  OutboxOperationType.purge => 'purge',
 };
 
 String _text(Map<String, Object?> row, String key) {
@@ -1767,6 +2309,7 @@ OutboxOperation _decodeOutbox(Map<String, Object?> row) => OutboxOperation(
     'upsert' => OutboxOperationType.upsert,
     'delete' => OutboxOperationType.delete,
     'resolve_conflict' => OutboxOperationType.resolveConflict,
+    'purge' => OutboxOperationType.purge,
     _ => throw const FormatException(),
   },
   baseRevision: _int(row, 'base_revision'),

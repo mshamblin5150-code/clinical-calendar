@@ -8,6 +8,7 @@ enum ClinicalCalendarDestination {
   clinicalPlacements('Clinical Placements', Icons.track_changes_outlined),
   studentProfile('Student Profile', Icons.person_outline),
   connectedDevices('Connected Devices', Icons.devices_other_outlined),
+  trashRecovery('Trash & Recovery', Icons.restore_from_trash_outlined),
   settings('Settings', Icons.settings_outlined),
   notifications('Notifications', Icons.notifications_outlined),
   help('Help', Icons.help_outline);
@@ -22,6 +23,7 @@ const applicationMenuDestinations = <ClinicalCalendarDestination>[
   ClinicalCalendarDestination.clinicalPlacements,
   ClinicalCalendarDestination.studentProfile,
   ClinicalCalendarDestination.connectedDevices,
+  ClinicalCalendarDestination.trashRecovery,
   ClinicalCalendarDestination.settings,
   ClinicalCalendarDestination.notifications,
   ClinicalCalendarDestination.help,

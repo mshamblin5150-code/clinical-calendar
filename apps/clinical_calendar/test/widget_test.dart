@@ -121,6 +121,54 @@ void main() {
     },
   );
 
+  test('production account backup encrypts before native save', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'clinical-calendar-account-backup-',
+    );
+    final databasePath =
+        '${directory.path}${Platform.pathSeparator}clinical_calendar.sqlite3';
+    final storage = _MemorySecureStorage();
+    final saver = _NativeSaver();
+    SqliteRepositoryRegistry? registry;
+    try {
+      final root = await app.buildProductionApplication(
+        secureStorage: storage,
+        identifiers: const _Identifiers(_identityStudentId),
+        accountBackupFileSaver: saver,
+        repositoryBootstrap: (owner, secureStorage, identifiers) async {
+          final database = await ClinicalCalendarDatabase.open(
+            path: databasePath,
+            secureStorage: secureStorage,
+          );
+          registry = SqliteRepositoryRegistry(
+            studentId: owner,
+            database: database,
+            identifierGenerator: identifiers,
+          );
+          await registry!.initialize();
+          return registry!;
+        },
+      );
+
+      expect(root.createAccountBackup, isNotNull);
+      expect(
+        await root.createAccountBackup!('correct horse battery staple'),
+        isTrue,
+      );
+      expect(saver.request, isNotNull);
+      expect(saver.request!.suggestedFileName, endsWith('.ccbackup'));
+      expect(saver.request!.mimeType, 'application/octet-stream');
+      expect(saver.request!.bytes, isNotEmpty);
+      expect(
+        String.fromCharCodes(saver.request!.bytes),
+        isNot(contains(_identityStudentId)),
+      );
+    } finally {
+      await registry?.close();
+      if (await directory.exists()) await directory.delete(recursive: true);
+    }
+  });
+
   test(
     'configured authenticated composition decorates only application writes',
     () async {
@@ -369,6 +417,16 @@ final class _FixedClock implements Clock {
   DateTime nowUtc() => DateTime.utc(2026, 8, 3, 12);
 }
 
+final class _NativeSaver implements NativeByteFileSaver {
+  NativeFileSaveRequest? request;
+
+  @override
+  Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request) async {
+    this.request = request;
+    return NativeFileSaveOutcome.saved;
+  }
+}
+
 final class _IdentityGateway implements PasswordlessIdentityGateway {
   @override
   Future<void> sendSignInCode(String email) async {}
@@ -414,6 +472,17 @@ final class _IdentityGateway implements PasswordlessIdentityGateway {
 
   @override
   Future<bool> markCurrentDeviceSynchronized(String accessToken) async => true;
+
+  @override
+  Future<AccountErasureRequest> requestAccountErasure(
+    String accessToken,
+    AccountErasureBackupChoice backupChoice,
+  ) async => throw const IdentityException('not_configured');
+
+  @override
+  Future<AccountErasureCancellationStatus> cancelPendingAccountErasure(
+    String accessToken,
+  ) async => throw const IdentityException('not_configured');
 }
 
 const _identityStudentId = '10000000-0000-4000-8000-000000000001';

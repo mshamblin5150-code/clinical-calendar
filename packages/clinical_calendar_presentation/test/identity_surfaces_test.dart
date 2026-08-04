@@ -200,6 +200,17 @@ final class _Gateway implements PasswordlessIdentityGateway {
   Future<void> signOutCurrentSession(String accessToken) async {}
   @override
   Future<bool> markCurrentDeviceSynchronized(String accessToken) async => true;
+  @override
+  Future<AccountErasureRequest> requestAccountErasure(
+    String accessToken,
+    AccountErasureBackupChoice backupChoice,
+  ) async => const AccountErasureRequest(
+    status: AccountErasureRequestStatus.backupCancelled,
+  );
+  @override
+  Future<AccountErasureCancellationStatus> cancelPendingAccountErasure(
+    String accessToken,
+  ) async => AccountErasureCancellationStatus.notPending;
 }
 
 final class _LocalCopy implements LocalDeviceCopyController {

@@ -1,17 +1,27 @@
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:flutter/material.dart';
 
+import 'account_erasure_surface.dart';
+
 final class IdentityDevicesSurface extends StatefulWidget {
   const IdentityDevicesSurface({
     required this.identity,
     required this.email,
     required this.onLocalCopyRemoved,
+    this.createAccountBackup,
+    this.pendingAccountErasure,
+    this.onAccountErasureRequested,
+    this.onAccountErasureCancelled,
     super.key,
   });
 
   final PasswordlessIdentityService identity;
   final String email;
   final Future<void> Function() onLocalCopyRemoved;
+  final AccountBackupCreator? createAccountBackup;
+  final AccountErasureRequest? pendingAccountErasure;
+  final ValueChanged<AccountErasureRequest>? onAccountErasureRequested;
+  final VoidCallback? onAccountErasureCancelled;
 
   @override
   State<IdentityDevicesSurface> createState() => _IdentityDevicesSurfaceState();
@@ -19,6 +29,7 @@ final class IdentityDevicesSurface extends StatefulWidget {
 
 final class _IdentityDevicesSurfaceState extends State<IdentityDevicesSurface> {
   late Future<List<ConnectedDevice>> _devices;
+  var _showAccountErasure = false;
 
   @override
   void initState() {
@@ -148,91 +159,111 @@ final class _IdentityDevicesSurfaceState extends State<IdentityDevicesSurface> {
   }
 
   @override
-  Widget build(BuildContext context) => ListView(
-    key: const Key('identity-devices-surface'),
-    padding: const EdgeInsets.all(16),
-    children: [
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Identity', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 8),
-              Text(widget.email, key: const Key('signed-in-email')),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                key: const Key('change-email-action'),
-                onPressed: _changeEmail,
-                icon: const Icon(Icons.alternate_email),
-                label: const Text('Change verified email'),
-              ),
-            ],
+  Widget build(BuildContext context) {
+    if (_showAccountErasure || widget.pendingAccountErasure != null) {
+      return AccountErasureSurface(
+        identity: widget.identity,
+        email: widget.email,
+        createBackup: widget.createAccountBackup,
+        pendingRequest: widget.pendingAccountErasure,
+        onErasureRequested: widget.onAccountErasureRequested,
+        onErasureCancelled: widget.onAccountErasureCancelled,
+        onClose: () => setState(() => _showAccountErasure = false),
+      );
+    }
+    return ListView(
+      key: const Key('identity-devices-surface'),
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Identity', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 8),
+                Text(widget.email, key: const Key('signed-in-email')),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  key: const Key('change-email-action'),
+                  onPressed: _changeEmail,
+                  icon: const Icon(Icons.alternate_email),
+                  label: const Text('Change verified email'),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 12),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Connected Devices',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              FutureBuilder<List<ConnectedDevice>>(
-                future: _devices,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return const Text(
-                      'Connected devices are unavailable while offline.',
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Connected Devices',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                FutureBuilder<List<ConnectedDevice>>(
+                  future: _devices,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return const Text(
+                        'Connected devices are unavailable while offline.',
+                      );
+                    }
+                    return Column(
+                      children: [
+                        for (final device in snapshot.data!)
+                          ListTile(
+                            key: Key('connected-device-${device.id}'),
+                            leading: Icon(_icon(device.platform)),
+                            title: Text(
+                              '${device.name}${device.isCurrent ? ' (this device)' : ''}',
+                            ),
+                            subtitle: Text(
+                              device.isRevoked
+                                  ? 'Revoked — offline copies are not remotely erased'
+                                  : 'Last sync: ${_lastSync(device.lastSynchronizedAtUtc)}',
+                            ),
+                            trailing: device.isCurrent || device.isRevoked
+                                ? null
+                                : OutlinedButton(
+                                    onPressed: () => _revoke(device),
+                                    child: const Text('Revoke'),
+                                  ),
+                          ),
+                      ],
                     );
-                  }
-                  return Column(
-                    children: [
-                      for (final device in snapshot.data!)
-                        ListTile(
-                          key: Key('connected-device-${device.id}'),
-                          leading: Icon(_icon(device.platform)),
-                          title: Text(
-                            '${device.name}${device.isCurrent ? ' (this device)' : ''}',
-                          ),
-                          subtitle: Text(
-                            device.isRevoked
-                                ? 'Revoked — offline copies are not remotely erased'
-                                : 'Last sync: ${_lastSync(device.lastSynchronizedAtUtc)}',
-                          ),
-                          trailing: device.isCurrent || device.isRevoked
-                              ? null
-                              : OutlinedButton(
-                                  onPressed: () => _revoke(device),
-                                  child: const Text('Revoke'),
-                                ),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ],
+                  },
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 12),
-      OutlinedButton.icon(
-        key: const Key('sign-out-remove-local-action'),
-        onPressed: _removeLocalCopy,
-        icon: const Icon(Icons.phonelink_erase_outlined),
-        label: const Text("Sign Out and Remove This Device's Copy"),
-      ),
-    ],
-  );
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          key: const Key('sign-out-remove-local-action'),
+          onPressed: _removeLocalCopy,
+          icon: const Icon(Icons.phonelink_erase_outlined),
+          label: const Text("Sign Out and Remove This Device's Copy"),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          key: const Key('delete-account-all-data-action'),
+          onPressed: () => setState(() => _showAccountErasure = true),
+          icon: const Icon(Icons.delete_forever_outlined),
+          label: const Text('Delete Account and All Data'),
+        ),
+      ],
+    );
+  }
 }
 
 IconData _icon(DevicePlatform platform) => switch (platform) {

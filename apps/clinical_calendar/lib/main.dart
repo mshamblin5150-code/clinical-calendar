@@ -76,6 +76,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   NotificationDevicePolicyStore? notificationDevicePolicyStore,
   String? deviceTimeZoneId,
   NotificationDeviceClass? notificationDeviceClass,
+  RecoveryReauthenticationGate? recoveryReauthentication,
+  NativeByteFileSaver? accountBackupFileSaver,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
   final identifierGenerator = identifiers ?? ProcessIdentifierGenerator();
@@ -221,6 +223,49 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     secureStorage: storage,
     files: const DartIoFileService(),
   );
+  final recoveryStore = baseRepositories is RecoveryStore
+      ? baseRepositories as RecoveryStore
+      : null;
+  final recoveryProofGate = recoveryReauthentication == null
+      ? OneShotRecoveryReauthenticationGate()
+      : null;
+  final recoveryService = recoveryStore == null
+      ? null
+      : RecoveryApplicationService(
+          store: recoveryStore,
+          reauthentication: recoveryReauthentication ?? recoveryProofGate!,
+          identifiers: identifierGenerator,
+        );
+  final createAccountBackup = baseRepositories is SqliteRepositoryRegistry
+      ? (String passphrase) async {
+          final createdAtUtc = applicationClock.nowUtc();
+          final bytes = await baseRepositories.runPortableBackupExclusive(
+            (service) => service.createEncryptedBackup(
+              passphrase: passphrase,
+              createdAtUtc: createdAtUtc,
+            ),
+          );
+          final date = createdAtUtc.toIso8601String().substring(0, 10);
+          final outcome =
+              await (accountBackupFileSaver ?? NativeExportFileSaver()).save(
+                NativeFileSaveRequest(
+                  suggestedFileName: 'clinical-calendar-backup-$date.ccbackup',
+                  mimeType: 'application/octet-stream',
+                  bytes: bytes,
+                ),
+              );
+          return outcome == NativeFileSaveOutcome.saved;
+        }
+      : null;
+  if (recoveryStore != null) {
+    final existingLaunchOrResume = onLaunchOrResume;
+    onLaunchOrResume = () async {
+      await existingLaunchOrResume();
+      await recoveryStore.createDailySnapshot(
+        nowUtc: applicationClock.nowUtc(),
+      );
+    };
+  }
   if (baseRepositories is SqliteRepositoryRegistry &&
       onLocalCopyControllerReady != null) {
     final sqliteRepositories = baseRepositories;
@@ -259,9 +304,13 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     identity: identity,
     identityEmail: identityEmail,
     onLocalCopyRemoved: onLocalCopyRemoved,
+    createAccountBackup: createAccountBackup,
     notificationInteractions: interactions.stream,
     notificationDevicePolicyStore: devicePolicyStore,
     notificationDeviceClass: resolvedDeviceClass,
+    recoveryStore: recoveryStore,
+    recoveryService: recoveryService,
+    recoveryProofGate: recoveryProofGate,
   );
 }
 

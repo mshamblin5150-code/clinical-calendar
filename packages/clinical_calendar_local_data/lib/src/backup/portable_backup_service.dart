@@ -52,6 +52,8 @@ const excludedPortableBackupTables = <String>{
   'sync_state',
   'sync_conflicts',
   'outbox_operations',
+  'operational_recovery_snapshots',
+  'permanent_purge_markers',
 };
 
 final class PortableBackupService {
@@ -70,6 +72,56 @@ final class PortableBackupService {
   final RestoreSynchronizationIntentSink _intentSink;
   final PortableBackupCrypto _crypto;
   final PortableBackupMigrator migrator;
+
+  /// Revalidates the complete logical dataset through an isolated in-memory
+  /// schema copy. Callers use this immediately before committing recovery.
+  void validateCurrentState() => _validateDataset(_readCurrentTables());
+
+  /// Creates a logical recovery copy inside the encrypted local database.
+  /// Unlike a portable backup this payload is not independently encrypted;
+  /// it never leaves the SQLCipher file.
+  String createOperationalSnapshotPayload({required DateTime createdAtUtc}) {
+    if (!createdAtUtc.isUtc) {
+      throw ArgumentError.value(createdAtUtc, 'createdAtUtc', 'must be UTC');
+    }
+    final tables = database.transaction(_readCurrentTables);
+    _validateDataset(tables);
+    return canonicalJson({
+      'payload_version': _payloadVersion,
+      'source_database_schema_version': database.schemaVersion,
+      'student_id': _studentId,
+      'created_at_utc': createdAtUtc.toIso8601String(),
+      'tables': _encodeTables(tables),
+    });
+  }
+
+  Future<PortableRestorePreview> previewOperationalRestore({
+    required String payloadJson,
+  }) async {
+    try {
+      final raw = jsonDecode(payloadJson);
+      if (raw is! Map<String, dynamic> || raw['student_id'] != _studentId) {
+        throw const FormatException();
+      }
+      final migrated = migrator.migrate(Map<String, Object?>.from(raw));
+      final tables = _decodeTables(migrated['tables']);
+      _validateDataset(tables);
+      final decoded = _DecodedBackup(
+        _studentId,
+        DateTime.parse(migrated['created_at_utc'] as String).toUtc(),
+        tables,
+      );
+      return _previewDecoded(decoded);
+    } on PortableBackupException {
+      rethrow;
+    } on Object catch (error) {
+      throw PortableBackupException(
+        PortableBackupFailureKind.invalidRecord,
+        'The recovery snapshot is invalid.',
+        cause: error,
+      );
+    }
+  }
 
   Future<List<int>> createEncryptedBackup({
     required String passphrase,
@@ -108,6 +160,10 @@ final class PortableBackupService {
     required String passphrase,
   }) async {
     final decoded = await _decryptAndValidate(encryptedBytes, passphrase);
+    return _previewDecoded(decoded);
+  }
+
+  PortableRestorePreview _previewDecoded(_DecodedBackup decoded) {
     final local = database.transaction(_readCurrentTables);
     final items = <RestoreMergeItem>[];
     for (final table in _logicalTables) {
@@ -426,6 +482,31 @@ final class PortableBackupService {
   }
 
   void _upsert(String table, Map<String, Object?> row) {
+    final entityType = switch (table) {
+      'preceptors' => 'preceptor',
+      'clinical_placements' => 'clinical_placement',
+      'commitments' =>
+        row['commitment_type'] == 'work_shift'
+            ? 'work_shift'
+            : 'clinical_session',
+      'protected_days' => 'protected_day',
+      'historical_hours_entries' => 'historical_hours_entry',
+      'evaluation_plans' => 'evaluation_plan',
+      'schedule_templates' => 'schedule_template',
+      'reminder_state' => 'reminder_state',
+      _ => null,
+    };
+    if (entityType != null &&
+        database.select(
+          'SELECT 1 FROM permanent_purge_markers WHERE student_id = ? '
+          'AND entity_type = ? AND entity_id = ?',
+          [_studentId, entityType, row['id']],
+        ).isNotEmpty) {
+      throw const PortableBackupException(
+        PortableBackupFailureKind.invalidRecord,
+        'A backup cannot restore a permanently deleted identity.',
+      );
+    }
     final columns = row.keys.toList(growable: false);
     final keys = _primaryKeys[table]!;
     final updates = columns

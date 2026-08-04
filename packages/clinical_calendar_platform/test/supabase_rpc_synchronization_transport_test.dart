@@ -47,6 +47,57 @@ void main() {
   });
 
   test(
+    'permanent purge crosses transport as a content-free operation',
+    () async {
+      late http.Request captured;
+      final transport = _transport(
+        MockClient((request) async {
+          captured = request;
+          return http.Response(
+            jsonEncode({
+              'accepted': true,
+              'cursor': 13,
+              'entity_type': 'preceptor',
+              'entity_id': _entityId,
+              'revision': 3,
+            }),
+            200,
+          );
+        }),
+      );
+      final operation = OutboxOperation(
+        mutation: MutationToken(
+          operationId: _id(20),
+          idempotencyKey: _id(21),
+          occurredAtUtc: DateTime.utc(2026, 8, 4),
+        ),
+        studentId: _studentId,
+        entityType: 'preceptor',
+        entityId: _entityId,
+        type: OutboxOperationType.purge,
+        baseRevision: 2,
+        payloadJson: jsonEncode({
+          'schema_version': 1,
+          'entity_type': 'preceptor',
+          'entity_id': _entityId,
+          'student_id': _studentId,
+          'revision': 3,
+          'created_at_utc': '2026-08-03T12:00:00.000Z',
+          'updated_at_utc': '2026-08-04T12:00:00.000Z',
+          'deleted_at_utc': '2026-08-03T13:00:00.000Z',
+          'purged_at_utc': '2026-08-04T12:00:00.000Z',
+          'value': <String, Object?>{},
+        }),
+      );
+
+      await transport.push(operation);
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect(body['p_operation_type'], 'purge');
+      expect((body['p_payload'] as Map)['value'], isEmpty);
+    },
+  );
+
+  test(
     'stable rejection and ordered pull rows decode without interpretation',
     () async {
       var calls = 0;

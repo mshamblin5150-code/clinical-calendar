@@ -148,6 +148,63 @@ final class SupabasePasswordlessIdentityGateway
       ) ==
       true;
 
+  @override
+  Future<AccountErasureRequest> requestAccountErasure(
+    String accessToken,
+    AccountErasureBackupChoice backupChoice,
+  ) async {
+    final response = await _rpc(
+      'request_account_erasure',
+      accessToken,
+      body: {'p_backup_choice': _backupChoiceName(backupChoice)},
+    );
+    if (response is! Map<String, dynamic>) {
+      throw const IdentityException('invalid_account_erasure_response');
+    }
+    final status = response['status'];
+    if (status == 'backup_cancelled') {
+      return const AccountErasureRequest(
+        status: AccountErasureRequestStatus.backupCancelled,
+      );
+    }
+    if (status != 'pending') {
+      throw IdentityException(
+        status is String ? status : 'invalid_account_erasure_response',
+      );
+    }
+    try {
+      return AccountErasureRequest(
+        status: AccountErasureRequestStatus.pending,
+        requestedAtUtc: DateTime.parse(
+          response['requested_at_utc'] as String,
+        ).toUtc(),
+        purgeAfterUtc: DateTime.parse(
+          response['purge_after_utc'] as String,
+        ).toUtc(),
+      );
+    } on Object {
+      throw const IdentityException('invalid_account_erasure_response');
+    }
+  }
+
+  @override
+  Future<AccountErasureCancellationStatus> cancelPendingAccountErasure(
+    String accessToken,
+  ) async {
+    final response = await _rpc(
+      'cancel_account_erasure',
+      accessToken,
+      body: const {},
+    );
+    return switch (response) {
+      'cancelled' => AccountErasureCancellationStatus.cancelled,
+      'not_pending' => AccountErasureCancellationStatus.notPending,
+      'grace_expired' => AccountErasureCancellationStatus.graceExpired,
+      final String status => throw IdentityException(status),
+      _ => throw const IdentityException('invalid_account_erasure_response'),
+    };
+  }
+
   Future<Object?> _rpc(
     String function,
     String accessToken, {
@@ -193,6 +250,12 @@ final class SupabasePasswordlessIdentityGateway
     }
   }
 }
+
+String _backupChoiceName(AccountErasureBackupChoice value) => switch (value) {
+  AccountErasureBackupChoice.completed => 'completed',
+  AccountErasureBackupChoice.skipped => 'skipped',
+  AccountErasureBackupChoice.cancelled => 'cancelled',
+};
 
 IdentitySession _sessionFrom(Object? response) {
   if (response is! Map<String, dynamic>) {

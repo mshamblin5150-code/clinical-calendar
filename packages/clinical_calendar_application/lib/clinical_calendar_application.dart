@@ -19,6 +19,8 @@ export 'src/reminders/repository_reminder_candidate_source.dart';
 export 'src/reminders/reminder_policy.dart';
 export 'src/reminders/reminder_state.dart';
 export 'src/reminders/reminder_state_service.dart';
+export 'src/recovery/recovery_application_service.dart';
+export 'src/recovery/recovery_models.dart';
 export 'src/repositories.dart';
 export 'src/scheduling/scheduling_application_service.dart';
 export 'src/scheduling/batch_scheduling_models.dart';

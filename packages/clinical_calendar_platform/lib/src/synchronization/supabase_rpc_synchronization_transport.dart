@@ -111,6 +111,7 @@ final class SupabaseRpcSynchronizationTransport
                 'upsert' => OutboxOperationType.upsert,
                 'delete' => OutboxOperationType.delete,
                 'resolve_conflict' => OutboxOperationType.resolveConflict,
+                'purge' => OutboxOperationType.purge,
                 _ => throw const FormatException(),
               },
               payloadJson: jsonEncode(raw['payload']),
@@ -193,6 +194,7 @@ String _operationType(OutboxOperationType type) => switch (type) {
   OutboxOperationType.upsert => 'upsert',
   OutboxOperationType.delete => 'delete',
   OutboxOperationType.resolveConflict => 'resolve_conflict',
+  OutboxOperationType.purge => 'purge',
 };
 
 String _required(String value, String name) {

@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 7;
+  static const latestVersion = 9;
 
   final MigrationTestHook? _testHook;
 
@@ -330,7 +330,7 @@ final Map<int, List<String>> _statements = {
       idempotency_key TEXT NOT NULL CHECK (length(idempotency_key) = 36),
       entity_type TEXT NOT NULL,
       entity_id TEXT NOT NULL CHECK (length(entity_id) = 36),
-      operation_type TEXT NOT NULL CHECK (operation_type IN ('upsert', 'delete', 'resolve_conflict')),
+      operation_type TEXT NOT NULL CHECK (operation_type IN ('upsert', 'delete', 'resolve_conflict', 'purge')),
       base_revision INTEGER NOT NULL CHECK (base_revision >= 0),
       payload_json TEXT NOT NULL,
       created_at_utc TEXT NOT NULL,
@@ -418,5 +418,62 @@ final Map<int, List<String>> _statements = {
     '''CREATE UNIQUE INDEX reminder_occurrence_index
       ON reminder_state(student_id, occurrence_key)
       WHERE deleted_at_utc IS NULL''',
+  ],
+  8: [
+    '''CREATE TABLE operational_recovery_snapshots (
+      id TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 36),
+      student_id TEXT NOT NULL CHECK (length(student_id) = 36),
+      snapshot_date TEXT NOT NULL,
+      created_at_utc TEXT NOT NULL,
+      expires_at_utc TEXT NOT NULL CHECK (expires_at_utc > created_at_utc),
+      payload_json TEXT NOT NULL,
+      UNIQUE (student_id, snapshot_date),
+      FOREIGN KEY (student_id) REFERENCES student_profiles(student_id)
+    ) STRICT''',
+    '''CREATE INDEX operational_recovery_snapshot_expiry_index
+      ON operational_recovery_snapshots(student_id, expires_at_utc)''',
+  ],
+  9: [
+    '''CREATE TABLE permanent_purge_markers (
+      student_id TEXT NOT NULL CHECK (length(student_id) = 36),
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL CHECK (length(entity_id) = 36),
+      revision INTEGER NOT NULL CHECK (revision > 0),
+      purged_at_utc TEXT NOT NULL,
+      PRIMARY KEY (student_id, entity_type, entity_id),
+      FOREIGN KEY (student_id) REFERENCES student_profiles(student_id)
+    ) STRICT''',
+    '''CREATE TABLE outbox_operations_v9 (
+      id TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 36),
+      student_id TEXT NOT NULL CHECK (length(student_id) = 36),
+      idempotency_key TEXT NOT NULL CHECK (length(idempotency_key) = 36),
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL CHECK (length(entity_id) = 36),
+      operation_type TEXT NOT NULL CHECK (operation_type IN ('upsert', 'delete', 'resolve_conflict', 'purge')),
+      base_revision INTEGER NOT NULL CHECK (base_revision >= 0),
+      payload_json TEXT NOT NULL,
+      created_at_utc TEXT NOT NULL,
+      attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+      next_attempt_at_utc TEXT,
+      acknowledged_cursor INTEGER CHECK (acknowledged_cursor >= 0),
+      acknowledged_at_utc TEXT,
+      last_failure_code TEXT,
+      terminal_rejection_code TEXT,
+      terminal_rejected_at_utc TEXT,
+      UNIQUE (idempotency_key),
+      FOREIGN KEY (student_id) REFERENCES student_profiles(student_id)
+    ) STRICT''',
+    '''INSERT INTO outbox_operations_v9 SELECT
+      id, student_id, idempotency_key, entity_type, entity_id,
+      operation_type, base_revision, payload_json, created_at_utc,
+      attempt_count, next_attempt_at_utc, acknowledged_cursor,
+      acknowledged_at_utc, last_failure_code, terminal_rejection_code,
+      terminal_rejected_at_utc FROM outbox_operations''',
+    'DROP TABLE outbox_operations',
+    'ALTER TABLE outbox_operations_v9 RENAME TO outbox_operations',
+    '''CREATE INDEX outbox_pending_index
+      ON outbox_operations(student_id, created_at_utc)
+      WHERE acknowledged_at_utc IS NULL
+        AND terminal_rejected_at_utc IS NULL''',
   ],
 };

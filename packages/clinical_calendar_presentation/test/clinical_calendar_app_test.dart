@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
+import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:flutter/material.dart';
@@ -210,6 +211,91 @@ void main() {
 
     expect(find.byKey(const Key('settings-templates-surface')), findsOneWidget);
     expect(find.byKey(const Key('back-action')), findsOneWidget);
+  });
+
+  testWidgets('menu exposes the production Trash and recovery destination', (
+    tester,
+  ) async {
+    final store = _RecoveryStore();
+    await _pumpAt(
+      tester,
+      const Size(1024, 768),
+      recoveryStore: store,
+      recoveryService: RecoveryApplicationService(
+        store: store,
+        reauthentication: _RecoveryGate(),
+        identifiers: _Identifiers(),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('desktop-menu-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Trash & Recovery'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Trash is empty.'), findsOneWidget);
+    expect(find.byKey(const Key('back-action')), findsOneWidget);
+    expect(store.dailySnapshots, 0);
+  });
+
+  testWidgets('Clear Trash consumes a fresh passwordless OTP proof', (
+    tester,
+  ) async {
+    final store = _RecoveryStore(withTrash: true);
+    final proof = OneShotRecoveryReauthenticationGate();
+    final gateway = _RecoveryOtpGateway();
+    final identity = PasswordlessIdentityService(
+      gateway: gateway,
+      secureStorage: _SecureStorage(),
+      identifiers: _Identifiers(),
+      clock: _Clock(),
+      currentDevice: DeviceDescriptor(
+        name: 'Test device',
+        platform: DevicePlatform.windows,
+      ),
+    );
+    await _pumpAt(
+      tester,
+      const Size(1024, 768),
+      recoveryStore: store,
+      recoveryService: RecoveryApplicationService(
+        store: store,
+        reauthentication: proof,
+        identifiers: _Identifiers(),
+      ),
+      recoveryProofGate: proof,
+      identity: identity,
+      identityEmail: 'student@example.com',
+    );
+    await tester.tap(find.byKey(const Key('desktop-menu-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Trash & Recovery'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('clear-trash')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(store.clears, 0);
+
+    await tester.tap(find.byKey(const Key('clear-trash')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('send-recovery-otp')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('recovery-otp-code')),
+      '123456',
+    );
+    await tester.tap(find.byKey(const Key('verify-recovery-otp')));
+    await tester.pumpAndSettle();
+
+    expect(gateway.sent, 1);
+    expect(gateway.verified, 1);
+    expect(store.clears, 1);
+    expect(find.text('Trash is empty.'), findsOneWidget);
   });
 
   testWidgets('calendar selection feeds staged tray and both reset seams', (
@@ -469,6 +555,11 @@ Future<void> _pumpAt(
   Size size, {
   ApplicationDependencies? dependencies,
   Stream<NotificationInteraction>? notificationInteractions,
+  RecoveryStore? recoveryStore,
+  RecoveryApplicationService? recoveryService,
+  OneShotRecoveryReauthenticationGate? recoveryProofGate,
+  PasswordlessIdentityService? identity,
+  String? identityEmail,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -478,9 +569,105 @@ Future<void> _pumpAt(
       environmentName: 'test',
       studentId: studentId,
       notificationInteractions: notificationInteractions,
+      recoveryStore: recoveryStore,
+      recoveryService: recoveryService,
+      recoveryProofGate: recoveryProofGate,
+      identity: identity,
+      identityEmail: identityEmail,
     ),
   );
   await tester.pumpAndSettle();
+}
+
+final class _RecoveryStore implements RecoveryStore {
+  _RecoveryStore({bool withTrash = false})
+    : _trash = withTrash
+          ? [
+              TrashEntry(
+                id: '00000000-0000-4000-8000-000000000091',
+                entityType: 'work_shift',
+                entityId: '00000000-0000-4000-8000-000000000092',
+                deletedAtUtc: DateTime.utc(2026),
+                purgeAfterUtc: DateTime.utc(2026, 2),
+              ),
+            ]
+          : [];
+
+  var dailySnapshots = 0;
+  var clears = 0;
+  List<TrashEntry> _trash;
+
+  @override
+  Future<OperationalSnapshotSummary> createDailySnapshot({
+    required DateTime nowUtc,
+  }) async {
+    dailySnapshots++;
+    return OperationalSnapshotSummary(
+      id: '00000000-0000-4000-8000-000000000099',
+      snapshotDate: '2026-01-01',
+      createdAtUtc: nowUtc,
+      expiresAtUtc: nowUtc.add(const Duration(days: 30)),
+    );
+  }
+
+  @override
+  Future<List<TrashEntry>> listTrash({required DateTime nowUtc}) async =>
+      List.of(_trash);
+
+  @override
+  Future<int> clearTrash({
+    required DateTime deletedAtUtc,
+    required List<MutationToken> mutations,
+  }) async {
+    clears++;
+    final count = _trash.length;
+    _trash = [];
+    return count;
+  }
+
+  @override
+  Future<List<OperationalSnapshotSummary>> listSnapshots({
+    required DateTime nowUtc,
+  }) async => [];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+final class _RecoveryOtpGateway implements PasswordlessIdentityGateway {
+  var sent = 0;
+  var verified = 0;
+
+  @override
+  Future<void> sendSignInCode(String email) async => sent++;
+
+  @override
+  Future<IdentitySession> verifySignInCode(String email, String code) async {
+    verified++;
+    return IdentitySession(
+      accessToken: 'fresh-access',
+      refreshToken: 'fresh-refresh',
+      studentId: studentId,
+      sessionId: '00000000-0000-4000-8000-000000000093',
+      email: email,
+      expiresAtUtc: DateTime.utc(2027),
+    );
+  }
+
+  @override
+  Future<bool> registerCurrentDevice({
+    required String accessToken,
+    required String deviceId,
+    required DeviceDescriptor descriptor,
+  }) async => true;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+final class _RecoveryGate implements RecoveryReauthenticationGate {
+  @override
+  Future<bool> reauthenticate({required String reason}) async => true;
 }
 
 ApplicationDependencies _dependencies({_Repositories? repositories}) =>

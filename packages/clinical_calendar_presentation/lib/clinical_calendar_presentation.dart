@@ -18,6 +18,7 @@ export 'src/placements/placement_management_surface.dart';
 export 'src/placements/placement_progress_controller.dart';
 export 'src/placements/placement_progress_widgets.dart';
 export 'src/responsive_shell.dart';
+export 'src/recovery/trash_recovery_surface.dart';
 export 'src/scheduling/batch_scheduling_controller.dart';
 export 'src/scheduling/staged_batch_scheduling_tray.dart';
 export 'src/support/profile_avatar_button.dart';

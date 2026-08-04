@@ -168,6 +168,87 @@ void main() {
       );
     },
   );
+
+  test(
+    'account erasure requires a fresh OTP and clears revoked session',
+    () async {
+      gateway.erasureRequest = AccountErasureRequest(
+        status: AccountErasureRequestStatus.pending,
+        requestedAtUtc: DateTime.utc(2026, 8, 3, 12),
+        purgeAfterUtc: DateTime.utc(2026, 9, 2, 12),
+      );
+
+      final result = await service.requestAccountErasure(
+        email: 'Student@Example.com',
+        code: '123456',
+        backupChoice: AccountErasureBackupChoice.completed,
+      );
+
+      expect(result.status, AccountErasureRequestStatus.pending);
+      expect(gateway.events, ['verify', 'register', 'request_erasure']);
+      expect(gateway.erasureBackupChoice, AccountErasureBackupChoice.completed);
+      expect(
+        storage.values,
+        isNot(contains(PasswordlessIdentityService.sessionStorageKey)),
+      );
+    },
+  );
+
+  test(
+    'cancelling the backup leaves the fresh signed-in session intact',
+    () async {
+      gateway.erasureRequest = const AccountErasureRequest(
+        status: AccountErasureRequestStatus.backupCancelled,
+      );
+
+      final result = await service.requestAccountErasure(
+        email: 'student@example.com',
+        code: '123456',
+        backupChoice: AccountErasureBackupChoice.cancelled,
+      );
+
+      expect(result.status, AccountErasureRequestStatus.backupCancelled);
+      expect(
+        storage.values,
+        contains(PasswordlessIdentityService.sessionStorageKey),
+      );
+    },
+  );
+
+  test(
+    'grace cancellation occurs before the fresh device is rebound',
+    () async {
+      gateway.cancellationStatus = AccountErasureCancellationStatus.cancelled;
+
+      final status = await service.cancelAccountErasure(
+        email: 'student@example.com',
+        code: '123456',
+      );
+
+      expect(status, AccountErasureCancellationStatus.cancelled);
+      expect(gateway.events, ['verify', 'cancel_erasure', 'register']);
+      expect(
+        storage.values,
+        contains(PasswordlessIdentityService.sessionStorageKey),
+      );
+    },
+  );
+
+  test('expired grace does not rebind or retain the fresh session', () async {
+    gateway.cancellationStatus = AccountErasureCancellationStatus.graceExpired;
+
+    final status = await service.cancelAccountErasure(
+      email: 'student@example.com',
+      code: '123456',
+    );
+
+    expect(status, AccountErasureCancellationStatus.graceExpired);
+    expect(gateway.events, ['verify', 'cancel_erasure']);
+    expect(
+      storage.values,
+      isNot(contains(PasswordlessIdentityService.sessionStorageKey)),
+    );
+  });
 }
 
 const _studentId = '10000000-0000-4000-8000-000000000001';
@@ -194,11 +275,19 @@ final class _Gateway implements PasswordlessIdentityGateway {
   String revokeResult = 'revoked';
   bool signedOut = false;
   IdentityException? signOutFailure;
+  final events = <String>[];
+  AccountErasureRequest erasureRequest = const AccountErasureRequest(
+    status: AccountErasureRequestStatus.backupCancelled,
+  );
+  AccountErasureBackupChoice? erasureBackupChoice;
+  AccountErasureCancellationStatus cancellationStatus =
+      AccountErasureCancellationStatus.notPending;
 
   @override
   Future<void> sendSignInCode(String email) async {}
   @override
   Future<IdentitySession> verifySignInCode(String email, String code) async {
+    events.add('verify');
     verifiedEmail = email;
     return _session();
   }
@@ -216,6 +305,7 @@ final class _Gateway implements PasswordlessIdentityGateway {
     required String deviceId,
     required DeviceDescriptor descriptor,
   }) async {
+    events.add('register');
     registeredDeviceId = deviceId;
     return true;
   }
@@ -239,6 +329,24 @@ final class _Gateway implements PasswordlessIdentityGateway {
 
   @override
   Future<bool> markCurrentDeviceSynchronized(String accessToken) async => true;
+
+  @override
+  Future<AccountErasureRequest> requestAccountErasure(
+    String accessToken,
+    AccountErasureBackupChoice backupChoice,
+  ) async {
+    events.add('request_erasure');
+    erasureBackupChoice = backupChoice;
+    return erasureRequest;
+  }
+
+  @override
+  Future<AccountErasureCancellationStatus> cancelPendingAccountErasure(
+    String accessToken,
+  ) async {
+    events.add('cancel_erasure');
+    return cancellationStatus;
+  }
 }
 
 final class _Storage implements SecureStorage {

@@ -128,7 +128,7 @@ abstract interface class MutableRepository<T> implements ReadRepository<T> {
   });
 }
 
-enum OutboxOperationType { upsert, delete, resolveConflict }
+enum OutboxOperationType { upsert, delete, resolveConflict, purge }
 
 /// A mutation waiting to be delivered to synchronization infrastructure.
 final class OutboxOperation {

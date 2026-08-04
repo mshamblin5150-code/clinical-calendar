@@ -481,8 +481,19 @@ final class SqliteSynchronizationRepository
       );
     }
     final deletedAt = value['deleted_at_utc'];
-    if ((change.operationType == OutboxOperationType.delete) !=
-        (deletedAt != null)) {
+    final purgedAt = value['purged_at_utc'];
+    if (change.operationType == OutboxOperationType.purge) {
+      if (purgedAt is! String ||
+          deletedAt is! String ||
+          value['value'] is! Map) {
+        throw const RepositoryException(
+          RepositoryFailureKind.corruptData,
+          'The remote permanent purge marker is invalid.',
+        );
+      }
+    } else if ((change.operationType == OutboxOperationType.delete) !=
+            (deletedAt != null) ||
+        purgedAt != null) {
       throw const RepositoryException(
         RepositoryFailureKind.corruptData,
         'The remote synchronization tombstone is invalid.',
@@ -496,6 +507,21 @@ final class SqliteSynchronizationRepository
     String entityId,
     Map<String, dynamic> envelope,
   ) {
+    if (envelope['purged_at_utc'] != null) {
+      _applyPermanentPurge(entityType, entityId, envelope);
+      return;
+    }
+    final marker = _database.select(
+      'SELECT 1 FROM permanent_purge_markers WHERE student_id = ? '
+      'AND entity_type = ? AND entity_id = ?',
+      [_studentId, entityType, entityId],
+    );
+    if (marker.isNotEmpty) {
+      throw const RepositoryException(
+        RepositoryFailureKind.concurrentModification,
+        'A permanently deleted identity cannot be restored.',
+      );
+    }
     final value = envelope['value'] as Map<String, dynamic>;
     final common = <String, Object?>{
       'id': entityId,
@@ -566,6 +592,109 @@ final class SqliteSynchronizationRepository
           'The remote entity type is unsupported.',
         );
     }
+    _synchronizeTrash(entityType, entityId, envelope);
+  }
+
+  void _applyPermanentPurge(
+    String entityType,
+    String entityId,
+    Map<String, dynamic> envelope,
+  ) {
+    final table = switch (entityType) {
+      'work_shift' || 'clinical_session' => 'commitments',
+      'protected_day' => 'protected_days',
+      'schedule_template' => 'schedule_templates',
+      'preceptor' => 'preceptors',
+      'clinical_placement' => 'clinical_placements',
+      'historical_hours_entry' => 'historical_hours_entries',
+      'evaluation_plan' => 'evaluation_plans',
+      'reminder_state' => 'reminder_state',
+      _ => throw const RepositoryException(
+        RepositoryFailureKind.corruptData,
+        'The remote purge entity type is unsupported.',
+      ),
+    };
+    _database.execute('DELETE FROM $table WHERE student_id = ? AND id = ?', [
+      _studentId,
+      entityId,
+    ]);
+    _database.execute(
+      'DELETE FROM trash WHERE student_id = ? AND entity_type = ? '
+      'AND entity_id = ?',
+      [_studentId, entityType, entityId],
+    );
+    _database.execute(
+      '''INSERT INTO permanent_purge_markers
+        (student_id, entity_type, entity_id, revision, purged_at_utc)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(student_id, entity_type, entity_id) DO UPDATE SET
+          revision = max(revision, excluded.revision),
+          purged_at_utc = max(purged_at_utc, excluded.purged_at_utc)''',
+      [
+        _studentId,
+        entityType,
+        entityId,
+        envelope['revision'],
+        envelope['purged_at_utc'],
+      ],
+    );
+  }
+
+  void _synchronizeTrash(
+    String entityType,
+    String entityId,
+    Map<String, dynamic> envelope,
+  ) {
+    final deletedAtValue = envelope['deleted_at_utc'];
+    if (deletedAtValue == null) {
+      _database.execute(
+        'DELETE FROM trash WHERE student_id = ? AND entity_type = ? '
+        'AND entity_id = ?',
+        [_studentId, entityType, entityId],
+      );
+      return;
+    }
+    if (entityType == 'student_profile' || entityType == 'settings') return;
+    final deletedAt = DateTime.parse(deletedAtValue as String).toUtc();
+    final existing = _database.select(
+      'SELECT id, created_at_utc, revision FROM trash '
+      'WHERE student_id = ? AND entity_type = ? AND entity_id = ?',
+      [_studentId, entityType, entityId],
+    );
+    final id = existing.isEmpty
+        ? _uuid(_identifiers.nextIdentifier())
+        : existing.single['id'] as String;
+    final createdAt = existing.isEmpty
+        ? deletedAt.toIso8601String()
+        : existing.single['created_at_utc'] as String;
+    final revision = existing.isEmpty
+        ? 1
+        : (existing.single['revision'] as int) + 1;
+    _database.execute(
+      '''INSERT INTO trash
+        (id, student_id, revision, created_at_utc, updated_at_utc,
+         deleted_at_utc, entity_type, entity_id, deleted_snapshot_json,
+         purge_after_utc, permanently_deleted_at_utc)
+        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL)
+        ON CONFLICT(student_id, entity_type, entity_id) DO UPDATE SET
+          revision = excluded.revision,
+          updated_at_utc = excluded.updated_at_utc,
+          deleted_at_utc = NULL,
+          deleted_snapshot_json = excluded.deleted_snapshot_json,
+          purge_after_utc = excluded.purge_after_utc,
+          permanently_deleted_at_utc = NULL''',
+      [
+        id,
+        _studentId,
+        revision,
+        createdAt,
+        deletedAt.toIso8601String(),
+        entityType,
+        entityId,
+        _canonicalJson(envelope),
+        deletedAt.add(const Duration(days: 30)).toIso8601String(),
+      ],
+    );
   }
 
   void _applyPlacement(

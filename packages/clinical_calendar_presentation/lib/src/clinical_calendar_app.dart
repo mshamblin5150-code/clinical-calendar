@@ -19,6 +19,7 @@ import 'identity/identity_devices_surface.dart';
 import 'placements/placement_management_surface.dart';
 import 'placements/placement_progress_controller.dart';
 import 'placements/placement_progress_widgets.dart';
+import 'recovery/trash_recovery_surface.dart';
 import 'responsive_shell.dart';
 import 'scheduling/batch_scheduling_controller.dart';
 import 'scheduling/staged_batch_scheduling_tray.dart';
@@ -47,6 +48,10 @@ final class ClinicalCalendarApp extends StatelessWidget {
     this.identity,
     this.identityEmail,
     this.onLocalCopyRemoved,
+    this.createAccountBackup,
+    this.recoveryStore,
+    this.recoveryService,
+    this.recoveryProofGate,
     super.key,
   });
 
@@ -69,6 +74,10 @@ final class ClinicalCalendarApp extends StatelessWidget {
   final PasswordlessIdentityService? identity;
   final String? identityEmail;
   final Future<void> Function()? onLocalCopyRemoved;
+  final Future<bool> Function(String passphrase)? createAccountBackup;
+  final RecoveryStore? recoveryStore;
+  final RecoveryApplicationService? recoveryService;
+  final OneShotRecoveryReauthenticationGate? recoveryProofGate;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -89,6 +98,10 @@ final class ClinicalCalendarApp extends StatelessWidget {
         identity: identity,
         identityEmail: identityEmail,
         onLocalCopyRemoved: onLocalCopyRemoved,
+        createAccountBackup: createAccountBackup,
+        recoveryStore: recoveryStore,
+        recoveryService: recoveryService,
+        recoveryProofGate: recoveryProofGate,
         notificationInteractions: notificationInteractions,
         notificationDevicePolicyStore: notificationDevicePolicyStore,
         notificationDeviceClass: notificationDeviceClass,
@@ -182,6 +195,10 @@ final class _ApplicationHost extends StatefulWidget {
     required this.identity,
     required this.identityEmail,
     required this.onLocalCopyRemoved,
+    required this.createAccountBackup,
+    required this.recoveryStore,
+    required this.recoveryService,
+    required this.recoveryProofGate,
     required this.notificationInteractions,
     required this.notificationDevicePolicyStore,
     required this.notificationDeviceClass,
@@ -196,6 +213,10 @@ final class _ApplicationHost extends StatefulWidget {
   final PasswordlessIdentityService? identity;
   final String? identityEmail;
   final Future<void> Function()? onLocalCopyRemoved;
+  final Future<bool> Function(String passphrase)? createAccountBackup;
+  final RecoveryStore? recoveryStore;
+  final RecoveryApplicationService? recoveryService;
+  final OneShotRecoveryReauthenticationGate? recoveryProofGate;
   final Stream<NotificationInteraction>? notificationInteractions;
   final NotificationDevicePolicyStore? notificationDevicePolicyStore;
   final NotificationDeviceClass? notificationDeviceClass;
@@ -917,6 +938,37 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
           identity: identity,
           email: email,
           onLocalCopyRemoved: onLocalCopyRemoved,
+          createAccountBackup: widget.createAccountBackup,
+        );
+      case ClinicalCalendarDestination.trashRecovery:
+        final store = widget.recoveryStore;
+        final service = widget.recoveryService;
+        if (store == null || service == null) {
+          return const _IdentityUnavailable();
+        }
+        DateTime now() => widget.dependencies.clock.nowUtc();
+        return TrashRecoverySurface(
+          showAppBar: false,
+          loadTrash: () => store.listTrash(nowUtc: now()),
+          restore: (trashId) =>
+              service.restoreTrash(trashId: trashId, nowUtc: now()),
+          permanentlyDelete: (trashId) => service.permanentlyDelete(
+            trashId: trashId,
+            confirmed: true,
+            nowUtc: now(),
+          ),
+          clearTrash: () => service.clearTrash(confirmed: true, nowUtc: now()),
+          reauthenticateForClear: _freshRecoveryReauthentication,
+          loadSnapshots: () => store.listSnapshots(nowUtc: now()),
+          previewSnapshot: (snapshotId) =>
+              store.previewSnapshot(snapshotId: snapshotId, nowUtc: now()),
+          restoreSnapshot: (snapshotId, choices) async {
+            await store.restoreSnapshot(
+              snapshotId: snapshotId,
+              choices: choices,
+              nowUtc: now(),
+            );
+          },
         );
       case ClinicalCalendarDestination.settings:
         final devicePolicy = _notificationDevicePolicy;
@@ -974,6 +1026,22 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     return ready(snapshot!);
   }
 
+  Future<bool> _freshRecoveryReauthentication() async {
+    final identity = widget.identity;
+    final email = widget.identityEmail;
+    final proof = widget.recoveryProofGate;
+    if (identity == null || email == null || proof == null) return false;
+    final verified = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          _RecoveryOtpDialog(identity: identity, email: email),
+    );
+    if (verified != true) return false;
+    proof.grantOnce();
+    return true;
+  }
+
   List<ClinicalTemplateDefaultOption> get _clinicalDefaults => [
     for (final placement in _placementController.placements)
       for (final attached in placement.attachedPreceptors)
@@ -1001,6 +1069,90 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         ],
       ),
   ];
+}
+
+final class _RecoveryOtpDialog extends StatefulWidget {
+  const _RecoveryOtpDialog({required this.identity, required this.email});
+
+  final PasswordlessIdentityService identity;
+  final String email;
+
+  @override
+  State<_RecoveryOtpDialog> createState() => _RecoveryOtpDialogState();
+}
+
+final class _RecoveryOtpDialogState extends State<_RecoveryOtpDialog> {
+  final _code = TextEditingController();
+  bool _codeSent = false;
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Reauthenticate to clear Trash'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('A fresh one-time code will be sent to ${widget.email}.'),
+        if (_codeSent) ...[
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('recovery-otp-code'),
+            controller: _code,
+            keyboardType: TextInputType.number,
+            autofillHints: const [AutofillHints.oneTimeCode],
+            decoration: const InputDecoration(labelText: 'One-time code'),
+          ),
+        ],
+        if (_error != null) ...[
+          const SizedBox(height: 8),
+          Text(_error!, key: const Key('recovery-otp-error')),
+        ],
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: _busy ? null : () => Navigator.pop(context, false),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        key: Key(_codeSent ? 'verify-recovery-otp' : 'send-recovery-otp'),
+        onPressed: _busy ? null : (_codeSent ? _verify : _send),
+        child: Text(_codeSent ? 'Verify and continue' : 'Send code'),
+      ),
+    ],
+  );
+
+  Future<void> _send() => _run(() async {
+    await widget.identity.sendSignInCode(widget.email);
+    _codeSent = true;
+  });
+
+  Future<void> _verify() => _run(() async {
+    await widget.identity.verifySignInCode(widget.email, _code.text);
+    if (mounted) Navigator.pop(context, true);
+  });
+
+  Future<void> _run(Future<void> Function() action) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await action();
+    } on Object {
+      _error = 'The code could not be verified.';
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 }
 
 final class _PlanningRegion extends StatelessWidget {

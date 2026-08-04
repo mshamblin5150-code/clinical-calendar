@@ -29,7 +29,34 @@ abstract interface class PasswordlessIdentityGateway {
   Future<void> signOutCurrentSession(String accessToken);
 
   Future<bool> markCurrentDeviceSynchronized(String accessToken);
+
+  Future<AccountErasureRequest> requestAccountErasure(
+    String accessToken,
+    AccountErasureBackupChoice backupChoice,
+  );
+
+  Future<AccountErasureCancellationStatus> cancelPendingAccountErasure(
+    String accessToken,
+  );
 }
+
+enum AccountErasureBackupChoice { completed, skipped, cancelled }
+
+enum AccountErasureRequestStatus { pending, backupCancelled }
+
+final class AccountErasureRequest {
+  const AccountErasureRequest({
+    required this.status,
+    this.requestedAtUtc,
+    this.purgeAfterUtc,
+  });
+
+  final AccountErasureRequestStatus status;
+  final DateTime? requestedAtUtc;
+  final DateTime? purgeAfterUtc;
+}
+
+enum AccountErasureCancellationStatus { cancelled, notPending, graceExpired }
 
 abstract interface class LocalDeviceCopyController {
   Future<LocalRemovalPreview> previewRemoval();
@@ -78,14 +105,65 @@ final class PasswordlessIdentityService {
       _gateway.sendSignInCode(email.trim().toLowerCase());
 
   Future<IdentitySession> verifySignInCode(String email, String code) async {
+    final session = await _verifyFreshSession(email, code);
+    await _register(session);
+    await _store(session);
+    return session;
+  }
+
+  /// Starts Delete Account and All Data after a genuinely new passwordless
+  /// Auth session. Refreshing stored tokens is deliberately insufficient.
+  Future<AccountErasureRequest> requestAccountErasure({
+    required String email,
+    required String code,
+    required AccountErasureBackupChoice backupChoice,
+  }) async {
+    final session = await _verifyFreshSession(email, code);
+    await _register(session);
+    await _store(session);
+    final request = await _gateway.requestAccountErasure(
+      session.accessToken,
+      backupChoice,
+    );
+    if (request.status == AccountErasureRequestStatus.pending) {
+      // The backend has revoked every Connected Device. Retaining this session
+      // locally would falsely present the app as signed in during grace.
+      await _secureStorage.delete(sessionStorageKey);
+    }
+    return request;
+  }
+
+  /// Cancels a pending deletion with a newly issued Auth session, then binds
+  /// the current installation again only when cancellation is still allowed.
+  Future<AccountErasureCancellationStatus> cancelAccountErasure({
+    required String email,
+    required String code,
+  }) async {
+    final session = await _verifyFreshSession(email, code);
+    final status = await _gateway.cancelPendingAccountErasure(
+      session.accessToken,
+    );
+    if (status == AccountErasureCancellationStatus.graceExpired) {
+      await _secureStorage.delete(sessionStorageKey);
+      return status;
+    }
+    await _register(session);
+    await _store(session);
+    return status;
+  }
+
+  Future<IdentitySession> _verifyFreshSession(String email, String code) {
     final normalizedCode = code.trim();
     if (!RegExp(r'^\d{6,8}$').hasMatch(normalizedCode)) {
       throw const IdentityException('invalid_otp');
     }
-    final session = await _gateway.verifySignInCode(
+    return _gateway.verifySignInCode(
       email.trim().toLowerCase(),
       normalizedCode,
     );
+  }
+
+  Future<void> _register(IdentitySession session) async {
     final deviceId = await _loadOrCreateDeviceId();
     final registered = await _gateway.registerCurrentDevice(
       accessToken: session.accessToken,
@@ -95,8 +173,6 @@ final class PasswordlessIdentityService {
     if (!registered) {
       throw const IdentityException('device_registration_failed');
     }
-    await _store(session);
-    return session;
   }
 
   Future<String?> currentAccessToken() async {

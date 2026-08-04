@@ -42,6 +42,10 @@ void main() {
         path: databasePath,
         secureStorage: keys,
       );
+      var databaseClosed = false;
+      addTearDown(() async {
+        if (!databaseClosed) await database.close();
+      });
 
       expect(database.cipherVersion, isNotEmpty);
       expect(database.schemaVersion, DatabaseMigrationRunner.latestVersion);
@@ -71,6 +75,8 @@ void main() {
         'sync_state',
         'sync_conflicts',
         'outbox_operations',
+        'operational_recovery_snapshots',
+        'permanent_purge_markers',
       };
       final tableRows = database.select(
         "SELECT name, strict FROM pragma_table_list WHERE type = 'table' "
@@ -120,6 +126,7 @@ void main() {
       );
 
       await database.close();
+      databaseClosed = true;
       final header = await File(databasePath).openRead(0, 16).first;
       expect(
         utf8.decode(header, allowMalformed: true),

@@ -99,6 +99,77 @@ void main() {
     expect(captured.last.url.path, '/auth/v1/logout');
     expect(captured.last.url.queryParameters['scope'], 'local');
   });
+
+  test('requests account erasure with the explicit backup outcome', () async {
+    late http.Request captured;
+    final gateway = _gateway((request) async {
+      captured = request;
+      return http.Response(
+        jsonEncode({
+          'status': 'pending',
+          'requested_at_utc': '2026-08-04T12:00:00Z',
+          'purge_after_utc': '2026-09-03T12:00:00Z',
+        }),
+        200,
+      );
+    });
+
+    final result = await gateway.requestAccountErasure(
+      'fresh-access',
+      AccountErasureBackupChoice.completed,
+    );
+
+    expect(captured.url.path, '/rest/v1/rpc/request_account_erasure');
+    expect(captured.headers['authorization'], 'Bearer fresh-access');
+    expect(jsonDecode(captured.body), {'p_backup_choice': 'completed'});
+    expect(result.status, AccountErasureRequestStatus.pending);
+    expect(result.purgeAfterUtc, DateTime.utc(2026, 9, 3, 12));
+  });
+
+  test('maps backup cancellation without inventing a grace period', () async {
+    final gateway = _gateway(
+      (_) async =>
+          http.Response(jsonEncode({'status': 'backup_cancelled'}), 200),
+    );
+
+    final result = await gateway.requestAccountErasure(
+      'fresh-access',
+      AccountErasureBackupChoice.cancelled,
+    );
+
+    expect(result.status, AccountErasureRequestStatus.backupCancelled);
+    expect(result.requestedAtUtc, isNull);
+    expect(result.purgeAfterUtc, isNull);
+  });
+
+  test('cancels pending account erasure through its guarded RPC', () async {
+    late http.Request captured;
+    final gateway = _gateway((request) async {
+      captured = request;
+      return http.Response(jsonEncode('cancelled'), 200);
+    });
+
+    final result = await gateway.cancelPendingAccountErasure('fresh-access');
+
+    expect(captured.url.path, '/rest/v1/rpc/cancel_account_erasure');
+    expect(captured.headers['authorization'], 'Bearer fresh-access');
+    expect(jsonDecode(captured.body), <String, Object?>{});
+    expect(result, AccountErasureCancellationStatus.cancelled);
+  });
+
+  test(
+    'maps an expired grace period without registering a false success',
+    () async {
+      final gateway = _gateway(
+        (_) async => http.Response(jsonEncode('grace_expired'), 200),
+      );
+
+      expect(
+        await gateway.cancelPendingAccountErasure('fresh-access'),
+        AccountErasureCancellationStatus.graceExpired,
+      );
+    },
+  );
 }
 
 SupabasePasswordlessIdentityGateway _gateway(
