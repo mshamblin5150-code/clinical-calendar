@@ -2,6 +2,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 
 import '../ports.dart';
 import '../repositories.dart';
+import 'calendar_period_snapshot.dart';
 import 'scheduling_requests.dart';
 
 /// Transactional scheduling use cases. Every mutation validates and writes in
@@ -515,6 +516,92 @@ final class SchedulingApplicationService {
     );
   });
 
+  Future<CalendarPeriodSnapshot> readCalendarPeriod({
+    required String studentId,
+    required LocalDate firstDate,
+    required LocalDate lastDate,
+  }) {
+    if (lastDate.isBefore(firstDate)) {
+      throw const DomainValidationException(
+        'Calendar period end cannot be before its start.',
+      );
+    }
+    return _repositories.read((repositories) {
+      final workShifts = repositories.workShifts
+          .list(studentId: studentId)
+          .where(
+            (record) => _intervalTouchesPeriod(
+              record.value.plannedInterval,
+              firstDate,
+              lastDate,
+            ),
+          )
+          .toList(growable: false);
+      final clinicalSessions = repositories.clinicalSessions
+          .list(studentId: studentId)
+          .where((record) {
+            final session = record.value;
+            final interval = session.state == ClinicalSessionState.completed
+                ? session.actualInterval!
+                : session.plannedInterval;
+            return _intervalTouchesPeriod(interval, firstDate, lastDate);
+          })
+          .toList(growable: false);
+      final protectedDays = repositories.protectedDays
+          .list(studentId: studentId)
+          .where(
+            (record) =>
+                !record.value.date.isBefore(firstDate) &&
+                !record.value.date.isAfter(lastDate),
+          )
+          .toList(growable: false);
+      final placementIds = clinicalSessions
+          .map((record) => record.value.clinicalPlacementId)
+          .toSet();
+      final preceptorIds = clinicalSessions
+          .map((record) => record.value.preceptorId)
+          .toSet();
+      final placements = {
+        for (final record in repositories.clinicalPlacements.list(
+          studentId: studentId,
+        ))
+          if (placementIds.contains(record.value.id))
+            record.value.id: record.value,
+      };
+      final preceptors = {
+        for (final record in repositories.preceptors.list(studentId: studentId))
+          if (preceptorIds.contains(record.value.id))
+            record.value.id: record.value,
+      };
+      final assignments = <String, CalendarClinicalAssignment>{};
+      for (final record in clinicalSessions) {
+        final session = record.value;
+        final placement = placements[session.clinicalPlacementId];
+        final preceptor = preceptors[session.preceptorId];
+        if (placement == null || preceptor == null) {
+          throw const RepositoryException(
+            RepositoryFailureKind.corruptData,
+            'A Clinical Session references missing assignment data.',
+          );
+        }
+        assignments[session.id] = CalendarClinicalAssignment(
+          clinicalPlacementId: placement.id,
+          clinicalPlacementName: placement.name,
+          preceptorId: preceptor.id,
+          preceptorName: preceptor.name,
+        );
+      }
+      return CalendarPeriodSnapshot(
+        firstDate: firstDate,
+        lastDate: lastDate,
+        workShifts: workShifts,
+        clinicalSessions: clinicalSessions,
+        protectedDays: protectedDays,
+        clinicalAssignmentsBySessionId: assignments,
+      );
+    });
+  }
+
   Future<ClinicalPlacementProgress> readPlacementProgress({
     required String studentId,
     required String clinicalPlacementId,
@@ -629,3 +716,11 @@ LocalDate _today(DateTime nowUtc, UtcOffset offset) {
   final local = nowUtc.toUtc().add(offset.duration);
   return LocalDate(local.year, local.month, local.day);
 }
+
+bool _intervalTouchesPeriod(
+  ZonedInterval interval,
+  LocalDate firstDate,
+  LocalDate lastDate,
+) =>
+    !interval.endDate.isBefore(firstDate) &&
+    !interval.startDate.isAfter(lastDate);

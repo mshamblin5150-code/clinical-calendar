@@ -1,7 +1,7 @@
 # Build PDF, CSV, and JSON Exports
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: 68, 69
 
 ## Objective
@@ -17,3 +17,6 @@ Implement human-readable Clinical Placement reporting and complete machine-reada
 - Exports never include authentication secrets, encryption keys, internal service credentials, or deleted data outside the documented export boundary.
 - Output is verified with zero, typical, over-target, multiple-Preceptor, Unattributed, and non-ASCII fixtures on every target platform.
 
+## Answer
+
+Implemented privacy-gated PDF, CSV, and complete versioned JSON export workflows with native save dialogs, stable machine-readable fields, and no secret material. Fixture coverage includes zero, typical, over-target, multiple-Preceptor, Unattributed, and non-ASCII cases; rendered PDFs were visually inspected, Windows and Android builds pass, and iOS picker configuration is prepared for deferred Mac/iPhone verification.

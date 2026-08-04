@@ -60,6 +60,54 @@ void main() {
   );
 
   test(
+    'calendar period query includes bounds, overnight coverage, and labels',
+    () async {
+      final overnight = WorkShift(
+        id: _id(65),
+        plannedInterval: ZonedInterval(
+          startDate: LocalDate(2026, 8, 31),
+          startTime: LocalTime(22, 0),
+          endTime: LocalTime(2, 0),
+          timeZone: _zone,
+          startOffset: _offset,
+          endOffset: _offset,
+        ),
+      );
+      final session = ClinicalSession.schedule(
+        id: _id(66),
+        clinicalPlacementId: placement.id,
+        preceptorId: alternate.id,
+        plannedInterval: _interval(8, 9, 12),
+        asOfUtc: _now,
+      );
+      final protected = ProtectedDay(id: _id(67), date: LocalDate(2026, 9, 1));
+      registry.repositories.workShifts.seed(_studentId, overnight);
+      registry.repositories.clinicalSessions.seed(_studentId, session);
+      registry.repositories.protectedDays.seed(_studentId, protected);
+
+      final snapshot = await service.readCalendarPeriod(
+        studentId: _studentId,
+        firstDate: LocalDate(2026, 8, 8),
+        lastDate: LocalDate(2026, 9, 1),
+      );
+
+      expect(snapshot.workShifts.single.value.id, overnight.id);
+      expect(snapshot.clinicalSessions.single.value.id, session.id);
+      expect(snapshot.protectedDays.single.value.date, LocalDate(2026, 9, 1));
+      final assignment = snapshot.clinicalAssignmentsBySessionId[session.id]!;
+      expect(assignment.clinicalPlacementName, placement.name);
+      expect(assignment.preceptorName, alternate.name);
+
+      final continuationOnly = await service.readCalendarPeriod(
+        studentId: _studentId,
+        firstDate: LocalDate(2026, 9, 1),
+        lastDate: LocalDate(2026, 9, 1),
+      );
+      expect(continuationOnly.workShifts.single.value.id, overnight.id);
+    },
+  );
+
+  test(
     'one conflicting date reports all conflicts and writes no outbox',
     () async {
       registry.repositories.workShifts.seed(

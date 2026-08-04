@@ -12,6 +12,7 @@ dependencies:
     path: ../clinical_calendar_application
   clinical_calendar_domain:
     path: ../clinical_calendar_domain
+  cryptography: ^2.9.0
   sqlite3: ^3.5.0
 
 dev_dependencies:

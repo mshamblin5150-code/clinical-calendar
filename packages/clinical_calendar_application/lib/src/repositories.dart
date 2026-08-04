@@ -1,5 +1,9 @@
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 
+import 'support/support_models.dart';
+
+export 'support/support_models.dart';
+
 enum RepositoryFailureKind {
   notFound,
   ownershipMismatch,
@@ -268,6 +272,34 @@ abstract interface class ActivePlacementSelectionRepository
   });
 }
 
+abstract interface class StudentProfileReadRepository {
+  StoredDomainRecord<StudentProfile>? find({required String studentId});
+}
+
+abstract interface class StudentProfileRepository
+    implements StudentProfileReadRepository {
+  MutationReceipt<StudentProfile> put({
+    required String studentId,
+    required StudentProfile profile,
+    required int expectedRevision,
+    required MutationToken mutation,
+  });
+}
+
+abstract interface class StudentSettingsReadRepository {
+  StoredDomainRecord<StudentSettings>? find({required String studentId});
+}
+
+abstract interface class StudentSettingsRepository
+    implements StudentSettingsReadRepository {
+  MutationReceipt<StudentSettings> put({
+    required String studentId,
+    required StudentSettings settings,
+    required int expectedRevision,
+    required MutationToken mutation,
+  });
+}
+
 abstract interface class LocalReadRepositories {
   ReadRepository<WorkShift> get workShifts;
   ReadRepository<ClinicalSession> get clinicalSessions;
@@ -306,6 +338,22 @@ abstract interface class LocalWriteRepositories
   SyncCursorRepository get syncCursors;
   @override
   ActivePlacementSelectionRepository get activePlacementSelection;
+}
+
+/// Optional support capability kept separate so existing use-case fakes remain
+/// source-compatible while support surfaces are integrated incrementally.
+abstract interface class SupportLocalReadRepositories
+    implements LocalReadRepositories {
+  StudentProfileReadRepository get studentProfile;
+  StudentSettingsReadRepository get studentSettings;
+}
+
+abstract interface class SupportLocalWriteRepositories
+    implements LocalWriteRepositories, SupportLocalReadRepositories {
+  @override
+  StudentProfileRepository get studentProfile;
+  @override
+  StudentSettingsRepository get studentSettings;
 }
 
 /// Owns local repository transactions.

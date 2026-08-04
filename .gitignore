@@ -11,6 +11,8 @@
 **/coverage/
 **/ephemeral/
 **/.flutter-plugins-dependencies
+supabase/.branches/
+supabase/.temp/
 
 # Local data, signing material, and environment secrets
 *.db

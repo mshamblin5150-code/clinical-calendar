@@ -1,7 +1,7 @@
 # Build Clinical Placement and Progress Surfaces
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: 68, 69
 
 ## Objective
@@ -18,3 +18,6 @@ Implement repository-backed Clinical Placement management, progress wheel, dock,
 - Projected Completion Date or required weekly pace is shown according to the progress engine result.
 - Completed Placements visibly lock ordinary editing and expose guarded Reopen Placement.
 
+## Answer
+
+Implemented repository-backed Clinical Placement management, synchronized active-Placement selection, desktop/mobile progress surfaces, Total Progress, Preceptor and Unattributed breakdowns, completion projections, impact previews, and guarded completed-Placement behavior. The surfaces are integrated into the Variant F shell and pass the repository-wide quality gate.

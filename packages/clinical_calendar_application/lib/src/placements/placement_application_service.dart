@@ -569,6 +569,29 @@ final class PlacementApplicationService {
     );
   }
 
+  Future<List<PlacementSnapshot>> placements() {
+    final asOf = _now();
+    return _repositories.read((repositories) {
+      final records =
+          repositories.clinicalPlacements.list(studentId: _studentId)..sort((
+            left,
+            right,
+          ) {
+            final date = left.value.startDate.compareTo(right.value.startDate);
+            if (date != 0) return date;
+            final name = left.value.name.compareTo(right.value.name);
+            return name != 0 ? name : left.value.id.compareTo(right.value.id);
+          });
+      return List.unmodifiable(
+        records.map((record) => _snapshot(repositories, record.value.id, asOf)),
+      );
+    });
+  }
+
+  Future<TotalProgress> totalProgress() async => _progressEngine.deriveTotal(
+    (await placements()).map((snapshot) => snapshot.progress),
+  );
+
   Future<PlacementSnapshot> _changePlacementOnly({
     required String clinicalPlacementId,
     required int expectedPlacementRevision,
@@ -617,7 +640,8 @@ final class PlacementApplicationService {
     String placementId,
     DateTime asOf,
   ) {
-    final placement = _placement(repositories, placementId).value;
+    final placementRecord = _placement(repositories, placementId);
+    final placement = placementRecord.value;
     final sessionRecords = _sessionRecords(repositories, placement.id);
     final sessions = sessionRecords
         .map((record) => record.value.refreshStatus(asOf))
@@ -632,7 +656,8 @@ final class PlacementApplicationService {
       historicalHoursEntries: history,
       today: _today(asOf),
     );
-    final plan = _plan(repositories, placement.evaluationPlanId).value;
+    final planRecord = _plan(repositories, placement.evaluationPlanId);
+    final plan = planRecord.value;
     final evaluation = _evaluationPlanEngine.evaluate(
       plan,
       _evaluationContext(placement, progress, sessions, asOf),
@@ -658,6 +683,30 @@ final class PlacementApplicationService {
         : placement.evaluateReadiness(evidence).state;
     return PlacementSnapshot(
       placement: placement,
+      placementRevision: placementRecord.revision,
+      evaluationPlanRevision: planRecord.revision,
+      evaluationPlanConfiguration: plan.configuration,
+      attachedPreceptors: List.unmodifiable(
+        placement.attachedPreceptorIds.map((id) {
+          final record = _requireRecord(
+            repositories.preceptors.find(studentId: _studentId, id: id),
+            'Preceptor',
+          );
+          return PlacementPreceptorSnapshot(
+            preceptor: record.value,
+            revision: record.revision,
+            isPrimary: id == placement.primaryPreceptorId,
+          );
+        }).toList()..sort((left, right) {
+          if (left.isPrimary != right.isPrimary) {
+            return left.isPrimary ? -1 : 1;
+          }
+          final name = left.preceptor.name.compareTo(right.preceptor.name);
+          return name != 0
+              ? name
+              : left.preceptor.id.compareTo(right.preceptor.id);
+        }),
+      ),
       progress: progress,
       evaluation: evaluation,
       derivedState: derivedState,

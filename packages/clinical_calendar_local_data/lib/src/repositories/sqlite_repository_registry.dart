@@ -4,6 +4,9 @@ import 'dart:convert';
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 
+import '../backup/portable_backup_crypto.dart';
+import '../backup/portable_backup_models.dart';
+import '../backup/portable_backup_service.dart';
 import '../database/clinical_calendar_database.dart';
 
 typedef _Encoder<T> = Map<String, Object?> Function(T value);
@@ -71,11 +74,33 @@ final class SqliteRepositoryRegistry implements RepositoryRegistry {
     }
   });
 
-  Future<R> _enqueue<R>(R Function() action) {
+  /// Runs one complete portable-backup operation behind the repository FIFO.
+  ///
+  /// The callback may be asynchronous; the gate remains held until its Future
+  /// completes, so database reads and restore writes cannot interleave with
+  /// repository work on this connection.
+  Future<R> runPortableBackupExclusive<R>(
+    FutureOr<R> Function(PortableBackupService service) callback, {
+    PortableBackupCrypto? crypto,
+    PortableBackupMigrator migrator = const DefaultPortableBackupMigrator(),
+  }) => _enqueue(() {
+    _requireInitialized();
+    return callback(
+      PortableBackupService(
+        database: _database,
+        studentId: studentId,
+        synchronizationIntentSink: _RestoreOutboxIntentSink(this),
+        crypto: crypto,
+        migrator: migrator,
+      ),
+    );
+  });
+
+  Future<R> _enqueue<R>(FutureOr<R> Function() action) {
     final completer = Completer<R>();
-    _tail = _tail.then((_) {
+    _tail = _tail.then((_) async {
       try {
-        completer.complete(action());
+        completer.complete(await action());
       } on Object catch (error, stackTrace) {
         if (error is StateError &&
             error.toString().contains('local database is closed')) {
@@ -104,7 +129,216 @@ final class SqliteRepositoryRegistry implements RepositoryRegistry {
   }
 }
 
-final class _Repositories implements LocalWriteRepositories {
+const _restoreLocalOnlyTables = {'reminder_state', 'trash'};
+
+final class _RestoreOutboxIntentSink
+    implements RestoreSynchronizationIntentSink {
+  _RestoreOutboxIntentSink(this.registry);
+
+  final SqliteRepositoryRegistry registry;
+
+  @override
+  void recordFreshIntents(List<RestoreSynchronizationIntent> intents) {
+    final targets = <String, _RestoreOutboxTarget>{};
+    for (final intent in intents) {
+      final target = _targetFor(intent);
+      if (target != null) targets[target.stableValue] = target;
+    }
+    if (targets.isEmpty) return;
+
+    final repositories = _Repositories(registry, writable: false);
+    try {
+      final ordered = targets.values.toList()
+        ..sort((left, right) {
+          final dependency = left.dependencyRank.compareTo(
+            right.dependencyRank,
+          );
+          return dependency == 0
+              ? left.stableValue.compareTo(right.stableValue)
+              : dependency;
+        });
+      final batchStartedAtUtc = DateTime.now().toUtc();
+      for (var index = 0; index < ordered.length; index++) {
+        _insertFreshIntent(
+          ordered[index],
+          repositories,
+          batchStartedAtUtc.add(Duration(microseconds: index)),
+        );
+      }
+    } finally {
+      repositories.close();
+    }
+  }
+
+  _RestoreOutboxTarget? _targetFor(RestoreSynchronizationIntent intent) {
+    final table = intent.identity.table;
+    if (_restoreLocalOnlyTables.contains(table)) return null;
+    if (table == 'placement_preceptors') {
+      return _RestoreOutboxTarget(
+        table: 'clinical_placements',
+        entityType: 'clinical_placement',
+        entityId: _identifier(_text(intent.row, 'placement_id')),
+      );
+    }
+    if (table == 'evaluation_requirements') {
+      return _RestoreOutboxTarget(
+        table: 'evaluation_plans',
+        entityType: 'evaluation_plan',
+        entityId: _identifier(_text(intent.row, 'evaluation_plan_id')),
+      );
+    }
+    final entityType = switch (table) {
+      'student_profiles' => 'student_profile',
+      'preceptors' => 'preceptor',
+      'clinical_placements' => 'clinical_placement',
+      'commitments' => switch (_text(intent.row, 'commitment_type')) {
+        'work_shift' => 'work_shift',
+        'clinical_session' => 'clinical_session',
+        _ => throw const FormatException('Unknown commitment type.'),
+      },
+      'protected_days' => 'protected_day',
+      'historical_hours_entries' => 'historical_hours_entry',
+      'evaluation_plans' => 'evaluation_plan',
+      'schedule_templates' => 'schedule_template',
+      'settings' => 'settings',
+      _ => throw StateError('Unmapped portable restore table: $table'),
+    };
+    return _RestoreOutboxTarget(
+      table: table,
+      entityType: entityType,
+      entityId: _identifier(_text(intent.row, 'id')),
+    );
+  }
+
+  void _insertFreshIntent(
+    _RestoreOutboxTarget target,
+    _Repositories repositories,
+    DateTime createdAtUtc,
+  ) {
+    final rows = registry._database.select(
+      'SELECT * FROM ${target.table} WHERE student_id = ? AND id = ?',
+      [registry.studentId, target.entityId],
+    );
+    if (rows.length != 1) {
+      throw const RepositoryException(
+        RepositoryFailureKind.corruptData,
+        'A restored synchronization aggregate is incomplete.',
+      );
+    }
+    final row = Map<String, Object?>.from(rows.single);
+    final revision = _int(row, 'revision');
+    final deletedAt = _nullableText(row, 'deleted_at_utc');
+    final payload = _canonicalJson(<String, Object?>{
+      'schema_version': 1,
+      'entity_type': target.entityType,
+      'entity_id': target.entityId,
+      'student_id': registry.studentId,
+      'revision': revision,
+      'created_at_utc': _text(row, 'created_at_utc'),
+      'updated_at_utc': _text(row, 'updated_at_utc'),
+      'deleted_at_utc': deletedAt,
+      'value': _restorePayloadValue(target, row, repositories),
+    });
+    final operationId = _identifier(
+      registry._identifierGenerator.nextIdentifier(),
+    );
+    final idempotencyKey = _identifier(
+      registry._identifierGenerator.nextIdentifier(),
+    );
+    registry._database.execute(
+      '''INSERT INTO outbox_operations
+        (id, student_id, idempotency_key, entity_type, entity_id,
+         operation_type, base_revision, payload_json, created_at_utc)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+      [
+        operationId,
+        registry.studentId,
+        idempotencyKey,
+        target.entityType,
+        target.entityId,
+        deletedAt == null ? 'upsert' : 'delete',
+        revision == 0 ? 0 : revision - 1,
+        payload,
+        _utc(createdAtUtc),
+      ],
+    );
+  }
+}
+
+final class _RestoreOutboxTarget {
+  const _RestoreOutboxTarget({
+    required this.table,
+    required this.entityType,
+    required this.entityId,
+  });
+
+  final String table;
+  final String entityType;
+  final String entityId;
+
+  String get stableValue => '$entityType/$entityId';
+
+  int get dependencyRank => switch (entityType) {
+    'student_profile' => 0,
+    'preceptor' || 'protected_day' || 'work_shift' => 1,
+    'clinical_placement' => 2,
+    'evaluation_plan' ||
+    'clinical_session' ||
+    'historical_hours_entry' ||
+    'schedule_template' => 3,
+    'settings' => 4,
+    _ => throw StateError('Unmapped restore entity type: $entityType'),
+  };
+}
+
+Map<String, Object?> _restorePayloadValue(
+  _RestoreOutboxTarget target,
+  Map<String, Object?> row,
+  _Repositories repositories,
+) => switch (target.table) {
+  'student_profiles' => {
+    'display_name': _text(row, 'display_name'),
+    'program': _nullableText(row, 'program'),
+    'account_identity': _nullableText(row, 'account_identity'),
+    'avatar_base64': row['avatar_bytes'] == null
+        ? null
+        : base64Encode(row['avatar_bytes']! as List<int>),
+  },
+  'preceptors' => _encodePreceptor(_decodePreceptor(row)),
+  'clinical_placements' => _encodeClinicalPlacementPayload(
+    _decodeClinicalPlacement(repositories, row),
+  ),
+  'commitments' => switch (target.entityType) {
+    'work_shift' => _encodeWorkShift(_decodeWorkShift(row)),
+    'clinical_session' => _encodeClinicalSession(_decodeClinicalSession(row)),
+    _ => throw const FormatException('Unknown commitment type.'),
+  },
+  'protected_days' => _encodeProtectedDay(
+    repositories,
+    _decodeProtectedDay(row),
+  ),
+  'historical_hours_entries' => _encodeHistoricalHours(
+    _decodeHistoricalHours(row),
+  ),
+  'evaluation_plans' => _encodeEvaluationPlanPayload(
+    _decodeEvaluationPlan(repositories, row),
+  ),
+  'schedule_templates' => _encodeScheduleTemplate(_decodeScheduleTemplate(row)),
+  'settings' => {
+    'week_start': _int(row, 'week_start'),
+    'time_display': _text(row, 'time_display'),
+    'theme': _text(row, 'theme'),
+    'synchronization_mode': _text(row, 'synchronization_mode'),
+    'notification_preferences_json': _text(
+      row,
+      'notification_preferences_json',
+    ),
+    'active_placement_id': _nullableText(row, 'active_placement_id'),
+  },
+  _ => throw StateError('Unmapped restore payload table: ${target.table}'),
+};
+
+final class _Repositories implements SupportLocalWriteRepositories {
   _Repositories(this.registry, {required this.writable});
 
   final SqliteRepositoryRegistry registry;
@@ -179,6 +413,10 @@ final class _Repositories implements LocalWriteRepositories {
   late final activePlacementSelection = _ActivePlacementSelectionRepository(
     this,
   );
+  @override
+  late final studentProfile = _StudentProfileRepository(this);
+  @override
+  late final studentSettings = _StudentSettingsRepository(this);
 
   void requireWritable() {
     requireActive();
@@ -1601,7 +1839,7 @@ final class _ActivePlacementSelectionRepository
     final createdAt = existing == null
         ? mutation.occurredAtUtc
         : _dateTime(existing, 'created_at_utc');
-    final revision = baseRevision + 1;
+    final revision = expectedRevision + 1;
     final weekStart = existing == null
         ? DateTime.sunday
         : _int(existing, 'week_start');
@@ -1739,3 +1977,394 @@ final class _ActivePlacementSelectionRepository
 
   void _ownerCheck(String studentId) => _owner(studentId, _studentId);
 }
+
+final class _StudentProfileRepository implements StudentProfileRepository {
+  _StudentProfileRepository(this.repositories);
+
+  final _Repositories repositories;
+
+  ClinicalCalendarDatabase get _database => repositories.registry._database;
+  String get _studentId => repositories.registry.studentId;
+
+  @override
+  StoredDomainRecord<StudentProfile>? find({required String studentId}) {
+    repositories.requireActive();
+    _owner(studentId, _studentId);
+    final rows = _database.select(
+      'SELECT * FROM student_profiles WHERE student_id = ?',
+      [_studentId],
+    );
+    if (rows.isEmpty) return null;
+    try {
+      final row = rows.single;
+      final avatar = row['avatar_bytes'];
+      return StoredDomainRecord<StudentProfile>(
+        value: StudentProfile(
+          id: _identifier(_text(row, 'id')),
+          displayName: _text(row, 'display_name'),
+          program: _nullableText(row, 'program'),
+          accountIdentity: _nullableText(row, 'account_identity'),
+          avatarBytes: avatar == null ? null : List<int>.from(avatar as List),
+        ),
+        studentId: _identifier(_text(row, 'student_id')),
+        revision: _int(row, 'revision'),
+        createdAtUtc: _dateTime(row, 'created_at_utc'),
+        updatedAtUtc: _dateTime(row, 'updated_at_utc'),
+        deletedAtUtc: _nullableDateTime(row, 'deleted_at_utc'),
+      );
+    } on RepositoryException {
+      rethrow;
+    } on Object catch (error) {
+      throw RepositoryException(
+        RepositoryFailureKind.corruptData,
+        'The stored Student Profile is invalid.',
+        cause: error,
+      );
+    }
+  }
+
+  @override
+  MutationReceipt<StudentProfile> put({
+    required String studentId,
+    required StudentProfile profile,
+    required int expectedRevision,
+    required MutationToken mutation,
+  }) {
+    repositories.requireWritable();
+    _owner(studentId, _studentId);
+    final existing = _database.select(
+      'SELECT * FROM student_profiles WHERE student_id = ?',
+      [_studentId],
+    );
+    if (existing.isEmpty) {
+      throw const RepositoryException(
+        RepositoryFailureKind.notFound,
+        'The Student Profile does not exist.',
+      );
+    }
+    final row = existing.single;
+    final profileId = _identifier(_text(row, 'id'));
+    if (_identifier(profile.id) != profileId) {
+      throw const RepositoryException(
+        RepositoryFailureKind.ownershipMismatch,
+        'The Student Profile identifier does not match this Student.',
+      );
+    }
+    final baseRevision = _int(row, 'revision');
+    final revision = expectedRevision + 1;
+    final createdAt = _dateTime(row, 'created_at_utc');
+    final valuePayload = <String, Object?>{
+      'display_name': profile.displayName,
+      'program': profile.program,
+      'account_identity': profile.accountIdentity,
+      'avatar_base64': profile.avatarBytes == null
+          ? null
+          : base64Encode(profile.avatarBytes!),
+    };
+    final payload = _canonicalJson(<String, Object?>{
+      'schema_version': 1,
+      'entity_type': 'student_profile',
+      'entity_id': profileId,
+      'student_id': _studentId,
+      'revision': revision,
+      'created_at_utc': _utc(createdAt),
+      'updated_at_utc': _utc(mutation.occurredAtUtc),
+      'deleted_at_utc': null,
+      'value': valuePayload,
+    });
+    if (_supportReplay(
+      database: _database,
+      mutation: mutation,
+      studentId: _studentId,
+      entityType: 'student_profile',
+      entityId: profileId,
+      expectedRevision: expectedRevision,
+      payload: payload,
+    )) {
+      return MutationReceipt(
+        record: find(studentId: _studentId)!,
+        replayed: true,
+      );
+    }
+    _revision(expectedRevision, baseRevision);
+    _database.execute(
+      '''UPDATE student_profiles SET revision = ?, updated_at_utc = ?,
+        deleted_at_utc = NULL, display_name = ?, avatar_bytes = ?, program = ?,
+        account_identity = ? WHERE student_id = ?''',
+      [
+        revision,
+        _utc(mutation.occurredAtUtc),
+        profile.displayName,
+        profile.avatarBytes,
+        profile.program,
+        profile.accountIdentity,
+        _studentId,
+      ],
+    );
+    _insertSupportOutbox(
+      database: _database,
+      mutation: mutation,
+      studentId: _studentId,
+      entityType: 'student_profile',
+      entityId: profileId,
+      baseRevision: baseRevision,
+      payload: payload,
+    );
+    return MutationReceipt(
+      record: StoredDomainRecord(
+        value: profile,
+        studentId: _studentId,
+        revision: revision,
+        createdAtUtc: createdAt,
+        updatedAtUtc: mutation.occurredAtUtc,
+      ),
+      replayed: false,
+    );
+  }
+}
+
+final class _StudentSettingsRepository implements StudentSettingsRepository {
+  _StudentSettingsRepository(this.repositories);
+
+  final _Repositories repositories;
+
+  ClinicalCalendarDatabase get _database => repositories.registry._database;
+  String get _studentId => repositories.registry.studentId;
+
+  @override
+  StoredDomainRecord<StudentSettings>? find({required String studentId}) {
+    repositories.requireActive();
+    _owner(studentId, _studentId);
+    final rows = _database.select(
+      'SELECT * FROM settings WHERE student_id = ?',
+      [_studentId],
+    );
+    if (rows.isEmpty) return null;
+    try {
+      final row = rows.single;
+      final notificationJson = jsonDecode(
+        _text(row, 'notification_preferences_json'),
+      );
+      if (notificationJson is! Map<String, dynamic>) {
+        throw const FormatException();
+      }
+      return StoredDomainRecord<StudentSettings>(
+        value: StudentSettings(
+          weekStart: _int(row, 'week_start'),
+          timeDisplay: switch (_text(row, 'time_display')) {
+            'military' => TimeDisplayPreference.military,
+            'twelve_hour' => TimeDisplayPreference.twelveHour,
+            _ => throw const FormatException(),
+          },
+          themeId: _normalizeThemeId(_text(row, 'theme')),
+          synchronization: switch (_text(row, 'synchronization_mode')) {
+            'enabled' => SynchronizationPreference.enabled,
+            'paused' => SynchronizationPreference.paused,
+            _ => throw const FormatException(),
+          },
+          notifications: NotificationPreferences.fromJson(notificationJson),
+        ),
+        studentId: _identifier(_text(row, 'student_id')),
+        revision: _int(row, 'revision'),
+        createdAtUtc: _dateTime(row, 'created_at_utc'),
+        updatedAtUtc: _dateTime(row, 'updated_at_utc'),
+        deletedAtUtc: _nullableDateTime(row, 'deleted_at_utc'),
+      );
+    } on RepositoryException {
+      rethrow;
+    } on Object catch (error) {
+      throw RepositoryException(
+        RepositoryFailureKind.corruptData,
+        'The stored Student Settings are invalid.',
+        cause: error,
+      );
+    }
+  }
+
+  @override
+  MutationReceipt<StudentSettings> put({
+    required String studentId,
+    required StudentSettings settings,
+    required int expectedRevision,
+    required MutationToken mutation,
+  }) {
+    repositories.requireWritable();
+    _owner(studentId, _studentId);
+    final rows = _database.select(
+      'SELECT * FROM settings WHERE student_id = ?',
+      [_studentId],
+    );
+    final existing = rows.isEmpty ? null : rows.single;
+    final settingsId = existing == null
+        ? _identifier(
+            repositories.registry._identifierGenerator.nextIdentifier(),
+          )
+        : _identifier(_text(existing, 'id'));
+    final baseRevision = existing == null ? 0 : _int(existing, 'revision');
+    final revision = expectedRevision + 1;
+    final createdAt = existing == null
+        ? mutation.occurredAtUtc
+        : _dateTime(existing, 'created_at_utc');
+    final activePlacementId = existing == null
+        ? null
+        : _nullableText(existing, 'active_placement_id');
+    final notificationJson = _canonicalJson(settings.notifications.toJson());
+    final valuePayload = <String, Object?>{
+      'week_start': settings.weekStart,
+      'time_display': _timeDisplay(settings.timeDisplay),
+      'theme': settings.themeId,
+      'synchronization_mode': _synchronization(settings.synchronization),
+      'notification_preferences_json': notificationJson,
+      'active_placement_id': activePlacementId,
+    };
+    final payload = _canonicalJson(<String, Object?>{
+      'schema_version': 1,
+      'entity_type': 'settings',
+      'entity_id': settingsId,
+      'student_id': _studentId,
+      'revision': revision,
+      'created_at_utc': _utc(createdAt),
+      'updated_at_utc': _utc(mutation.occurredAtUtc),
+      'deleted_at_utc': null,
+      'value': valuePayload,
+    });
+    if (_supportReplay(
+      database: _database,
+      mutation: mutation,
+      studentId: _studentId,
+      entityType: 'settings',
+      entityId: settingsId,
+      expectedRevision: expectedRevision,
+      payload: payload,
+    )) {
+      return MutationReceipt(
+        record: find(studentId: _studentId)!,
+        replayed: true,
+      );
+    }
+    _revision(expectedRevision, baseRevision);
+    _database.execute(
+      '''INSERT INTO settings
+        (id, student_id, revision, created_at_utc, updated_at_utc,
+         deleted_at_utc, week_start, time_display, theme,
+         synchronization_mode, notification_preferences_json,
+         active_placement_id)
+        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(student_id) DO UPDATE SET
+          revision = excluded.revision,
+          updated_at_utc = excluded.updated_at_utc,
+          deleted_at_utc = NULL,
+          week_start = excluded.week_start,
+          time_display = excluded.time_display,
+          theme = excluded.theme,
+          synchronization_mode = excluded.synchronization_mode,
+          notification_preferences_json = excluded.notification_preferences_json,
+          active_placement_id = excluded.active_placement_id''',
+      [
+        settingsId,
+        _studentId,
+        revision,
+        _utc(createdAt),
+        _utc(mutation.occurredAtUtc),
+        settings.weekStart,
+        _timeDisplay(settings.timeDisplay),
+        settings.themeId,
+        _synchronization(settings.synchronization),
+        notificationJson,
+        activePlacementId,
+      ],
+    );
+    _insertSupportOutbox(
+      database: _database,
+      mutation: mutation,
+      studentId: _studentId,
+      entityType: 'settings',
+      entityId: settingsId,
+      baseRevision: baseRevision,
+      payload: payload,
+    );
+    return MutationReceipt(
+      record: StoredDomainRecord(
+        value: settings,
+        studentId: _studentId,
+        revision: revision,
+        createdAtUtc: createdAt,
+        updatedAtUtc: mutation.occurredAtUtc,
+      ),
+      replayed: false,
+    );
+  }
+}
+
+bool _supportReplay({
+  required ClinicalCalendarDatabase database,
+  required MutationToken mutation,
+  required String studentId,
+  required String entityType,
+  required String entityId,
+  required int expectedRevision,
+  required String payload,
+}) {
+  final rows = database.select(
+    'SELECT * FROM outbox_operations WHERE idempotency_key = ?',
+    [mutation.idempotencyKey],
+  );
+  if (rows.isEmpty) return false;
+  final row = rows.single;
+  final identical =
+      _text(row, 'id') == mutation.operationId &&
+      _text(row, 'student_id') == studentId &&
+      _text(row, 'entity_type') == entityType &&
+      _text(row, 'entity_id') == entityId &&
+      _text(row, 'operation_type') == 'upsert' &&
+      _int(row, 'base_revision') == expectedRevision &&
+      _text(row, 'payload_json') == payload &&
+      _dateTime(row, 'created_at_utc') == mutation.occurredAtUtc;
+  if (!identical) {
+    throw const RepositoryException(
+      RepositoryFailureKind.idempotencyConflict,
+      'The idempotency key was already used for a different mutation.',
+    );
+  }
+  return true;
+}
+
+void _insertSupportOutbox({
+  required ClinicalCalendarDatabase database,
+  required MutationToken mutation,
+  required String studentId,
+  required String entityType,
+  required String entityId,
+  required int baseRevision,
+  required String payload,
+}) {
+  database.execute(
+    '''INSERT INTO outbox_operations
+      (id, student_id, idempotency_key, entity_type, entity_id,
+       operation_type, base_revision, payload_json, created_at_utc)
+      VALUES (?, ?, ?, ?, ?, 'upsert', ?, ?, ?)''',
+    [
+      mutation.operationId,
+      studentId,
+      mutation.idempotencyKey,
+      entityType,
+      entityId,
+      baseRevision,
+      payload,
+      _utc(mutation.occurredAtUtc),
+    ],
+  );
+}
+
+String _timeDisplay(TimeDisplayPreference value) => switch (value) {
+  TimeDisplayPreference.military => 'military',
+  TimeDisplayPreference.twelveHour => 'twelve_hour',
+};
+
+String _synchronization(SynchronizationPreference value) => switch (value) {
+  SynchronizationPreference.enabled => 'enabled',
+  SynchronizationPreference.paused => 'paused',
+};
+
+String _normalizeThemeId(String value) =>
+    value == 'borg_tactical' ? StudentSettings.variantFThemeId : value;

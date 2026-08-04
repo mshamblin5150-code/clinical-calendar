@@ -5,6 +5,10 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 final class PlacementSnapshot {
   const PlacementSnapshot({
     required this.placement,
+    required this.placementRevision,
+    required this.evaluationPlanRevision,
+    required this.evaluationPlanConfiguration,
+    required this.attachedPreceptors,
     required this.progress,
     required this.evaluation,
     required this.derivedState,
@@ -13,6 +17,10 @@ final class PlacementSnapshot {
   });
 
   final ClinicalPlacement placement;
+  final int placementRevision;
+  final int evaluationPlanRevision;
+  final EvaluationPlanConfiguration evaluationPlanConfiguration;
+  final List<PlacementPreceptorSnapshot> attachedPreceptors;
   final ClinicalPlacementProgress progress;
   final EvaluationPlanEvaluation evaluation;
   final ClinicalPlacementState derivedState;
@@ -31,6 +39,18 @@ final class PlacementSnapshot {
                 item.state == EvaluationRequirementState.due),
       )
       .toList(growable: false);
+}
+
+final class PlacementPreceptorSnapshot {
+  const PlacementPreceptorSnapshot({
+    required this.preceptor,
+    required this.revision,
+    required this.isPrimary,
+  });
+
+  final Preceptor preceptor;
+  final int revision;
+  final bool isPrimary;
 }
 
 final class CreatePlacementRequest {

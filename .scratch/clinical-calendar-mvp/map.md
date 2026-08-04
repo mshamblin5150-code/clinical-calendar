@@ -107,7 +107,7 @@ Produce a decision-complete MVP product and architecture specification for an in
 
 - The MVP product and architecture are decision-complete in [`spec.md`](spec.md).
 - Ticket 58 approved Flutter for continued implementation after Windows and Android physical-device evidence. The iPhone leg remains explicitly deferred to tickets 87 and 88 until Mac/iPhone hardware is available.
-- Tickets 67 and 68 established the transactional scheduling and Clinical Placement application services over the local repositories, including durable shared active-Placement selection. Tickets 70, 73, and 83 are newly unblocked; tickets 75, 77, and 82 also have no remaining blockers and are available for parallel agents. Ticket 70 calendar period views is the next numbered frontier.
+- Tickets 70, 73, and 75 replaced the prototype shell's central workflows with repository-backed calendar, Clinical Placement/progress, Settings, templates, profile/avatar, and Help surfaces. Ticket 77 provides a Docker-verified least-privilege Supabase synchronization backend. Tickets 82 and 83 add encrypted portable backup/restore and privacy-gated PDF/CSV/JSON export boundaries with native platform adapters. The repository-wide quality gate and Windows/Android release builds pass; iOS runtime verification remains deferred to tickets 87 and 88. Tickets 71, 72, 74, and 78 are now the parallel implementation frontier.
 - Public distribution and comprehensive keyboard-first optimization remain deferred beyond the first MVP implementation plan.
 
 ## Implementation backlog

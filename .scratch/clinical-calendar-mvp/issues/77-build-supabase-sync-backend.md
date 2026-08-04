@@ -1,7 +1,7 @@
 # Build the Supabase Synchronization Backend
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: 62, 65, 66
 
 ## Objective
@@ -18,3 +18,6 @@ Implement the Postgres schema, ownership policies, ordered change feed, and atom
 - Pull-after-cursor returns a complete ordered sequence including tombstones and supports safe retry.
 - Database tests cover concurrent operations, RLS isolation, rollback, idempotency, and invariant parity with the Dart domain suite.
 
+## Answer
+
+Implemented the private Supabase/Postgres synchronization schema, forced RLS, least-privilege RPC executor, atomic idempotent mutation endpoint, structured invariant rejections, ordered cursor feed, and tombstone pulls. Docker-backed verification passes a clean migration/reset, 27 pgTAP assertions, schema lint, static contract checks, and a real two-session race with exactly one accepted update and one stale-revision rejection.

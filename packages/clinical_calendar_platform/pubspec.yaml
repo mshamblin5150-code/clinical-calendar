@@ -13,10 +13,21 @@ dependencies:
     sdk: flutter
   clinical_calendar_application:
     path: ../clinical_calendar_application
+  clinical_calendar_domain:
+    path: ../clinical_calendar_domain
+  file_selector: ^1.1.0
+  flutter_file_saver: ^0.10.0
+  flutter_secure_storage: ^10.3.1
+  path_provider: ^2.1.6
+  pdf: ^3.13.0
 
 dev_dependencies:
+  file_selector_platform_interface: ^2.7.0
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
 
-flutter: {}
+flutter:
+  assets:
+    - assets/fonts/LiberationSansNarrow-Regular.ttf
+    - assets/fonts/LiberationSansNarrow-Bold.ttf

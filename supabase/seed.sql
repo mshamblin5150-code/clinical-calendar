@@ -1,0 +1,3 @@
+-- Intentionally empty. Production-like Student records and credentials must
+-- never be committed. Database tests create transaction-scoped identities and
+-- roll them back.

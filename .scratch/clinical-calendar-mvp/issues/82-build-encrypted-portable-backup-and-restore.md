@@ -1,7 +1,7 @@
 # Build Encrypted Portable Backup and Restore
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: 65, 66, 69
 
 ## Objective
@@ -18,3 +18,6 @@ Implement service-independent encrypted backup and safe all-or-nothing restore t
 - There is no unguarded Replace Everything action, and restore works without the synchronization service.
 - Round-trip fixtures pass across Windows, iOS, and Android file pickers and supported schema versions.
 
+## Answer
+
+Implemented versioned portable backups using Argon2id and AES-256-GCM entirely in memory, strict schema/checksum validation, previewed identity-based merge, transactional restore, and fresh FIFO outbox operations. Backup/restore services and responsive UI pass round-trip, wrong-passphrase, damaged/newer-version, rollback, replay-idempotency, and ordering tests; platform picker composition is prepared for Windows, Android, and deferred iOS hardware verification.

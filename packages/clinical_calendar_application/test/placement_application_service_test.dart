@@ -60,8 +60,56 @@ void main() {
         (await service.activePlacement())!.placement.id,
         snapshot.placement.id,
       );
+      expect(snapshot.placementRevision, 1);
+      expect(snapshot.evaluationPlanRevision, 1);
+      expect(snapshot.attachedPreceptors.single.preceptor.name, 'Dr. Rivera');
+      expect(snapshot.attachedPreceptors.single.isPrimary, isTrue);
     },
   );
+
+  test('lists placements stably and derives shared Total Progress', () async {
+    final preceptor = await service.createPreceptor(name: 'Dr. Rivera');
+    Future<PlacementSnapshot> create(String name, LocalDate start) =>
+        service.createPlacement(
+          CreatePlacementRequest(
+            name: name,
+            targetHours: TargetHours.fromMinutes(60),
+            startDate: start,
+            completionDeadline: LocalDate(2026, 12, 31),
+            primaryPreceptorId: preceptor.id,
+            evaluationPlanConfiguration: EvaluationPlanConfiguration(
+              initialSelfAssessmentRequired: false,
+              interimReviewCadenceMinutes: 120,
+              finalSelfAssessmentRequired: false,
+              finalPlacementReviewRequired: false,
+            ),
+          ),
+        );
+
+    final later = await create('Pediatrics', LocalDate(2026, 9, 1));
+    final earlier = await create('Family Medicine', LocalDate(2026, 8, 1));
+    await service.addHistoricalHours(
+      clinicalPlacementId: earlier.placement.id,
+      completedMinutes: 30,
+      effectiveDate: LocalDate(2026, 8, 2),
+    );
+
+    final listed = await service.placements();
+    expect(listed.map((item) => item.placement.name), [
+      'Family Medicine',
+      'Pediatrics',
+    ]);
+    expect(
+      (await service.activePlacement())!.placement.id,
+      earlier.placement.id,
+    );
+    final total = await service.totalProgress();
+    expect(total.targetMinutes, 120);
+    expect(total.completedMinutes, 30);
+    expect(total.completedPercentage, 25);
+    expect(total.segmentFillPercentages, hasLength(8));
+    expect(later.progress.completedMinutes, 0);
+  });
 
   test(
     'aggregate failure rolls back records, selection, and outboxes',

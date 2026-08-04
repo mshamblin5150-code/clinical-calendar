@@ -1,7 +1,19 @@
+import 'dart:async';
+
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
+import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
+import 'calendar/calendar_data_source.dart';
+import 'calendar/calendar_period_view.dart';
+import 'placements/placement_management_surface.dart';
+import 'placements/placement_progress_controller.dart';
+import 'placements/placement_progress_widgets.dart';
 import 'responsive_shell.dart';
+import 'support/profile_avatar_button.dart';
+import 'support/settings_templates_surface.dart';
+import 'support/student_profile_surface.dart';
+import 'support/support_help_surface.dart';
 import 'theme_contract.dart';
 import 'variant_f_theme.dart';
 
@@ -9,6 +21,8 @@ final class ClinicalCalendarApp extends StatelessWidget {
   const ClinicalCalendarApp({
     required this.dependencies,
     required this.environmentName,
+    required this.studentId,
+    this.chooseAvatar,
     this.visualTheme = const VariantFVisualTheme(),
     this.helpGuides,
     super.key,
@@ -16,6 +30,8 @@ final class ClinicalCalendarApp extends StatelessWidget {
 
   final ApplicationDependencies dependencies;
   final String environmentName;
+  final String studentId;
+  final AvatarChooser? chooseAvatar;
   final ClinicalCalendarVisualTheme visualTheme;
   final ThemeHelpGuideRegistry? helpGuides;
 
@@ -27,6 +43,8 @@ final class ClinicalCalendarApp extends StatelessWidget {
     home: _ApplicationHost(
       dependencies: dependencies,
       environmentName: environmentName,
+      studentId: studentId,
+      chooseAvatar: chooseAvatar,
       themeId: visualTheme.id,
       helpGuides: helpGuides ?? ThemeHelpGuideRegistry.standard(),
     ),
@@ -37,12 +55,16 @@ final class _ApplicationHost extends StatefulWidget {
   const _ApplicationHost({
     required this.dependencies,
     required this.environmentName,
+    required this.studentId,
+    required this.chooseAvatar,
     required this.themeId,
     required this.helpGuides,
   });
 
   final ApplicationDependencies dependencies;
   final String environmentName;
+  final String studentId;
+  final AvatarChooser? chooseAvatar;
   final String themeId;
   final ThemeHelpGuideRegistry helpGuides;
 
@@ -53,6 +75,174 @@ final class _ApplicationHost extends StatefulWidget {
 final class _ApplicationHostState extends State<_ApplicationHost> {
   ClinicalCalendarDestination? _destination;
   DestinationEntry _entry = DestinationEntry.direct;
+  late final SchedulingCalendarDataSource _calendarDataSource;
+  late final PlacementProgressController _placementController;
+  late final SupportApplicationService _supportService;
+  SupportSnapshot? _support;
+  Object? _supportError;
+  bool _supportLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final dependencies = widget.dependencies;
+    _calendarDataSource = SchedulingCalendarDataSource(
+      SchedulingApplicationService(
+        dependencies.repositories,
+        dependencies.clock,
+        dependencies.identifiers,
+      ),
+    );
+    _placementController = PlacementProgressController(
+      service: PlacementApplicationService(
+        repositories: dependencies.repositories,
+        clock: dependencies.clock,
+        identifiers: dependencies.identifiers,
+        studentId: widget.studentId,
+      ),
+      studentId: widget.studentId,
+    );
+    _supportService = SupportApplicationService(
+      repositories: dependencies.repositories,
+      clock: dependencies.clock,
+      identifiers: dependencies.identifiers,
+      studentId: widget.studentId,
+    );
+    unawaited(_placementController.load());
+    unawaited(_loadSupport());
+  }
+
+  @override
+  void dispose() {
+    _placementController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSupport() async {
+    if (mounted) {
+      setState(() {
+        _supportLoading = true;
+        _supportError = null;
+      });
+    }
+    try {
+      final loaded = await _supportService.load();
+      if (!mounted) return;
+      setState(() => _support = loaded);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _supportError = error);
+    } finally {
+      if (mounted) setState(() => _supportLoading = false);
+    }
+  }
+
+  StudentProfile get _headerProfile =>
+      _support?.profile.value ??
+      StudentProfile(id: widget.studentId, displayName: 'Student');
+
+  Future<void> _saveProfile(StudentProfile profile) async {
+    final snapshot = _support;
+    if (snapshot == null) return;
+    final saved = await _supportService.saveProfile(
+      expectedRevision: snapshot.profile.revision,
+      displayName: profile.displayName,
+      program: profile.program,
+      accountIdentity: profile.accountIdentity,
+      avatarBytes: profile.avatarBytes,
+    );
+    if (!mounted) return;
+    setState(
+      () => _support = SupportSnapshot(
+        profile: saved,
+        settings: snapshot.settings,
+        scheduleTemplates: snapshot.scheduleTemplates,
+      ),
+    );
+  }
+
+  Future<void> _saveSettings(StudentSettings settings) async {
+    final snapshot = _support;
+    if (snapshot == null) return;
+    final saved = await _supportService.saveSettings(
+      expectedRevision: snapshot.settings.revision,
+      settings: settings,
+    );
+    if (!mounted) return;
+    setState(
+      () => _support = SupportSnapshot(
+        profile: snapshot.profile,
+        settings: saved,
+        scheduleTemplates: snapshot.scheduleTemplates,
+      ),
+    );
+  }
+
+  Future<void> _saveTemplate(ScheduleTemplate template) async {
+    final snapshot = _support;
+    if (snapshot == null) return;
+    StoredSupportRecord<ScheduleTemplate>? existing;
+    for (final record in snapshot.scheduleTemplates) {
+      if (record.value.id == template.id) existing = record;
+    }
+    final saved = existing == null
+        ? await _supportService.addScheduleTemplate(
+            name: template.name,
+            type: template.type,
+            startTime: template.startTime,
+            endTime: template.endTime,
+            clinicalPlacementId: template.clinicalPlacementId,
+            preceptorId: template.preceptorId,
+          )
+        : await _supportService.editScheduleTemplate(
+            id: template.id,
+            expectedRevision: existing.revision,
+            name: template.name,
+            type: template.type,
+            startTime: template.startTime,
+            endTime: template.endTime,
+            clinicalPlacementId: template.clinicalPlacementId,
+            preceptorId: template.preceptorId,
+          );
+    if (!mounted) return;
+    final latest = _support;
+    if (latest == null) return;
+    setState(
+      () => _support = SupportSnapshot(
+        profile: latest.profile,
+        settings: latest.settings,
+        scheduleTemplates: [
+          for (final record in latest.scheduleTemplates)
+            if (record.value.id != template.id) record,
+          saved,
+        ],
+      ),
+    );
+  }
+
+  Future<void> _removeTemplate(String templateId) async {
+    final snapshot = _support;
+    if (snapshot == null) return;
+    final record = snapshot.scheduleTemplates.singleWhere(
+      (record) => record.value.id == templateId,
+    );
+    await _supportService.removeScheduleTemplate(
+      id: templateId,
+      expectedRevision: record.revision,
+    );
+    if (!mounted) return;
+    final latest = _support;
+    if (latest == null) return;
+    setState(
+      () => _support = SupportSnapshot(
+        profile: latest.profile,
+        settings: latest.settings,
+        scheduleTemplates: latest.scheduleTemplates
+            .where((record) => record.value.id != templateId)
+            .toList(growable: false),
+      ),
+    );
+  }
 
   Future<void> _showMenu() async {
     final destination = await showModalBottomSheet<ClinicalCalendarDestination>(
@@ -105,174 +295,125 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         destination: destination,
         entry: _entry,
         onExit: _exitDestination,
-        child: _DestinationBody(
-          destination: destination,
-          themeGuide: widget.helpGuides.resolve(widget.themeId),
-        ),
+        child: _destinationBody(destination),
       );
     }
 
+    final settings = _support?.settings.value ?? StudentSettings();
     return ResponsiveApplicationShell(
       environmentName: widget.environmentName,
       onOpenMenu: _showMenu,
       onOpenDestination: _openDirect,
       slots: ResponsiveShellSlots(
-        placementDock: const _PlacementDock(),
-        centralContent: _FoundationContent(dependencies: widget.dependencies),
-        insightRail: const _InsightRail(),
-        mobilePlacementSummary: const _MobilePlacementSummary(),
+        placementDock: _PlacementLoadState(
+          controller: _placementController,
+          onRetry: _placementController.load,
+          child: PlacementDock(
+            controller: _placementController,
+            studentId: widget.studentId,
+            onManage: () =>
+                _openDirect(ClinicalCalendarDestination.clinicalPlacements),
+          ),
+        ),
+        centralContent: CalendarPeriodView(
+          dataSource: _calendarDataSource,
+          studentId: widget.studentId,
+          today: _today(widget.dependencies.clock),
+          weekStartsOn: settings.weekStart,
+          twelveHourTime:
+              settings.timeDisplay == TimeDisplayPreference.twelveHour,
+        ),
+        insightRail: _PlacementLoadState(
+          controller: _placementController,
+          onRetry: _placementController.load,
+          child: PlacementProgressRail(
+            controller: _placementController,
+            studentId: widget.studentId,
+          ),
+        ),
+        mobilePlacementSummary: _PlacementLoadState(
+          controller: _placementController,
+          onRetry: _placementController.load,
+          child: PlacementMobileSummary(
+            controller: _placementController,
+            studentId: widget.studentId,
+          ),
+        ),
         planningRegion: const _PlanningRegion(),
+        profileAvatar: ProfileAvatarButton(
+          profile: _headerProfile,
+          onPressed: () =>
+              _openDirect(ClinicalCalendarDestination.studentProfile),
+        ),
       ),
     );
   }
-}
 
-final class _FoundationContent extends StatelessWidget {
-  const _FoundationContent({required this.dependencies});
-
-  final ApplicationDependencies dependencies;
-
-  static const modules = <String>[
-    'DOMAIN',
-    'APPLICATION',
-    'LOCAL DATA',
-    'SYNCHRONIZATION',
-    'PRESENTATION',
-    'PLATFORM ADAPTERS',
-  ];
-
-  @override
-  Widget build(BuildContext context) => ShellPanel(
-    label: 'Production foundation',
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Package boundaries and dependency ports are ready for domain '
-          'implementation. No prototype records are loaded.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final cardWidth = constraints.maxWidth >= 520
-                ? (constraints.maxWidth - 8) / 2
-                : constraints.maxWidth;
-            return Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final module in modules)
-                  SizedBox(
-                    width: cardWidth,
-                    child: _BoundaryCard(label: module),
-                  ),
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'CLOCK · ${dependencies.clock.runtimeType}\n'
-          'REPOSITORIES · ${dependencies.repositories.runtimeType}',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontFeatures: const [FontFeature.tabularFigures()],
-            letterSpacing: .5,
+  Widget _destinationBody(ClinicalCalendarDestination destination) {
+    switch (destination) {
+      case ClinicalCalendarDestination.clinicalPlacements:
+        return PlacementManagementSurface(
+          controller: _placementController,
+          studentId: widget.studentId,
+        );
+      case ClinicalCalendarDestination.studentProfile:
+        return _supportBody(
+          (snapshot) => StudentProfileSurface(
+            profile: snapshot.profile.value,
+            chooseAvatar: widget.chooseAvatar ?? () async => null,
+            onSave: _saveProfile,
           ),
+        );
+      case ClinicalCalendarDestination.settings:
+        return _supportBody(
+          (snapshot) => SettingsTemplatesSurface(
+            settings: snapshot.settings.value,
+            scheduleTemplates: snapshot.scheduleTemplates
+                .map((record) => record.value)
+                .toList(growable: false),
+            clinicalDefaults: _clinicalDefaults,
+            newTemplateId: widget.dependencies.identifiers.nextIdentifier,
+            onSaveSettings: _saveSettings,
+            onSaveTemplate: _saveTemplate,
+            onRemoveTemplate: _removeTemplate,
+          ),
+        );
+      case ClinicalCalendarDestination.help:
+        return SupportHelpSurface(
+          themeGuide: widget.helpGuides.resolve(widget.themeId),
+        );
+      case ClinicalCalendarDestination.calendar:
+      case ClinicalCalendarDestination.planning:
+      case ClinicalCalendarDestination.notifications:
+        return _PendingDestination(destination: destination);
+    }
+  }
+
+  Widget _supportBody(Widget Function(SupportSnapshot snapshot) ready) {
+    final snapshot = _support;
+    if (_supportLoading && snapshot == null) {
+      return const _DestinationLoading(label: 'Loading student data');
+    }
+    if (_supportError != null && snapshot == null) {
+      return _DestinationFailure(
+        message: 'Student data could not be loaded.',
+        onRetry: _loadSupport,
+      );
+    }
+    return ready(snapshot!);
+  }
+
+  List<ClinicalTemplateDefaultOption> get _clinicalDefaults => [
+    for (final placement in _placementController.placements)
+      for (final attached in placement.attachedPreceptors)
+        ClinicalTemplateDefaultOption(
+          clinicalPlacementId: placement.placement.id,
+          preceptorId: attached.preceptor.id,
+          label:
+              '${placement.placement.name} · ${attached.preceptor.name}'
+              '${attached.isPrimary ? ' (Primary)' : ''}',
         ),
-      ],
-    ),
-  );
-}
-
-final class _BoundaryCard extends StatelessWidget {
-  const _BoundaryCard({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(minHeight: 44),
-    decoration: BoxDecoration(
-      color: context.clinicalColors.structureRaised,
-      border: Border.all(color: context.clinicalColors.insetBorder),
-    ),
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    child: Row(
-      children: [
-        Icon(
-          Icons.check_circle_outline,
-          color: context.clinicalColors.clinical,
-          size: 20,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(label, style: Theme.of(context).textTheme.labelMedium),
-        ),
-      ],
-    ),
-  );
-}
-
-final class _PlacementDock extends StatelessWidget {
-  const _PlacementDock();
-
-  @override
-  Widget build(BuildContext context) => ShellPanel(
-    label: 'Clinical Placement',
-    accent: context.clinicalColors.clinical,
-    child: const Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text('No active Clinical Placement'),
-        SizedBox(height: 8),
-        Text('Placement controls arrive with the progress surfaces.'),
-      ],
-    ),
-  );
-}
-
-final class _InsightRail extends StatelessWidget {
-  const _InsightRail();
-
-  @override
-  Widget build(BuildContext context) => ShellPanel(
-    label: 'Progress & attention',
-    child: const Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text('TOTAL PROGRESS'),
-        SizedBox(height: 8),
-        Text('No progress data'),
-        Divider(height: 24),
-        Text('ATTENTION'),
-        SizedBox(height: 8),
-        Text('No items need attention'),
-      ],
-    ),
-  );
-}
-
-final class _MobilePlacementSummary extends StatelessWidget {
-  const _MobilePlacementSummary();
-
-  @override
-  Widget build(BuildContext context) => ShellPanel(
-    label: 'Clinical Placement',
-    child: const Row(
-      children: [
-        SizedBox(
-          width: 44,
-          height: 44,
-          child: CircularProgressIndicator(value: 0),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: Text('No active Clinical Placement\nTotal Progress · 0%'),
-        ),
-      ],
-    ),
-  );
+  ];
 }
 
 final class _PlanningRegion extends StatelessWidget {
@@ -301,70 +442,90 @@ final class _PlanningRegion extends StatelessWidget {
   );
 }
 
-final class _DestinationBody extends StatelessWidget {
-  const _DestinationBody({required this.destination, required this.themeGuide});
+final class _PlacementLoadState extends StatelessWidget {
+  const _PlacementLoadState({
+    required this.controller,
+    required this.onRetry,
+    required this.child,
+  });
 
-  final ClinicalCalendarDestination destination;
-  final ThemeHelpGuide themeGuide;
+  final PlacementProgressController controller;
+  final Future<void> Function() onRetry;
+  final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    if (destination == ClinicalCalendarDestination.help) {
-      return _HelpBody(themeGuide: themeGuide);
-    }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: ShellPanel(
-        label: destination.label,
-        child: Text(
-          '${destination.label} workflows are supplied by their dedicated '
-          'presentation ticket. This shell owns navigation only.',
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: controller,
+    builder: (context, _) {
+      if (controller.isBusy && controller.placements.isEmpty) {
+        return const _DestinationLoading(label: 'Loading placements');
+      }
+      if (controller.error != null && controller.placements.isEmpty) {
+        return _DestinationFailure(
+          message: 'Clinical Placements could not be loaded.',
+          onRetry: onRetry,
+        );
+      }
+      return child;
+    },
+  );
 }
 
-final class _HelpBody extends StatelessWidget {
-  const _HelpBody({required this.themeGuide});
+final class _DestinationLoading extends StatelessWidget {
+  const _DestinationLoading({required this.label});
 
-  final ThemeHelpGuide themeGuide;
-
-  static const sharedGuidance = <String>[
-    'Batch scheduling',
-    'Completion and Protected Days',
-    'Progress and Preceptors',
-    'Evaluation Plans and attention',
-    'Settings and Student Profile',
-    'Storage limitations',
-  ];
+  final String label;
 
   @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(16),
-    children: [
-      ShellPanel(
-        label: 'Workflow guide',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [for (final topic in sharedGuidance) Text('• $topic')],
-        ),
+  Widget build(BuildContext context) => Center(
+    child: Semantics(
+      label: label,
+      child: const SizedBox.square(
+        dimension: 28,
+        child: CircularProgressIndicator(strokeWidth: 2),
       ),
-      const SizedBox(height: 12),
-      ShellPanel(
-        label: themeGuide.title,
-        child: Column(
-          children: [
-            for (final state in themeGuide.calendarStates)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(width: 20, height: 20, color: state.color),
-                title: Text(state.label),
-                subtitle: Text(state.description),
-              ),
-          ],
-        ),
-      ),
-    ],
+    ),
   );
+}
+
+final class _DestinationFailure extends StatelessWidget {
+  const _DestinationFailure({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
+    ),
+  );
+}
+
+final class _PendingDestination extends StatelessWidget {
+  const _PendingDestination({required this.destination});
+
+  final ClinicalCalendarDestination destination;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    padding: const EdgeInsets.all(16),
+    child: ShellPanel(
+      label: destination.label,
+      child: Text('${destination.label} opens from the calendar workflow.'),
+    ),
+  );
+}
+
+LocalDate _today(Clock clock) {
+  final now = clock.nowUtc();
+  return LocalDate(now.year, now.month, now.day);
 }

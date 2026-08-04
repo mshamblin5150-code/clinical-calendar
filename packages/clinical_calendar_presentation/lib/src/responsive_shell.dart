@@ -35,6 +35,7 @@ final class ResponsiveShellSlots {
     required this.placementDock,
     required this.insightRail,
     required this.mobilePlacementSummary,
+    required this.profileAvatar,
   });
 
   final Widget centralContent;
@@ -42,6 +43,7 @@ final class ResponsiveShellSlots {
   final Widget placementDock;
   final Widget insightRail;
   final Widget mobilePlacementSummary;
+  final Widget profileAvatar;
 }
 
 /// Responsive composition only. It has no scheduling or progress rules.
@@ -83,6 +85,7 @@ final class ResponsiveApplicationShell extends StatelessWidget {
             onOpenMenu: onOpenMenu,
             onOpenHelp: () =>
                 onOpenDestination(ClinicalCalendarDestination.help),
+            profileAvatar: slots.profileAvatar,
           ),
           Expanded(
             child: Padding(
@@ -138,6 +141,7 @@ final class ResponsiveApplicationShell extends StatelessWidget {
           _CompactHeader(
             environmentName: environmentName,
             onOpenMenu: onOpenMenu,
+            profileAvatar: slots.profileAvatar,
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -316,11 +320,13 @@ final class _CommandBar extends StatelessWidget {
     required this.environmentName,
     required this.onOpenMenu,
     required this.onOpenHelp,
+    required this.profileAvatar,
   });
 
   final String environmentName;
   final VoidCallback onOpenMenu;
   final VoidCallback onOpenHelp;
+  final Widget profileAvatar;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -359,7 +365,7 @@ final class _CommandBar extends StatelessWidget {
           onPressed: onOpenHelp,
           icon: const Icon(Icons.help_outline),
         ),
-        const CircleAvatar(radius: 18, child: Text('CC')),
+        profileAvatar,
       ],
     ),
   );
@@ -369,10 +375,12 @@ final class _CompactHeader extends StatelessWidget {
   const _CompactHeader({
     required this.environmentName,
     required this.onOpenMenu,
+    required this.profileAvatar,
   });
 
   final String environmentName;
   final VoidCallback onOpenMenu;
+  final Widget profileAvatar;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -407,7 +415,7 @@ final class _CompactHeader extends StatelessWidget {
           style: Theme.of(context).textTheme.labelMedium,
         ),
         const SizedBox(width: 8),
-        const CircleAvatar(radius: 18, child: Text('CC')),
+        profileAvatar,
       ],
     ),
   );
