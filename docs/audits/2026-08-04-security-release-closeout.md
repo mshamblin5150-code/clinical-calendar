@@ -26,9 +26,10 @@ credentials.
 The completed changes were reviewed through stacked pull requests
 [#89](https://github.com/mshamblin5150-code/clinical-calendar/pull/89) and
 [#90](https://github.com/mshamblin5150-code/clinical-calendar/pull/90), with
-passing GitHub Quality checks. The authorized closeout merges both stacks to
-`main` in dependency order (#89, then #90). No force push or protection bypass
-is authorized or required.
+passing GitHub Quality checks. The authorized closeout merged both stacks to
+`main` in dependency order: #89 as `aa573454a23abe708c312a8e81903eea01ba4ab3`,
+then #90 as `d0baeed30a28e0da125cd195d66cd57c21c13741`. No force push or
+protection bypass was used.
 
 ## Codex Security scan
 
@@ -196,7 +197,9 @@ gh pr checks 90
 The final local full quality gate passed. PR #89's Quality run
 `30932301186` passed. PR #90's final Quality run `30940457073` passed on
 commit `c495156` after correcting Linux-only eager platform resolution. The
-working tree was clean before this closeout record was added.
+documentation closeout run `30941062406` also passed before PR #90 merged. The
+local `main` checkout was then fast-forwarded to `origin/main` and verified
+clean at `d0baeed`.
 
 ## Remaining work and safe resume point
 
@@ -218,6 +221,8 @@ verified recovery source makes those destructive app-data operations safe.
 Ticket #87 remains deferred. Do not infer acceptance from generated iOS icon
 assets; resume only when the maintainer has suitable Apple hardware/tooling.
 
-At authorized closeout, the intended repository state is `main` containing
-both PR #89 and PR #90, with #84 closed, #85/#86 still open and in progress,
-and #87 open and explicitly equipment-deferred.
+At authorized closeout, `main` contains both PR #89 and PR #90. Ticket #84 is
+closed. GitHub automatically closed #85 when PR #90 merged even though its
+acceptance criteria remain incomplete; #85 was immediately reopened with an
+explanatory comment and remains in progress. Ticket #86 remains open and in
+progress. Ticket #87 remains open and explicitly equipment-deferred.
