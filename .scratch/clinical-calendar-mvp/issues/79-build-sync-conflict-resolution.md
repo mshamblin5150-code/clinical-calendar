@@ -1,7 +1,7 @@
 # Build Synchronization Conflict Resolution
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: 67, 68, 69, 78
 
 ## Objective
@@ -17,4 +17,3 @@ Preserve and resolve concurrent offline changes explicitly instead of using sile
 - A conflicted week remains visibly Planning Incomplete when its Protected Day or commitment validity is unresolved.
 - Resolution history retains both originals without exposing private contents to support telemetry.
 - Two-device integration tests demonstrate that neither original is silently discarded and all devices converge after resolution.
-

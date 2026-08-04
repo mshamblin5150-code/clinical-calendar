@@ -1,7 +1,7 @@
 # Implement Reminder Policy and Platform Notifications
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: 67, 68, 74, 75
 
 ## Objective
