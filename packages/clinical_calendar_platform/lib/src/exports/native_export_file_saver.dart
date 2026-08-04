@@ -13,18 +13,22 @@ enum NativeSavePlatform { windows, android, ios }
 /// iOS 16+ use `flutter_file_saver`, whose native implementations use
 /// `ACTION_CREATE_DOCUMENT` and `UIDocumentPickerViewController` respectively.
 final class NativeExportFileSaver implements NativeByteFileSaver {
-  NativeExportFileSaver({NativeSavePlatform? platform})
-    : _platform = platform ?? _currentPlatform();
+  factory NativeExportFileSaver({NativeSavePlatform? platform}) =>
+      NativeExportFileSaver._(platform);
 
-  final NativeSavePlatform _platform;
+  NativeExportFileSaver._(this._platform);
+
+  final NativeSavePlatform? _platform;
 
   @override
-  Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request) =>
-      switch (_platform) {
-        NativeSavePlatform.windows => _saveOnWindows(request),
-        NativeSavePlatform.android ||
-        NativeSavePlatform.ios => _saveOnMobile(request),
-      };
+  Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request) {
+    final platform = _platform ?? _currentPlatform();
+    return switch (platform) {
+      NativeSavePlatform.windows => _saveOnWindows(request),
+      NativeSavePlatform.android ||
+      NativeSavePlatform.ios => _saveOnMobile(request),
+    };
+  }
 
   Future<NativeFileSaveOutcome> _saveOnWindows(
     NativeFileSaveRequest request,
