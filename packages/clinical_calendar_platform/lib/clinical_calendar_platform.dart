@@ -1,6 +1,7 @@
 /// Native capability adapters used by the application composition root.
 library;
 
+export 'src/backup/native_backup_file_picker.dart';
 export 'src/exports/dart_export_encoder.dart';
 export 'src/exports/native_export_file_saver.dart';
 export 'src/foundation_platform_adapters.dart';

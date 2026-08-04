@@ -11,7 +11,7 @@ final class ExportSurface extends StatefulWidget {
   });
 
   final ExportWorkflowService workflow;
-  final String clinicalPlacementId;
+  final String? clinicalPlacementId;
 
   @override
   State<ExportSurface> createState() => _ExportSurfaceState();
@@ -109,11 +109,11 @@ final class _ExportSurfaceState extends State<ExportSurface> {
           children: [
             FilledButton.icon(
               key: const Key('export-placement-pdf'),
-              onPressed: _busy
+              onPressed: _busy || widget.clinicalPlacementId == null
                   ? null
                   : () => _run(
                       () => widget.workflow.exportPlacementPdf(
-                        widget.clinicalPlacementId,
+                        widget.clinicalPlacementId!,
                       ),
                     ),
               icon: const Icon(Icons.picture_as_pdf_outlined),
@@ -121,11 +121,11 @@ final class _ExportSurfaceState extends State<ExportSurface> {
             ),
             OutlinedButton.icon(
               key: const Key('export-placement-csv'),
-              onPressed: _busy
+              onPressed: _busy || widget.clinicalPlacementId == null
                   ? null
                   : () => _run(
                       () => widget.workflow.exportPlacementCsv(
-                        widget.clinicalPlacementId,
+                        widget.clinicalPlacementId!,
                       ),
                     ),
               icon: const Icon(Icons.table_view_outlined),

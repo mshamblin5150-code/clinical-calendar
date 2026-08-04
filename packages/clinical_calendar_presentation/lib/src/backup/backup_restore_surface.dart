@@ -2,6 +2,20 @@ import 'package:flutter/material.dart';
 
 enum BackupConflictSelection { keepLocal, useBackup }
 
+final class PortableBackupWorkflows {
+  const PortableBackupWorkflows({
+    required this.create,
+    required this.choose,
+    required this.apply,
+  });
+
+  final Future<bool> Function(String passphrase) create;
+  final Future<BackupRestorePreviewViewModel?> Function(String passphrase)
+  choose;
+  final Future<void> Function(Map<String, BackupConflictSelection> choices)
+  apply;
+}
+
 final class BackupConflictViewModel {
   const BackupConflictViewModel({
     required this.identity,
@@ -37,14 +51,16 @@ final class BackupRestoreSurface extends StatefulWidget {
     required this.onCreateBackup,
     required this.onChooseBackup,
     required this.onApplyRestore,
+    this.showAppBar = true,
     super.key,
   });
 
-  final Future<void> Function(String passphrase) onCreateBackup;
+  final Future<bool> Function(String passphrase) onCreateBackup;
   final Future<BackupRestorePreviewViewModel?> Function(String passphrase)
   onChooseBackup;
   final Future<void> Function(Map<String, BackupConflictSelection> choices)
   onApplyRestore;
+  final bool showAppBar;
 
   @override
   State<BackupRestoreSurface> createState() => _BackupRestoreSurfaceState();
@@ -76,9 +92,8 @@ final class _BackupRestoreSurfaceState extends State<BackupRestoreSurface> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Encrypted portable backup')),
-    body: SafeArea(
+  Widget build(BuildContext context) {
+    final content = SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
@@ -175,19 +190,29 @@ final class _BackupRestoreSurfaceState extends State<BackupRestoreSurface> {
           ],
         ],
       ),
-    ),
-  );
+    );
+    return widget.showAppBar
+        ? Scaffold(
+            appBar: AppBar(title: const Text('Encrypted portable backup')),
+            body: content,
+          )
+        : content;
+  }
 
   Future<void> _create() => _run(() async {
-    await widget.onCreateBackup(_passphrase.text);
-    _message = 'Encrypted backup created.';
+    final created = await widget.onCreateBackup(_passphrase.text);
+    _message = created
+        ? 'Encrypted backup created.'
+        : 'Backup creation cancelled.';
   });
 
   Future<void> _choose() => _run(() async {
     final preview = await widget.onChooseBackup(_passphrase.text);
-    if (preview != null) {
-      _preview = preview;
-      _choices.clear();
+    _preview = preview;
+    _choices.clear();
+    if (preview == null) {
+      _message = 'No backup selected.';
+    } else {
       _message = 'Backup validated. Review the merge before applying it.';
     }
   });

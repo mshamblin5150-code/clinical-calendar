@@ -78,6 +78,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   NotificationDeviceClass? notificationDeviceClass,
   RecoveryReauthenticationGate? recoveryReauthentication,
   NativeByteFileSaver? accountBackupFileSaver,
+  BackupByteFilePicker? portableBackupFilePicker,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
   final identifierGenerator = identifiers ?? ProcessIdentifierGenerator();
@@ -236,6 +237,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
           reauthentication: recoveryReauthentication ?? recoveryProofGate!,
           identifiers: identifierGenerator,
         );
+  final nativeFileSaver = accountBackupFileSaver ?? NativeExportFileSaver();
   final createAccountBackup = baseRepositories is SqliteRepositoryRegistry
       ? (String passphrase) async {
           final createdAtUtc = applicationClock.nowUtc();
@@ -246,17 +248,105 @@ Future<ClinicalCalendarApp> buildProductionApplication({
             ),
           );
           final date = createdAtUtc.toIso8601String().substring(0, 10);
-          final outcome =
-              await (accountBackupFileSaver ?? NativeExportFileSaver()).save(
-                NativeFileSaveRequest(
-                  suggestedFileName: 'clinical-calendar-backup-$date.ccbackup',
-                  mimeType: 'application/octet-stream',
-                  bytes: bytes,
-                ),
-              );
+          final outcome = await nativeFileSaver.save(
+            NativeFileSaveRequest(
+              suggestedFileName: 'clinical-calendar-backup-$date.ccbackup',
+              mimeType: 'application/octet-stream',
+              bytes: bytes,
+            ),
+          );
           return outcome == NativeFileSaveOutcome.saved;
         }
       : null;
+  PortableBackupWorkflows? portableBackupWorkflows;
+  if (baseRepositories is SqliteRepositoryRegistry &&
+      createAccountBackup != null) {
+    final sqliteRepositories = baseRepositories;
+    final picker = portableBackupFilePicker ?? NativeBackupFilePicker();
+    PortableRestorePreview? selectedPreview;
+    portableBackupWorkflows = PortableBackupWorkflows(
+      create: createAccountBackup,
+      choose: (passphrase) async {
+        final encryptedBytes = await picker.pickBackupBytes();
+        if (encryptedBytes == null) {
+          selectedPreview = null;
+          return null;
+        }
+        final preview = await sqliteRepositories.runPortableBackupExclusive(
+          (service) => service.previewRestore(
+            encryptedBytes: encryptedBytes,
+            passphrase: passphrase,
+          ),
+        );
+        selectedPreview = preview;
+        return BackupRestorePreviewViewModel(
+          additions: preview.additions,
+          backupUpdates: preview.backupUpdates,
+          localRecordsKept: preview.items
+              .where(
+                (item) => item.disposition == RestoreMergeDisposition.keepLocal,
+              )
+              .length,
+          conflicts: [
+            for (final item in preview.conflicts)
+              BackupConflictViewModel(
+                identity: item.identity.stableValue,
+                title: '${item.identity.table} record',
+                localSummary: 'Current revision ${item.localRevision}',
+                backupSummary: 'Backup revision ${item.backupRevision}',
+              ),
+          ],
+        );
+      },
+      apply: (choices) async {
+        final preview = selectedPreview;
+        if (preview == null) {
+          throw StateError('No validated backup preview is available.');
+        }
+        final conflictsByIdentity = {
+          for (final item in preview.conflicts)
+            item.identity.stableValue: item.identity,
+        };
+        final resolved = <BackupRecordIdentity, RestoreConflictChoice>{};
+        for (final entry in choices.entries) {
+          final identity = conflictsByIdentity[entry.key];
+          if (identity == null) {
+            throw StateError('Restore choices do not match the preview.');
+          }
+          resolved[identity] = switch (entry.value) {
+            BackupConflictSelection.keepLocal =>
+              RestoreConflictChoice.keepLocal,
+            BackupConflictSelection.useBackup =>
+              RestoreConflictChoice.useBackup,
+          };
+        }
+        await sqliteRepositories.runPortableBackupExclusive(
+          (service) =>
+              service.applyRestore(preview: preview, conflictChoices: resolved),
+        );
+        selectedPreview = null;
+      },
+    );
+  }
+  final exportData = ExportDataService(
+    applicationRepositories,
+    PlacementApplicationService(
+      repositories: applicationRepositories,
+      clock: applicationClock,
+      identifiers: identifierGenerator,
+      studentId: studentId,
+    ),
+    applicationClock,
+    studentId,
+  );
+  ExportWorkflowService buildExportWorkflow(
+    ExportReauthenticationGate reauthentication,
+  ) => ExportWorkflowService(
+    data: exportData,
+    encoder: const DartExportEncoder(),
+    reauthentication: reauthentication,
+    fileSaver: nativeFileSaver,
+  );
   if (recoveryStore != null) {
     final existingLaunchOrResume = onLaunchOrResume;
     onLaunchOrResume = () async {
@@ -305,6 +395,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     identityEmail: identityEmail,
     onLocalCopyRemoved: onLocalCopyRemoved,
     createAccountBackup: createAccountBackup,
+    portableBackupWorkflows: portableBackupWorkflows,
+    exportWorkflowFactory: buildExportWorkflow,
     notificationInteractions: interactions.stream,
     notificationDevicePolicyStore: devicePolicyStore,
     notificationDeviceClass: resolvedDeviceClass,

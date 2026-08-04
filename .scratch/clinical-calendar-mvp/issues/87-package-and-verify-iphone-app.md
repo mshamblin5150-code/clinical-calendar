@@ -17,3 +17,6 @@ Produce a provisioned iPhone release and verify the preferred repeatable private
 - Provisioning expiry, device replacement, uninstall/reinstall, and backup recovery behavior are documented accurately.
 - No public App Store launch work is introduced into the MVP ticket.
 
+## Comments
+
+- 2026-08-04: Prerequisite tickets are complete, but this ticket remains deliberately deferred at the maintainer's direction until Mac/Xcode and physical iPhone equipment are available. It is not claimed and no iPhone packaging work is running.

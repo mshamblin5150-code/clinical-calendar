@@ -60,9 +60,38 @@ void main() {
     expect(find.byKey(const Key('export-complete-json')), findsOne);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('placement exports disable without an active placement', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(<String>[], clinicalPlacementId: null));
+
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('export-placement-pdf')))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<OutlinedButton>(find.byKey(const Key('export-placement-csv')))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<OutlinedButton>(find.byKey(const Key('export-complete-json')))
+          .onPressed,
+      isNotNull,
+    );
+  });
 }
 
-Widget _app(List<String> log, {bool authenticated = true}) => MaterialApp(
+Widget _app(
+  List<String> log, {
+  bool authenticated = true,
+  String? clinicalPlacementId = 'placement-1',
+}) => MaterialApp(
   theme: buildVariantFTheme(),
   home: Scaffold(
     body: SingleChildScrollView(
@@ -73,7 +102,7 @@ Widget _app(List<String> log, {bool authenticated = true}) => MaterialApp(
           reauthentication: _Reauthentication(log, authenticated),
           fileSaver: _Saver(log),
         ),
-        clinicalPlacementId: 'placement-1',
+        clinicalPlacementId: clinicalPlacementId,
       ),
     ),
   ),

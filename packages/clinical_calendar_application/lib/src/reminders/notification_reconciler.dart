@@ -152,12 +152,10 @@ final class NotificationReconciler {
     bool requestPermission = false,
   }) async {
     final existing = await store.readAll();
-    var permission = await platform.permission();
-    if (device.effectiveEnabled &&
-        requestPermission &&
-        permission != NotificationPermission.granted) {
-      permission = await platform.requestPermission();
-    }
+    final permission = await ensurePermission(
+      device: device,
+      requestPermission: requestPermission,
+    );
     if (!device.effectiveEnabled ||
         permission != NotificationPermission.granted) {
       for (final record in existing.values) {
@@ -218,6 +216,19 @@ final class NotificationReconciler {
       );
     }
     await store.replaceAll(next);
+  }
+
+  Future<NotificationPermission> ensurePermission({
+    required NotificationDevicePolicy device,
+    bool requestPermission = false,
+  }) async {
+    var permission = await platform.permission();
+    if (device.effectiveEnabled &&
+        requestPermission &&
+        permission != NotificationPermission.granted) {
+      permission = await platform.requestPermission();
+    }
+    return permission;
   }
 
   List<NotificationAction> _actions(List<ReminderSnooze> choices) => [

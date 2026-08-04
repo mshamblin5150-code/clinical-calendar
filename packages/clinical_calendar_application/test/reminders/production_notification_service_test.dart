@@ -43,6 +43,29 @@ void main() {
     expect(states.values.single, now.add(const Duration(hours: 1)));
     expect(platform.scheduled.last.$1, now.add(const Duration(hours: 1)));
   });
+
+  test('requests device permission before candidate discovery fails', () async {
+    final now = DateTime.utc(2026, 8, 4, 12);
+    final platform = _Platform(NotificationPermission.denied);
+    final service = ProductionNotificationService(
+      source: const _FailingSource(),
+      policy: ReminderPolicy(_UtcResolver()),
+      reconciler: NotificationReconciler(platform, _DeliveryStore()),
+      states: ReminderStateApplicationService(_Registry(now)),
+      devicePolicies: _PolicyStore(),
+      clock: _Clock(now),
+      identifiers: _Identifiers(),
+      studentId: _id(1),
+      deviceClass: NotificationDeviceClass.phone,
+      deviceTimeZoneId: 'UTC',
+    );
+
+    await expectLater(
+      service.reconcileScheduledNotifications(),
+      throwsStateError,
+    );
+    expect(platform.requested, isTrue);
+  });
 }
 
 final class _Source implements ReminderCandidateSource {
@@ -62,6 +85,14 @@ final class _Source implements ReminderCandidateSource {
           ),
         ],
       );
+}
+
+final class _FailingSource implements ReminderCandidateSource {
+  const _FailingSource();
+
+  @override
+  Future<ReminderCandidatePlan> load(DateTime nowUtc) =>
+      Future.error(StateError('candidate discovery failed'));
 }
 
 final class _Clock implements Clock {
@@ -86,15 +117,21 @@ final class _UtcResolver implements ReminderTimeZoneResolver {
 }
 
 final class _Platform implements NotificationPlatform {
+  _Platform([this.current = NotificationPermission.granted]);
+
+  NotificationPermission current;
+  bool requested = false;
   final List<(DateTime, String)> scheduled = [];
   @override
   Future<void> cancel(int id) async {}
   @override
-  Future<NotificationPermission> permission() async =>
-      NotificationPermission.granted;
+  Future<NotificationPermission> permission() async => current;
   @override
-  Future<NotificationPermission> requestPermission() async =>
-      NotificationPermission.granted;
+  Future<NotificationPermission> requestPermission() async {
+    requested = true;
+    return current = NotificationPermission.granted;
+  }
+
   @override
   Future<void> schedule({
     required int id,

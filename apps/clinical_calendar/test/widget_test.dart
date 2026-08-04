@@ -170,6 +170,60 @@ void main() {
   });
 
   test(
+    'production backup picker previews and safely reapplies encrypted data',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'clinical-calendar-portable-restore-',
+      );
+      final databasePath =
+          '${directory.path}${Platform.pathSeparator}clinical_calendar.sqlite3';
+      final storage = _MemorySecureStorage();
+      final saver = _NativeSaver();
+      final picker = _BackupPicker();
+      SqliteRepositoryRegistry? registry;
+      try {
+        final root = await app.buildProductionApplication(
+          secureStorage: storage,
+          identifiers: const _Identifiers(_identityStudentId),
+          accountBackupFileSaver: saver,
+          portableBackupFilePicker: picker,
+          repositoryBootstrap: (owner, secureStorage, identifiers) async {
+            final database = await ClinicalCalendarDatabase.open(
+              path: databasePath,
+              secureStorage: secureStorage,
+            );
+            registry = SqliteRepositoryRegistry(
+              studentId: owner,
+              database: database,
+              identifierGenerator: identifiers,
+            );
+            await registry!.initialize();
+            return registry!;
+          },
+        );
+        final workflows = root.portableBackupWorkflows!;
+        expect(await workflows.create('correct horse battery staple'), isTrue);
+        picker.bytes = saver.request!.bytes;
+
+        final preview = await workflows.choose('correct horse battery staple');
+        expect(preview, isNotNull);
+        expect(preview!.localRecordsKept, greaterThan(0));
+        expect(preview.conflicts, isEmpty);
+        await workflows.apply(const {});
+        expect(picker.calls, 1);
+
+        await expectLater(
+          workflows.choose('wrong passphrase'),
+          throwsA(isA<PortableBackupException>()),
+        );
+      } finally {
+        await registry?.close();
+        if (await directory.exists()) await directory.delete(recursive: true);
+      }
+    },
+  );
+
+  test(
     'configured authenticated composition decorates only application writes',
     () async {
       const studentId = '00000000-0000-4000-8000-000000000021';
@@ -290,6 +344,42 @@ void main() {
     expect(gradle, contains('signingConfigs.getByName("release")'));
     expect(gradle, contains('CLINICAL_CALENDAR_ANDROID_KEYSTORE_PATH'));
     expect(gradle, contains('releaseSigningConfigured'));
+  });
+
+  test('Windows release workflow requires signed versioned MSIX output', () {
+    final workflow = File(
+      '../../.github/workflows/windows-release.yml',
+    ).readAsStringSync();
+    final packager = File(
+      '../../tool/windows/package_msix.ps1',
+    ).readAsStringSync();
+    final manifest = File(
+      '../../tool/windows/AppxManifest.template.xml',
+    ).readAsStringSync();
+
+    expect(workflow, contains('runs-on: windows-2025'));
+    expect(workflow, contains('flutter-version: 3.44.8'));
+    expect(workflow, contains("-WindowsSdkVersion '10.0.26100.0'"));
+    expect(workflow, contains('WINDOWS_SIGNING_PFX_BASE64'));
+    expect(workflow, contains('WINDOWS_SIGNING_PFX_PASSWORD'));
+    expect(workflow, contains('WINDOWS_SIGNING_PUBLISHER'));
+    expect(workflow, contains('Import-PfxCertificate'));
+    expect(workflow, contains('Remove ephemeral signing certificate'));
+    expect(workflow, isNot(contains('-AllowUnsigned')));
+    expect(packager, contains("throw 'A CurrentUser signing certificate"));
+    expect(packager, contains('Publisher must exactly match'));
+    expect(packager, contains('signtool.exe'));
+    expect(packager, contains('verify /pa /all /v'));
+    expect(
+      packager,
+      contains(r'''$suffix = if ($certificate) { '' } else { '.unsigned' }'''),
+    );
+    expect(manifest, contains('Name="ClinicalCalendar"'));
+    expect(manifest, contains('Version="__VERSION__"'));
+    expect(manifest, contains('uap10:PackageIntegrity'));
+    expect(manifest, contains('rescap:Capability Name="runFullTrust"'));
+    expect(manifest, contains('Assets\\AppIcon44.png'));
+    expect(manifest, contains('Assets\\AppIcon150.png'));
   });
 
   testWidgets('startup failure is sanitized and leaves recovery guidance', (
@@ -451,6 +541,17 @@ final class _NativeSaver implements NativeByteFileSaver {
   Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request) async {
     this.request = request;
     return NativeFileSaveOutcome.saved;
+  }
+}
+
+final class _BackupPicker implements BackupByteFilePicker {
+  List<int>? bytes;
+  var calls = 0;
+
+  @override
+  Future<List<int>?> pickBackupBytes() async {
+    calls++;
+    return bytes;
   }
 }
 

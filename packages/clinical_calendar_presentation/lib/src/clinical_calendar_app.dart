@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'calendar/calendar_data_source.dart';
 import 'calendar/calendar_models.dart';
 import 'calendar/calendar_period_view.dart';
+import 'backup/backup_restore_surface.dart';
 import 'commitments/commitment_lifecycle_controller.dart';
 import 'commitments/commitment_lifecycle_surface.dart';
 import 'conflict_resolution/conflict_resolution_controller.dart';
@@ -15,6 +16,7 @@ import 'conflict_resolution/conflict_resolution_surface.dart';
 import 'evaluation_attention/attention_surfaces.dart';
 import 'evaluation_attention/evaluation_attention_controller.dart';
 import 'evaluation_attention/evaluation_plan_surface.dart';
+import 'exports/export_surface.dart';
 import 'identity/identity_devices_surface.dart';
 import 'placements/placement_management_surface.dart';
 import 'placements/placement_progress_controller.dart';
@@ -29,6 +31,9 @@ import 'support/student_profile_surface.dart';
 import 'support/support_help_surface.dart';
 import 'theme_contract.dart';
 import 'variant_f_theme.dart';
+
+typedef ExportWorkflowFactory =
+    ExportWorkflowService Function(ExportReauthenticationGate gate);
 
 final class ClinicalCalendarApp extends StatelessWidget {
   const ClinicalCalendarApp({
@@ -49,6 +54,8 @@ final class ClinicalCalendarApp extends StatelessWidget {
     this.identityEmail,
     this.onLocalCopyRemoved,
     this.createAccountBackup,
+    this.portableBackupWorkflows,
+    this.exportWorkflowFactory,
     this.recoveryStore,
     this.recoveryService,
     this.recoveryProofGate,
@@ -75,6 +82,8 @@ final class ClinicalCalendarApp extends StatelessWidget {
   final String? identityEmail;
   final Future<void> Function()? onLocalCopyRemoved;
   final Future<bool> Function(String passphrase)? createAccountBackup;
+  final PortableBackupWorkflows? portableBackupWorkflows;
+  final ExportWorkflowFactory? exportWorkflowFactory;
   final RecoveryStore? recoveryStore;
   final RecoveryApplicationService? recoveryService;
   final OneShotRecoveryReauthenticationGate? recoveryProofGate;
@@ -99,6 +108,8 @@ final class ClinicalCalendarApp extends StatelessWidget {
         identityEmail: identityEmail,
         onLocalCopyRemoved: onLocalCopyRemoved,
         createAccountBackup: createAccountBackup,
+        portableBackupWorkflows: portableBackupWorkflows,
+        exportWorkflowFactory: exportWorkflowFactory,
         recoveryStore: recoveryStore,
         recoveryService: recoveryService,
         recoveryProofGate: recoveryProofGate,
@@ -196,6 +207,8 @@ final class _ApplicationHost extends StatefulWidget {
     required this.identityEmail,
     required this.onLocalCopyRemoved,
     required this.createAccountBackup,
+    required this.portableBackupWorkflows,
+    required this.exportWorkflowFactory,
     required this.recoveryStore,
     required this.recoveryService,
     required this.recoveryProofGate,
@@ -214,6 +227,8 @@ final class _ApplicationHost extends StatefulWidget {
   final String? identityEmail;
   final Future<void> Function()? onLocalCopyRemoved;
   final Future<bool> Function(String passphrase)? createAccountBackup;
+  final PortableBackupWorkflows? portableBackupWorkflows;
+  final ExportWorkflowFactory? exportWorkflowFactory;
   final RecoveryStore? recoveryStore;
   final RecoveryApplicationService? recoveryService;
   final OneShotRecoveryReauthenticationGate? recoveryProofGate;
@@ -469,11 +484,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       case 'backup':
         await _openContextualRoute(
           title: 'Portable Backup',
-          child: const _UnavailableAttentionWorkflow(
-            message:
-                'Portable backup is not available in this build. No backup '
-                'state was changed.',
-          ),
+          child: _portableBackupSurface(),
         );
       case 'synchronization':
         await _conflictController.load();
@@ -574,11 +585,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       case AttentionDestination.createPortableBackup:
         await _openContextualRoute(
           title: 'Portable Backup',
-          child: const _UnavailableAttentionWorkflow(
-            message:
-                'Portable backup is not available in this build. No backup '
-                'state was changed.',
-          ),
+          child: _portableBackupSurface(),
         );
       case AttentionDestination.resolveSynchronization:
         await _conflictController.load();
@@ -770,7 +777,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       context: context,
       backgroundColor: context.clinicalColors.structureRaised,
       isScrollControlled: true,
-      constraints: const BoxConstraints(maxWidth: 560, maxHeight: 440),
+      constraints: const BoxConstraints(maxWidth: 560, maxHeight: 560),
       builder: (context) => SafeArea(
         child: ApplicationMenu(
           onSelected: (destination) => Navigator.pop(context, destination),
@@ -810,7 +817,8 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     final exited = _destination;
     setState(() => _destination = null);
     if (exited == ClinicalCalendarDestination.clinicalPlacements ||
-        exited == ClinicalCalendarDestination.settings) {
+        exited == ClinicalCalendarDestination.settings ||
+        exited == ClinicalCalendarDestination.backupRestore) {
       unawaited(_refreshAfterDestinationExit(exited!));
     }
     if (returnToMenu) {
@@ -821,6 +829,10 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   Future<void> _refreshAfterDestinationExit(
     ClinicalCalendarDestination destination,
   ) async {
+    if (destination == ClinicalCalendarDestination.backupRestore) {
+      await _initializeScheduling();
+      return;
+    }
     await _attentionController.load();
     if (!mounted) return;
     if (destination == ClinicalCalendarDestination.clinicalPlacements) {
@@ -970,6 +982,24 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             );
           },
         );
+      case ClinicalCalendarDestination.backupRestore:
+        return _portableBackupSurface();
+      case ClinicalCalendarDestination.exports:
+        final factory = widget.exportWorkflowFactory;
+        if (factory == null) {
+          return const _UnavailableAttentionWorkflow(
+            message: 'Exports are not available in this build.',
+          );
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: ExportSurface(
+            workflow: factory(
+              _CallbackExportReauthenticationGate(_freshExportReauthentication),
+            ),
+            clinicalPlacementId: _placementController.activePlacementId,
+          ),
+        );
       case ClinicalCalendarDestination.settings:
         final devicePolicy = _notificationDevicePolicy;
         return _supportBody(
@@ -1034,12 +1064,46 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     final verified = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) =>
-          _RecoveryOtpDialog(identity: identity, email: email),
+      builder: (context) => _RecoveryOtpDialog(
+        identity: identity,
+        email: email,
+        title: 'Reauthenticate to clear Trash',
+      ),
     );
     if (verified != true) return false;
     proof.grantOnce();
     return true;
+  }
+
+  Future<bool> _freshExportReauthentication(String reason) async {
+    final identity = widget.identity;
+    final email = widget.identityEmail;
+    if (identity == null || email == null) return false;
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => _RecoveryOtpDialog(
+            identity: identity,
+            email: email,
+            title: reason,
+          ),
+        ) ==
+        true;
+  }
+
+  Widget _portableBackupSurface() {
+    final workflows = widget.portableBackupWorkflows;
+    if (workflows == null) {
+      return const _UnavailableAttentionWorkflow(
+        message: 'Portable backup is not available in this build.',
+      );
+    }
+    return BackupRestoreSurface(
+      showAppBar: false,
+      onCreateBackup: workflows.create,
+      onChooseBackup: workflows.choose,
+      onApplyRestore: workflows.apply,
+    );
   }
 
   List<ClinicalTemplateDefaultOption> get _clinicalDefaults => [
@@ -1071,11 +1135,26 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   ];
 }
 
+final class _CallbackExportReauthenticationGate
+    implements ExportReauthenticationGate {
+  const _CallbackExportReauthenticationGate(this.callback);
+
+  final Future<bool> Function(String reason) callback;
+
+  @override
+  Future<bool> reauthenticate({required String reason}) => callback(reason);
+}
+
 final class _RecoveryOtpDialog extends StatefulWidget {
-  const _RecoveryOtpDialog({required this.identity, required this.email});
+  const _RecoveryOtpDialog({
+    required this.identity,
+    required this.email,
+    required this.title,
+  });
 
   final PasswordlessIdentityService identity;
   final String email;
+  final String title;
 
   @override
   State<_RecoveryOtpDialog> createState() => _RecoveryOtpDialogState();
@@ -1095,7 +1174,7 @@ final class _RecoveryOtpDialogState extends State<_RecoveryOtpDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Reauthenticate to clear Trash'),
+    title: Text(widget.title),
     content: Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
