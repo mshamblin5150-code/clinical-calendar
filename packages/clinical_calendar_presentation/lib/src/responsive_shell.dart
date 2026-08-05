@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'tactical_frame.dart';
 import 'variant_f_theme.dart';
 
 enum ClinicalCalendarDestination {
@@ -127,7 +128,12 @@ final class ResponsiveApplicationShell extends StatelessWidget {
                         children: [
                           KeyedSubtree(
                             key: const Key('central-content'),
-                            child: slots.centralContent,
+                            child: VariantFTacticalFrame(
+                              padding: const EdgeInsets.all(7),
+                              chamfer: 14,
+                              statusLight: true,
+                              child: slots.centralContent,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           KeyedSubtree(
@@ -172,7 +178,12 @@ final class ResponsiveApplicationShell extends StatelessWidget {
                 children: [
                   KeyedSubtree(
                     key: const Key('central-content'),
-                    child: slots.centralContent,
+                    child: VariantFTacticalFrame(
+                      padding: const EdgeInsets.all(7),
+                      chamfer: 14,
+                      statusLight: true,
+                      child: slots.centralContent,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   LayoutBuilder(
@@ -217,47 +228,56 @@ final class ResponsiveApplicationShell extends StatelessWidget {
         ],
       ),
     ),
-    bottomNavigationBar: NavigationBar(
-      key: const Key('bottom-navigation'),
-      selectedIndex: mobileIndex,
-      onDestinationSelected: (index) {
-        switch (index) {
-          case 0:
-            onOpenDestination(ClinicalCalendarDestination.calendar);
-            return;
-          case 1:
-            onOpenDestination(ClinicalCalendarDestination.calendar);
-            return;
-          case 2:
-            onOpenDestination(ClinicalCalendarDestination.clinicalPlacements);
-            return;
-          case 3:
-            onOpenDestination(ClinicalCalendarDestination.notifications);
-            return;
-          case 4:
-            onOpenDestination(ClinicalCalendarDestination.settings);
-            return;
-        }
-      },
-      destinations: const [
-        NavigationDestination(icon: Icon(Icons.today_outlined), label: 'Today'),
-        NavigationDestination(
-          icon: Icon(Icons.calendar_month_outlined),
-          label: 'Calendar',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.track_changes_outlined),
-          label: 'Placements',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.notifications_outlined),
-          label: 'Attention',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.settings_outlined),
-          label: 'Settings',
-        ),
-      ],
+    bottomNavigationBar: VariantFTacticalFrame(
+      key: const Key('bottom-navigation-frame'),
+      padding: EdgeInsets.zero,
+      chamfer: 10,
+      recessed: false,
+      child: NavigationBar(
+        key: const Key('bottom-navigation'),
+        selectedIndex: mobileIndex,
+        onDestinationSelected: (index) {
+          switch (index) {
+            case 0:
+              onOpenDestination(ClinicalCalendarDestination.calendar);
+              return;
+            case 1:
+              onOpenDestination(ClinicalCalendarDestination.calendar);
+              return;
+            case 2:
+              onOpenDestination(ClinicalCalendarDestination.clinicalPlacements);
+              return;
+            case 3:
+              onOpenDestination(ClinicalCalendarDestination.notifications);
+              return;
+            case 4:
+              onOpenDestination(ClinicalCalendarDestination.settings);
+              return;
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.today_outlined),
+            label: 'Today',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            label: 'Calendar',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.track_changes_outlined),
+            label: 'Placements',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.notifications_outlined),
+            label: 'Attention',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            label: 'Settings',
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -325,7 +345,17 @@ final class DestinationSurface extends StatelessWidget {
       ),
       title: Text(destination.label),
     ),
-    body: SafeArea(child: child),
+    body: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: VariantFTacticalFrame(
+          padding: const EdgeInsets.all(8),
+          chamfer: 14,
+          statusLight: true,
+          child: child,
+        ),
+      ),
+    ),
   );
 }
 
@@ -342,104 +372,38 @@ final class ShellPanel extends StatelessWidget {
   final Color? accent;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    foregroundPainter: _TacticalFramePainter(
-      color: accent ?? context.clinicalColors.insetBorder,
-      insetColor: context.clinicalColors.insetBorder,
-    ),
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.clinicalColors.structure,
-        border: Border.all(
-          color: accent ?? context.clinicalColors.insetBorder,
-          width: context.clinicalMetrics.borderWidth,
-        ),
-        borderRadius: BorderRadius.circular(
-          context.clinicalMetrics.cornerRadius,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: VariantFColors.shadow,
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget build(BuildContext context) => VariantFTacticalFrame(
+    accent: accent,
+    chamfer: 13,
+    statusLight: true,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    label.toUpperCase(),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Divider(
-                    color: (accent ?? context.clinicalColors.insetBorder)
-                        .withValues(alpha: .65),
-                    height: 1,
-                  ),
-                ),
-              ],
+            Flexible(
+              child: Text(
+                label.toUpperCase(),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
-            const SizedBox(height: 10),
-            child,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Divider(
+                color: (accent ?? context.clinicalColors.insetBorder)
+                    .withValues(alpha: .75),
+                height: 1,
+                thickness: 1,
+              ),
+            ),
+            const SizedBox(width: 22),
           ],
         ),
-      ),
+        const SizedBox(height: 10),
+        child,
+      ],
     ),
   );
-}
-
-final class _TacticalFramePainter extends CustomPainter {
-  const _TacticalFramePainter({required this.color, required this.insetColor});
-
-  final Color color;
-  final Color insetColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.width < 28 || size.height < 28) return;
-    final insetPaint = Paint()
-      ..color = insetColor.withValues(alpha: .45)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawRect(
-      Rect.fromLTWH(4.5, 4.5, size.width - 9, size.height - 9),
-      insetPaint,
-    );
-
-    final cornerPaint = Paint()
-      ..color = color.withValues(alpha: .9)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    const notch = 9.0;
-    const run = 20.0;
-    final path = Path()
-      ..moveTo(0, notch)
-      ..lineTo(notch, 0)
-      ..lineTo(run, 0)
-      ..moveTo(size.width - run, 0)
-      ..lineTo(size.width - notch, 0)
-      ..lineTo(size.width, notch)
-      ..moveTo(size.width, size.height - notch)
-      ..lineTo(size.width - notch, size.height)
-      ..lineTo(size.width - run, size.height)
-      ..moveTo(run, size.height)
-      ..lineTo(notch, size.height)
-      ..lineTo(0, size.height - notch);
-    canvas.drawPath(path, cornerPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _TacticalFramePainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.insetColor != insetColor;
 }
 
 final class _CommandBar extends StatelessWidget {
@@ -535,41 +499,96 @@ final class _CompactHeader extends StatelessWidget {
   final Widget profileAvatar;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => VariantFTacticalFrame(
     key: const Key('compact-header'),
-    constraints: const BoxConstraints(minHeight: 56),
-    decoration: BoxDecoration(
-      color: context.clinicalColors.structure,
-      border: Border(
-        bottom: BorderSide(color: context.clinicalColors.insetBorder),
+    padding: const EdgeInsets.fromLTRB(8, 4, 8, 7),
+    chamfer: 11,
+    recessed: false,
+    statusLight: true,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              key: const Key('mobile-menu-action'),
+              tooltip: 'Application menu',
+              onPressed: onOpenMenu,
+              icon: const Icon(Icons.menu),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                'Clinical Calendar',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            IconButton(
+              key: const Key('compact-add-schedule'),
+              tooltip: 'Add schedule',
+              onPressed: onAddSchedule,
+              icon: const Icon(Icons.add),
+            ),
+            profileAvatar,
+          ],
+        ),
+        const SizedBox(height: 2),
+        const _CompactStatusRail(),
+      ],
+    ),
+  );
+}
+
+final class _CompactStatusRail extends StatelessWidget {
+  const _CompactStatusRail();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: 'Operational status rail',
+    child: SizedBox(
+      height: 34,
+      child: Row(
+        children: const [
+          _StatusRailCell(
+            icon: Icons.warning_amber_rounded,
+            color: VariantFColors.urgent,
+          ),
+          _StatusRailCell(
+            icon: Icons.schedule_outlined,
+            color: VariantFColors.muted,
+          ),
+          _StatusRailCell(
+            icon: Icons.description_outlined,
+            color: VariantFColors.muted,
+          ),
+          _StatusRailCell(
+            icon: Icons.check_circle_outline,
+            color: VariantFColors.primary,
+          ),
+        ],
       ),
     ),
-    padding: const EdgeInsets.symmetric(horizontal: 8),
-    child: Row(
-      children: [
-        IconButton(
-          key: const Key('mobile-menu-action'),
-          tooltip: 'Application menu',
-          onPressed: onOpenMenu,
-          icon: const Icon(Icons.menu),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            'Clinical Calendar',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-        ),
-        IconButton(
-          key: const Key('compact-add-schedule'),
-          tooltip: 'Add schedule',
-          onPressed: onAddSchedule,
-          icon: const Icon(Icons.add),
-        ),
-        profileAvatar,
-      ],
+  );
+}
+
+final class _StatusRailCell extends StatelessWidget {
+  const _StatusRailCell({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Container(
+      height: double.infinity,
+      decoration: BoxDecoration(
+        color: VariantFColors.control,
+        border: Border.all(color: context.clinicalColors.insetBorder),
+      ),
+      alignment: Alignment.center,
+      child: Icon(icon, size: 18, color: color),
     ),
   );
 }

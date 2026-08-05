@@ -257,9 +257,9 @@ ThemeData buildVariantFTheme() {
       shadowColor: VariantFColors.shadow,
       elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
+      shape: BeveledRectangleBorder(
         side: const BorderSide(color: VariantFColors.border),
-        borderRadius: BorderRadius.circular(metrics.cornerRadius),
+        borderRadius: BorderRadius.circular(8),
       ),
     ),
     appBarTheme: const AppBarTheme(
@@ -281,9 +281,9 @@ ThemeData buildVariantFTheme() {
       surfaceTintColor: Colors.transparent,
       elevation: 16,
       shadowColor: VariantFColors.shadow,
-      shape: RoundedRectangleBorder(
+      shape: BeveledRectangleBorder(
         side: const BorderSide(color: VariantFColors.controlBorder),
-        borderRadius: BorderRadius.circular(metrics.cornerRadius),
+        borderRadius: BorderRadius.circular(10),
       ),
     ),
     bottomSheetTheme: const BottomSheetThemeData(
@@ -339,9 +339,7 @@ ThemeData buildVariantFTheme() {
           fontWeight: FontWeight.w700,
           letterSpacing: .7,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(metrics.cornerRadius),
-        ),
+        shape: BeveledRectangleBorder(borderRadius: BorderRadius.circular(7)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -354,9 +352,7 @@ ThemeData buildVariantFTheme() {
           fontWeight: FontWeight.w700,
           letterSpacing: .7,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(metrics.cornerRadius),
-        ),
+        shape: BeveledRectangleBorder(borderRadius: BorderRadius.circular(7)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -366,9 +362,7 @@ ThemeData buildVariantFTheme() {
           fontWeight: FontWeight.w700,
           letterSpacing: .7,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(metrics.cornerRadius),
-        ),
+        shape: BeveledRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
@@ -387,9 +381,7 @@ ThemeData buildVariantFTheme() {
           BorderSide(color: VariantFColors.controlBorder),
         ),
         shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(metrics.cornerRadius),
-          ),
+          BeveledRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
         textStyle: const WidgetStatePropertyAll(
           TextStyle(fontWeight: FontWeight.w700, letterSpacing: .6),
@@ -401,15 +393,14 @@ ThemeData buildVariantFTheme() {
       selectedColor: VariantFColors.controlActive,
       disabledColor: VariantFColors.control,
       side: const BorderSide(color: VariantFColors.controlBorder),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(metrics.cornerRadius),
-      ),
+      shape: BeveledRectangleBorder(borderRadius: BorderRadius.circular(6)),
       labelStyle: const TextStyle(color: VariantFColors.text),
     ),
     navigationBarTheme: const NavigationBarThemeData(
       height: 64,
-      backgroundColor: VariantFColors.surface,
+      backgroundColor: VariantFColors.background,
       indicatorColor: VariantFColors.controlActive,
+      elevation: 0,
       labelTextStyle: WidgetStatePropertyAll(
         TextStyle(
           color: VariantFColors.muted,

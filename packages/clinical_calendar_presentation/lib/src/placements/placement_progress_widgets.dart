@@ -5,6 +5,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../tactical_frame.dart';
 import '../variant_f_theme.dart';
 import 'placement_progress_controller.dart';
 import 'placement_specialty_icon.dart';
@@ -655,13 +656,11 @@ final class _TacticalPanel extends StatelessWidget {
   final bool expandChild;
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: context.clinicalColors.structure,
-      border: Border.all(color: context.clinicalColors.insetBorder),
-      borderRadius: BorderRadius.circular(context.clinicalMetrics.cornerRadius),
-    ),
-    padding: const EdgeInsets.all(10),
+  Widget build(BuildContext context) => VariantFTacticalFrame(
+    accent: statusColor,
+    chamfer: 13,
+    statusLight: true,
+    padding: const EdgeInsets.all(12),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -682,6 +681,12 @@ final class _TacticalPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: statusColor,
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: statusColor!.withValues(alpha: .45),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
               ),
             ?trailing,
