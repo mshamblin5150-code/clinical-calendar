@@ -56,6 +56,68 @@ void main() {
     expect(find.text('PEDIATRICS'), findsOneWidget);
   });
 
+  testWidgets('narrow placement dock wraps full Clinical Placement names', (
+    tester,
+  ) async {
+    final harness = _Harness();
+    await harness.controller.load();
+    await _pump(
+      tester,
+      SizedBox(
+        width: 138,
+        child: PlacementDock(
+          controller: harness.controller,
+          studentId: _studentId,
+        ),
+      ),
+      size: const Size(138, 900),
+    );
+
+    final dock = find.byKey(const Key('placement-dock-surface'));
+    for (final name in const ['Family Medicine', 'Pediatrics']) {
+      final nameFinder = find.descendant(of: dock, matching: find.text(name));
+      expect(nameFinder, findsOneWidget);
+      final label = tester.widget<Text>(nameFinder);
+      expect(
+        label.overflow,
+        isNot(TextOverflow.ellipsis),
+        reason: '$name must continue onto another line instead of truncating.',
+      );
+      expect(
+        label.maxLines,
+        isNot(1),
+        reason: '$name must have room to continue onto another line.',
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('management list wraps full Clinical Placement names', (
+    tester,
+  ) async {
+    final harness = _Harness(familyName: 'Acceptance Family Medicine');
+    await harness.controller.load();
+    await _pump(
+      tester,
+      PlacementManagementSurface(
+        controller: harness.controller,
+        studentId: _studentId,
+      ),
+      size: const Size(1056, 1691),
+    );
+
+    final choice = find.byKey(const Key('manage-placement-$_familyId'));
+    final nameFinder = find.descendant(
+      of: choice,
+      matching: find.text('Acceptance Family Medicine'),
+    );
+    expect(nameFinder, findsOneWidget);
+    final label = tester.widget<Text>(nameFinder);
+    expect(label.overflow, isNot(TextOverflow.ellipsis));
+    expect(label.maxLines, isNot(1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'progress reconciles Preceptors, Unattributed, pace, and segments',
     (tester) async {
@@ -340,8 +402,8 @@ Future<void> _pump(
 }
 
 final class _Harness {
-  _Harness({bool completed = false}) {
-    _seed(completed: completed);
+  _Harness({bool completed = false, String familyName = 'Family Medicine'}) {
+    _seed(completed: completed, familyName: familyName);
     controller = PlacementProgressController(
       service: PlacementApplicationService(
         repositories: registry,
@@ -357,7 +419,7 @@ final class _Harness {
   late final _Registry registry = _Registry(repositories);
   late final PlacementProgressController controller;
 
-  void _seed({required bool completed}) {
+  void _seed({required bool completed, required String familyName}) {
     final smith = Preceptor(id: _smithId, name: 'Dr. Smith');
     final nguyen = Preceptor(id: _nguyenId, name: 'Dr. Nguyen');
     repositories.preceptors
@@ -372,7 +434,7 @@ final class _Harness {
       ..seed(
         ClinicalPlacement.restore(
           id: _familyId,
-          name: 'Family Medicine',
+          name: familyName,
           targetHours: TargetHours.fromWholeHours(270),
           startDate: LocalDate(2026, 8, 1),
           completionDeadline: LocalDate(2026, 12, 31),

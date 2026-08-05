@@ -141,62 +141,71 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
         );
       }
       final calendar = snapshot.requireData;
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          color: context.clinicalColors.structure,
-          border: Border.all(color: context.clinicalColors.insetBorder),
-          borderRadius: BorderRadius.circular(
-            context.clinicalMetrics.cornerRadius,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _CalendarToolbar(
-              period: _period,
-              title: _periodTitle(_anchor, _period, widget.weekStartsOn),
-              onPrevious: () => _navigate(-1),
-              onNext: () => _navigate(1),
-              onPeriod: _changePeriod,
+      return LayoutBuilder(
+        builder: (context, outerConstraints) {
+          final periodView = LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 600;
+              return switch (_period) {
+                CalendarPeriod.month => _MonthView(
+                  anchor: _anchor,
+                  today: widget.today,
+                  snapshot: calendar,
+                  selectedDates: _selectedDates,
+                  weekStartsOn: widget.weekStartsOn,
+                  compact: compact,
+                  twelveHourTime: widget.twelveHourTime,
+                  onActivate: _activateDate,
+                ),
+                CalendarPeriod.week => _WeekView(
+                  anchor: _anchor,
+                  today: widget.today,
+                  snapshot: calendar,
+                  selectedDates: _selectedDates,
+                  weekStartsOn: widget.weekStartsOn,
+                  compact: compact,
+                  twelveHourTime: widget.twelveHourTime,
+                  onActivate: _activateDate,
+                ),
+                CalendarPeriod.agenda => _AgendaView(
+                  anchor: _anchor,
+                  today: widget.today,
+                  snapshot: calendar,
+                  selectedDates: _selectedDates,
+                  compact: compact,
+                  twelveHourTime: widget.twelveHourTime,
+                  onActivate: _activateDate,
+                ),
+              };
+            },
+          );
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              color: context.clinicalColors.structure,
+              border: Border.all(color: context.clinicalColors.insetBorder),
+              borderRadius: BorderRadius.circular(
+                context.clinicalMetrics.cornerRadius,
+              ),
             ),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 600;
-                return switch (_period) {
-                  CalendarPeriod.month => _MonthView(
-                    anchor: _anchor,
-                    today: widget.today,
-                    snapshot: calendar,
-                    selectedDates: _selectedDates,
-                    weekStartsOn: widget.weekStartsOn,
-                    compact: compact,
-                    twelveHourTime: widget.twelveHourTime,
-                    onActivate: _activateDate,
-                  ),
-                  CalendarPeriod.week => _WeekView(
-                    anchor: _anchor,
-                    today: widget.today,
-                    snapshot: calendar,
-                    selectedDates: _selectedDates,
-                    weekStartsOn: widget.weekStartsOn,
-                    compact: compact,
-                    twelveHourTime: widget.twelveHourTime,
-                    onActivate: _activateDate,
-                  ),
-                  CalendarPeriod.agenda => _AgendaView(
-                    anchor: _anchor,
-                    today: widget.today,
-                    snapshot: calendar,
-                    selectedDates: _selectedDates,
-                    compact: compact,
-                    twelveHourTime: widget.twelveHourTime,
-                    onActivate: _activateDate,
-                  ),
-                };
-              },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _CalendarToolbar(
+                  period: _period,
+                  title: _periodTitle(_anchor, _period, widget.weekStartsOn),
+                  onPrevious: () => _navigate(-1),
+                  onNext: () => _navigate(1),
+                  onPeriod: _changePeriod,
+                ),
+                if (_period == CalendarPeriod.week &&
+                    outerConstraints.hasBoundedHeight)
+                  Expanded(child: periodView)
+                else
+                  periodView,
+              ],
             ),
-          ],
-        ),
+          );
+        },
       );
     },
   );
@@ -644,7 +653,10 @@ final class _WeekView extends StatelessWidget {
       key: const Key('week-view'),
       padding: const EdgeInsets.all(6),
       child: compact
-          ? Column(children: children)
+          ? SingleChildScrollView(
+              key: const Key('week-scroll'),
+              child: Column(children: children),
+            )
           : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [for (final child in children) Expanded(child: child)],
