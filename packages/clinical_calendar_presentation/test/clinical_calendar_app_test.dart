@@ -124,6 +124,22 @@ void main() {
     expect(find.byKey(const Key('settings-templates-surface')), findsOneWidget);
   });
 
+  testWidgets('compact status rail indicators open real destinations', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(390, 844));
+
+    expect(find.byTooltip('Open Attention'), findsOneWidget);
+    expect(find.byTooltip('Open Today'), findsOneWidget);
+    expect(find.byTooltip('Open Clinical Placements'), findsOneWidget);
+    expect(find.byTooltip('Open Synchronization'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Open Synchronization'));
+    await tester.pumpAndSettle();
+    expect(find.text('Synchronization'), findsWidgets);
+    expect(find.byKey(const Key('close-action')), findsOneWidget);
+  });
+
   testWidgets('portrait tablet compacts progress and attention side by side', (
     tester,
   ) async {

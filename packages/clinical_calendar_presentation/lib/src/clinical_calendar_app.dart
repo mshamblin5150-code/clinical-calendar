@@ -950,6 +950,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       environmentName: widget.environmentName,
       onOpenMenu: _showMenu,
       onOpenDestination: _openDirect,
+      onOpenAttention: _openAttentionCenter,
       onAddSchedule: _openPlanning,
       slots: ResponsiveShellSlots(
         placementDock: _PlacementLoadState(

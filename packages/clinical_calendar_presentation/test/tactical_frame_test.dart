@@ -31,4 +31,23 @@ void main() {
     expect(find.text('TACTICAL PANEL'), findsOneWidget);
     expect(buildVariantFTheme().cardTheme.shape, isA<BeveledRectangleBorder>());
   });
+
+  testWidgets('mechanical chassis reserves space for mounted console rails', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildVariantFTheme(),
+        home: const VariantFMechanicalChassis(
+          child: SizedBox(width: 200, height: 300, child: Text('MODULE')),
+        ),
+      ),
+    );
+
+    final chassis = tester.getRect(find.byType(VariantFMechanicalChassis));
+    final module = tester.getRect(find.text('MODULE'));
+    expect(module.left, greaterThan(chassis.left));
+    expect(module.right, lessThan(chassis.right));
+    expect(find.byType(CustomPaint), findsWidgets);
+  });
 }
