@@ -180,6 +180,55 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('portrait placement dock keeps headings and names readable', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(1056, 1691));
+
+    final dock = find.byKey(const Key('placement-dock'));
+    final heading = find.descendant(
+      of: dock,
+      matching: find.text('MY PLACEMENTS'),
+    );
+    expect(heading, findsOneWidget);
+    expect(
+      tester.getSize(heading).height,
+      lessThanOrEqualTo(28),
+      reason: 'The portrait dock heading must remain on one readable line.',
+    );
+  });
+
+  testWidgets('portrait tablet Week owns a vertical scrollable', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(1056, 1691));
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(CalendarPeriodView),
+        matching: find.text('Week'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final week = find.byKey(const Key('week-view'));
+    expect(week, findsOneWidget);
+    final scrollable = find.descendant(
+      of: week,
+      matching: find.byType(Scrollable),
+    );
+    expect(scrollable, findsOneWidget);
+    final position = tester.state<ScrollableState>(scrollable).position;
+    expect(position.maxScrollExtent, greaterThan(0));
+    await tester.drag(week, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(
+      position.pixels,
+      greaterThan(0),
+      reason: 'Week must scroll within the clipped portrait calendar bay.',
+    );
+  });
+
   testWidgets('menu entry uses Back and returns to the application menu', (
     tester,
   ) async {

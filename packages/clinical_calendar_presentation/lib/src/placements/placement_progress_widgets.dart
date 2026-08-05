@@ -29,6 +29,7 @@ final class PlacementDock extends StatelessWidget {
     builder: (context, _) => _TacticalPanel(
       key: const Key('placement-dock-surface'),
       label: 'My placements',
+      stackedHeader: true,
       expandChild: true,
       trailing: IconButton(
         key: const Key('manage-placements-action'),
@@ -468,8 +469,6 @@ final class _PlacementDockRow extends StatelessWidget {
                     children: [
                       Text(
                         snapshot.placement.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 4),
@@ -647,6 +646,7 @@ final class _TacticalPanel extends StatelessWidget {
     this.trailing,
     this.statusColor,
     this.expandChild = false,
+    this.stackedHeader = false,
     super.key,
   });
 
@@ -655,40 +655,55 @@ final class _TacticalPanel extends StatelessWidget {
   final Widget? trailing;
   final Color? statusColor;
   final bool expandChild;
+  final bool stackedHeader;
 
   @override
   Widget build(BuildContext context) {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                label.toUpperCase(),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+        if (stackedHeader) ...[
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label.toUpperCase(),
+              maxLines: 1,
+              softWrap: false,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            if (statusColor != null)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: statusColor!.withValues(alpha: .45),
-                      blurRadius: 6,
-                    ),
-                  ],
+          ),
+          if (trailing != null)
+            Align(alignment: Alignment.centerRight, child: trailing),
+        ] else
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label.toUpperCase(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-            ?trailing,
-          ],
-        ),
+              if (statusColor != null)
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: statusColor!.withValues(alpha: .45),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                ),
+              ?trailing,
+            ],
+          ),
         const Divider(height: 14),
         if (expandChild) Expanded(child: child) else child,
       ],

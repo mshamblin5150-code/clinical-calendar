@@ -302,13 +302,7 @@ final class _PlacementChoice extends StatelessWidget {
               : context.clinicalColors.secondaryText,
         ),
         const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            snapshot.placement.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
+        Flexible(child: Text(snapshot.placement.name)),
       ],
     ),
   );
