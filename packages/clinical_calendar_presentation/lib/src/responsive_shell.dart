@@ -66,6 +66,7 @@ final class ResponsiveApplicationShell extends StatelessWidget {
     required this.environmentName,
     required this.onOpenMenu,
     required this.onOpenDestination,
+    required this.onOpenAttention,
     required this.onAddSchedule,
     this.mobileIndex = 1,
     super.key,
@@ -78,6 +79,7 @@ final class ResponsiveApplicationShell extends StatelessWidget {
   final String environmentName;
   final VoidCallback onOpenMenu;
   final ValueChanged<ClinicalCalendarDestination> onOpenDestination;
+  final VoidCallback onOpenAttention;
   final VoidCallback onAddSchedule;
   final int mobileIndex;
 
@@ -93,145 +95,153 @@ final class ResponsiveApplicationShell extends StatelessWidget {
   );
 
   Widget _desktop(BuildContext context) => Scaffold(
-    body: SafeArea(
-      child: Column(
-        children: [
-          _CommandBar(
-            environmentName: environmentName,
-            onOpenMenu: onOpenMenu,
-            onOpenHelp: () =>
-                onOpenDestination(ClinicalCalendarDestination.help),
-            onAddSchedule: onAddSchedule,
-            onOpenNotifications: () =>
-                onOpenDestination(ClinicalCalendarDestination.notifications),
-            onOpenSynchronization: () =>
-                onOpenDestination(ClinicalCalendarDestination.synchronization),
-            profileAvatar: slots.profileAvatar,
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    key: const Key('placement-dock'),
-                    width: 216,
-                    child: slots.placementDock,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      key: const Key('desktop-content-scroll'),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          KeyedSubtree(
-                            key: const Key('central-content'),
-                            child: VariantFTacticalFrame(
-                              padding: const EdgeInsets.all(7),
-                              chamfer: 14,
-                              statusLight: true,
-                              child: slots.centralContent,
+    body: VariantFMechanicalChassis(
+      child: SafeArea(
+        child: Column(
+          children: [
+            _CommandBar(
+              environmentName: environmentName,
+              onOpenMenu: onOpenMenu,
+              onOpenHelp: () =>
+                  onOpenDestination(ClinicalCalendarDestination.help),
+              onAddSchedule: onAddSchedule,
+              onOpenNotifications: () =>
+                  onOpenDestination(ClinicalCalendarDestination.notifications),
+              onOpenSynchronization: () => onOpenDestination(
+                ClinicalCalendarDestination.synchronization,
+              ),
+              profileAvatar: slots.profileAvatar,
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      key: const Key('placement-dock'),
+                      width: 216,
+                      child: slots.placementDock,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        key: const Key('desktop-content-scroll'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            KeyedSubtree(
+                              key: const Key('central-content'),
+                              child: VariantFTacticalFrame(
+                                padding: const EdgeInsets.all(7),
+                                chamfer: 14,
+                                statusLight: true,
+                                child: slots.centralContent,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          KeyedSubtree(
-                            key: const Key('planning-region'),
-                            child: slots.planningRegion,
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            KeyedSubtree(
+                              key: const Key('planning-region'),
+                              child: slots.planningRegion,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    key: const Key('insight-rail'),
-                    width: 232,
-                    child: slots.insightRail,
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      key: const Key('insight-rail'),
+                      width: 232,
+                      child: slots.insightRail,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
   );
 
   Widget _mobile(BuildContext context) => Scaffold(
-    body: SafeArea(
-      bottom: false,
-      child: Column(
-        children: [
-          _CompactHeader(
-            onOpenMenu: onOpenMenu,
-            onAddSchedule: onAddSchedule,
-            profileAvatar: slots.profileAvatar,
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              key: const Key('mobile-content-scroll'),
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  KeyedSubtree(
-                    key: const Key('central-content'),
-                    child: VariantFTacticalFrame(
-                      padding: const EdgeInsets.all(7),
-                      chamfer: 14,
-                      statusLight: true,
-                      child: slots.centralContent,
+    body: VariantFMechanicalChassis(
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _CompactHeader(
+              onOpenMenu: onOpenMenu,
+              onAddSchedule: onAddSchedule,
+              onOpenDestination: onOpenDestination,
+              onOpenAttention: onOpenAttention,
+              profileAvatar: slots.profileAvatar,
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                key: const Key('mobile-content-scroll'),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    KeyedSubtree(
+                      key: const Key('central-content'),
+                      child: VariantFTacticalFrame(
+                        padding: const EdgeInsets.all(7),
+                        chamfer: 14,
+                        statusLight: true,
+                        child: slots.centralContent,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final placement = KeyedSubtree(
-                        key: const Key('mobile-placement-summary'),
-                        child: slots.mobilePlacementSummary,
-                      );
-                      final attention = KeyedSubtree(
-                        key: const Key('mobile-attention'),
-                        child: slots.mobileAttention,
-                      );
-                      if (constraints.maxWidth >= 720) {
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 12),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final placement = KeyedSubtree(
+                          key: const Key('mobile-placement-summary'),
+                          child: slots.mobilePlacementSummary,
+                        );
+                        final attention = KeyedSubtree(
+                          key: const Key('mobile-attention'),
+                          child: slots.mobileAttention,
+                        );
+                        if (constraints.maxWidth >= 720) {
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: placement),
+                              const SizedBox(width: 12),
+                              Expanded(child: attention),
+                            ],
+                          );
+                        }
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Expanded(child: placement),
-                            const SizedBox(width: 12),
-                            Expanded(child: attention),
+                            placement,
+                            const SizedBox(height: 12),
+                            attention,
                           ],
                         );
-                      }
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          placement,
-                          const SizedBox(height: 12),
-                          attention,
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  KeyedSubtree(
-                    key: const Key('planning-region'),
-                    child: slots.planningRegion,
-                  ),
-                ],
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    KeyedSubtree(
+                      key: const Key('planning-region'),
+                      child: slots.planningRegion,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
     bottomNavigationBar: VariantFTacticalFrame(
       key: const Key('bottom-navigation-frame'),
       padding: EdgeInsets.zero,
       chamfer: 10,
+      mechanicalBezel: 7,
       recessed: false,
       child: NavigationBar(
         key: const Key('bottom-navigation'),
@@ -248,7 +258,7 @@ final class ResponsiveApplicationShell extends StatelessWidget {
               onOpenDestination(ClinicalCalendarDestination.clinicalPlacements);
               return;
             case 3:
-              onOpenDestination(ClinicalCalendarDestination.notifications);
+              onOpenAttention();
               return;
             case 4:
               onOpenDestination(ClinicalCalendarDestination.settings);
@@ -491,11 +501,15 @@ final class _CompactHeader extends StatelessWidget {
   const _CompactHeader({
     required this.onOpenMenu,
     required this.onAddSchedule,
+    required this.onOpenDestination,
+    required this.onOpenAttention,
     required this.profileAvatar,
   });
 
   final VoidCallback onOpenMenu;
   final VoidCallback onAddSchedule;
+  final ValueChanged<ClinicalCalendarDestination> onOpenDestination;
+  final VoidCallback onOpenAttention;
   final Widget profileAvatar;
 
   @override
@@ -535,14 +549,23 @@ final class _CompactHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 2),
-        const _CompactStatusRail(),
+        _CompactStatusRail(
+          onOpenDestination: onOpenDestination,
+          onOpenAttention: onOpenAttention,
+        ),
       ],
     ),
   );
 }
 
 final class _CompactStatusRail extends StatelessWidget {
-  const _CompactStatusRail();
+  const _CompactStatusRail({
+    required this.onOpenDestination,
+    required this.onOpenAttention,
+  });
+
+  final ValueChanged<ClinicalCalendarDestination> onOpenDestination;
+  final VoidCallback onOpenAttention;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -550,22 +573,34 @@ final class _CompactStatusRail extends StatelessWidget {
     child: SizedBox(
       height: 34,
       child: Row(
-        children: const [
+        children: [
           _StatusRailCell(
             icon: Icons.warning_amber_rounded,
             color: VariantFColors.urgent,
+            tooltip: 'Open Attention',
+            onPressed: onOpenAttention,
           ),
           _StatusRailCell(
             icon: Icons.schedule_outlined,
             color: VariantFColors.muted,
+            tooltip: 'Open Today',
+            onPressed: () =>
+                onOpenDestination(ClinicalCalendarDestination.calendar),
           ),
           _StatusRailCell(
             icon: Icons.description_outlined,
             color: VariantFColors.muted,
+            tooltip: 'Open Clinical Placements',
+            onPressed: () => onOpenDestination(
+              ClinicalCalendarDestination.clinicalPlacements,
+            ),
           ),
           _StatusRailCell(
             icon: Icons.check_circle_outline,
             color: VariantFColors.primary,
+            tooltip: 'Open Synchronization',
+            onPressed: () =>
+                onOpenDestination(ClinicalCalendarDestination.synchronization),
           ),
         ],
       ),
@@ -574,10 +609,17 @@ final class _CompactStatusRail extends StatelessWidget {
 }
 
 final class _StatusRailCell extends StatelessWidget {
-  const _StatusRailCell({required this.icon, required this.color});
+  const _StatusRailCell({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    required this.onPressed,
+  });
 
   final IconData icon;
   final Color color;
+  final String tooltip;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) => Expanded(
@@ -588,7 +630,13 @@ final class _StatusRailCell extends StatelessWidget {
         border: Border.all(color: context.clinicalColors.insetBorder),
       ),
       alignment: Alignment.center,
-      child: Icon(icon, size: 18, color: color),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.expand(),
+        icon: Icon(icon, size: 18, color: color),
+      ),
     ),
   );
 }
