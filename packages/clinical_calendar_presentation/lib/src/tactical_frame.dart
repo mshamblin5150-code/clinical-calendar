@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'mechanical_pixel_tiles.dart';
 import 'variant_f_theme.dart';
 
 /// A substantial mechanical panel adapted from the Variant F console chassis.
@@ -252,9 +253,80 @@ final class _MechanicalPanelHardwarePainter extends CustomPainter {
       );
     }
 
-    _drawLatch(canvas, size, edge, rail);
     for (final point in _fastenerPoints(size, chamfer, bezel)) {
       _drawSlottedFastener(canvas, point, rail);
+    }
+
+    final tilePalette = VariantFMechanicalPalette(
+      edge: edge,
+      highlight: VariantFColors.muted.withValues(alpha: .78),
+      metal: VariantFColors.controlBorder,
+      shadow: VariantFColors.background,
+      accent: edge,
+    );
+    final cornerSize = size.shortestSide < 90 ? 18.0 : 26.0;
+    paintVariantFMechanicalTile(
+      canvas,
+      Rect.fromLTWH(0, 0, cornerSize, cornerSize),
+      VariantFMechanicalTile.cornerClamp,
+      tilePalette,
+    );
+    paintVariantFMechanicalTile(
+      canvas,
+      Rect.fromLTWH(size.width - cornerSize, 0, cornerSize, cornerSize),
+      VariantFMechanicalTile.cornerClamp,
+      tilePalette,
+      turns: 1,
+    );
+    paintVariantFMechanicalTile(
+      canvas,
+      Rect.fromLTWH(
+        size.width - cornerSize,
+        size.height - cornerSize,
+        cornerSize,
+        cornerSize,
+      ),
+      VariantFMechanicalTile.cornerClamp,
+      tilePalette,
+      turns: 2,
+    );
+    paintVariantFMechanicalTile(
+      canvas,
+      Rect.fromLTWH(0, size.height - cornerSize, cornerSize, cornerSize),
+      VariantFMechanicalTile.cornerClamp,
+      tilePalette,
+      turns: 3,
+    );
+    if (size.width >= 150 && size.height >= 48) {
+      final latchWidth = (size.width * .13).clamp(52, 94).toDouble();
+      paintVariantFMechanicalTile(
+        canvas,
+        Rect.fromLTWH(size.width / 2 - latchWidth / 2, 0, latchWidth, 14),
+        VariantFMechanicalTile.recessedLatch,
+        tilePalette,
+      );
+      paintVariantFMechanicalTile(
+        canvas,
+        Rect.fromLTWH(size.width / 2 - 32, size.height - 10, 64, 10),
+        VariantFMechanicalTile.ventBank,
+        tilePalette,
+      );
+    }
+    if (size.height >= 120) {
+      paintVariantFMechanicalTile(
+        canvas,
+        Rect.fromLTWH(0, size.height / 2 - 20, 16, 40),
+        VariantFMechanicalTile.bridgeBracket,
+        tilePalette,
+        turns: 1,
+      );
+      paintVariantFMechanicalTile(
+        canvas,
+        Rect.fromLTWH(size.width - 16, size.height / 2 - 20, 16, 40),
+        VariantFMechanicalTile.bridgeBracket,
+        tilePalette,
+        turns: 3,
+      );
     }
 
     if (statusLight) {
@@ -323,9 +395,48 @@ final class _MechanicalChassisPainter extends CustomPainter {
       ..drawPath(right, railFill)
       ..drawPath(right, railEdge);
 
-    for (var y = 42.0; y < size.height - 32; y += 92) {
-      _drawRailModule(canvas, Offset(1, y), false, edge);
-      _drawRailModule(canvas, Offset(size.width - 1, y), true, edge);
+    final tilePalette = VariantFMechanicalPalette(
+      edge: edge,
+      highlight: VariantFColors.muted.withValues(alpha: .75),
+      metal: metal,
+      shadow: VariantFColors.background,
+      accent: VariantFColors.primary,
+    );
+    for (var y = 36.0; y < size.height - 32; y += 72) {
+      paintVariantFMechanicalTile(
+        canvas,
+        Rect.fromLTWH(0, y, 14, 42),
+        VariantFMechanicalTile.railCoupler,
+        tilePalette,
+      );
+      paintVariantFMechanicalTile(
+        canvas,
+        Rect.fromLTWH(size.width - 14, y, 14, 42),
+        VariantFMechanicalTile.railCoupler,
+        tilePalette,
+      );
+    }
+    paintVariantFMechanicalTile(
+      canvas,
+      Rect.fromLTWH(0, size.height - 42, 42, 42),
+      VariantFMechanicalTile.conduitElbow,
+      tilePalette,
+      turns: 3,
+    );
+    paintVariantFMechanicalTile(
+      canvas,
+      Rect.fromLTWH(size.width - 42, size.height - 42, 42, 42),
+      VariantFMechanicalTile.conduitElbow,
+      tilePalette,
+      turns: 2,
+    );
+    if (size.width > 180) {
+      paintVariantFMechanicalTile(
+        canvas,
+        Rect.fromLTWH(size.width / 2 - 32, 0, 64, 16),
+        VariantFMechanicalTile.bridgeBracket,
+        tilePalette,
+      );
     }
   }
 
@@ -428,59 +539,5 @@ void _drawSlottedFastener(Canvas canvas, Offset point, Color color) {
       Paint()
         ..color = color
         ..strokeWidth = .8,
-    );
-}
-
-void _drawLatch(Canvas canvas, Size size, Color edge, Color rail) {
-  if (size.width < 90 || size.height < 40) return;
-  final latchWidth = (size.width * .12).clamp(42, 92).toDouble();
-  final center = size.width / 2;
-  final latch = Path()
-    ..moveTo(center - latchWidth / 2, 0)
-    ..lineTo(center + latchWidth / 2, 0)
-    ..lineTo(center + latchWidth / 2 - 7, 7)
-    ..lineTo(center - latchWidth / 2 + 7, 7)
-    ..close();
-  canvas
-    ..drawPath(latch, Paint()..color = VariantFColors.background)
-    ..drawPath(
-      latch,
-      Paint()
-        ..color = edge
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
-    )
-    ..drawLine(
-      Offset(center - 8, 3.5),
-      Offset(center + 8, 3.5),
-      Paint()
-        ..color = rail
-        ..strokeWidth = 1,
-    );
-}
-
-void _drawRailModule(Canvas canvas, Offset center, bool right, Color edge) {
-  final direction = right ? -1.0 : 1.0;
-  final block = Path()
-    ..moveTo(center.dx, center.dy - 18)
-    ..lineTo(center.dx + direction * 8, center.dy - 12)
-    ..lineTo(center.dx + direction * 8, center.dy + 12)
-    ..lineTo(center.dx, center.dy + 18)
-    ..close();
-  canvas
-    ..drawPath(block, Paint()..color = VariantFColors.control)
-    ..drawPath(
-      block,
-      Paint()
-        ..color = edge
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
-    )
-    ..drawLine(
-      center.translate(direction * 3, -8),
-      center.translate(direction * 3, 8),
-      Paint()
-        ..color = edge.withValues(alpha: .7)
-        ..strokeWidth = 1.4,
     );
 }
