@@ -62,10 +62,11 @@ void main() {
     );
     await _pump(tester, harness.surface(), const Size(768, 900));
 
-    await tester.enterText(
-      find.byKey(const Key('lifecycle-date-field')),
-      '2026-08-12',
-    );
+    tester
+            .widget<TextField>(find.byKey(const Key('lifecycle-date-field')))
+            .controller!
+            .text =
+        '08-12-2026';
     await tester.enterText(
       find.byKey(const Key('lifecycle-start-field')),
       '1000',
@@ -78,7 +79,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.textContaining('Schedule Conflict on 2026-08-12'),
+      find.textContaining('Schedule Conflict on 08-12-2026'),
       findsOneWidget,
     );
     expect(
@@ -178,14 +179,15 @@ void main() {
       final before = harness.controller.missingProtectedDayWeeks!;
       await _pump(tester, harness.surface(), const Size(640, 760));
 
-      await tester.enterText(
-        find.byKey(const Key('lifecycle-date-field')),
-        '2026-08-11',
-      );
+      tester
+              .widget<TextField>(find.byKey(const Key('lifecycle-date-field')))
+              .controller!
+              .text =
+          '08-11-2026';
       await tester.tap(find.byKey(const Key('move-protected-day-action')));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining('Protected Day on 2026-08-11'),
+        find.textContaining('Protected Day on 08-11-2026'),
         findsOneWidget,
       );
       expect(
@@ -196,10 +198,11 @@ void main() {
         LocalDate(2026, 8, 9),
       );
 
-      await tester.enterText(
-        find.byKey(const Key('lifecycle-date-field')),
-        '2026-08-13',
-      );
+      tester
+              .widget<TextField>(find.byKey(const Key('lifecycle-date-field')))
+              .controller!
+              .text =
+          '08-13-2026';
       await tester.tap(find.byKey(const Key('move-protected-day-action')));
       await tester.pumpAndSettle();
       expect(

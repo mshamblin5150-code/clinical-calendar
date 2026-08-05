@@ -104,9 +104,15 @@ if (-not $Publisher) {
 }
 
 if (-not $SkipFlutterBuild) {
+  . (Join-Path $repoRoot 'tool\release\resolve_flutter_release_defines.ps1')
+  $releaseArguments = if ($certificate) {
+    Get-ClinicalCalendarReleaseFlutterArguments
+  } else {
+    @()
+  }
   Push-Location $appRoot
   try {
-    & $FlutterExecutable build windows --release
+    & $FlutterExecutable build windows --release @releaseArguments
     if ($LASTEXITCODE -ne 0) {
       throw "Flutter Windows release build failed with exit code $LASTEXITCODE."
     }

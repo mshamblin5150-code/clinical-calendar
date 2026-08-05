@@ -162,7 +162,7 @@ void main() {
 
     expect(_visiblePeriodTitle(tester), 'Aug 30 – Sep 5, 2026');
     expect(find.text('22:00–02:00 next day'), findsOneWidget);
-    expect(find.text('Continues from 2026-08-31'), findsOneWidget);
+    expect(find.text('Continues from 08-31-2026'), findsOneWidget);
     expect(find.byKey(const Key('week-day-2026-09-01')), findsOneWidget);
   });
 

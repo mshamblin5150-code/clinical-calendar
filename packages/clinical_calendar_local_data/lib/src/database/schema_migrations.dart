@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 9;
+  static const latestVersion = 12;
 
   final MigrationTestHook? _testHook;
 
@@ -475,5 +475,158 @@ final Map<int, List<String>> _statements = {
       ON outbox_operations(student_id, created_at_utc)
       WHERE acknowledged_at_utc IS NULL
         AND terminal_rejected_at_utc IS NULL''',
+  ],
+  10: [
+    // A parent and its dependent records could previously be submitted in
+    // timestamp order. The server correctly rejected the dependent records,
+    // then cached those decisions by idempotency key. Preserve that history
+    // and enqueue one fresh evaluation now that pending operations are ordered
+    // by relationship dependency.
+    '''INSERT INTO outbox_operations (
+      id, student_id, idempotency_key, entity_type, entity_id,
+      operation_type, base_revision, payload_json, created_at_utc,
+      attempt_count, next_attempt_at_utc, acknowledged_cursor,
+      acknowledged_at_utc, last_failure_code, terminal_rejection_code,
+      terminal_rejected_at_utc
+    )
+    SELECT
+      lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) ||
+        '-4' || substr(lower(hex(randomblob(2))), 2) || '-' ||
+        substr('89ab', 1 + abs(random()) % 4, 1) ||
+        substr(lower(hex(randomblob(2))), 2) || '-' ||
+        lower(hex(randomblob(6))),
+      rejected.student_id,
+      lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) ||
+        '-4' || substr(lower(hex(randomblob(2))), 2) || '-' ||
+        substr('89ab', 1 + abs(random()) % 4, 1) ||
+        substr(lower(hex(randomblob(2))), 2) || '-' ||
+        lower(hex(randomblob(6))),
+      rejected.entity_type, rejected.entity_id, rejected.operation_type,
+      rejected.base_revision, rejected.payload_json, rejected.created_at_utc,
+      0, NULL, NULL, NULL, NULL, NULL, NULL
+    FROM outbox_operations AS rejected
+    WHERE rejected.acknowledged_at_utc IS NULL
+      AND rejected.terminal_rejection_code = 'relationship_violation'
+      AND rejected.terminal_rejected_at_utc IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM outbox_operations AS retry
+        WHERE retry.id <> rejected.id
+          AND retry.student_id = rejected.student_id
+          AND retry.entity_type = rejected.entity_type
+          AND retry.entity_id = rejected.entity_id
+          AND retry.operation_type = rejected.operation_type
+          AND retry.base_revision = rejected.base_revision
+          AND retry.payload_json = rejected.payload_json
+          AND retry.terminal_rejected_at_utc IS NULL
+      )''',
+  ],
+  11: [
+    // Version ten retried dependency-order failures while preserving their
+    // rejected operations for audit. Once an equivalent retry was accepted,
+    // the associated relationship conflict no longer requires user action.
+    '''UPDATE sync_conflicts
+      SET resolved_at_utc = (
+            SELECT accepted.acknowledged_at_utc
+            FROM outbox_operations AS rejected
+            JOIN outbox_operations AS accepted
+              ON accepted.student_id = rejected.student_id
+             AND accepted.entity_type = rejected.entity_type
+             AND accepted.entity_id = rejected.entity_id
+             AND accepted.operation_type = rejected.operation_type
+             AND accepted.base_revision = rejected.base_revision
+             AND accepted.payload_json = rejected.payload_json
+             AND accepted.acknowledged_at_utc IS NOT NULL
+            WHERE rejected.student_id = sync_conflicts.student_id
+              AND rejected.entity_type = sync_conflicts.entity_type
+              AND rejected.entity_id = sync_conflicts.entity_id
+              AND rejected.payload_json = sync_conflicts.local_snapshot_json
+              AND rejected.terminal_rejection_code = 'relationship_violation'
+            ORDER BY accepted.acknowledged_at_utc DESC
+            LIMIT 1
+          ),
+          resolution_json =
+            '{"choice":"automatic_retry","reason":"relationship_dependency_recovered"}',
+          updated_at_utc = (
+            SELECT accepted.acknowledged_at_utc
+            FROM outbox_operations AS rejected
+            JOIN outbox_operations AS accepted
+              ON accepted.student_id = rejected.student_id
+             AND accepted.entity_type = rejected.entity_type
+             AND accepted.entity_id = rejected.entity_id
+             AND accepted.operation_type = rejected.operation_type
+             AND accepted.base_revision = rejected.base_revision
+             AND accepted.payload_json = rejected.payload_json
+             AND accepted.acknowledged_at_utc IS NOT NULL
+            WHERE rejected.student_id = sync_conflicts.student_id
+              AND rejected.entity_type = sync_conflicts.entity_type
+              AND rejected.entity_id = sync_conflicts.entity_id
+              AND rejected.payload_json = sync_conflicts.local_snapshot_json
+              AND rejected.terminal_rejection_code = 'relationship_violation'
+            ORDER BY accepted.acknowledged_at_utc DESC
+            LIMIT 1
+          ),
+          revision = revision + 1
+      WHERE resolved_at_utc IS NULL
+        AND rejection_code = 'relationship_violation'
+        AND EXISTS (
+          SELECT 1
+          FROM outbox_operations AS rejected
+          JOIN outbox_operations AS accepted
+            ON accepted.student_id = rejected.student_id
+           AND accepted.entity_type = rejected.entity_type
+           AND accepted.entity_id = rejected.entity_id
+           AND accepted.operation_type = rejected.operation_type
+           AND accepted.base_revision = rejected.base_revision
+           AND accepted.payload_json = rejected.payload_json
+           AND accepted.acknowledged_at_utc IS NOT NULL
+          WHERE rejected.student_id = sync_conflicts.student_id
+            AND rejected.entity_type = sync_conflicts.entity_type
+            AND rejected.entity_id = sync_conflicts.entity_id
+            AND rejected.payload_json = sync_conflicts.local_snapshot_json
+            AND rejected.terminal_rejection_code = 'relationship_violation'
+      )''',
+  ],
+  12: [
+    // Reminder snooze/resolution truth was always modeled as synchronized,
+    // but the initial backend allowlist rejected it. Preserve that audit and
+    // enqueue one fresh operation after the backend contract is corrected.
+    '''INSERT INTO outbox_operations (
+      id, student_id, idempotency_key, entity_type, entity_id,
+      operation_type, base_revision, payload_json, created_at_utc,
+      attempt_count, next_attempt_at_utc, acknowledged_cursor,
+      acknowledged_at_utc, last_failure_code, terminal_rejection_code,
+      terminal_rejected_at_utc
+    )
+    SELECT
+      lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) ||
+        '-4' || substr(lower(hex(randomblob(2))), 2) || '-' ||
+        substr('89ab', 1 + abs(random()) % 4, 1) ||
+        substr(lower(hex(randomblob(2))), 2) || '-' ||
+        lower(hex(randomblob(6))),
+      rejected.student_id,
+      lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) ||
+        '-4' || substr(lower(hex(randomblob(2))), 2) || '-' ||
+        substr('89ab', 1 + abs(random()) % 4, 1) ||
+        substr(lower(hex(randomblob(2))), 2) || '-' ||
+        lower(hex(randomblob(6))),
+      rejected.entity_type, rejected.entity_id, rejected.operation_type,
+      rejected.base_revision, rejected.payload_json, rejected.created_at_utc,
+      0, NULL, NULL, NULL, NULL, NULL, NULL
+    FROM outbox_operations AS rejected
+    WHERE rejected.entity_type = 'reminder_state'
+      AND rejected.acknowledged_at_utc IS NULL
+      AND rejected.terminal_rejection_code = 'invalid_request'
+      AND rejected.terminal_rejected_at_utc IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM outbox_operations AS retry
+        WHERE retry.id <> rejected.id
+          AND retry.student_id = rejected.student_id
+          AND retry.entity_type = rejected.entity_type
+          AND retry.entity_id = rejected.entity_id
+          AND retry.operation_type = rejected.operation_type
+          AND retry.base_revision = rejected.base_revision
+          AND retry.payload_json = rejected.payload_json
+          AND retry.terminal_rejected_at_utc IS NULL
+      )''',
   ],
 };

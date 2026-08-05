@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
+import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_local_data/clinical_calendar_local_data.dart';
 import 'package:clinical_calendar_platform/clinical_calendar_platform.dart';
 import 'package:clinical_calendar_platform/clinical_calendar_identity_platform.dart';
@@ -403,6 +404,24 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     recoveryStore: recoveryStore,
     recoveryService: recoveryService,
     recoveryProofGate: recoveryProofGate,
+    scheduleDateFactory: (date) => ZonedScheduleDate.resolvingOffsets(
+      date: date,
+      timeZone: TimeZoneId(resolvedTimeZoneId),
+      offsetAt: (boundaryDate, boundaryTime) => UtcOffset.inMinutes(
+        timeZones
+            .offsetAtLocal(
+              DateTime.utc(
+                boundaryDate.year,
+                boundaryDate.month,
+                boundaryDate.day,
+                boundaryTime.hour,
+                boundaryTime.minute,
+              ),
+              resolvedTimeZoneId,
+            )
+            .inMinutes,
+      ),
+    ),
   );
 }
 

@@ -253,7 +253,7 @@ final class _AttentionRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
-              _kindIcon(item.kind),
+              _kindIcon(item),
               color: _urgencyColor(context, item.urgency),
               size: 20,
             ),
@@ -300,14 +300,20 @@ Color _urgencyColor(BuildContext context, AttentionUrgency urgency) =>
       AttentionUrgency.urgent => context.clinicalColors.urgent,
     };
 
-IconData _kindIcon(AttentionKind kind) => switch (kind) {
-  AttentionKind.confirmation => Icons.fact_check_outlined,
-  AttentionKind.protectedDayPlanning => Icons.shield_outlined,
-  AttentionKind.evaluation => Icons.assignment_turned_in_outlined,
-  AttentionKind.deadline => Icons.event_busy_outlined,
-  AttentionKind.backup => Icons.lock_clock_outlined,
-  AttentionKind.synchronization => Icons.sync_problem_outlined,
-};
+IconData _kindIcon(AttentionItem item) {
+  if (item.kind == AttentionKind.protectedDayPlanning &&
+      item.title == 'Planning Incomplete') {
+    return Icons.warning_amber_rounded;
+  }
+  return switch (item.kind) {
+    AttentionKind.confirmation => Icons.fact_check_outlined,
+    AttentionKind.protectedDayPlanning => Icons.shield_outlined,
+    AttentionKind.evaluation => Icons.assignment_turned_in_outlined,
+    AttentionKind.deadline => Icons.event_busy_outlined,
+    AttentionKind.backup => Icons.lock_clock_outlined,
+    AttentionKind.synchronization => Icons.sync_problem_outlined,
+  };
+}
 
 String _actionLabel(AttentionDestination destination) => switch (destination) {
   AttentionDestination.confirmClinicalSession => 'Confirm Clinical Session',

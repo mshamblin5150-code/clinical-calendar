@@ -2,7 +2,8 @@
 param(
     [string] $FlutterExecutable = 'flutter',
     [Parameter(Mandatory = $true)]
-    [string] $ExpectedSignerSha256
+    [string] $ExpectedSignerSha256,
+    [switch] $AllowUnconfiguredAcceptanceBuild
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,10 +27,16 @@ if (-not (Test-Path -LiteralPath $env:CLINICAL_CALENDAR_ANDROID_KEYSTORE_PATH -P
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $applicationPath = Join-Path $repositoryRoot 'apps/clinical_calendar'
 $apkPath = Join-Path $applicationPath 'build/app/outputs/flutter-apk/app-release.apk'
+. (Join-Path $repositoryRoot 'tool/release/resolve_flutter_release_defines.ps1')
+$releaseArguments = if ($AllowUnconfiguredAcceptanceBuild) {
+    @()
+} else {
+    Get-ClinicalCalendarReleaseFlutterArguments
+}
 
 Push-Location $applicationPath
 try {
-    & $FlutterExecutable build apk --release
+    & $FlutterExecutable build apk --release @releaseArguments
     if ($LASTEXITCODE -ne 0) {
         throw "Flutter Android release build failed with exit code $LASTEXITCODE."
     }
@@ -40,4 +47,3 @@ try {
 & (Join-Path $PSScriptRoot 'verify_signed_apk.ps1') `
     -ApkPath $apkPath `
     -ExpectedSignerSha256 $ExpectedSignerSha256
-

@@ -62,6 +62,84 @@ void main() {
   });
 
   test(
+    'local removal preview excludes only rejected audit rows with accepted replacements',
+    () async {
+      await registry.initialize();
+      const entityId = '00000000-0000-4000-8000-000000000091';
+      const payload = '{"entity_id":"$entityId"}';
+      const rejectedAt = '2026-08-03T12:00:00.000Z';
+      const liveCreatedAt = '2026-08-03T13:00:00.000Z';
+      database.execute(
+        '''INSERT INTO outbox_operations
+          (id, student_id, idempotency_key, entity_type, entity_id,
+           operation_type, base_revision, payload_json, created_at_utc,
+           terminal_rejection_code, terminal_rejected_at_utc)
+          VALUES
+          ('00000000-0000-4000-8000-000000000092', ?,
+           '00000000-0000-4000-8000-000000000093', 'evaluation_plan', ?,
+           'upsert', 0, ?, ?, 'relationship_violation', ?),
+          ('00000000-0000-4000-8000-000000000094', ?,
+           '00000000-0000-4000-8000-000000000095', 'evaluation_plan', ?,
+           'upsert', 0, ?, ?, NULL, NULL),
+          ('00000000-0000-4000-8000-000000000096', ?,
+           '00000000-0000-4000-8000-000000000097', 'settings', ?,
+           'upsert', 1, '{"entity_id":"$_studentId"}', ?, NULL, NULL)''',
+        [
+          _studentId,
+          entityId,
+          payload,
+          rejectedAt,
+          rejectedAt,
+          _studentId,
+          entityId,
+          payload,
+          rejectedAt,
+          _studentId,
+          _studentId,
+          liveCreatedAt,
+        ],
+      );
+      database.execute(
+        '''UPDATE outbox_operations
+          SET acknowledged_cursor = 8, acknowledged_at_utc = ?
+          WHERE id = '00000000-0000-4000-8000-000000000094' ''',
+        ['2026-08-03T12:05:00.000Z'],
+      );
+      database.execute(
+        '''INSERT INTO outbox_operations
+          (id, student_id, idempotency_key, entity_type, entity_id,
+           operation_type, base_revision, payload_json, created_at_utc,
+           acknowledged_cursor, acknowledged_at_utc,
+           terminal_rejection_code, terminal_rejected_at_utc)
+          VALUES
+          ('00000000-0000-4000-8000-000000000098', ?,
+           '00000000-0000-4000-8000-000000000099', 'settings', ?,
+           'upsert', 0, '{"entity_id":"$_studentId","revision":1}', ?,
+           NULL, NULL, 'stale_revision', ?),
+          ('00000000-0000-4000-8000-000000000100', ?,
+           '00000000-0000-4000-8000-000000000101', 'settings', ?,
+           'upsert', 1, '{"entity_id":"$_studentId","revision":2}', ?,
+           9, ?, NULL, NULL)''',
+        [
+          _studentId,
+          _studentId,
+          '2026-08-03T11:00:00.000Z',
+          '2026-08-03T11:01:00.000Z',
+          _studentId,
+          _studentId,
+          '2026-08-03T12:00:00.000Z',
+          '2026-08-03T12:05:00.000Z',
+        ],
+      );
+
+      final preview = await registry.localRemovalPreview();
+
+      expect(preview.count, 1);
+      expect(preview.oldestAtUtc, DateTime.parse(liveCreatedAt));
+    },
+  );
+
+  test(
     'initialize gates access and all eight domain types round-trip',
     () async {
       await expectLater(
@@ -255,6 +333,44 @@ void main() {
       });
     },
   );
+
+  test('pending outbox orders relationship owners before dependents', () async {
+    await registry.initialize();
+    final fixture = _DomainFixture();
+
+    await registry.mutate((repositories) {
+      repositories.preceptors.put(
+        studentId: _studentId,
+        value: fixture.preceptor,
+        expectedRevision: 0,
+        mutation: _mutation(3),
+      );
+      repositories.clinicalPlacements.put(
+        studentId: _studentId,
+        value: fixture.placement,
+        expectedRevision: 0,
+        mutation: _mutation(2),
+      );
+      repositories.evaluationPlans.put(
+        studentId: _studentId,
+        value: fixture.evaluationPlan,
+        expectedRevision: 0,
+        mutation: _mutation(1),
+      );
+    });
+
+    await registry.read((repositories) {
+      expect(
+        repositories.outbox
+            .pending(
+              studentId: _studentId,
+              asOfUtc: _baseTime.add(const Duration(hours: 1)),
+            )
+            .map((operation) => operation.entityType),
+        ['preceptor', 'clinical_placement', 'evaluation_plan'],
+      );
+    });
+  });
 
   test(
     'foreign-key failure rolls back earlier entity and outbox writes',

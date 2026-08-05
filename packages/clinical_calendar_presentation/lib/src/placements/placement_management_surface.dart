@@ -2,18 +2,22 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
+import '../date_input.dart';
 import '../variant_f_theme.dart';
 import 'placement_progress_controller.dart';
+import 'placement_specialty_icon.dart';
 
 final class PlacementManagementSurface extends StatelessWidget {
   const PlacementManagementSurface({
     required this.controller,
     required this.studentId,
+    this.onOpenEvaluations,
     super.key,
   });
 
   final PlacementProgressController controller;
   final String studentId;
+  final VoidCallback? onOpenEvaluations;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -32,6 +36,7 @@ final class PlacementManagementSurface extends StatelessWidget {
             '${controller.activePlacement?.placementRevision}',
           ),
           controller: controller,
+          onOpenEvaluations: onOpenEvaluations,
         );
         return Container(
           key: const Key('placement-management-surface'),
@@ -87,10 +92,12 @@ final class PlacementManagementSurface extends StatelessWidget {
   Future<void> _showAddPlacement(BuildContext context) async {
     var name = '';
     var target = '90';
-    var start = '';
-    var deadline = '';
+    LocalDate? start;
+    LocalDate? deadline;
     var preceptor = '';
     String? validation;
+    final startController = TextEditingController();
+    final deadlineController = TextEditingController();
     final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -115,17 +122,45 @@ final class PlacementManagementSurface extends StatelessWidget {
                   decoration: const InputDecoration(labelText: 'Target Hours'),
                 ),
                 TextField(
-                  onChanged: (value) => start = value,
+                  key: const Key('new-placement-start-date'),
+                  controller: startController,
+                  readOnly: true,
+                  onTap: () async {
+                    final selected = await pickUsDate(
+                      context,
+                      initialDate: start,
+                    );
+                    if (selected == null) return;
+                    setDialogState(() {
+                      start = selected;
+                      startController.text = formatUsDate(selected);
+                    });
+                  },
                   decoration: const InputDecoration(
                     labelText: 'Start Date',
-                    hintText: 'YYYY-MM-DD',
+                    hintText: 'MM-DD-YYYY',
+                    suffixIcon: Icon(Icons.calendar_today_outlined),
                   ),
                 ),
                 TextField(
-                  onChanged: (value) => deadline = value,
+                  key: const Key('new-placement-deadline'),
+                  controller: deadlineController,
+                  readOnly: true,
+                  onTap: () async {
+                    final selected = await pickUsDate(
+                      context,
+                      initialDate: deadline ?? start,
+                    );
+                    if (selected == null) return;
+                    setDialogState(() {
+                      deadline = selected;
+                      deadlineController.text = formatUsDate(selected);
+                    });
+                  },
                   decoration: const InputDecoration(
                     labelText: 'Completion Deadline',
-                    hintText: 'YYYY-MM-DD',
+                    hintText: 'MM-DD-YYYY',
+                    suffixIcon: Icon(Icons.calendar_today_outlined),
                   ),
                 ),
                 TextField(
@@ -155,9 +190,10 @@ final class PlacementManagementSurface extends StatelessWidget {
               onPressed: () {
                 try {
                   _targetHours(target);
-                  _localDate(start);
-                  _localDate(deadline);
-                  if (name.trim().isEmpty || preceptor.trim().isEmpty) {
+                  if (start == null ||
+                      deadline == null ||
+                      name.trim().isEmpty ||
+                      preceptor.trim().isEmpty) {
                     throw const FormatException('Required fields are missing.');
                   }
                   Navigator.pop(context, true);
@@ -171,12 +207,14 @@ final class PlacementManagementSurface extends StatelessWidget {
         ),
       ),
     );
+    startController.dispose();
+    deadlineController.dispose();
     if (accepted == true) {
       await controller.createPlacementWithPrimary(
         placementName: name,
         targetHours: _targetHours(target),
-        startDate: _localDate(start),
-        completionDeadline: _localDate(deadline),
+        startDate: start!,
+        completionDeadline: deadline!,
         primaryPreceptorName: preceptor,
       );
     }
@@ -253,17 +291,37 @@ final class _PlacementChoice extends StatelessWidget {
             : context.clinicalColors.insetBorder,
       ),
     ),
-    child: Text(
-      snapshot.placement.name,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PlacementSpecialtyGlyph(
+          placementName: snapshot.placement.name,
+          size: 20,
+          color: selected
+              ? context.clinicalColors.clinical
+              : context.clinicalColors.secondaryText,
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            snapshot.placement.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     ),
   );
 }
 
 final class _PlacementEditor extends StatefulWidget {
-  const _PlacementEditor({required this.controller, super.key});
+  const _PlacementEditor({
+    required this.controller,
+    required this.onOpenEvaluations,
+    super.key,
+  });
   final PlacementProgressController controller;
+  final VoidCallback? onOpenEvaluations;
 
   @override
   State<_PlacementEditor> createState() => _PlacementEditorState();
@@ -286,9 +344,13 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
     _target = TextEditingController(
       text: value == null ? '' : _hoursInput(value.progress.targetMinutes),
     );
-    _start = TextEditingController(text: value?.placement.startDate.toString());
+    _start = TextEditingController(
+      text: value == null ? '' : formatUsDate(value.placement.startDate),
+    );
     _deadline = TextEditingController(
-      text: value?.placement.completionDeadline.toString(),
+      text: value == null
+          ? ''
+          : formatUsDate(value.placement.completionDeadline),
     );
   }
 
@@ -344,9 +406,12 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
                 key: const Key('placement-start-date-field'),
                 controller: _start,
                 enabled: !completed,
+                readOnly: true,
+                onTap: completed ? null : () => _pickInto(_start),
                 decoration: const InputDecoration(
                   labelText: 'Start Date',
-                  hintText: 'YYYY-MM-DD',
+                  hintText: 'MM-DD-YYYY',
+                  suffixIcon: Icon(Icons.calendar_today_outlined),
                 ),
               ),
             ),
@@ -356,9 +421,12 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
                 key: const Key('placement-deadline-field'),
                 controller: _deadline,
                 enabled: !completed,
+                readOnly: true,
+                onTap: completed ? null : () => _pickInto(_deadline),
                 decoration: const InputDecoration(
                   labelText: 'Completion Deadline',
-                  hintText: 'YYYY-MM-DD',
+                  hintText: 'MM-DD-YYYY',
+                  suffixIcon: Icon(Icons.calendar_today_outlined),
                 ),
               ),
             ),
@@ -419,6 +487,11 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
           ),
         ],
         const SizedBox(height: 16),
+        _ReviewsAndEvaluationsPanel(
+          evaluation: value.evaluation,
+          onOpen: widget.onOpenEvaluations,
+        ),
+        const SizedBox(height: 16),
         if (completed)
           OutlinedButton.icon(
             key: const Key('reopen-placement-action'),
@@ -448,8 +521,8 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
       final request = EditPlacementRequest(
         name: _name.text,
         targetHours: _targetHours(_target.text),
-        startDate: _localDate(_start.text),
-        completionDeadline: _localDate(_deadline.text),
+        startDate: parseUsDate(_start.text),
+        completionDeadline: parseUsDate(_deadline.text),
         evaluationPlanConfiguration: value.evaluationPlanConfiguration,
       );
       setState(() => _validation = null);
@@ -457,6 +530,18 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
     } on Object catch (error) {
       setState(() => _validation = error.toString());
     }
+  }
+
+  Future<void> _pickInto(TextEditingController controller) async {
+    final selected = await pickUsDate(
+      context,
+      initialDate: parseUsDate(controller.text),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      controller.text = formatUsDate(selected);
+      _validation = null;
+    });
   }
 
   Future<void> _showAddPreceptor(BuildContext context) async {
@@ -489,6 +574,131 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
     }
   }
 }
+
+final class _ReviewsAndEvaluationsPanel extends StatelessWidget {
+  const _ReviewsAndEvaluationsPanel({
+    required this.evaluation,
+    required this.onOpen,
+  });
+
+  final EvaluationPlanEvaluation evaluation;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('placement-reviews-evaluations'),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: context.clinicalColors.structureRaised,
+      border: Border.all(color: context.clinicalColors.insetBorder),
+      borderRadius: BorderRadius.circular(context.clinicalMetrics.cornerRadius),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'REVIEWS & EVALUATIONS',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        if (evaluation.requirements.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text('No reviews are configured for this placement.'),
+          ),
+        for (final item in evaluation.requirements)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  _evaluationIcon(item.state),
+                  size: 18,
+                  color: _evaluationColor(context, item.state),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _evaluationLabel(item.requirement.identity),
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      Text(
+                        _evaluationStatus(item),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: _evaluationColor(context, item.state),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (onOpen != null)
+          OutlinedButton.icon(
+            key: const Key('open-placement-evaluations'),
+            onPressed: onOpen,
+            icon: const Icon(Icons.fact_check_outlined),
+            label: const Text('Open Reviews & Evaluations'),
+          ),
+      ],
+    ),
+  );
+}
+
+String _evaluationLabel(EvaluationRequirementIdentity identity) {
+  final threshold = identity.thresholdMinutes;
+  final atHours = threshold == null
+      ? ''
+      : ' at ${_evaluationHours(threshold)} hours';
+  return switch (identity.kind) {
+    EvaluationRequirementKind.initialSelfAssessment =>
+      'Initial Self-Assessment',
+    EvaluationRequirementKind.interimStudentReviewsPrimaryPreceptor =>
+      'Student Reviews Primary Preceptor$atHours',
+    EvaluationRequirementKind.interimPrimaryPreceptorReviewsStudent =>
+      'Primary Preceptor Reviews Student$atHours',
+    EvaluationRequirementKind.finalSelfAssessment => 'Final Self-Assessment',
+    EvaluationRequirementKind.finalPlacementReview => 'Final Placement Review',
+  };
+}
+
+String _evaluationHours(int minutes) =>
+    minutes % 60 == 0 ? '${minutes ~/ 60}' : (minutes / 60).toStringAsFixed(1);
+
+String _evaluationStatus(EvaluatedEvaluationRequirement item) {
+  final documented = item.requirement.documentation;
+  if (documented != null) {
+    return 'Documented ${formatUsDate(documented.dateDocumented)}';
+  }
+  return switch (item.state) {
+    EvaluationRequirementState.notDue => 'Not Due',
+    EvaluationRequirementState.approaching => 'Approaching',
+    EvaluationRequirementState.due => 'Due',
+    EvaluationRequirementState.documented => 'Documented',
+  };
+}
+
+IconData _evaluationIcon(EvaluationRequirementState state) => switch (state) {
+  EvaluationRequirementState.notDue => Icons.schedule_outlined,
+  EvaluationRequirementState.approaching => Icons.timelapse_outlined,
+  EvaluationRequirementState.due => Icons.error_outline,
+  EvaluationRequirementState.documented => Icons.task_alt,
+};
+
+Color _evaluationColor(
+  BuildContext context,
+  EvaluationRequirementState state,
+) => switch (state) {
+  EvaluationRequirementState.notDue => context.clinicalColors.secondaryText,
+  EvaluationRequirementState.approaching => context.clinicalColors.scheduled,
+  EvaluationRequirementState.due => context.clinicalColors.urgent,
+  EvaluationRequirementState.documented => context.clinicalColors.clinical,
+};
 
 final class _PreceptorEditorRow extends StatefulWidget {
   const _PreceptorEditorRow({
@@ -664,16 +874,6 @@ TargetHours _targetHours(String value) {
   final hours = double.parse(value.trim());
   final minutes = (hours * 60).round();
   return TargetHours.fromMinutes(minutes);
-}
-
-LocalDate _localDate(String value) {
-  final parts = value.trim().split('-');
-  if (parts.length != 3) throw const FormatException('Use YYYY-MM-DD.');
-  return LocalDate(
-    int.parse(parts[0]),
-    int.parse(parts[1]),
-    int.parse(parts[2]),
-  );
 }
 
 String _hoursInput(int minutes) {

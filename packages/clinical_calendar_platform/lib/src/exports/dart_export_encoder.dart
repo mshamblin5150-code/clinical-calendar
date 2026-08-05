@@ -181,7 +181,8 @@ List<pw.Widget> _pdfSections(
     ),
     pw.SizedBox(height: 4),
     pw.Text(
-      '${placement.startDate} to ${placement.completionDeadline}  |  '
+      '${_displayDate(placement.startDate)} to '
+      '${_displayDate(placement.completionDeadline)}  |  '
       '${_minutes(placement.targetHours.minutes)} Target Hours',
       style: pw.TextStyle(color: colors.muted),
     ),
@@ -234,7 +235,7 @@ List<pw.Widget> _pdfSections(
         rows: [
           for (final record in export.historicalHours)
             [
-              record.value.effectiveDate.toString(),
+              _displayDate(record.value.effectiveDate),
               record.value.preceptorId == null
                   ? 'Unattributed'
                   : preceptors[record.value.preceptorId]?.name ?? 'Preceptor',
@@ -298,7 +299,7 @@ List<pw.Widget> _pdfSections(
               ),
               requirement.documentation == null
                   ? 'Not documented'
-                  : '${requirement.documentation!.dateDocumented} - '
+                  : '${_displayDate(requirement.documentation!.dateDocumented)} - '
                         '${requirement.documentation!.location}',
             ],
         ],
@@ -378,7 +379,7 @@ List<String> _sessionPdfRow(
       ? session.actualInterval!
       : session.plannedInterval;
   return [
-    interval.startDate.toString(),
+    _displayDate(interval.startDate),
     '${interval.startTime.military}-${interval.endTime.military}'
         '${interval.isOvernight ? ' next day' : ''}',
     preceptors[session.preceptorId]?.name ?? 'Preceptor',
@@ -517,6 +518,11 @@ String _csv(Object? value) {
 }
 
 final _spreadsheetFormulaPrefix = RegExp(r'^[\t\r\n ]*[=+\-@]');
+
+String _displayDate(LocalDate value) =>
+    '${value.month.toString().padLeft(2, '0')}-'
+    '${value.day.toString().padLeft(2, '0')}-'
+    '${value.year.toString().padLeft(4, '0')}';
 
 String _minutes(int minutes) {
   final hours = minutes ~/ 60;

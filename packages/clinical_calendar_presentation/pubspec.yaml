@@ -15,10 +15,13 @@ dependencies:
     path: ../clinical_calendar_application
   clinical_calendar_domain:
     path: ../clinical_calendar_domain
+  flutter_svg: ^2.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
 
-flutter: {}
+flutter:
+  assets:
+    - assets/placement_icons/

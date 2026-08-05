@@ -1,6 +1,8 @@
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:flutter/material.dart';
 
+import '../date_input.dart';
+
 import 'account_erasure_surface.dart';
 
 final class IdentityDevicesSurface extends StatefulWidget {
@@ -273,4 +275,4 @@ IconData _icon(DevicePlatform platform) => switch (platform) {
 };
 
 String _lastSync(DateTime? value) =>
-    value == null ? 'Never' : value.toLocal().toString();
+    value == null ? 'Never' : formatUsDateTime(value);

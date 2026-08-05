@@ -489,7 +489,7 @@ void main() {
     );
   });
 
-  test('past anchors are filtered or rolled forward by source semantics', () {
+  test('due anchors are filtered or moved safely into the future', () {
     final now = DateTime.utc(2026, 2, 10, 12);
     final past = now.subtract(const Duration(hours: 1));
     final result = policy.build(
@@ -510,12 +510,22 @@ void main() {
           route: '/sync',
           deliverWhenPastDue: true,
         ),
+        ReminderCandidate(
+          kind: ReminderKind.syncFailure,
+          subjectId: 'failure',
+          anchorUtc: now,
+          title: 'Failure',
+          route: '/sync',
+          deliverWhenPastDue: true,
+        ),
       ],
       deviceTimeZoneId: 'fixed',
     );
-    expect(result, hasLength(1));
-    expect(result.single.kind, ReminderKind.syncConflict);
-    expect(result.single.scheduledForUtc, now);
+    expect(result, hasLength(2));
+    expect(
+      result.map((item) => item.scheduledForUtc),
+      everyElement(now.add(const Duration(minutes: 1))),
+    );
   });
 
   test('quiet-hour start is delayed and end is immediately deliverable', () {

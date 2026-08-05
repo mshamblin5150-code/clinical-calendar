@@ -10,24 +10,46 @@ final class ZonedScheduleDate {
     required this.timeZone,
     required this.startOffset,
     required this.endOffset,
-  });
+  }) : _offsetAt = null;
+
+  factory ZonedScheduleDate.resolvingOffsets({
+    required LocalDate date,
+    required TimeZoneId timeZone,
+    required UtcOffset Function(LocalDate date, LocalTime time) offsetAt,
+  }) => ZonedScheduleDate._resolvingOffsets(
+    date: date,
+    timeZone: timeZone,
+    offsetAt: offsetAt,
+  );
+
+  const ZonedScheduleDate._resolvingOffsets({
+    required this.date,
+    required this.timeZone,
+    required this._offsetAt,
+  }) : startOffset = null,
+       endOffset = null;
 
   final LocalDate date;
   final TimeZoneId timeZone;
-  final UtcOffset startOffset;
-  final UtcOffset endOffset;
+  final UtcOffset? startOffset;
+  final UtcOffset? endOffset;
+  final UtcOffset Function(LocalDate date, LocalTime time)? _offsetAt;
 
   ZonedInterval interval({
     required LocalTime startTime,
     required LocalTime endTime,
-  }) => ZonedInterval(
-    startDate: date,
-    startTime: startTime,
-    endTime: endTime,
-    timeZone: timeZone,
-    startOffset: startOffset,
-    endOffset: endOffset,
-  );
+  }) {
+    final endDate = endTime.compareTo(startTime) < 0 ? date.addDays(1) : date;
+    final resolver = _offsetAt;
+    return ZonedInterval(
+      startDate: date,
+      startTime: startTime,
+      endTime: endTime,
+      timeZone: timeZone,
+      startOffset: resolver?.call(date, startTime) ?? startOffset!,
+      endOffset: resolver?.call(endDate, endTime) ?? endOffset!,
+    );
+  }
 }
 
 final class WorkShiftBatchRequest {

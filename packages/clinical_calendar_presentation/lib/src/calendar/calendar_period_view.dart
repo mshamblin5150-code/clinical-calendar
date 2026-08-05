@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
+import '../date_input.dart';
 import '../variant_f_theme.dart';
 import 'calendar_data_source.dart';
 import 'calendar_models.dart';
@@ -954,7 +955,7 @@ final class _PeriodEntryRow extends StatelessWidget {
         children: [
           Text(
             entry.isContinuationOn(date)
-                ? 'Continues from ${entry.startDate}'
+                ? 'Continues from ${formatUsDate(entry.startDate)}'
                 : entry.timeLabel(twelveHour: twelveHourTime),
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -1206,7 +1207,7 @@ String _dateSemanticLabel(
       entry.title,
       if (entry.assignment != null) entry.assignment!,
       entry.isContinuationOn(date)
-          ? 'continues from ${entry.startDate}'
+          ? 'continues from ${formatUsDate(entry.startDate)}'
           : entry.timeLabel(twelveHour: twelveHourTime),
       entry.statusLabel,
     ],

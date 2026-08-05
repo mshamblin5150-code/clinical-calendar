@@ -107,10 +107,13 @@ void main() {
       size: const Size(1024, 768),
     );
 
-    await tester.enterText(
-      find.byKey(const Key('placement-deadline-field')),
-      '2026-08-15',
-    );
+    tester
+            .widget<TextField>(
+              find.byKey(const Key('placement-deadline-field')),
+            )
+            .controller!
+            .text =
+        '08-15-2026';
     await tester.tap(find.byKey(const Key('preview-placement-edit-action')));
     await tester.pumpAndSettle();
     expect(find.text('SAVE BLOCKED'), findsOneWidget);
@@ -124,10 +127,13 @@ void main() {
       isNull,
     );
 
-    await tester.enterText(
-      find.byKey(const Key('placement-deadline-field')),
-      '2026-12-31',
-    );
+    tester
+            .widget<TextField>(
+              find.byKey(const Key('placement-deadline-field')),
+            )
+            .controller!
+            .text =
+        '12-31-2026';
     await tester.enterText(
       find.byKey(const Key('placement-target-field')),
       '300',
@@ -153,12 +159,14 @@ void main() {
     tester,
   ) async {
     final harness = _Harness();
+    var openedEvaluations = false;
     await harness.controller.load();
     await _pump(
       tester,
       PlacementManagementSurface(
         controller: harness.controller,
         studentId: _studentId,
+        onOpenEvaluations: () => openedEvaluations = true,
       ),
       size: const Size(1024, 768),
     );
@@ -189,6 +197,23 @@ void main() {
       ),
       contains('Dr. Crusher'),
     );
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('placement-reviews-evaluations')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('REVIEWS & EVALUATIONS'), findsOneWidget);
+    expect(
+      find.text('No reviews are configured for this placement.'),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('open-placement-evaluations')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('open-placement-evaluations')));
+    expect(openedEvaluations, isTrue);
   });
 
   testWidgets(
@@ -212,6 +237,10 @@ void main() {
             .enabled,
         isFalse,
       );
+      await tester.ensureVisible(
+        find.byKey(const Key('reopen-placement-action')),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('reopen-placement-action')));
       await tester.pumpAndSettle();
       expect(

@@ -17,6 +17,24 @@ void main() {
     expect(draft.intervals.every((value) => value.isOvernight), isTrue);
   });
 
+  test('schedule date resolves each DST boundary after times are entered', () {
+    final date = ZonedScheduleDate.resolvingOffsets(
+      date: LocalDate(2026, 11, 1),
+      timeZone: TimeZoneId('America/New_York'),
+      offsetAt: (date, time) =>
+          time.hour < 2 ? UtcOffset.inMinutes(-240) : UtcOffset.inMinutes(-300),
+    );
+
+    final interval = date.interval(
+      startTime: LocalTime(1, 30),
+      endTime: LocalTime(3, 30),
+    );
+
+    expect(interval.startOffset, UtcOffset.inMinutes(-240));
+    expect(interval.endOffset, UtcOffset.inMinutes(-300));
+    expect(interval.elapsedMinutes, 180);
+  });
+
   test('review blocks the whole batch when any selected date conflicts', () {
     final conflict = SchedulingError(
       violation: ScheduleInvariantViolation.commitmentOverlap,

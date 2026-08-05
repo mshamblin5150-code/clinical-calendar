@@ -4,6 +4,7 @@ Set-StrictMode -Version Latest
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $workflow = Get-Content -Raw (Join-Path $repositoryRoot '.github/workflows/android-release.yml')
 $gradle = Get-Content -Raw (Join-Path $repositoryRoot 'apps/clinical_calendar/android/app/build.gradle.kts')
+$manifest = Get-Content -Raw (Join-Path $repositoryRoot 'apps/clinical_calendar/android/app/src/main/AndroidManifest.xml')
 
 $requiredWorkflowFragments = @(
     'actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
@@ -21,6 +22,9 @@ $requiredWorkflowFragments = @(
     'secrets.ANDROID_KEY_ALIAS',
     'secrets.ANDROID_KEY_PASSWORD',
     'vars.ANDROID_SIGNING_CERT_SHA256',
+    'CLINICAL_CALENDAR_ENVIRONMENT: private-release',
+    'vars.CLINICAL_CALENDAR_SUPABASE_URL',
+    'secrets.CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY',
     'package_signed_apk.ps1',
     'app-release.apk.sha256'
 )
@@ -28,6 +32,18 @@ foreach ($fragment in $requiredWorkflowFragments) {
     if (-not $workflow.Contains($fragment)) {
         throw "Android release workflow is missing required fragment: $fragment"
     }
+}
+if ($workflow.Contains('AllowUnconfiguredAcceptanceBuild')) {
+    throw 'Protected Android release workflow must never allow unconfigured acceptance builds.'
+}
+
+if (-not $manifest.Contains('android.permission.INTERNET')) {
+    throw 'Android release manifest must grant network access for authentication and synchronization.'
+}
+
+$packager = Get-Content -Raw (Join-Path $repositoryRoot 'tool/android/package_signed_apk.ps1')
+if (-not $packager.Contains('Get-ClinicalCalendarReleaseFlutterArguments')) {
+    throw 'Android release packaging must resolve protected Supabase compile-time configuration.'
 }
 
 if ($gradle.Contains('signingConfigs.getByName("debug")')) {

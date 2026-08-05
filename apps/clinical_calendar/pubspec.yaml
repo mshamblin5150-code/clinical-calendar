@@ -1,7 +1,7 @@
 name: clinical_calendar
 description: Clinical Calendar production composition root.
 publish_to: none
-version: 0.1.0+4
+version: 0.1.0+28
 resolution: workspace
 
 environment:

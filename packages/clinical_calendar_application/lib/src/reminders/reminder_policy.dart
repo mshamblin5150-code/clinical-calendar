@@ -116,9 +116,12 @@ final class ReminderPolicy {
           '${candidate.kind.name}:${candidate.subjectId}:${candidate.anchorUtc.toUtc().toIso8601String()}';
       final snoozed = synchronizedSnoozes[baseKey];
       var requested = (snoozed ?? candidate.anchorUtc).toUtc();
-      if (requested.isBefore(now)) {
+      if (!requested.isAfter(now)) {
         if (snoozed != null || candidate.deliverWhenPastDue) {
-          requested = now;
+          // Native schedulers require a future instant. A small grace window
+          // also prevents several overdue reminders from aging into the past
+          // while earlier entries are being registered.
+          requested = now.add(const Duration(minutes: 1));
         } else {
           continue;
         }

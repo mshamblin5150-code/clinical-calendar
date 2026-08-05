@@ -223,7 +223,8 @@ List<AttentionItem> _deriveAttention(
               ? 'Planning Incomplete'
               : 'Plan next week’s Protected Day',
           detail:
-              'Choose one empty Protected Day for ${candidate.start}–${candidate.end}.',
+              'Choose one empty Protected Day for '
+              '${_usDate(candidate.start)}–${_usDate(candidate.end)}.',
           suggestedDate: candidate.start,
         ),
       );
@@ -315,6 +316,11 @@ List<AttentionItem> _deriveAttention(
   });
   return items;
 }
+
+String _usDate(LocalDate value) =>
+    '${value.month.toString().padLeft(2, '0')}-'
+    '${value.day.toString().padLeft(2, '0')}-'
+    '${value.year.toString().padLeft(4, '0')}';
 
 String _requirementTitle(
   EvaluationRequirementIdentity identity,

@@ -157,7 +157,7 @@ void main() {
       expect(gateway.erasureRequests, 1);
       expect(gateway.backupChoice, AccountErasureBackupChoice.skipped);
       expect(requested, isTrue);
-      expect(find.text('Purge date: 2026-09-03'), findsOneWidget);
+      expect(find.text('Purge date: 09-03-2026'), findsOneWidget);
       expect(
         find.textContaining('Every Connected Device is revoked'),
         findsOneWidget,
@@ -195,7 +195,7 @@ void main() {
     await _pump(tester, gateway: gateway, pendingRequest: _pendingRequest);
 
     expect(find.text('Deletion pending'), findsOneWidget);
-    expect(find.text('Purge date: 2026-09-03'), findsOneWidget);
+    expect(find.text('Purge date: 09-03-2026'), findsOneWidget);
     expect(find.byKey(const Key('send-cancel-erasure-code')), findsOneWidget);
     expect(find.byKey(const Key('begin-account-erasure')), findsNothing);
   });

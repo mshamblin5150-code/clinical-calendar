@@ -11,6 +11,7 @@ enum ClinicalCalendarDestination {
   trashRecovery('Trash & Recovery', Icons.restore_from_trash_outlined),
   backupRestore('Backup & Restore', Icons.backup_outlined),
   exports('Exports', Icons.ios_share_outlined),
+  synchronization('Synchronization', Icons.sync_outlined),
   settings('Settings', Icons.settings_outlined),
   notifications('Notifications', Icons.notifications_outlined),
   help('Help', Icons.help_outline);
@@ -28,6 +29,7 @@ const applicationMenuDestinations = <ClinicalCalendarDestination>[
   ClinicalCalendarDestination.trashRecovery,
   ClinicalCalendarDestination.backupRestore,
   ClinicalCalendarDestination.exports,
+  ClinicalCalendarDestination.synchronization,
   ClinicalCalendarDestination.settings,
   ClinicalCalendarDestination.notifications,
   ClinicalCalendarDestination.help,
@@ -297,30 +299,104 @@ final class ShellPanel extends StatelessWidget {
   final Color? accent;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: context.clinicalColors.structure,
-      border: Border.all(
-        color: accent ?? context.clinicalColors.insetBorder,
-        width: context.clinicalMetrics.borderWidth,
-      ),
-      borderRadius: BorderRadius.circular(context.clinicalMetrics.cornerRadius),
+  Widget build(BuildContext context) => CustomPaint(
+    foregroundPainter: _TacticalFramePainter(
+      color: accent ?? context.clinicalColors.insetBorder,
+      insetColor: context.clinicalColors.insetBorder,
     ),
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: Theme.of(context).textTheme.titleMedium,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.clinicalColors.structure,
+        border: Border.all(
+          color: accent ?? context.clinicalColors.insetBorder,
+          width: context.clinicalMetrics.borderWidth,
+        ),
+        borderRadius: BorderRadius.circular(
+          context.clinicalMetrics.cornerRadius,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: VariantFColors.shadow,
+            blurRadius: 8,
+            offset: Offset(0, 3),
           ),
-          const SizedBox(height: 10),
-          child,
         ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    label.toUpperCase(),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Divider(
+                    color: (accent ?? context.clinicalColors.insetBorder)
+                        .withValues(alpha: .65),
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            child,
+          ],
+        ),
       ),
     ),
   );
+}
+
+final class _TacticalFramePainter extends CustomPainter {
+  const _TacticalFramePainter({required this.color, required this.insetColor});
+
+  final Color color;
+  final Color insetColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width < 28 || size.height < 28) return;
+    final insetPaint = Paint()
+      ..color = insetColor.withValues(alpha: .45)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawRect(
+      Rect.fromLTWH(4.5, 4.5, size.width - 9, size.height - 9),
+      insetPaint,
+    );
+
+    final cornerPaint = Paint()
+      ..color = color.withValues(alpha: .9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    const notch = 9.0;
+    const run = 20.0;
+    final path = Path()
+      ..moveTo(0, notch)
+      ..lineTo(notch, 0)
+      ..lineTo(run, 0)
+      ..moveTo(size.width - run, 0)
+      ..lineTo(size.width - notch, 0)
+      ..lineTo(size.width, notch)
+      ..moveTo(size.width, size.height - notch)
+      ..lineTo(size.width - notch, size.height)
+      ..lineTo(size.width - run, size.height)
+      ..moveTo(run, size.height)
+      ..lineTo(notch, size.height)
+      ..lineTo(0, size.height - notch);
+    canvas.drawPath(path, cornerPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TacticalFramePainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.insetColor != insetColor;
 }
 
 final class _CommandBar extends StatelessWidget {
@@ -358,7 +434,7 @@ final class _CommandBar extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            'CLINICAL CALENDAR',
+            'Clinical Calendar',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
         ),
@@ -412,7 +488,7 @@ final class _CompactHeader extends StatelessWidget {
         const SizedBox(width: 4),
         Expanded(
           child: Text(
-            'CLINICAL CALENDAR',
+            'Clinical Calendar',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleLarge,

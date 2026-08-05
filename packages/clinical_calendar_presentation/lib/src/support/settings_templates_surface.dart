@@ -227,11 +227,12 @@ final class _SettingsTemplatesSurfaceState
                     items: const [
                       DropdownMenuItem(
                         value: StudentSettings.variantFThemeId,
-                        child: Text('Borg Tactical Console'),
+                        child: Text('Containment Drone 47-Alpha'),
                       ),
                     ],
                     onChanged: (value) => setState(() => _themeId = value!),
                   ),
+                  width: 280,
                 ),
                 _field(
                   DropdownButtonFormField<SynchronizationPreference>(
@@ -268,6 +269,11 @@ final class _SettingsTemplatesSurfaceState
                 key: const Key('work-shift-notifications-setting'),
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Work Shift reminders'),
+                subtitle: Text(
+                  _notifications.upcomingWorkShiftsEnabled
+                      ? 'Scheduled using the lead times below.'
+                      : 'Muted. You can turn these on when you are ready.',
+                ),
                 value: _notifications.upcomingWorkShiftsEnabled,
                 onChanged: (value) => setState(
                   () => _notifications = _notifications.copyWith(
@@ -282,6 +288,11 @@ final class _SettingsTemplatesSurfaceState
                 key: const Key('clinical-session-notifications-setting'),
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Clinical Session reminders'),
+                subtitle: Text(
+                  _notifications.upcomingClinicalSessionsEnabled
+                      ? 'Scheduled using the lead times below.'
+                      : 'Muted. You can turn these on when you are ready.',
+                ),
                 value: _notifications.upcomingClinicalSessionsEnabled,
                 onChanged: (value) => setState(
                   () => _notifications = _notifications.copyWith(
@@ -294,31 +305,35 @@ final class _SettingsTemplatesSurfaceState
               spacing: 12,
               runSpacing: 12,
               children: [
-                _minutesField(
+                _leadTimeField(
                   key: const Key('work-shift-first-lead-setting'),
-                  label: 'Work Shift first lead (minutes)',
-                  value: _notifications.workShiftFirstLeadMinutes,
+                  label: 'First Work Shift reminder',
+                  valueMinutes: _notifications.workShiftFirstLeadMinutes,
+                  enabled: _notifications.upcomingWorkShiftsEnabled,
                   onChanged: (value) => _notifications = _notifications
                       .copyWith(workShiftFirstLeadMinutes: value),
                 ),
-                _minutesField(
+                _leadTimeField(
                   key: const Key('work-shift-second-lead-setting'),
-                  label: 'Work Shift second lead (minutes)',
-                  value: _notifications.workShiftSecondLeadMinutes,
+                  label: 'Second Work Shift reminder',
+                  valueMinutes: _notifications.workShiftSecondLeadMinutes,
+                  enabled: _notifications.upcomingWorkShiftsEnabled,
                   onChanged: (value) => _notifications = _notifications
                       .copyWith(workShiftSecondLeadMinutes: value),
                 ),
-                _minutesField(
+                _leadTimeField(
                   key: const Key('clinical-session-first-lead-setting'),
-                  label: 'Clinical Session first lead (minutes)',
-                  value: _notifications.clinicalSessionFirstLeadMinutes,
+                  label: 'First Clinical Session reminder',
+                  valueMinutes: _notifications.clinicalSessionFirstLeadMinutes,
+                  enabled: _notifications.upcomingClinicalSessionsEnabled,
                   onChanged: (value) => _notifications = _notifications
                       .copyWith(clinicalSessionFirstLeadMinutes: value),
                 ),
-                _minutesField(
+                _leadTimeField(
                   key: const Key('clinical-session-second-lead-setting'),
-                  label: 'Clinical Session second lead (minutes)',
-                  value: _notifications.clinicalSessionSecondLeadMinutes,
+                  label: 'Second Clinical Session reminder',
+                  valueMinutes: _notifications.clinicalSessionSecondLeadMinutes,
+                  enabled: _notifications.upcomingClinicalSessionsEnabled,
                   onChanged: (value) => _notifications = _notifications
                       .copyWith(clinicalSessionSecondLeadMinutes: value),
                 ),
@@ -532,7 +547,8 @@ final class _SettingsTemplatesSurfaceState
     ],
   );
 
-  Widget _field(Widget child) => SizedBox(width: 230, child: child);
+  Widget _field(Widget child, {double width = 230}) =>
+      SizedBox(width: width, child: child);
 
   Widget _minutesField({
     required Key key,
@@ -551,6 +567,34 @@ final class _SettingsTemplatesSurfaceState
       },
     ),
   );
+
+  Widget _leadTimeField({
+    required Key key,
+    required String label,
+    required int valueMinutes,
+    required bool enabled,
+    required ValueChanged<int> onChanged,
+  }) {
+    final options = <int>{60, 120, 240, 480, 720, 1440, 2880, 4320};
+    options.add(valueMinutes);
+    final ordered = options.toList()..sort();
+    return _field(
+      DropdownButtonFormField<int>(
+        key: key,
+        isExpanded: true,
+        initialValue: valueMinutes,
+        decoration: InputDecoration(labelText: label),
+        items: [
+          for (final minutes in ordered)
+            DropdownMenuItem(
+              value: minutes,
+              child: Text(_leadTimeLabel(minutes)),
+            ),
+        ],
+        onChanged: enabled ? (next) => setState(() => onChanged(next!)) : null,
+      ),
+    );
+  }
 
   Widget _hourField({
     required Key key,
@@ -576,6 +620,14 @@ String _hourLabel(int hour) {
   final suffix = hour < 12 ? 'AM' : 'PM';
   final displayHour = hour % 12 == 0 ? 12 : hour % 12;
   return '$displayHour:00 $suffix';
+}
+
+String _leadTimeLabel(int minutes) {
+  final hours = minutes / 60;
+  final value = hours == hours.roundToDouble()
+      ? hours.toInt().toString()
+      : hours.toStringAsFixed(1);
+  return '$value ${hours == 1 ? 'hour' : 'hours'} before';
 }
 
 final class _TemplateEditor extends StatelessWidget {
