@@ -337,7 +337,7 @@ final class ResponsiveApplicationShell extends StatelessWidget {
                     height: 720,
                     child: VariantFRasterPanelFrame(
                       panel: VariantFRasterPanel.calendar,
-                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+                      padding: const EdgeInsets.fromLTRB(36, 38, 36, 38),
                       child: slots.centralContent,
                     ),
                   ),
@@ -532,11 +532,8 @@ final class ShellPanel extends StatelessWidget {
   final Color? accent;
 
   @override
-  Widget build(BuildContext context) => VariantFTacticalFrame(
-    accent: accent,
-    chamfer: 13,
-    statusLight: true,
-    child: Column(
+  Widget build(BuildContext context) {
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
@@ -562,8 +559,17 @@ final class ShellPanel extends StatelessWidget {
         const SizedBox(height: 10),
         child,
       ],
-    ),
-  );
+    );
+    if (VariantFRasterPanelInterior.isActive(context)) {
+      return Padding(padding: const EdgeInsets.all(8), child: content);
+    }
+    return VariantFTacticalFrame(
+      accent: accent,
+      chamfer: 13,
+      statusLight: true,
+      child: content,
+    );
+  }
 }
 
 final class _CommandBar extends StatelessWidget {

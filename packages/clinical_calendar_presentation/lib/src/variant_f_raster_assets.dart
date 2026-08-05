@@ -28,6 +28,21 @@ enum VariantFRasterRail {
 
 enum VariantFRasterPanel { calendar, placements, planning, status }
 
+/// Marks content mounted inside a rendered housing so it does not repaint a
+/// second opaque/vector panel over the raster chrome.
+final class VariantFRasterPanelInterior extends InheritedWidget {
+  const VariantFRasterPanelInterior({required super.child, super.key});
+
+  static bool isActive(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<VariantFRasterPanelInterior>() !=
+      null;
+
+  @override
+  bool updateShouldNotify(covariant VariantFRasterPanelInterior oldWidget) =>
+      false;
+}
+
 final class VariantFRasterHardwareSprite extends StatelessWidget {
   const VariantFRasterHardwareSprite({required this.part, super.key});
 
@@ -83,7 +98,10 @@ final class VariantFRasterPanelFrame extends StatelessWidget {
           ),
         ),
       ),
-      Padding(padding: padding, child: child),
+      Padding(
+        padding: padding,
+        child: VariantFRasterPanelInterior(child: child),
+      ),
     ],
   );
 }

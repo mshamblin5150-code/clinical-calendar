@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../tactical_frame.dart';
 import '../variant_f_theme.dart';
+import '../variant_f_raster_assets.dart';
 import 'placement_progress_controller.dart';
 import 'placement_specialty_icon.dart';
 
@@ -656,12 +657,8 @@ final class _TacticalPanel extends StatelessWidget {
   final bool expandChild;
 
   @override
-  Widget build(BuildContext context) => VariantFTacticalFrame(
-    accent: statusColor,
-    chamfer: 13,
-    statusLight: true,
-    padding: const EdgeInsets.all(12),
-    child: Column(
+  Widget build(BuildContext context) {
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
@@ -695,8 +692,18 @@ final class _TacticalPanel extends StatelessWidget {
         const Divider(height: 14),
         if (expandChild) Expanded(child: child) else child,
       ],
-    ),
-  );
+    );
+    if (VariantFRasterPanelInterior.isActive(context)) {
+      return Padding(padding: const EdgeInsets.all(8), child: content);
+    }
+    return VariantFTacticalFrame(
+      accent: statusColor,
+      chamfer: 13,
+      statusLight: true,
+      padding: const EdgeInsets.all(12),
+      child: content,
+    );
+  }
 }
 
 final class _EmptyPlacementState extends StatelessWidget {
