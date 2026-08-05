@@ -50,4 +50,31 @@ void main() {
     expect(module.right, lessThan(chassis.right));
     expect(find.byType(CustomPaint), findsWidgets);
   });
+
+  testWidgets('Variant F mechanical tile atlas renders every reusable part', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildVariantFTheme(),
+        home: Scaffold(
+          body: Wrap(
+            children: [
+              for (final tile in VariantFMechanicalTile.values)
+                SizedBox.square(
+                  dimension: 48,
+                  child: VariantFMechanicalTileWidget(tile: tile),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byType(VariantFMechanicalTileWidget),
+      findsNWidgets(VariantFMechanicalTile.values.length),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
