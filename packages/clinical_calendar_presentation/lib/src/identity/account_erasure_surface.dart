@@ -1,6 +1,8 @@
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:flutter/material.dart';
 
+import '../date_input.dart';
+
 typedef AccountBackupCreator = Future<bool> Function(String passphrase);
 
 final class AccountErasureSurface extends StatefulWidget {
@@ -512,12 +514,7 @@ final class _FreshCodeCardState extends State<_FreshCodeCard> {
   );
 }
 
-String _date(DateTime value) {
-  final local = value.toLocal();
-  return '${local.year.toString().padLeft(4, '0')}-'
-      '${local.month.toString().padLeft(2, '0')}-'
-      '${local.day.toString().padLeft(2, '0')}';
-}
+String _date(DateTime value) => formatUsDateFromDateTime(value);
 
 String _message(IdentityException error) => switch (error.code) {
   'expired_otp' => 'That code expired. Request a new code and try again.',

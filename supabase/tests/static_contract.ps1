@@ -9,6 +9,12 @@ $identityMigration = Get-Content -Raw (
 $erasureMigration = Get-Content -Raw (
   Join-Path $PSScriptRoot '..\migrations\202608040003_account_erasure.sql'
 )
+$reminderMigration = Get-Content -Raw (
+  Join-Path $PSScriptRoot '..\migrations\202608040004_synchronized_reminder_state.sql'
+)
+$profileMigration = Get-Content -Raw (
+  Join-Path $PSScriptRoot '..\migrations\202608040005_synchronized_student_profile.sql'
+)
 
 $requiredPatterns = @(
   'alter table clinical_calendar_sync.records force row level security',
@@ -93,6 +99,40 @@ $permanentPurgePatterns = @(
 foreach ($pattern in $permanentPurgePatterns) {
   if (-not $erasureMigration.Contains($pattern)) {
     throw "Missing permanent-purge contract pattern: $pattern"
+  }
+}
+
+$reminderPatterns = @(
+  "'evaluation_plan', 'settings', 'reminder_state'",
+  'validate_snapshot_without_reminder_state',
+  "p_entity_type <> 'reminder_state'",
+  "'reminder_type', 'subject_entity_id', 'scheduled_for_utc'",
+  "'snoozed_until_utc', 'resolved_at_utc', 'resolution_source'",
+  "'occurrence_key'",
+  'sync operation entity allowlist did not match',
+  'permanent purge entity allowlist did not match',
+  'from public, anon, authenticated'
+)
+foreach ($pattern in $reminderPatterns) {
+  if (-not $reminderMigration.Contains($pattern)) {
+    throw "Missing synchronized-reminder contract pattern: $pattern"
+  }
+}
+
+$profilePatterns = @(
+  "'settings', 'reminder_state', 'student_profile'",
+  'validate_snapshot_without_student_profile',
+  "p_entity_type <> 'student_profile'",
+  'p_entity_id <> p_student_id',
+  "'display_name', 'program', 'account_identity', 'avatar_base64'",
+  "'ownership_mismatch', 'field', 'student_profile_id'",
+  'sync operation entity allowlist did not match',
+  'permanent purge entity allowlist did not match',
+  'from public, anon, authenticated'
+)
+foreach ($pattern in $profilePatterns) {
+  if (-not $profileMigration.Contains($pattern)) {
+    throw "Missing synchronized-profile contract pattern: $pattern"
   }
 }
 

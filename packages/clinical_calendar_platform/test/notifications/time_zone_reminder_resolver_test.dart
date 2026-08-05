@@ -4,6 +4,14 @@ import 'package:clinical_calendar_platform/src/notifications/flutter_local_notif
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('UTC schedule boundaries use the package UTC location', () {
+    final resolver = TimeZonePackageReminderResolver();
+    final wallClock = DateTime.utc(2026, 8, 5, 8);
+
+    expect(resolver.fromLocal(wallClock, 'UTC').toUtc(), wallClock);
+    expect(resolver.toLocal(wallClock, 'UTC'), wallClock);
+  });
+
   test('named-zone wall clock follows daylight-saving transitions', () {
     final resolver = TimeZonePackageReminderResolver();
     final winter = resolver.fromLocal(
@@ -16,6 +24,14 @@ void main() {
     );
     expect(winter.toUtc(), DateTime.utc(2026, 1, 15, 12));
     expect(summer.toUtc(), DateTime.utc(2026, 7, 15, 11));
+    expect(
+      resolver.offsetAtLocal(DateTime.utc(2026, 1, 15, 7), 'America/New_York'),
+      const Duration(hours: -5),
+    );
+    expect(
+      resolver.offsetAtLocal(DateTime.utc(2026, 7, 15, 7), 'America/New_York'),
+      const Duration(hours: -4),
+    );
   });
 
   test('24-hour commitment lead preserves intended local wall clock', () {

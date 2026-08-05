@@ -199,6 +199,221 @@ void main() {
     },
   );
 
+  test(
+    'version ten requeues relationship rejections with fresh identities once',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'clinical-calendar-sync-v10-retry-',
+      );
+      final path = '${directory.path}${Platform.pathSeparator}calendar.db';
+      final raw = sqlite3.open(path);
+      raw.execute('PRAGMA key = "x\'$_key\'"');
+      final runner = DatabaseMigrationRunner.forTesting((version, _) {
+        if (version == 10) throw StateError('stop at version nine');
+      });
+      try {
+        runner.migrate(raw, 0);
+      } on ClinicalCalendarDatabaseException catch (error) {
+        expect(error.kind, DatabaseFailureKind.migrationFailed);
+      }
+      expect(raw.userVersion, 9);
+      raw.execute(
+        '''INSERT INTO student_profiles
+        (id, student_id, revision, created_at_utc, updated_at_utc, display_name)
+        VALUES (?, ?, 0, ?, ?, 'Student')''',
+        [_studentId, _studentId, _createdAt, _createdAt],
+      );
+      const rejectedId = '00000000-0000-4000-8000-000000000010';
+      const rejectedKey = '00000000-0000-4000-8000-000000000011';
+      raw.execute(
+        '''INSERT INTO outbox_operations
+        (id, student_id, idempotency_key, entity_type, entity_id,
+         operation_type, base_revision, payload_json, created_at_utc,
+         attempt_count, last_failure_code, terminal_rejection_code,
+         terminal_rejected_at_utc)
+        VALUES (?, ?, ?, 'evaluation_plan', ?, 'upsert', 0, ?, ?, 1,
+          'relationship_violation', 'relationship_violation', ?)''',
+        [
+          rejectedId,
+          _studentId,
+          rejectedKey,
+          _planId,
+          '{"entity_id":"$_planId"}',
+          _createdAt,
+          _createdAt,
+        ],
+      );
+
+      const DatabaseMigrationRunner().migrate(raw, 9);
+
+      expect(raw.userVersion, DatabaseMigrationRunner.latestVersion);
+      final rows = raw.select(
+        '''SELECT * FROM outbox_operations
+        WHERE entity_type = 'evaluation_plan' ORDER BY terminal_rejected_at_utc''',
+      );
+      expect(rows, hasLength(2));
+      final retry = rows.firstWhere(
+        (row) => row['terminal_rejected_at_utc'] == null,
+      );
+      expect(retry['id'], isNot(rejectedId));
+      expect(retry['idempotency_key'], isNot(rejectedKey));
+      expect(
+        retry['id'],
+        matches(
+          RegExp(
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+          ),
+        ),
+      );
+      expect(retry['attempt_count'], 0);
+      expect(retry['last_failure_code'], isNull);
+      expect(retry['terminal_rejection_code'], isNull);
+      expect(rows.singleWhere((row) => row['id'] == rejectedId), isNotNull);
+
+      raw.close();
+      await directory.delete(recursive: true);
+    },
+  );
+
+  test(
+    'version eleven resolves only relationship conflicts with accepted retries',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'clinical-calendar-sync-v11-recovery-',
+      );
+      final path = '${directory.path}${Platform.pathSeparator}calendar.db';
+      final raw = sqlite3.open(path);
+      raw.execute('PRAGMA key = "x\'$_key\'"');
+      final runner = DatabaseMigrationRunner.forTesting((version, _) {
+        if (version == 11) throw StateError('stop at version ten');
+      });
+      try {
+        runner.migrate(raw, 0);
+      } on ClinicalCalendarDatabaseException catch (error) {
+        expect(error.kind, DatabaseFailureKind.migrationFailed);
+      }
+      expect(raw.userVersion, 10);
+      raw.execute(
+        '''INSERT INTO student_profiles
+        (id, student_id, revision, created_at_utc, updated_at_utc, display_name)
+        VALUES (?, ?, 0, ?, ?, 'Student')''',
+        [_studentId, _studentId, _createdAt, _createdAt],
+      );
+      const payload = '{"entity_id":"$_planId"}';
+      const acceptedAt = '2026-08-04T19:00:00.000Z';
+      raw.execute(
+        '''INSERT INTO outbox_operations
+        (id, student_id, idempotency_key, entity_type, entity_id,
+         operation_type, base_revision, payload_json, created_at_utc,
+         attempt_count, last_failure_code, terminal_rejection_code,
+         terminal_rejected_at_utc)
+        VALUES ('00000000-0000-4000-8000-000000000020', ?,
+          '00000000-0000-4000-8000-000000000021', 'evaluation_plan', ?,
+          'upsert', 0, ?, ?, 1, 'relationship_violation',
+          'relationship_violation', ?)''',
+        [_studentId, _planId, payload, _createdAt, _createdAt],
+      );
+      raw.execute(
+        '''INSERT INTO outbox_operations
+        (id, student_id, idempotency_key, entity_type, entity_id,
+         operation_type, base_revision, payload_json, created_at_utc,
+         attempt_count, acknowledged_cursor, acknowledged_at_utc)
+        VALUES ('00000000-0000-4000-8000-000000000022', ?,
+          '00000000-0000-4000-8000-000000000023', 'evaluation_plan', ?,
+          'upsert', 0, ?, ?, 0, 8, ?)''',
+        [_studentId, _planId, payload, _createdAt, acceptedAt],
+      );
+      raw.execute(
+        '''INSERT INTO sync_conflicts
+        (id, student_id, revision, created_at_utc, updated_at_utc,
+         entity_type, entity_id, local_revision, remote_revision,
+         local_snapshot_json, remote_snapshot_json, detected_at_utc,
+         rejection_code, rejection_json)
+        VALUES ('00000000-0000-4000-8000-000000000024', ?, 1, ?, ?,
+          'evaluation_plan', ?, 1, 0, ?,
+          '{"code":"relationship_violation"}', ?,
+          'relationship_violation', '{"code":"relationship_violation"}')''',
+        [_studentId, _createdAt, _createdAt, _planId, payload, _createdAt],
+      );
+
+      const DatabaseMigrationRunner().migrate(raw, 10);
+
+      final conflict = raw.select('SELECT * FROM sync_conflicts').single;
+      expect(conflict['resolved_at_utc'], acceptedAt);
+      expect(conflict['updated_at_utc'], acceptedAt);
+      expect(conflict['revision'], 2);
+      expect(conflict['resolution_json'], contains('automatic_retry'));
+
+      raw.close();
+      await directory.delete(recursive: true);
+    },
+  );
+
+  test(
+    'version twelve requeues the rejected synchronized reminder once',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'clinical-calendar-sync-v12-reminder-',
+      );
+      final path = '${directory.path}${Platform.pathSeparator}calendar.db';
+      final raw = sqlite3.open(path);
+      raw.execute('PRAGMA key = "x\'$_key\'"');
+      final runner = DatabaseMigrationRunner.forTesting((version, _) {
+        if (version == 12) throw StateError('stop at version eleven');
+      });
+      try {
+        runner.migrate(raw, 0);
+      } on ClinicalCalendarDatabaseException catch (error) {
+        expect(error.kind, DatabaseFailureKind.migrationFailed);
+      }
+      expect(raw.userVersion, 11);
+      raw.execute(
+        '''INSERT INTO student_profiles
+        (id, student_id, revision, created_at_utc, updated_at_utc, display_name)
+        VALUES (?, ?, 0, ?, ?, 'Student')''',
+        [_studentId, _studentId, _createdAt, _createdAt],
+      );
+      const reminderId = '00000000-0000-4000-8000-000000000030';
+      const rejectedId = '00000000-0000-4000-8000-000000000031';
+      const rejectedKey = '00000000-0000-4000-8000-000000000032';
+      raw.execute(
+        '''INSERT INTO outbox_operations
+        (id, student_id, idempotency_key, entity_type, entity_id,
+         operation_type, base_revision, payload_json, created_at_utc,
+         attempt_count, last_failure_code, terminal_rejection_code,
+         terminal_rejected_at_utc)
+        VALUES (?, ?, ?, 'reminder_state', ?, 'upsert', 0, ?, ?, 1,
+          'invalid_request', 'invalid_request', ?)''',
+        [
+          rejectedId,
+          _studentId,
+          rejectedKey,
+          reminderId,
+          '{"entity_id":"$reminderId","revision":1}',
+          _createdAt,
+          _createdAt,
+        ],
+      );
+
+      const DatabaseMigrationRunner().migrate(raw, 11);
+
+      final rows = raw.select(
+        "SELECT * FROM outbox_operations WHERE entity_type = 'reminder_state'",
+      );
+      expect(rows, hasLength(2));
+      final retry = rows.singleWhere(
+        (row) => row['terminal_rejected_at_utc'] == null,
+      );
+      expect(retry['id'], isNot(rejectedId));
+      expect(retry['idempotency_key'], isNot(rejectedKey));
+      expect(retry['attempt_count'], 0);
+      expect(retry['last_failure_code'], isNull);
+
+      raw.close();
+      await directory.delete(recursive: true);
+    },
+  );
+
   test('Evaluation Plan outbox payload carries its Clinical Placement', () async {
     final directory = await Directory.systemTemp.createTemp(
       'clinical-calendar-sync-payload-',

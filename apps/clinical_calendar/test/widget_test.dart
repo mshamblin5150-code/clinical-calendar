@@ -363,6 +363,15 @@ void main() {
     expect(workflow, contains('WINDOWS_SIGNING_PFX_BASE64'));
     expect(workflow, contains('WINDOWS_SIGNING_PFX_PASSWORD'));
     expect(workflow, contains('WINDOWS_SIGNING_PUBLISHER'));
+    expect(
+      workflow,
+      contains('CLINICAL_CALENDAR_ENVIRONMENT: private-release'),
+    );
+    expect(workflow, contains('vars.CLINICAL_CALENDAR_SUPABASE_URL'));
+    expect(
+      workflow,
+      contains('secrets.CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY'),
+    );
     expect(workflow, contains('Import-PfxCertificate'));
     expect(workflow, contains('Remove ephemeral signing certificate'));
     expect(workflow, isNot(contains('-AllowUnsigned')));
@@ -370,6 +379,7 @@ void main() {
     expect(packager, contains('Publisher must exactly match'));
     expect(packager, contains('signtool.exe'));
     expect(packager, contains('verify /pa /all /v'));
+    expect(packager, contains('Get-ClinicalCalendarReleaseFlutterArguments'));
     expect(
       packager,
       contains(r'''$suffix = if ($certificate) { '' } else { '.unsigned' }'''),

@@ -114,6 +114,10 @@ void main() {
       );
       expect(gateway.details!.android!.actions!.single.id, 'snooze.oneHour');
       expect(
+        gateway.details!.android!.actions!.single.showsUserInterface,
+        isTrue,
+      );
+      expect(
         gateway.details!.windows!.actions.single.arguments,
         'snooze.oneHour',
       );

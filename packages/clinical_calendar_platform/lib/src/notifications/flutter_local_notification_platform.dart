@@ -16,11 +16,11 @@ final class TimeZonePackageReminderResolver
 
   @override
   DateTime toLocal(DateTime utc, String timeZoneId) =>
-      tz.TZDateTime.from(utc.toUtc(), tz.getLocation(timeZoneId));
+      tz.TZDateTime.from(utc.toUtc(), _location(timeZoneId));
 
   @override
   DateTime fromLocal(DateTime localWallClock, String timeZoneId) {
-    final location = tz.getLocation(timeZoneId);
+    final location = _location(timeZoneId);
     return tz.TZDateTime(
       location,
       localWallClock.year,
@@ -33,6 +33,21 @@ final class TimeZonePackageReminderResolver
       localWallClock.microsecond,
     );
   }
+
+  Duration offsetAtLocal(DateTime localWallClock, String timeZoneId) {
+    final location = _location(timeZoneId);
+    return tz.TZDateTime(
+      location,
+      localWallClock.year,
+      localWallClock.month,
+      localWallClock.day,
+      localWallClock.hour,
+      localWallClock.minute,
+    ).timeZoneOffset;
+  }
+
+  tz.Location _location(String timeZoneId) =>
+      timeZoneId == 'UTC' ? tz.UTC : tz.getLocation(timeZoneId);
 }
 
 final class FlutterDeviceTimeZoneProvider {
@@ -206,7 +221,11 @@ final class PluginLocalNotificationDriver implements LocalNotificationDriver {
         channelDescription: 'Clinical Calendar reminders',
         actions: [
           for (final action in actions)
-            AndroidNotificationAction(action.id, action.label),
+            AndroidNotificationAction(
+              action.id,
+              action.label,
+              showsUserInterface: true,
+            ),
         ],
       ),
       iOS: DarwinNotificationDetails(

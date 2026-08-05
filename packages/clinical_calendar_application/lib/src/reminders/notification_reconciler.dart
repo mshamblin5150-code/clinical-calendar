@@ -188,18 +188,21 @@ final class NotificationReconciler {
       if (old != null) {
         // Delivered or dismissed occurrences remain historical truth and are not
         // re-created merely because the process restarted.
-        if (old.delivered ||
-            old.dismissed ||
-            (old.scheduledForUtc == entry.value.scheduledForUtc &&
-                old.contentFingerprint == fingerprint)) {
+        if (old.delivered || old.dismissed) {
           next[entry.key] = old;
           continue;
         }
-        // A travel/time-zone or quiet-hours preference change can move a still
-        // pending occurrence without changing its logical identity.
-        await platform.cancel(old.notificationId);
+        if (old.scheduledForUtc != entry.value.scheduledForUtc ||
+            old.contentFingerprint != fingerprint) {
+          // A travel/time-zone or quiet-hours preference change can move a
+          // still-pending occurrence without changing its logical identity.
+          await platform.cancel(old.notificationId);
+        }
       }
-      final id = _stableId(item.occurrenceKey);
+      // Re-register every still-pending occurrence. The OS can discard native
+      // schedules independently of this durable record (for example after a
+      // force-stop), and scheduling the same identifier is idempotent.
+      final id = old?.notificationId ?? _stableId(item.occurrenceKey);
       await platform.schedule(
         id: id,
         atUtc: item.scheduledForUtc,

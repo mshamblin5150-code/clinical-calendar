@@ -13,6 +13,11 @@ versioned upgrades, and clean Windows-managed uninstall behavior.
   - `WINDOWS_SIGNING_PFX_PASSWORD`: the PFX password.
 - Configure `WINDOWS_SIGNING_PUBLISHER` as a protected environment variable
   containing the exact certificate subject distinguished name.
+- Configure `CLINICAL_CALENDAR_SUPABASE_URL` as a protected environment
+  variable containing the hosted HTTPS project URL and
+  `CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY` as a protected secret containing
+  only a publishable key or legacy `anon` JWT. Release packaging rejects
+  service-role/secret keys and missing or non-HTTPS configuration.
 - Keep the certificate subject stable. It becomes the MSIX Publisher identity;
   changing it creates a different application instead of an upgrade.
 - Never commit or attach the PFX, its password, a private key, database key,

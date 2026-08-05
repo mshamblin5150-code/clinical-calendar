@@ -4,6 +4,8 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/foundation.dart';
 
+import '../date_input.dart';
+
 typedef CommitmentLifecycleChanged = FutureOr<void> Function();
 
 final class CommitmentLifecycleController extends ChangeNotifier {
@@ -187,10 +189,10 @@ final class CommitmentLifecycleController extends ChangeNotifier {
     final conflict = _conflicts.first;
     return switch (conflict.violation) {
       ScheduleInvariantViolation.commitmentOverlap =>
-        'Schedule Conflict on ${conflict.conflictDate}. '
+        'Schedule Conflict on ${formatUsDate(conflict.conflictDate)}. '
             'The original entry was not changed.',
       ScheduleInvariantViolation.commitmentTouchesProtectedDay =>
-        'Protected Day on ${conflict.conflictDate} blocks this change. '
+        'Protected Day on ${formatUsDate(conflict.conflictDate)} blocks this change. '
             'The original entry was not changed.',
       ScheduleInvariantViolation.multipleProtectedDaysInWeek =>
         'That calendar week already has a Protected Day. '
@@ -290,15 +292,11 @@ final class _SchedulingConflictException implements Exception {
 }
 
 LocalDate parseCommitmentDate(String input) {
-  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(input.trim());
-  if (match == null) {
-    throw const FormatException('Date must use YYYY-MM-DD.');
+  try {
+    return parseUsDate(input);
+  } on Object {
+    throw const FormatException('Date must use MM-DD-YYYY.');
   }
-  return LocalDate(
-    int.parse(match.group(1)!),
-    int.parse(match.group(2)!),
-    int.parse(match.group(3)!),
-  );
 }
 
 LocalTime parseFlexibleCommitmentTime(String input) {

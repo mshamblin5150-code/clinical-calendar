@@ -58,6 +58,9 @@ jobs:
       - name: Build, package, sign, and verify MSIX
         shell: pwsh
         env:
+          CLINICAL_CALENDAR_ENVIRONMENT: private-release
+          CLINICAL_CALENDAR_SUPABASE_URL: ${{ vars.CLINICAL_CALENDAR_SUPABASE_URL }}
+          CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY }}
           WINDOWS_SIGNING_PUBLISHER: ${{ vars.WINDOWS_SIGNING_PUBLISHER }}
         run: |
           ./tool/windows/package_msix.ps1 `

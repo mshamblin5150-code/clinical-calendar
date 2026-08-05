@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
+import '../date_input.dart';
 import '../variant_f_theme.dart';
 import 'batch_scheduling_controller.dart';
 
@@ -375,7 +376,7 @@ final class _ReviewStage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item.date.toString(),
+                        formatUsDate(item.date),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 4),
@@ -396,7 +397,7 @@ final class _ReviewStage extends StatelessWidget {
                     width: context.clinicalMetrics.minimumTouchTarget,
                     height: context.clinicalMetrics.minimumTouchTarget,
                   ),
-                  tooltip: 'Remove ${item.date}',
+                  tooltip: 'Remove ${formatUsDate(item.date)}',
                   onPressed: () => controller.removeDate(item.date),
                   icon: const Icon(Icons.close),
                 ),
@@ -495,9 +496,10 @@ String _reviewSummary(
 String _conflictLabel(SchedulingError error) => switch (error.violation) {
   ScheduleInvariantViolation.commitmentOverlap =>
     'Schedule Conflict: overlaps an existing commitment on '
-        '${error.conflictDate}.',
+        '${formatUsDate(error.conflictDate)}.',
   ScheduleInvariantViolation.commitmentTouchesProtectedDay =>
-    'Schedule Conflict: touches the Protected Day on ${error.conflictDate}.',
+    'Schedule Conflict: touches the Protected Day on '
+        '${formatUsDate(error.conflictDate)}.',
   ScheduleInvariantViolation.multipleProtectedDaysInWeek =>
     'Schedule Conflict: that week already has a Protected Day.',
 };

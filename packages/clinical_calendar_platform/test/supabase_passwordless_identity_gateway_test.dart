@@ -40,6 +40,44 @@ void main() {
     );
   });
 
+  test('first signup code falls back to signup verification', () async {
+    final captured = <http.Request>[];
+    final gateway = _gateway((request) async {
+      captured.add(request);
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      return body['type'] == 'email'
+          ? http.Response(jsonEncode({'code': 'otp_expired'}), 403)
+          : http.Response(jsonEncode(_sessionResponse()), 200);
+    });
+
+    final session = await gateway.verifySignInCode(
+      'student@example.com',
+      '123456',
+    );
+
+    expect(captured.map((request) => jsonDecode(request.body)['type']), [
+      'email',
+      'signup',
+    ]);
+    expect(session.studentId, _studentId);
+  });
+
+  test('server failure is not misreported as device offline', () async {
+    final gateway = _gateway(
+      (_) async =>
+          http.Response(jsonEncode({'code': 'unexpected_failure'}), 500),
+    );
+
+    await expectLater(
+      gateway.sendSignInCode('student@example.com'),
+      throwsA(
+        isA<IdentityException>()
+            .having((error) => error.code, 'code', 'server_unavailable')
+            .having((error) => error.offline, 'offline', isFalse),
+      ),
+    );
+  });
+
   test(
     'refresh rotates tokens and preserves the session identity claim',
     () async {

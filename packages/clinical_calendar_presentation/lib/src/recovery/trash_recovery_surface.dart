@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 
+import '../date_input.dart';
 import '../variant_f_theme.dart';
 
 final class TrashRecoverySurface extends StatefulWidget {
@@ -114,7 +115,8 @@ final class _TrashRecoverySurfaceState extends State<TrashRecoverySurface> {
                   key: Key('trash-${entry.id}'),
                   title: Text(_entityLabel(entry.entityType)),
                   subtitle: Text(
-                    'Recoverable until ${entry.purgeAfterUtc.toLocal().toString().substring(0, 10)}',
+                    'Recoverable until '
+                    '${formatUsDateFromDateTime(entry.purgeAfterUtc)}',
                   ),
                   contentPadding: EdgeInsets.zero,
                   trailing: Wrap(

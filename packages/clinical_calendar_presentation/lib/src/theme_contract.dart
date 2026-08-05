@@ -49,7 +49,7 @@ final class VariantFHelpGuide implements ThemeHelpGuide {
   String get themeId => 'variant-f';
 
   @override
-  String get title => 'Variant F calendar states';
+  String get title => 'Containment Drone 47-Alpha calendar states';
 
   @override
   List<CalendarStateGuide> get calendarStates => const [

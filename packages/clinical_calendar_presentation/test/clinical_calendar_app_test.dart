@@ -155,7 +155,7 @@ void main() {
     expect(find.byKey(const Key('back-action')), findsNothing);
     expect(find.text('WORKFLOW GUIDE'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('VARIANT F CALENDAR STATES'),
+      find.text('CONTAINMENT DRONE 47-ALPHA CALENDAR STATES'),
       500,
       scrollable: find
           .descendant(
@@ -164,7 +164,10 @@ void main() {
           )
           .first,
     );
-    expect(find.text('VARIANT F CALENDAR STATES'), findsOneWidget);
+    expect(
+      find.text('CONTAINMENT DRONE 47-ALPHA CALENDAR STATES'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('profile avatar is a 44 pixel direct Student Profile entry', (

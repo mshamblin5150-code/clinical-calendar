@@ -495,18 +495,47 @@ final class SqliteRepositoryRegistry
     return row;
   }
 
-  /// Counts every local mutation that has not been acknowledged by the
-  /// synchronization service, including delayed retries and conflicts that
-  /// still require the Student's attention.
+  /// Counts local mutations whose value is not safely represented by an
+  /// acknowledged server operation. Delayed retries and unrecovered terminal
+  /// rejections remain visible, while rejected audit rows with an identical
+  /// replacement or a later acknowledged full snapshot do not falsely block
+  /// device-copy removal.
   Future<({int count, DateTime? oldestAtUtc})> localRemovalPreview() =>
       _enqueue(() {
         _requireInitialized();
         final row = _database
             .select(
               '''SELECT count(*) AS pending_count,
-                    min(created_at_utc) AS oldest_at_utc
-             FROM outbox_operations
-             WHERE student_id = ? AND acknowledged_at_utc IS NULL''',
+                    min(pending.created_at_utc) AS oldest_at_utc
+             FROM outbox_operations AS pending
+             WHERE pending.student_id = ?
+               AND pending.acknowledged_at_utc IS NULL
+               AND (
+                 pending.terminal_rejected_at_utc IS NULL
+                 OR NOT EXISTS (
+                   SELECT 1 FROM outbox_operations AS replacement
+                   WHERE replacement.student_id = pending.student_id
+                     AND replacement.id <> pending.id
+                     AND replacement.entity_type = pending.entity_type
+                     AND replacement.entity_id = pending.entity_id
+                     AND replacement.acknowledged_at_utc IS NOT NULL
+                     AND (
+                       (
+                         replacement.operation_type = pending.operation_type
+                         AND replacement.base_revision = pending.base_revision
+                         AND replacement.payload_json = pending.payload_json
+                       )
+                       OR (
+                         replacement.created_at_utc >= pending.created_at_utc
+                         AND CAST(json_extract(
+                           replacement.payload_json, '\$.revision'
+                         ) AS INTEGER) >= CAST(json_extract(
+                           pending.payload_json, '\$.revision'
+                         ) AS INTEGER)
+                       )
+                     )
+                 )
+               )''',
               [studentId],
             )
             .single;
@@ -2198,11 +2227,50 @@ final class _OutboxRepository implements OutboxMaintenanceRepository {
     _owner(studentId, repositories.registry.studentId);
     if (limit <= 0) return const [];
     final rows = repositories.registry._database.select(
-      '''SELECT * FROM outbox_operations
-        WHERE student_id = ? AND acknowledged_at_utc IS NULL
-        AND terminal_rejected_at_utc IS NULL
-        AND (next_attempt_at_utc IS NULL OR next_attempt_at_utc <= ?)
-        ORDER BY created_at_utc, id LIMIT ?''',
+      '''WITH eligible AS (
+          SELECT *, first_value(operation_type) OVER (
+            PARTITION BY student_id, entity_type, entity_id
+            ORDER BY created_at_utc DESC, id DESC
+          ) AS final_operation_type
+          FROM outbox_operations
+          WHERE student_id = ? AND acknowledged_at_utc IS NULL
+          AND terminal_rejected_at_utc IS NULL
+          AND (next_attempt_at_utc IS NULL OR next_attempt_at_utc <= ?)
+        )
+        SELECT * FROM eligible
+        ORDER BY
+          CASE
+            WHEN final_operation_type = 'delete' THEN CASE entity_type
+              WHEN 'evaluation_plan' THEN 0
+              WHEN 'clinical_session' THEN 0
+              WHEN 'historical_hours_entry' THEN 0
+              WHEN 'settings' THEN 0
+              WHEN 'reminder_state' THEN 0
+              WHEN 'schedule_template' THEN 0
+              WHEN 'clinical_placement' THEN 1
+              WHEN 'preceptor' THEN 2
+              WHEN 'protected_day' THEN 2
+              WHEN 'work_shift' THEN 2
+              WHEN 'student_profile' THEN 3
+              ELSE 3
+            END
+            ELSE CASE entity_type
+              WHEN 'student_profile' THEN 0
+              WHEN 'preceptor' THEN 1
+              WHEN 'protected_day' THEN 1
+              WHEN 'work_shift' THEN 1
+              WHEN 'clinical_placement' THEN 2
+              WHEN 'evaluation_plan' THEN 3
+              WHEN 'clinical_session' THEN 3
+              WHEN 'historical_hours_entry' THEN 3
+              WHEN 'schedule_template' THEN 3
+              WHEN 'settings' THEN 4
+              WHEN 'reminder_state' THEN 5
+              ELSE 5
+            END
+          END,
+          entity_type, entity_id,
+          created_at_utc, id LIMIT ?''',
       [repositories.registry.studentId, _utc(asOfUtc), limit],
     );
     try {

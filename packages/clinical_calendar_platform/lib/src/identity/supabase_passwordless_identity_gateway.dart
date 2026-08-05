@@ -27,13 +27,22 @@ final class SupabasePasswordlessIdentityGateway
   }
 
   @override
-  Future<IdentitySession> verifySignInCode(String email, String code) async =>
-      _sessionFrom(
-        await _request(
-          'POST',
-          '/auth/v1/verify',
-          body: {'type': 'email', 'email': email, 'token': code},
-        ),
+  Future<IdentitySession> verifySignInCode(String email, String code) async {
+    try {
+      return _sessionFrom(await _verifyEmailCode(email, code, 'email'));
+    } on IdentityException catch (error) {
+      if (error.code != 'expired_otp') rethrow;
+    }
+    // Supabase's first confirmation for a newly created email identity uses a
+    // signup token even though subsequent passwordless codes use email.
+    return _sessionFrom(await _verifyEmailCode(email, code, 'signup'));
+  }
+
+  Future<Object?> _verifyEmailCode(String email, String code, String type) =>
+      _request(
+        'POST',
+        '/auth/v1/verify',
+        body: {'type': type, 'email': email, 'token': code},
       );
 
   @override
@@ -326,7 +335,7 @@ IdentityException _failure(http.Response response) {
     return const IdentityException('unauthenticated');
   }
   if (response.statusCode >= 500) {
-    return const IdentityException('server_unavailable', offline: true);
+    return const IdentityException('server_unavailable');
   }
   return IdentityException(code ?? 'invalid_request');
 }

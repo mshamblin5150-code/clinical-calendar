@@ -1,6 +1,8 @@
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:flutter/material.dart';
 
+import '../date_input.dart';
+
 import '../variant_f_theme.dart';
 import 'conflict_resolution_controller.dart';
 
@@ -566,4 +568,4 @@ String _value(Object? value) => switch (value) {
   _ => value.toString(),
 };
 
-String _dateTime(DateTime value) => value.toLocal().toString().split('.').first;
+String _dateTime(DateTime value) => formatUsDateTime(value);

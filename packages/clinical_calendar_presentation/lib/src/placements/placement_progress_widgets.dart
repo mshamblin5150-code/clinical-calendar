@@ -2,10 +2,12 @@ import 'dart:math' as math;
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../variant_f_theme.dart';
 import 'placement_progress_controller.dart';
+import 'placement_specialty_icon.dart';
 
 final class PlacementDock extends StatelessWidget {
   const PlacementDock({
@@ -85,13 +87,14 @@ final class PlacementProgressWheel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = snapshot.progress;
+    final touchWording = _usesTouchWording(touch);
     final semantics =
         '${snapshot.placement.name}, ${_minutes(progress.completedMinutes)} '
         'Completed Hours of ${_minutes(progress.targetMinutes)} Target Hours, '
         '${_minutes(progress.scheduledMinutes)} Scheduled Hours, '
         '${_minutes(progress.unscheduledMinutes)} Unscheduled Hours, '
         '${_minutes(progress.overTargetMinutes)} Over-Target Hours. '
-        '${touch ? 'Tap' : 'Click'} to show the next Clinical Placement.';
+        '${touchWording ? 'Tap' : 'Click'} to show the next Clinical Placement.';
     return Semantics(
       button: true,
       label: semantics,
@@ -181,7 +184,8 @@ final class _PlacementProgressRailState extends State<PlacementProgressRail> {
                         ? null
                         : widget.controller.cyclePlacement,
                     child: Text(
-                      '${widget.touch ? 'TAP' : 'CLICK'} WHEEL TO VIEW NEXT PLACEMENT',
+                      '${_usesTouchWording(widget.touch) ? 'TAP' : 'CLICK'} '
+                      'WHEEL TO VIEW NEXT PLACEMENT',
                     ),
                   ),
                   TextButton(
@@ -202,6 +206,11 @@ final class _PlacementProgressRailState extends State<PlacementProgressRail> {
     },
   );
 }
+
+bool _usesTouchWording(bool explicitTouch) =>
+    explicitTouch ||
+    defaultTargetPlatform == TargetPlatform.android ||
+    defaultTargetPlatform == TargetPlatform.iOS;
 
 final class PlacementMobileSummary extends StatelessWidget {
   const PlacementMobileSummary({
@@ -243,8 +252,8 @@ final class PlacementMetricLedger extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = snapshot.progress;
-    final metrics = <(String, int, Color)>[
-      ('Target', progress.targetMinutes, context.clinicalColors.secondaryText),
+    final metrics = <(String, int, Color?)>[
+      ('Target', progress.targetMinutes, null),
       ('Completed', progress.completedMinutes, context.clinicalColors.clinical),
       (
         'Scheduled',
@@ -270,14 +279,17 @@ final class PlacementMetricLedger extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 3),
             child: Row(
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: metric.$3,
-                    shape: BoxShape.circle,
-                  ),
-                ),
+                if (metric.$3 case final color?)
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                else
+                  const SizedBox(width: 8, height: 8),
                 const SizedBox(width: 8),
                 Expanded(child: Text(metric.$1)),
                 Text(
@@ -441,8 +453,8 @@ final class _PlacementDockRow extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.medical_services_outlined,
+                PlacementSpecialtyGlyph(
+                  placementName: snapshot.placement.name,
                   color: selected
                       ? context.clinicalColors.clinical
                       : context.clinicalColors.secondaryText,
@@ -579,10 +591,20 @@ final class _ProgressWheelPainter extends CustomPainter {
           math.max(target - progress.completedMinutes, 0),
         ) /
         target;
+    final unscheduled =
+        math.min(
+          progress.unscheduledMinutes,
+          math.max(
+            target - progress.completedMinutes - progress.scheduledMinutes,
+            0,
+          ),
+        ) /
+        target;
     var start = -math.pi / 2;
     for (final segment in [
       (completed, colors.clinical),
       (scheduled, colors.scheduled),
+      (unscheduled, colors.urgent),
     ]) {
       if (segment.$1 <= 0) continue;
       final paint = Paint()
@@ -593,6 +615,21 @@ final class _ProgressWheelPainter extends CustomPainter {
       final sweep = math.pi * 2 * segment.$1;
       canvas.drawArc(rect, start, sweep, false, paint);
       start += sweep;
+    }
+    if (progress.overTargetMinutes > 0) {
+      final overTarget = math.min(progress.overTargetMinutes / target, 1.0);
+      final overTargetPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(stroke * .18, 2)
+        ..strokeCap = StrokeCap.round
+        ..color = colors.primaryText;
+      canvas.drawArc(
+        rect.inflate(stroke * .38),
+        -math.pi / 2,
+        math.pi * 2 * overTarget,
+        false,
+        overTargetPaint,
+      );
     }
   }
 

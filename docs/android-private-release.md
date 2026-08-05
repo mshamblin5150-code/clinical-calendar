@@ -26,6 +26,22 @@ passwords outside the repository, shell history, issue comments, and build
 artifacts. Preserve an offline backup: losing the signing key prevents trusted
 upgrades over the installed application.
 
+Also configure the protected environment with:
+
+- `CLINICAL_CALENDAR_SUPABASE_URL` as a variable containing the hosted HTTPS
+  project URL.
+- `CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY` as a secret containing only a
+  Supabase publishable key or legacy `anon` JWT. Service-role and secret keys
+  are rejected and forbidden.
+
+Release packaging pins `CLINICAL_CALENDAR_ENVIRONMENT=private-release` and
+fails closed when either synchronization value is absent or invalid. These
+public client values identify the project but never replace RLS authorization.
+The packager's `-AllowUnconfiguredAcceptanceBuild` escape hatch is only for a
+locally signer-preserving physical QA upgrade; its visibly `LOCAL` artifact is
+non-distributable and cannot satisfy authentication or synchronization
+acceptance. The protected GitHub workflow never uses that switch.
+
 ## Build and retrieve the APK
 
 Run the `Android private release` workflow manually for the reviewed commit.

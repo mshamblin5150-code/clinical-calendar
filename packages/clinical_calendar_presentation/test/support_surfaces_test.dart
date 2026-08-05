@@ -79,6 +79,83 @@ void main() {
     },
   );
 
+  testWidgets('profile onboarding collects names and locks signed-in email', (
+    tester,
+  ) async {
+    String? firstName;
+    String? lastName;
+    await _pump(
+      tester,
+      Builder(
+        builder: (context) => FilledButton(
+          onPressed: () => showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => StudentProfileOnboardingDialog(
+              email: 'student@example.com',
+              onSave: (first, last) async {
+                firstName = first;
+                lastName = last;
+              },
+            ),
+          ),
+          child: const Text('Open'),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('student-profile-onboarding')), findsOneWidget);
+    expect(
+      tester
+          .widget<EditableText>(
+            find.descendant(
+              of: find.byKey(const Key('onboarding-email')),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .readOnly,
+      isTrue,
+    );
+    expect(find.text('student@example.com'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const Key('save-onboarding-profile')),
+          )
+          .onPressed,
+      isNull,
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('onboarding-first-name')),
+      '  Alex  ',
+    );
+    await tester.enterText(
+      find.byKey(const Key('onboarding-last-name')),
+      ' Bennett ',
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const Key('save-onboarding-profile')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('save-onboarding-profile')),
+    );
+    await tester.tap(find.byKey(const Key('save-onboarding-profile')));
+    await tester.pumpAndSettle();
+
+    expect(firstName, 'Alex');
+    expect(lastName, 'Bennett');
+    expect(find.byKey(const Key('student-profile-onboarding')), findsNothing);
+  });
+
   testWidgets(
     'Settings edits preferences and templates with derived duration',
     (tester) async {
@@ -204,12 +281,12 @@ void main() {
         matching: find.byType(Scrollable),
       );
 
+      await tester.tap(find.byKey(const Key('work-shift-first-lead-setting')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('12 hours before').last);
+      await tester.pumpAndSettle();
       await tester.tap(
         find.byKey(const Key('work-shift-notifications-setting')),
-      );
-      await tester.enterText(
-        find.byKey(const Key('work-shift-first-lead-setting')),
-        '720',
       );
       await _bringIntoView(
         tester,

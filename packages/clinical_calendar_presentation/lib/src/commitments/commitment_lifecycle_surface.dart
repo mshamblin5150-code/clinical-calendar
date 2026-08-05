@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
+import '../date_input.dart';
 import '../variant_f_theme.dart';
 import 'commitment_lifecycle_controller.dart';
 
@@ -140,14 +141,14 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
         _initializeTimed(editable);
         _preceptorId = session.preceptorId;
       case ProtectedDayLifecycleSnapshot(:final record):
-        _date = TextEditingController(text: record.value.date.toString());
+        _date = TextEditingController(text: formatUsDate(record.value.date));
         _start = TextEditingController();
         _end = TextEditingController();
     }
   }
 
   void _initializeTimed(ZonedInterval interval) {
-    _date = TextEditingController(text: interval.startDate.toString());
+    _date = TextEditingController(text: formatUsDate(interval.startDate));
     _start = TextEditingController(
       text: widget.twelveHourTime
           ? interval.startTime.twelveHour
@@ -307,7 +308,7 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
     children: [
       _SummaryPanel(
         icon: Icons.shield_moon_outlined,
-        title: day.date.toString(),
+        title: formatUsDate(day.date),
         lines: const [
           'Protected Day',
           'Blocked for rest and preparation for this calendar week.',
@@ -353,13 +354,27 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
     key: const Key('lifecycle-date-field'),
     controller: _date,
     enabled: !widget.controller.isBusy,
-    onChanged: (_) => setState(() {}),
+    readOnly: true,
+    onTap: widget.controller.isBusy ? null : _pickDate,
     decoration: InputDecoration(
       labelText: label,
-      hintText: 'YYYY-MM-DD',
+      hintText: 'MM-DD-YYYY',
       helperText: 'Changing the date moves the entry without replacing it.',
+      suffixIcon: const Icon(Icons.calendar_today_outlined),
     ),
   );
+
+  Future<void> _pickDate() async {
+    LocalDate? initialDate;
+    try {
+      initialDate = parseUsDate(_date.text);
+    } on Object {
+      initialDate = null;
+    }
+    final selected = await pickUsDate(context, initialDate: initialDate);
+    if (!mounted || selected == null) return;
+    setState(() => _date.text = formatUsDate(selected));
+  }
 
   Widget _timeFields() => LayoutBuilder(
     builder: (context, constraints) {
@@ -551,7 +566,7 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
 
   Widget _workSummary(WorkShift shift) => _SummaryPanel(
     icon: Icons.work_outline,
-    title: shift.plannedInterval.startDate.toString(),
+    title: formatUsDate(shift.plannedInterval.startDate),
     lines: [
       _range(shift.plannedInterval),
       'Scheduled Â· ${_minutesLabel(shift.plannedMinutes)}',
@@ -580,7 +595,7 @@ final class _ClinicalSummary extends StatelessWidget {
     final session = snapshot.record.value;
     return _SummaryPanel(
       icon: Icons.medical_services_outlined,
-      title: session.plannedInterval.startDate.toString(),
+      title: formatUsDate(session.plannedInterval.startDate),
       lines: [
         '${snapshot.clinicalPlacementName} Â· '
             '${snapshot.selectedPreceptor.name}',

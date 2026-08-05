@@ -165,6 +165,10 @@ abstract final class VariantFColors {
   static const protectedDayAccent = Color(0xFFB7BCB7);
   static const scheduled = Color(0xFFC49B45);
   static const urgent = Color(0xFFD55A52);
+  static const control = Color(0xFF121914);
+  static const controlActive = Color(0xFF293A20);
+  static const controlBorder = Color(0xFF596354);
+  static const shadow = Color(0xE6000000);
 }
 
 const variantFSemanticColors = ClinicalCalendarColors(
@@ -231,6 +235,7 @@ ThemeData buildVariantFTheme() {
 
   return ThemeData(
     brightness: Brightness.dark,
+    useMaterial3: true,
     scaffoldBackgroundColor: VariantFColors.background,
     colorScheme: const ColorScheme.dark(
       primary: VariantFColors.primary,
@@ -242,15 +247,98 @@ ThemeData buildVariantFTheme() {
     ),
     textTheme: textTheme,
     dividerColor: VariantFColors.border,
+    disabledColor: VariantFColors.muted.withValues(alpha: .45),
     splashFactory: NoSplash.splashFactory,
     extensions: const [variantFSemanticColors, metrics],
     visualDensity: VisualDensity.standard,
+    cardTheme: CardThemeData(
+      color: VariantFColors.surface,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: VariantFColors.shadow,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: VariantFColors.border),
+        borderRadius: BorderRadius.circular(metrics.cornerRadius),
+      ),
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: VariantFColors.surface,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: VariantFColors.text,
+      elevation: 0,
+      centerTitle: false,
+      titleTextStyle: TextStyle(
+        color: VariantFColors.text,
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        letterSpacing: .9,
+      ),
+      shape: Border(bottom: BorderSide(color: VariantFColors.border)),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: VariantFColors.raisedSurface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 16,
+      shadowColor: VariantFColors.shadow,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: VariantFColors.controlBorder),
+        borderRadius: BorderRadius.circular(metrics.cornerRadius),
+      ),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: VariantFColors.surface,
+      surfaceTintColor: Colors.transparent,
+      modalBackgroundColor: VariantFColors.surface,
+      modalBarrierColor: Color(0xB3000000),
+      shape: Border(top: BorderSide(color: VariantFColors.controlBorder)),
+      showDragHandle: false,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: VariantFColors.control,
+      labelStyle: const TextStyle(
+        color: VariantFColors.muted,
+        letterSpacing: .4,
+      ),
+      helperStyle: const TextStyle(color: VariantFColors.muted),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(metrics.cornerRadius),
+        borderSide: const BorderSide(color: VariantFColors.controlBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(metrics.cornerRadius),
+        borderSide: const BorderSide(color: VariantFColors.controlBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(metrics.cornerRadius),
+        borderSide: const BorderSide(color: VariantFColors.primary, width: 1.5),
+      ),
+    ),
+    listTileTheme: const ListTileThemeData(
+      iconColor: VariantFColors.muted,
+      textColor: VariantFColors.text,
+      selectedColor: VariantFColors.primary,
+    ),
     iconButtonTheme: const IconButtonThemeData(
-      style: ButtonStyle(minimumSize: WidgetStatePropertyAll(Size.square(44))),
+      style: ButtonStyle(
+        foregroundColor: WidgetStatePropertyAll(VariantFColors.text),
+        minimumSize: WidgetStatePropertyAll(Size.square(44)),
+      ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
+        backgroundColor: VariantFColors.controlActive,
+        foregroundColor: VariantFColors.text,
+        disabledBackgroundColor: VariantFColors.control,
+        disabledForegroundColor: VariantFColors.muted,
         minimumSize: const Size(44, 44),
+        side: const BorderSide(color: VariantFColors.primary),
+        elevation: 0,
+        textStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          letterSpacing: .7,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(metrics.cornerRadius),
         ),
@@ -258,17 +346,70 @@ ThemeData buildVariantFTheme() {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
+        backgroundColor: VariantFColors.control,
+        foregroundColor: VariantFColors.text,
         minimumSize: const Size(44, 44),
-        side: const BorderSide(color: VariantFColors.border),
+        side: const BorderSide(color: VariantFColors.controlBorder),
+        textStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          letterSpacing: .7,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(metrics.cornerRadius),
         ),
       ),
     ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: VariantFColors.primary,
+        textStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          letterSpacing: .7,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(metrics.cornerRadius),
+        ),
+      ),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? VariantFColors.controlActive
+              : VariantFColors.control,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? VariantFColors.primary
+              : VariantFColors.text,
+        ),
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: VariantFColors.controlBorder),
+        ),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(metrics.cornerRadius),
+          ),
+        ),
+        textStyle: const WidgetStatePropertyAll(
+          TextStyle(fontWeight: FontWeight.w700, letterSpacing: .6),
+        ),
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: VariantFColors.control,
+      selectedColor: VariantFColors.controlActive,
+      disabledColor: VariantFColors.control,
+      side: const BorderSide(color: VariantFColors.controlBorder),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(metrics.cornerRadius),
+      ),
+      labelStyle: const TextStyle(color: VariantFColors.text),
+    ),
     navigationBarTheme: const NavigationBarThemeData(
       height: 64,
       backgroundColor: VariantFColors.surface,
-      indicatorColor: VariantFColors.raisedSurface,
+      indicatorColor: VariantFColors.controlActive,
       labelTextStyle: WidgetStatePropertyAll(
         TextStyle(
           color: VariantFColors.muted,

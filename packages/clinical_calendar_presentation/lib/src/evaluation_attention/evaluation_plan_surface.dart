@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
+import '../date_input.dart';
 import '../responsive_shell.dart';
 import '../variant_f_theme.dart';
 import 'evaluation_attention_controller.dart';
@@ -321,7 +322,7 @@ final class _RequirementRow extends StatelessWidget {
             ),
           if (documentation != null)
             Text(
-              'Documented ${documentation.dateDocumented} · '
+              'Documented ${formatUsDate(documentation.dateDocumented)} · '
               '${documentation.location}'
               '${documentation.referenceOrNote == null ? '' : ' · ${documentation.referenceOrNote}'}',
             ),
@@ -401,9 +402,12 @@ class _DocumentationDialogState extends State<_DocumentationDialog> {
           TextField(
             key: const Key('evaluation-documented-date'),
             controller: _date,
+            readOnly: true,
+            onTap: _pickDate,
             decoration: const InputDecoration(
               labelText: 'Date documented',
-              hintText: 'YYYY-MM-DD',
+              hintText: 'MM-DD-YYYY',
+              suffixIcon: Icon(Icons.calendar_today_outlined),
             ),
           ),
           const SizedBox(height: 10),
@@ -457,7 +461,7 @@ class _DocumentationDialogState extends State<_DocumentationDialog> {
       Navigator.pop(
         context,
         EvaluationDocumentation(
-          dateDocumented: _parseDate(_date.text),
+          dateDocumented: parseUsDate(_date.text),
           location: _location.text,
           referenceOrNote: reference.isEmpty ? null : reference,
         ),
@@ -472,6 +476,18 @@ class _DocumentationDialogState extends State<_DocumentationDialog> {
   static final _externalReference = RegExp(
     r'^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,79}$',
   );
+
+  Future<void> _pickDate() async {
+    LocalDate? initial;
+    try {
+      initial = parseUsDate(_date.text);
+    } on Object {
+      initial = null;
+    }
+    final selected = await pickUsDate(context, initialDate: initial);
+    if (!mounted || selected == null) return;
+    setState(() => _date.text = formatUsDate(selected));
+  }
 }
 
 final class _LoadFailure extends StatelessWidget {
@@ -536,17 +552,5 @@ String _hours(int minutes) =>
 
 String _todayText() {
   final now = DateTime.now();
-  return '${now.year.toString().padLeft(4, '0')}-'
-      '${now.month.toString().padLeft(2, '0')}-'
-      '${now.day.toString().padLeft(2, '0')}';
-}
-
-LocalDate _parseDate(String value) {
-  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value.trim());
-  if (match == null) throw const FormatException('Invalid date.');
-  return LocalDate(
-    int.parse(match.group(1)!),
-    int.parse(match.group(2)!),
-    int.parse(match.group(3)!),
-  );
+  return formatUsDate(LocalDate(now.year, now.month, now.day));
 }

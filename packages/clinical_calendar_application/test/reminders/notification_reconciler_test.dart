@@ -76,6 +76,25 @@ void main() {
     },
   );
 
+  test(
+    'relaunch re-registers pending occurrences when native alarms were lost',
+    () async {
+      platform.current = NotificationPermission.granted;
+      const device = NotificationDevicePolicy(
+        deviceClass: NotificationDeviceClass.phone,
+      );
+      await reconciler.reconcile(desired: [_occurrence()], device: device);
+
+      // Android can clear the native alarm while the durable delivery record
+      // remains (for example after an adb force-stop during release QA).
+      await reconciler.reconcile(desired: [_occurrence()], device: device);
+
+      expect(platform.scheduled, hasLength(2));
+      expect(store.records.values.single.delivered, isFalse);
+      expect(store.records.values.single.dismissed, isFalse);
+    },
+  );
+
   test('unknown or denied permission never schedules delivery', () async {
     const device = NotificationDevicePolicy(
       deviceClass: NotificationDeviceClass.phone,

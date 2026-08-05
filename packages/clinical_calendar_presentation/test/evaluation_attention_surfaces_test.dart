@@ -49,10 +49,13 @@ void main() {
         find.text('External record reference (no patient information)'),
         findsOneWidget,
       );
-      await tester.enterText(
-        find.byKey(const Key('evaluation-documented-date')),
-        '2026-08-03',
-      );
+      tester
+              .widget<TextField>(
+                find.byKey(const Key('evaluation-documented-date')),
+              )
+              .controller!
+              .text =
+          '08-03-2026';
       await tester.enterText(
         find.byKey(const Key('evaluation-external-reference')),
         'Patient Jane Doe clinical note',

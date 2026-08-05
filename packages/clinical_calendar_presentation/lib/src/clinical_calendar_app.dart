@@ -27,6 +27,7 @@ import 'scheduling/batch_scheduling_controller.dart';
 import 'scheduling/staged_batch_scheduling_tray.dart';
 import 'support/profile_avatar_button.dart';
 import 'support/settings_templates_surface.dart';
+import 'support/student_profile_onboarding_dialog.dart';
 import 'support/student_profile_surface.dart';
 import 'support/support_help_surface.dart';
 import 'theme_contract.dart';
@@ -34,6 +35,7 @@ import 'variant_f_theme.dart';
 
 typedef ExportWorkflowFactory =
     ExportWorkflowService Function(ExportReauthenticationGate gate);
+typedef ScheduleDateFactory = ZonedScheduleDate Function(LocalDate date);
 
 final class ClinicalCalendarApp extends StatelessWidget {
   const ClinicalCalendarApp({
@@ -59,6 +61,7 @@ final class ClinicalCalendarApp extends StatelessWidget {
     this.recoveryStore,
     this.recoveryService,
     this.recoveryProofGate,
+    this.scheduleDateFactory,
     super.key,
   });
 
@@ -87,6 +90,7 @@ final class ClinicalCalendarApp extends StatelessWidget {
   final RecoveryStore? recoveryStore;
   final RecoveryApplicationService? recoveryService;
   final OneShotRecoveryReauthenticationGate? recoveryProofGate;
+  final ScheduleDateFactory? scheduleDateFactory;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -116,6 +120,7 @@ final class ClinicalCalendarApp extends StatelessWidget {
         notificationInteractions: notificationInteractions,
         notificationDevicePolicyStore: notificationDevicePolicyStore,
         notificationDeviceClass: notificationDeviceClass,
+        scheduleDateFactory: scheduleDateFactory,
       ),
     ),
   );
@@ -215,6 +220,7 @@ final class _ApplicationHost extends StatefulWidget {
     required this.notificationInteractions,
     required this.notificationDevicePolicyStore,
     required this.notificationDeviceClass,
+    required this.scheduleDateFactory,
   });
 
   final ApplicationDependencies dependencies;
@@ -235,6 +241,7 @@ final class _ApplicationHost extends StatefulWidget {
   final Stream<NotificationInteraction>? notificationInteractions;
   final NotificationDevicePolicyStore? notificationDevicePolicyStore;
   final NotificationDeviceClass? notificationDeviceClass;
+  final ScheduleDateFactory? scheduleDateFactory;
 
   @override
   State<_ApplicationHost> createState() => _ApplicationHostState();
@@ -258,6 +265,8 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   bool _supportLoading = true;
   StreamSubscription<NotificationInteraction>? _notificationSubscription;
   NotificationDevicePolicy? _notificationDevicePolicy;
+  Timer? _profileOnboardingTimer;
+  bool _profileOnboardingOpen = false;
 
   @override
   void initState() {
@@ -313,6 +322,12 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       (interaction) => unawaited(_handleNotificationInteraction(interaction)),
     );
     unawaited(_initializeScheduling());
+    if (widget.identityEmail != null) {
+      _profileOnboardingTimer = Timer(
+        const Duration(seconds: 2),
+        () => unawaited(_refreshSupportAndOfferOnboarding()),
+      );
+    }
   }
 
   @override
@@ -322,6 +337,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     _attentionController.dispose();
     _conflictController.dispose();
     _placementController.dispose();
+    _profileOnboardingTimer?.cancel();
     unawaited(_notificationSubscription?.cancel());
     super.dispose();
   }
@@ -352,7 +368,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       placements: _batchPlacementOptions,
       templates:
           _support?.scheduleTemplates.map((record) => record.value) ?? const [],
-      selectedDates: _selectedDates.map(_zonedScheduleDate),
+      selectedDates: _selectedDates.map(_scheduleDate),
       useTwelveHourTime:
           (_support?.settings.value.timeDisplay ??
               TimeDisplayPreference.military) ==
@@ -381,12 +397,15 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     if (controller == null) return;
     final current = controller.selectedDates.map((value) => value.date).toSet();
     for (final date in current.difference(next)) {
-      controller.toggleDate(_zonedScheduleDate(date));
+      controller.toggleDate(_scheduleDate(date));
     }
     for (final date in next.difference(current)) {
-      controller.toggleDate(_zonedScheduleDate(date));
+      controller.toggleDate(_scheduleDate(date));
     }
   }
+
+  ZonedScheduleDate _scheduleDate(LocalDate date) =>
+      widget.scheduleDateFactory?.call(date) ?? _zonedScheduleDate(date);
 
   void _resetPlanning(BatchSchedulingReset reset) {
     final controller = _batchController;
@@ -661,6 +680,63 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     }
   }
 
+  Future<void> _refreshSupportAndOfferOnboarding() async {
+    if (!mounted || _profileOnboardingOpen) return;
+    try {
+      final loaded = await _supportService.load();
+      if (!mounted) return;
+      setState(() => _support = loaded);
+      final email = widget.identityEmail;
+      final profile = loaded.profile.value;
+      if (email == null ||
+          profile.displayName != 'Student' ||
+          (profile.accountIdentity?.isNotEmpty ?? false)) {
+        return;
+      }
+      _profileOnboardingOpen = true;
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => PopScope(
+          canPop: false,
+          child: StudentProfileOnboardingDialog(
+            email: email,
+            onSave: _completeProfileOnboarding,
+          ),
+        ),
+      );
+    } on Object {
+      // A profile can still be completed from Student Profile after a local
+      // read failure. Never block the rest of the recovered calendar.
+    } finally {
+      _profileOnboardingOpen = false;
+    }
+  }
+
+  Future<void> _completeProfileOnboarding(
+    String firstName,
+    String lastName,
+  ) async {
+    final snapshot = _support;
+    final email = widget.identityEmail;
+    if (snapshot == null || email == null) return;
+    final saved = await _supportService.saveProfile(
+      expectedRevision: snapshot.profile.revision,
+      displayName: '$firstName $lastName',
+      program: snapshot.profile.value.program,
+      accountIdentity: email,
+      avatarBytes: snapshot.profile.value.avatarBytes,
+    );
+    if (!mounted) return;
+    setState(
+      () => _support = SupportSnapshot(
+        profile: saved,
+        settings: snapshot.settings,
+        scheduleTemplates: snapshot.scheduleTemplates,
+      ),
+    );
+  }
+
   StudentProfile get _headerProfile =>
       _support?.profile.value ??
       StudentProfile(id: widget.studentId, displayName: 'Student');
@@ -930,6 +1006,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         return PlacementManagementSurface(
           controller: _placementController,
           studentId: widget.studentId,
+          onOpenEvaluations: _openActivePlacementEvaluations,
         );
       case ClinicalCalendarDestination.studentProfile:
         return _supportBody(
@@ -1000,6 +1077,10 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             clinicalPlacementId: _placementController.activePlacementId,
           ),
         );
+      case ClinicalCalendarDestination.synchronization:
+        return SynchronizationAttentionSurface(
+          synchronization: widget.dependencies.synchronization,
+        );
       case ClinicalCalendarDestination.settings:
         final devicePolicy = _notificationDevicePolicy;
         return _supportBody(
@@ -1040,6 +1121,18 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       case ClinicalCalendarDestination.planning:
         return _PendingDestination(destination: destination);
     }
+  }
+
+  Future<void> _openActivePlacementEvaluations() async {
+    final placementId = _placementController.activePlacementId;
+    if (placementId != null) {
+      _attentionController.selectPlacement(placementId);
+    }
+    await _openContextualRoute(
+      title: 'Reviews & Evaluations',
+      child: EvaluationPlanSurface(controller: _attentionController),
+    );
+    await _reloadSchedulingSurfaces();
   }
 
   Widget _supportBody(Widget Function(SupportSnapshot snapshot) ready) {
@@ -1267,7 +1360,7 @@ final class _PlanningRegion extends StatelessWidget {
             OutlinedButton.icon(
               key: const Key('planning-incomplete-action'),
               onPressed: controller == null ? null : onPlanningIncomplete,
-              icon: const Icon(Icons.shield_outlined),
+              icon: const Icon(Icons.warning_amber_rounded),
               label: const Text('Planning Incomplete'),
             ),
           ],
