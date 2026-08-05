@@ -109,7 +109,9 @@ final class SecureNotificationDevicePolicyStore
       enabled: value['enabled'] as bool?,
       detailedPreview: value['detailedPreview'] as bool? ?? false,
       quietStartsAtHour: value['quietStartsAtHour'] as int? ?? 21,
+      quietStartsAtMinute: value['quietStartsAtMinute'] as int? ?? 0,
       quietEndsAtHour: value['quietEndsAtHour'] as int? ?? 7,
+      quietEndsAtMinute: value['quietEndsAtMinute'] as int? ?? 0,
     );
   }
 
@@ -119,7 +121,9 @@ final class SecureNotificationDevicePolicyStore
       'enabled': policy.enabled,
       'detailedPreview': policy.detailedPreview,
       'quietStartsAtHour': policy.quietStartsAtHour,
+      'quietStartsAtMinute': policy.quietStartsAtMinute,
       'quietEndsAtHour': policy.quietEndsAtHour,
+      'quietEndsAtMinute': policy.quietEndsAtMinute,
     }),
   );
 

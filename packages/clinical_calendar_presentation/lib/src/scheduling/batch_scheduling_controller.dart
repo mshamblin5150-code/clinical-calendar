@@ -147,6 +147,24 @@ final class BatchSchedulingController extends ChangeNotifier {
     _parseTimeInputs(notify: true);
   }
 
+  void chooseStartTime(LocalTime value) {
+    startTime = value;
+    _syncTimeInputs();
+    inputError = null;
+    review = null;
+    applied = false;
+    notifyListeners();
+  }
+
+  void chooseEndTime(LocalTime value) {
+    endTime = value;
+    _syncTimeInputs();
+    inputError = null;
+    review = null;
+    applied = false;
+    notifyListeners();
+  }
+
   void chooseTemplate(String? templateId) {
     selectedTemplateId = templateId;
     if (templateId == null) {

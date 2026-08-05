@@ -41,6 +41,28 @@ void main() {
     );
   });
 
+  test('quiet hours retain configured minute precision', () {
+    final at = DateTime.utc(2026, 1, 3, 3, 15); // 22:15 local.
+    final result = policy.build(
+      nowUtc: at.subtract(const Duration(hours: 1)),
+      candidates: [
+        ReminderCandidate(
+          kind: ReminderKind.weeklySummary,
+          subjectId: 'minute-quiet',
+          anchorUtc: at,
+          title: 'Weekly',
+          route: '/weekly',
+        ),
+      ],
+      deviceTimeZoneId: 'fixed',
+      quietStartsAtHour: 21,
+      quietStartsAtMinute: 30,
+      quietEndsAtHour: 7,
+      quietEndsAtMinute: 45,
+    );
+    expect(result.single.scheduledForUtc, DateTime.utc(2026, 1, 3, 12, 45));
+  });
+
   test('only configurable reminder kinds can be disabled', () {
     final at = DateTime.utc(2026, 1, 3, 15);
     final result = policy.build(
@@ -200,6 +222,18 @@ void main() {
         enabled: false,
       ),
       isEmpty,
+    );
+    expect(
+      schedules.upcoming(
+        kind: ReminderKind.upcomingWorkShift,
+        subjectId: 'one-reminder',
+        startsAtUtc: start,
+        commitmentTimeZoneId: 'fixed',
+        route: '/work',
+        first: Duration.zero,
+        second: const Duration(hours: 2),
+      ),
+      hasLength(1),
     );
   });
 

@@ -12,14 +12,20 @@ final class NotificationDevicePolicy {
     this.enabled,
     this.detailedPreview = false,
     this.quietStartsAtHour = 21,
+    this.quietStartsAtMinute = 0,
     this.quietEndsAtHour = 7,
+    this.quietEndsAtMinute = 0,
   }) : assert(quietStartsAtHour >= 0 && quietStartsAtHour <= 23),
-       assert(quietEndsAtHour >= 0 && quietEndsAtHour <= 23);
+       assert(quietStartsAtMinute >= 0 && quietStartsAtMinute <= 59),
+       assert(quietEndsAtHour >= 0 && quietEndsAtHour <= 23),
+       assert(quietEndsAtMinute >= 0 && quietEndsAtMinute <= 59);
   final NotificationDeviceClass deviceClass;
   final bool? enabled;
   final bool detailedPreview;
   final int quietStartsAtHour;
+  final int quietStartsAtMinute;
   final int quietEndsAtHour;
+  final int quietEndsAtMinute;
   bool get effectiveEnabled =>
       enabled ?? deviceClass == NotificationDeviceClass.phone;
 }

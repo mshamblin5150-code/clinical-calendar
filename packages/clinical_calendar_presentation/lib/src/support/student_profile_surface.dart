@@ -187,7 +187,7 @@ final class _StudentProfileSurfaceState extends State<StudentProfileSurface> {
                 key: const Key('save-profile-action'),
                 onPressed: preview == null || _saving ? null : _save,
                 icon: const Icon(Icons.save_outlined),
-                label: Text(_saving ? 'Savingâ€¦' : 'Save profile'),
+                label: Text(_saving ? 'Saving…' : 'Save profile'),
               ),
             ],
           ),
