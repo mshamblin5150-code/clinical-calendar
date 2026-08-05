@@ -153,13 +153,27 @@ void main() {
 
     final placement = tester.getRect(find.byKey(const Key('placement-dock')));
     final calendar = tester.getRect(find.byKey(const Key('central-content')));
+    final calendarSurface = tester.getRect(find.byType(CalendarPeriodView));
     final status = tester.getRect(find.byKey(const Key('insight-rail')));
     final planning = tester.getRect(find.byKey(const Key('planning-region')));
     expect(placement.right, lessThan(calendar.left));
     expect(calendar.right, lessThan(status.left));
+    expect(
+      calendarSurface.left - calendar.left,
+      greaterThanOrEqualTo(32),
+      reason: 'The wide raster housing needs a visible armor band.',
+    );
     expect(planning.left, calendar.left);
     expect(planning.top, greaterThan(calendar.bottom));
     expect(find.byType(VariantFRasterPanelFrame), findsNWidgets(4));
+    expect(
+      find.descendant(
+        of: find.byType(VariantFRasterPanelFrame),
+        matching: find.byType(VariantFTacticalFrame),
+      ),
+      findsNothing,
+      reason: 'Rendered housings must remain the visible panel chrome.',
+    );
     expect(find.byType(VariantFRasterRailSprite), findsWidgets);
     expect(find.byType(VariantFRasterHardwareSprite), findsWidgets);
     expect(find.byType(StagedBatchSchedulingTray), findsOneWidget);
