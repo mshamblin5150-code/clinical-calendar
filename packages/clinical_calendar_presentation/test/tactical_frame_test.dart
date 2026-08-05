@@ -77,4 +77,41 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('rendered Variant F raster families decode every atlas', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildVariantFTheme(),
+        home: Scaffold(
+          body: Row(
+            children: [
+              for (final part in VariantFRasterHardware.values)
+                SizedBox.square(
+                  dimension: 40,
+                  child: VariantFRasterHardwareSprite(part: part),
+                ),
+              for (final part in VariantFRasterRail.values)
+                SizedBox.square(
+                  dimension: 40,
+                  child: VariantFRasterRailSprite(part: part),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byType(VariantFRasterHardwareSprite),
+      findsNWidgets(VariantFRasterHardware.values.length),
+    );
+    expect(
+      find.byType(VariantFRasterRailSprite),
+      findsNWidgets(VariantFRasterRail.values.length),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }

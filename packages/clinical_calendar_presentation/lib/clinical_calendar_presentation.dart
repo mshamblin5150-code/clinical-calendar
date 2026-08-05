@@ -32,3 +32,4 @@ export 'src/tactical_frame.dart';
 export 'src/mechanical_pixel_tiles.dart';
 export 'src/time_input.dart';
 export 'src/variant_f_theme.dart';
+export 'src/variant_f_raster_assets.dart';

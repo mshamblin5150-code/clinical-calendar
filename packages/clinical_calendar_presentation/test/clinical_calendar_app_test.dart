@@ -33,6 +33,8 @@ void main() {
             viewport.width >= 960 &&
             viewport.height >= 600 &&
             viewport.width > viewport.height;
+        final tacticalTablet =
+            !desktop && viewport.width >= 900 && viewport.height >= 900;
         expect(
           find.byKey(Key(desktop ? 'command-bar' : 'compact-header')),
           findsOneWidget,
@@ -46,19 +48,23 @@ void main() {
         expect(find.byKey(const Key('planning-region')), findsOneWidget);
         expect(
           find.byKey(const Key('placement-dock')),
-          desktop ? findsOneWidget : findsNothing,
+          desktop || tacticalTablet ? findsOneWidget : findsNothing,
         );
         expect(
           find.byKey(const Key('insight-rail')),
-          desktop ? findsOneWidget : findsNothing,
+          desktop || tacticalTablet ? findsOneWidget : findsNothing,
         );
         expect(
           find.byType(PlacementDock),
-          desktop ? findsOneWidget : findsNothing,
+          desktop || tacticalTablet ? findsOneWidget : findsNothing,
         );
         expect(
           find.byType(PlacementMobileSummary),
-          desktop ? findsNothing : findsOneWidget,
+          desktop || tacticalTablet ? findsNothing : findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('variant-f-tablet-console')),
+          tacticalTablet ? findsOneWidget : findsNothing,
         );
         expect(find.byKey(const Key('attention-rail')), findsOneWidget);
 
@@ -140,17 +146,23 @@ void main() {
     expect(find.byKey(const Key('close-action')), findsOneWidget);
   });
 
-  testWidgets('portrait tablet compacts progress and attention side by side', (
+  testWidgets('portrait tablet uses the interlocked Variant F console bays', (
     tester,
   ) async {
     await _pumpAt(tester, const Size(1056, 1691));
 
-    final placement = tester.getRect(
-      find.byKey(const Key('mobile-placement-summary')),
-    );
-    final attention = tester.getRect(find.byKey(const Key('mobile-attention')));
-    expect(placement.top, attention.top);
-    expect(placement.right, lessThan(attention.left));
+    final placement = tester.getRect(find.byKey(const Key('placement-dock')));
+    final calendar = tester.getRect(find.byKey(const Key('central-content')));
+    final status = tester.getRect(find.byKey(const Key('insight-rail')));
+    final planning = tester.getRect(find.byKey(const Key('planning-region')));
+    expect(placement.right, lessThan(calendar.left));
+    expect(calendar.right, lessThan(status.left));
+    expect(planning.left, calendar.left);
+    expect(planning.top, greaterThan(calendar.bottom));
+    expect(find.byType(VariantFRasterPanelFrame), findsNWidgets(4));
+    expect(find.byType(VariantFRasterRailSprite), findsWidgets);
+    expect(find.byType(VariantFRasterHardwareSprite), findsWidgets);
+    expect(find.byType(StagedBatchSchedulingTray), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
