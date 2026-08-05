@@ -25,3 +25,4 @@ dev_dependencies:
 flutter:
   assets:
     - assets/placement_icons/
+    - assets/variant_f_raster/

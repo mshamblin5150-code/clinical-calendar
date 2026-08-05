@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'tactical_frame.dart';
 import 'variant_f_theme.dart';
+import 'variant_f_raster_assets.dart';
 
 enum ClinicalCalendarDestination {
   calendar('Calendar', Icons.calendar_month_outlined),
@@ -57,6 +60,27 @@ final class ResponsiveShellSlots {
   final Widget mobilePlacementSummary;
   final Widget mobileAttention;
   final Widget profileAvatar;
+}
+
+/// Supplies the console-composition default without coupling Planning to size.
+final class VariantFPlanningBayMode extends InheritedWidget {
+  const VariantFPlanningBayMode({
+    required this.expandedByDefault,
+    required super.child,
+    super.key,
+  });
+
+  final bool expandedByDefault;
+
+  static bool expandedByDefaultOf(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<VariantFPlanningBayMode>()
+          ?.expandedByDefault ??
+      false;
+
+  @override
+  bool updateShouldNotify(covariant VariantFPlanningBayMode oldWidget) =>
+      oldWidget.expandedByDefault != expandedByDefault;
 }
 
 /// Responsive composition only. It has no scheduling or progress rules.
@@ -178,59 +202,15 @@ final class ResponsiveApplicationShell extends StatelessWidget {
               profileAvatar: slots.profileAvatar,
             ),
             Expanded(
-              child: SingleChildScrollView(
-                key: const Key('mobile-content-scroll'),
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    KeyedSubtree(
-                      key: const Key('central-content'),
-                      child: VariantFTacticalFrame(
-                        padding: const EdgeInsets.all(7),
-                        chamfer: 14,
-                        statusLight: true,
-                        child: slots.centralContent,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final placement = KeyedSubtree(
-                          key: const Key('mobile-placement-summary'),
-                          child: slots.mobilePlacementSummary,
-                        );
-                        final attention = KeyedSubtree(
-                          key: const Key('mobile-attention'),
-                          child: slots.mobileAttention,
-                        );
-                        if (constraints.maxWidth >= 720) {
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: placement),
-                              const SizedBox(width: 12),
-                              Expanded(child: attention),
-                            ],
-                          );
-                        }
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            placement,
-                            const SizedBox(height: 12),
-                            attention,
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    KeyedSubtree(
-                      key: const Key('planning-region'),
-                      child: slots.planningRegion,
-                    ),
-                  ],
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final tacticalTablet =
+                      constraints.maxWidth >= 900 &&
+                      constraints.maxHeight >= 900;
+                  return tacticalTablet
+                      ? _tabletConsole(constraints)
+                      : _stackedMobileContent();
+                },
               ),
             ),
           ],
@@ -289,6 +269,176 @@ final class ResponsiveApplicationShell extends StatelessWidget {
         ],
       ),
     ),
+  );
+
+  Widget _stackedMobileContent() => SingleChildScrollView(
+    key: const Key('mobile-content-scroll'),
+    padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        KeyedSubtree(
+          key: const Key('central-content'),
+          child: VariantFTacticalFrame(
+            padding: const EdgeInsets.all(7),
+            chamfer: 14,
+            statusLight: true,
+            child: slots.centralContent,
+          ),
+        ),
+        const SizedBox(height: 12),
+        KeyedSubtree(
+          key: const Key('mobile-placement-summary'),
+          child: slots.mobilePlacementSummary,
+        ),
+        const SizedBox(height: 12),
+        KeyedSubtree(
+          key: const Key('mobile-attention'),
+          child: slots.mobileAttention,
+        ),
+        const SizedBox(height: 12),
+        KeyedSubtree(
+          key: const Key('planning-region'),
+          child: slots.planningRegion,
+        ),
+      ],
+    ),
+  );
+
+  Widget _tabletConsole(BoxConstraints constraints) {
+    final consoleHeight = math.max(1180.0, constraints.maxHeight - 28);
+    final placementWidth = (constraints.maxWidth * .21).clamp(190.0, 224.0);
+    final statusWidth = (constraints.maxWidth * .24).clamp(218.0, 256.0);
+    return SingleChildScrollView(
+      key: const Key('mobile-content-scroll'),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 18),
+      child: SizedBox(
+        key: const Key('variant-f-tablet-console'),
+        height: consoleHeight,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              key: const Key('placement-dock'),
+              width: placementWidth,
+              child: VariantFRasterPanelFrame(
+                panel: VariantFRasterPanel.placements,
+                padding: const EdgeInsets.fromLTRB(15, 18, 15, 18),
+                child: slots.placementDock,
+              ),
+            ),
+            const SizedBox(width: 24, child: _RasterVerticalBridge()),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    key: const Key('central-content'),
+                    height: 720,
+                    child: VariantFRasterPanelFrame(
+                      panel: VariantFRasterPanel.calendar,
+                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+                      child: slots.centralContent,
+                    ),
+                  ),
+                  const SizedBox(height: 24, child: _RasterHorizontalBridge()),
+                  Expanded(
+                    key: const Key('planning-region'),
+                    child: VariantFRasterPanelFrame(
+                      panel: VariantFRasterPanel.planning,
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                      child: SingleChildScrollView(
+                        child: VariantFPlanningBayMode(
+                          expandedByDefault: true,
+                          child: slots.planningRegion,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 24, child: _RasterVerticalBridge()),
+            SizedBox(
+              key: const Key('insight-rail'),
+              width: statusWidth,
+              child: VariantFRasterPanelFrame(
+                panel: VariantFRasterPanel.status,
+                padding: const EdgeInsets.fromLTRB(15, 18, 15, 18),
+                child: slots.insightRail,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final class _RasterVerticalBridge extends StatelessWidget {
+  const _RasterVerticalBridge();
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      for (var index = 0; index < 5; index++)
+        Expanded(
+          child: Stack(
+            clipBehavior: Clip.none,
+            fit: StackFit.expand,
+            children: [
+              VariantFRasterRailSprite(
+                part: index.isEven
+                    ? VariantFRasterRail.vertical
+                    : VariantFRasterRail.separator,
+              ),
+              Center(
+                child: OverflowBox(
+                  maxWidth: 42,
+                  maxHeight: 54,
+                  child: SizedBox(
+                    width: 42,
+                    height: 54,
+                    child: VariantFRasterHardwareSprite(
+                      part: index.isEven
+                          ? VariantFRasterHardware.railCoupler
+                          : VariantFRasterHardware.mechanicalJoint,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+    ],
+  );
+}
+
+final class _RasterHorizontalBridge extends StatelessWidget {
+  const _RasterHorizontalBridge();
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: const [
+      Expanded(
+        child: VariantFRasterRailSprite(part: VariantFRasterRail.horizontal),
+      ),
+      SizedBox(
+        width: 56,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            VariantFRasterRailSprite(part: VariantFRasterRail.junction),
+            VariantFRasterHardwareSprite(
+              part: VariantFRasterHardware.bridgeBracket,
+            ),
+          ],
+        ),
+      ),
+      Expanded(
+        child: VariantFRasterRailSprite(part: VariantFRasterRail.horizontal),
+      ),
+    ],
   );
 }
 
