@@ -3,6 +3,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../date_input.dart';
+import '../time_input.dart';
 import '../variant_f_theme.dart';
 import 'commitment_lifecycle_controller.dart';
 
@@ -319,7 +320,7 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
       _dateField(label: 'Move to date'),
       const SizedBox(height: 10),
       const Text(
-        'The destination must be empty and remain in this Protected Dayâ€™s '
+        'The destination must be empty and remain in this Protected Day’s '
         'calendar week.',
       ),
       const SizedBox(height: 14),
@@ -379,24 +380,30 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
   Widget _timeFields() => LayoutBuilder(
     builder: (context, constraints) {
       final fields = [
-        TextField(
+        ClinicalTimePickerField(
           key: const Key('lifecycle-start-field'),
-          controller: _start,
+          label: 'Start time',
+          value: _parsedTime(_start, LocalTime(8, 0)),
+          twelveHour: widget.twelveHourTime,
           enabled: !widget.controller.isBusy,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            labelText: 'Start time',
-            hintText: widget.twelveHourTime ? '8:00 AM' : '0800 or 08:00',
+          onChanged: (value) => setState(
+            () => _start.text = formatClinicalTime(
+              value,
+              twelveHour: widget.twelveHourTime,
+            ),
           ),
         ),
-        TextField(
+        ClinicalTimePickerField(
           key: const Key('lifecycle-end-field'),
-          controller: _end,
+          label: 'End time',
+          value: _parsedTime(_end, LocalTime(16, 0)),
+          twelveHour: widget.twelveHourTime,
           enabled: !widget.controller.isBusy,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            labelText: 'End time',
-            hintText: widget.twelveHourTime ? '4:00 PM' : '1600 or 16:00',
+          onChanged: (value) => setState(
+            () => _end.text = formatClinicalTime(
+              value,
+              twelveHour: widget.twelveHourTime,
+            ),
           ),
         ),
       ];
@@ -415,9 +422,17 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
     },
   );
 
+  LocalTime _parsedTime(TextEditingController controller, LocalTime fallback) {
+    try {
+      return parseFlexibleCommitmentTime(controller.text);
+    } on Object {
+      return fallback;
+    }
+  }
+
   Widget _durationPreview() => _LifecycleMessage(
     key: const Key('calculated-duration'),
-    message: 'Automatically calculated Â· ${_durationLabel()}',
+    message: 'Automatically calculated · ${_durationLabel()}',
     urgent: false,
   );
 
@@ -569,7 +584,7 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
     title: formatUsDate(shift.plannedInterval.startDate),
     lines: [
       _range(shift.plannedInterval),
-      'Scheduled Â· ${_minutesLabel(shift.plannedMinutes)}',
+      'Scheduled · ${_minutesLabel(shift.plannedMinutes)}',
     ],
     tone: context.clinicalColors.workMachinery,
   );
@@ -581,7 +596,7 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
     final end = widget.twelveHourTime
         ? interval.endTime.twelveHour
         : interval.endTime.military;
-    return '$startâ€“$end${interval.isOvernight ? ' next day' : ''}';
+    return '$start–$end${interval.isOvernight ? ' next day' : ''}';
   }
 }
 
@@ -597,13 +612,13 @@ final class _ClinicalSummary extends StatelessWidget {
       icon: Icons.medical_services_outlined,
       title: formatUsDate(session.plannedInterval.startDate),
       lines: [
-        '${snapshot.clinicalPlacementName} Â· '
+        '${snapshot.clinicalPlacementName} · '
             '${snapshot.selectedPreceptor.name}',
         _clinicalStateLabel(session.state),
         'Planned ${_minutesLabel(session.plannedMinutes)}',
         if (session.actualInterval != null)
-          'Actual ${session.actualInterval!.startTime.military}â€“'
-              '${session.actualInterval!.endTime.military} Â· '
+          'Actual ${session.actualInterval!.startTime.military}–'
+              '${session.actualInterval!.endTime.military} · '
               '${_minutesLabel(session.completedMinutes)}',
       ],
       tone: session.state == ClinicalSessionState.awaitingConfirmation

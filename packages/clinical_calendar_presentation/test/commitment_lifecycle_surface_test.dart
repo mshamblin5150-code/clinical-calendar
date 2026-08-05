@@ -26,14 +26,17 @@ void main() {
 
       expect(find.text('Awaiting Confirmation'), findsOneWidget);
       expect(find.byKey(const Key('confirm-session-action')), findsOneWidget);
-      await tester.enterText(
-        find.byKey(const Key('lifecycle-start-field')),
-        '0817',
-      );
-      await tester.enterText(
-        find.byKey(const Key('lifecycle-end-field')),
-        '15:53',
-      );
+      tester
+          .widget<ClinicalTimePickerField>(
+            find.byKey(const Key('lifecycle-start-field')),
+          )
+          .onChanged(LocalTime(8, 17));
+      tester
+          .widget<ClinicalTimePickerField>(
+            find.byKey(const Key('lifecycle-end-field')),
+          )
+          .onChanged(LocalTime(15, 53));
+      await tester.pump();
       await tester.tap(find.byKey(const Key('lifecycle-preceptor-field')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Dr. Nguyen').last);
@@ -67,14 +70,17 @@ void main() {
             .controller!
             .text =
         '08-12-2026';
-    await tester.enterText(
-      find.byKey(const Key('lifecycle-start-field')),
-      '1000',
-    );
-    await tester.enterText(
-      find.byKey(const Key('lifecycle-end-field')),
-      '1300',
-    );
+    tester
+        .widget<ClinicalTimePickerField>(
+          find.byKey(const Key('lifecycle-start-field')),
+        )
+        .onChanged(LocalTime(10, 0));
+    tester
+        .widget<ClinicalTimePickerField>(
+          find.byKey(const Key('lifecycle-end-field')),
+        )
+        .onChanged(LocalTime(13, 0));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('save-lifecycle-times-action')));
     await tester.pumpAndSettle();
 

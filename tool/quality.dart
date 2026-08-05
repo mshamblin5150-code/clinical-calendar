@@ -52,6 +52,10 @@ void _verifyProductionSourcePolicy(Directory repositoryRoot) {
     r'(^|[\s/])(react|node_modules)([\s/:]|$)|package\.json',
     caseSensitive: false,
   );
+  final corruptedText = RegExp(
+    '[\\u00c2\\u00c3\\ufffd]|'
+    '\\u00e2(?:\\u20ac\\u00a6|\\u20ac\\u201c|\\u20ac\\u2122)',
+  );
   final violations = <String>[];
 
   for (final rootName in const ['apps', 'packages']) {
@@ -72,6 +76,9 @@ void _verifyProductionSourcePolicy(Directory repositoryRoot) {
       if (file.path.endsWith('pubspec.yaml') &&
           forbiddenDependencies.hasMatch(contents)) {
         violations.add('${file.path}: React/Node production dependency');
+      }
+      if (corruptedText.hasMatch(contents)) {
+        violations.add('${file.path}: corrupted UTF-8 text');
       }
     }
   }

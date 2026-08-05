@@ -218,11 +218,16 @@ void main() {
       );
       await tester.ensureVisible(find.byKey(const Key('template-start-1')));
       await tester.pump();
-      await tester.enterText(
-        find.byKey(const Key('template-start-1')),
-        '19:00',
-      );
-      await tester.enterText(find.byKey(const Key('template-end-1')), '07:00');
+      tester
+          .widget<ClinicalTimePickerField>(
+            find.byKey(const Key('template-start-1')),
+          )
+          .onChanged(LocalTime(19, 0));
+      tester
+          .widget<ClinicalTimePickerField>(
+            find.byKey(const Key('template-end-1')),
+          )
+          .onChanged(LocalTime(7, 0));
       await tester.pump();
       expect(find.textContaining('12 hours automatically'), findsOneWidget);
 
@@ -283,11 +288,14 @@ void main() {
 
       await tester.tap(find.byKey(const Key('work-shift-first-lead-setting')));
       await tester.pumpAndSettle();
+      expect(find.text('Never'), findsOneWidget);
       await tester.tap(find.text('12 hours before').last);
       await tester.pumpAndSettle();
       await tester.tap(
         find.byKey(const Key('work-shift-notifications-setting')),
       );
+      await tester.pump();
+      expect(find.text('Work Shift reminders — Muted'), findsOneWidget);
       await _bringIntoView(
         tester,
         find.byKey(const Key('weekly-summary-weekday-setting')),
@@ -297,10 +305,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Monday').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('weekly-summary-hour-setting')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('5:00 PM').last);
-      await tester.pumpAndSettle();
+      tester
+          .widget<ClinicalTimePickerField>(
+            find.byKey(const Key('weekly-summary-hour-setting')),
+          )
+          .onChanged(LocalTime(17, 30));
+      await tester.pump();
       await tester.enterText(
         find.byKey(const Key('no-backup-reminder-days-setting')),
         '10',
@@ -330,10 +340,12 @@ void main() {
         find.byKey(const Key('device-quiet-start-setting')),
         scrollable.first,
       );
-      await tester.tap(find.byKey(const Key('device-quiet-start-setting')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('10:00 PM').last);
-      await tester.pumpAndSettle();
+      tester
+          .widget<ClinicalTimePickerField>(
+            find.byKey(const Key('device-quiet-start-setting')),
+          )
+          .onChanged(LocalTime(22, 15));
+      await tester.pump();
 
       await _bringIntoView(
         tester,
@@ -355,6 +367,7 @@ void main() {
         DateTime.monday,
       );
       expect(savedSettings!.notifications.weeklySummaryHour, 17);
+      expect(savedSettings!.notifications.weeklySummaryMinute, 30);
       expect(savedSettings!.notifications.noBackupReminderDays, 10);
       expect(savedSettings!.notifications.staleBackupReminderDays, 45);
       expect(savedSettings!.notifications.confirmationFirstDelayMinutes, 45);
@@ -363,6 +376,7 @@ void main() {
       expect(savedDeviceNotifications!.deliveryEnabled, isTrue);
       expect(savedDeviceNotifications!.detailedPreview, isTrue);
       expect(savedDeviceNotifications!.quietStartsAtHour, 22);
+      expect(savedDeviceNotifications!.quietStartsAtMinute, 15);
       expect(savedDeviceNotifications!.quietEndsAtHour, 7);
       expect(tester.takeException(), isNull);
     },

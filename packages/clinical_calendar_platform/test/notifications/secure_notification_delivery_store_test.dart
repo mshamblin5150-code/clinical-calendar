@@ -66,14 +66,18 @@ void main() {
           enabled: true,
           detailedPreview: true,
           quietStartsAtHour: 22,
+          quietStartsAtMinute: 15,
           quietEndsAtHour: 8,
+          quietEndsAtMinute: 45,
         ),
       );
       final restored = await store.read(NotificationDeviceClass.tablet);
       expect(restored?.effectiveEnabled, isTrue);
       expect(restored?.detailedPreview, isTrue);
       expect(restored?.quietStartsAtHour, 22);
+      expect(restored?.quietStartsAtMinute, 15);
       expect(restored?.quietEndsAtHour, 8);
+      expect(restored?.quietEndsAtMinute, 45);
     },
   );
 }

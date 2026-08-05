@@ -20,6 +20,7 @@ void main() {
         protectedDaySecondLeadDays: 2,
         weeklySummaryWeekday: DateTime.monday,
         weeklySummaryHour: 17,
+        weeklySummaryMinute: 30,
         noBackupReminderDays: 10,
         staleBackupReminderDays: 45,
       );
@@ -32,6 +33,8 @@ void main() {
       expect(restored.evaluationApproachingHours, 12);
       expect(restored.protectedDayFirstLeadDays, 4);
       expect(restored.weeklySummaryWeekday, DateTime.monday);
+      expect(restored.weeklySummaryHour, 17);
+      expect(restored.weeklySummaryMinute, 30);
       expect(restored.noBackupReminderDays, 10);
       expect(restored.staleBackupReminderDays, 45);
     },

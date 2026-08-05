@@ -77,8 +77,8 @@ void main() {
     expect(controller.durationMinutes, 510);
     expect(find.text('8 hr 30 min'), findsOne);
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Start'), '1415');
-    await tester.enterText(find.widgetWithText(TextFormField, 'End'), '22:00');
+    controller.chooseStartTime(LocalTime(14, 15));
+    controller.chooseEndTime(LocalTime(22, 0));
     await tester.pump();
     expect(controller.durationMinutes, 465);
 

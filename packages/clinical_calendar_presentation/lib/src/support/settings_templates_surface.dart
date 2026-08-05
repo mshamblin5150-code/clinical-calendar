@@ -3,6 +3,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../responsive_shell.dart';
+import '../time_input.dart';
 import '../variant_f_theme.dart';
 
 final class DeviceNotificationPreferences {
@@ -10,25 +11,35 @@ final class DeviceNotificationPreferences {
     required this.deliveryEnabled,
     this.detailedPreview = false,
     this.quietStartsAtHour = 21,
+    this.quietStartsAtMinute = 0,
     this.quietEndsAtHour = 7,
+    this.quietEndsAtMinute = 0,
   }) : assert(quietStartsAtHour >= 0 && quietStartsAtHour <= 23),
-       assert(quietEndsAtHour >= 0 && quietEndsAtHour <= 23);
+       assert(quietStartsAtMinute >= 0 && quietStartsAtMinute <= 59),
+       assert(quietEndsAtHour >= 0 && quietEndsAtHour <= 23),
+       assert(quietEndsAtMinute >= 0 && quietEndsAtMinute <= 59);
 
   final bool deliveryEnabled;
   final bool detailedPreview;
   final int quietStartsAtHour;
+  final int quietStartsAtMinute;
   final int quietEndsAtHour;
+  final int quietEndsAtMinute;
 
   DeviceNotificationPreferences copyWith({
     bool? deliveryEnabled,
     bool? detailedPreview,
     int? quietStartsAtHour,
+    int? quietStartsAtMinute,
     int? quietEndsAtHour,
+    int? quietEndsAtMinute,
   }) => DeviceNotificationPreferences(
     deliveryEnabled: deliveryEnabled ?? this.deliveryEnabled,
     detailedPreview: detailedPreview ?? this.detailedPreview,
     quietStartsAtHour: quietStartsAtHour ?? this.quietStartsAtHour,
+    quietStartsAtMinute: quietStartsAtMinute ?? this.quietStartsAtMinute,
     quietEndsAtHour: quietEndsAtHour ?? this.quietEndsAtHour,
+    quietEndsAtMinute: quietEndsAtMinute ?? this.quietEndsAtMinute,
   );
 }
 
@@ -268,11 +279,14 @@ final class _SettingsTemplatesSurfaceState
               child: SwitchListTile(
                 key: const Key('work-shift-notifications-setting'),
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Work Shift reminders'),
+                title: _switchTitle(
+                  'Work Shift reminders',
+                  _notifications.upcomingWorkShiftsEnabled,
+                ),
                 subtitle: Text(
                   _notifications.upcomingWorkShiftsEnabled
                       ? 'Scheduled using the lead times below.'
-                      : 'Muted. You can turn these on when you are ready.',
+                      : 'Muted — no Work Shift notifications.',
                 ),
                 value: _notifications.upcomingWorkShiftsEnabled,
                 onChanged: (value) => setState(
@@ -287,11 +301,14 @@ final class _SettingsTemplatesSurfaceState
               child: SwitchListTile(
                 key: const Key('clinical-session-notifications-setting'),
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Clinical Session reminders'),
+                title: _switchTitle(
+                  'Clinical Session reminders',
+                  _notifications.upcomingClinicalSessionsEnabled,
+                ),
                 subtitle: Text(
                   _notifications.upcomingClinicalSessionsEnabled
                       ? 'Scheduled using the lead times below.'
-                      : 'Muted. You can turn these on when you are ready.',
+                      : 'Muted — no Clinical Session notifications.',
                 ),
                 value: _notifications.upcomingClinicalSessionsEnabled,
                 onChanged: (value) => setState(
@@ -344,7 +361,15 @@ final class _SettingsTemplatesSurfaceState
               child: SwitchListTile(
                 key: const Key('weekly-summary-setting'),
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Weekly summary'),
+                title: _switchTitle(
+                  'Weekly summary',
+                  _notifications.weeklySummaryEnabled,
+                ),
+                subtitle: Text(
+                  _notifications.weeklySummaryEnabled
+                      ? 'Scheduled at the day and time below.'
+                      : 'Muted — no weekly summary notification.',
+                ),
                 value: _notifications.weeklySummaryEnabled,
                 onChanged: (value) => setState(
                   () => _notifications = _notifications.copyWith(
@@ -400,12 +425,19 @@ final class _SettingsTemplatesSurfaceState
                     ),
                   ),
                 ),
-                _hourField(
+                _timeField(
                   key: const Key('weekly-summary-hour-setting'),
                   label: 'Summary time',
-                  value: _notifications.weeklySummaryHour,
-                  onChanged: (value) => _notifications = _notifications
-                      .copyWith(weeklySummaryHour: value),
+                  value: LocalTime(
+                    _notifications.weeklySummaryHour,
+                    _notifications.weeklySummaryMinute,
+                  ),
+                  enabled: _notifications.weeklySummaryEnabled,
+                  onChanged: (value) =>
+                      _notifications = _notifications.copyWith(
+                        weeklySummaryHour: value.hour,
+                        weeklySummaryMinute: value.minute,
+                      ),
                 ),
               ],
             ),
@@ -414,7 +446,15 @@ final class _SettingsTemplatesSurfaceState
               child: SwitchListTile(
                 key: const Key('backup-reminders-setting'),
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Portable backup reminders'),
+                title: _switchTitle(
+                  'Portable backup reminders',
+                  _notifications.backupRemindersEnabled,
+                ),
+                subtitle: Text(
+                  _notifications.backupRemindersEnabled
+                      ? 'Scheduled using the day intervals below.'
+                      : 'Muted — no portable backup notifications.',
+                ),
                 value: _notifications.backupRemindersEnabled,
                 onChanged: (value) => setState(
                   () => _notifications = _notifications.copyWith(
@@ -454,7 +494,15 @@ final class _SettingsTemplatesSurfaceState
                 child: SwitchListTile(
                   key: const Key('device-notification-delivery-setting'),
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('System notification delivery'),
+                  title: _switchTitle(
+                    'System notification delivery',
+                    device.deliveryEnabled,
+                  ),
+                  subtitle: Text(
+                    device.deliveryEnabled
+                        ? 'On — this device may deliver enabled reminders.'
+                        : 'Muted — this device will deliver no notifications.',
+                  ),
                   value: device.deliveryEnabled,
                   onChanged: (value) => setState(
                     () => _deviceNotifications = device.copyWith(
@@ -468,9 +516,15 @@ final class _SettingsTemplatesSurfaceState
                 child: SwitchListTile(
                   key: const Key('device-detailed-preview-setting'),
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Detailed lock-screen previews'),
-                  subtitle: const Text(
-                    'May include Clinical Placement details on this device.',
+                  title: _switchTitle(
+                    'Detailed lock-screen previews',
+                    device.detailedPreview,
+                    disabledLabel: 'Off',
+                  ),
+                  subtitle: Text(
+                    device.detailedPreview
+                        ? 'On — may include Clinical Placement details.'
+                        : 'Off — lock-screen notifications stay generic.',
                   ),
                   value: device.detailedPreview,
                   onChanged: (value) => setState(
@@ -484,19 +538,33 @@ final class _SettingsTemplatesSurfaceState
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  _hourField(
+                  _timeField(
                     key: const Key('device-quiet-start-setting'),
                     label: 'Quiet hours start',
-                    value: device.quietStartsAtHour,
-                    onChanged: (value) => _deviceNotifications = device
-                        .copyWith(quietStartsAtHour: value),
+                    value: LocalTime(
+                      device.quietStartsAtHour,
+                      device.quietStartsAtMinute,
+                    ),
+                    enabled: true,
+                    onChanged: (value) =>
+                        _deviceNotifications = device.copyWith(
+                          quietStartsAtHour: value.hour,
+                          quietStartsAtMinute: value.minute,
+                        ),
                   ),
-                  _hourField(
+                  _timeField(
                     key: const Key('device-quiet-end-setting'),
                     label: 'Quiet hours end',
-                    value: device.quietEndsAtHour,
-                    onChanged: (value) => _deviceNotifications = device
-                        .copyWith(quietEndsAtHour: value),
+                    value: LocalTime(
+                      device.quietEndsAtHour,
+                      device.quietEndsAtMinute,
+                    ),
+                    enabled: true,
+                    onChanged: (value) =>
+                        _deviceNotifications = device.copyWith(
+                          quietEndsAtHour: value.hour,
+                          quietEndsAtMinute: value.minute,
+                        ),
                   ),
                 ],
               ),
@@ -542,13 +610,22 @@ final class _SettingsTemplatesSurfaceState
         key: const Key('save-settings-templates-action'),
         onPressed: _saving || !_templatesValid ? null : _save,
         icon: const Icon(Icons.save_outlined),
-        label: Text(_saving ? 'Savingâ€¦' : 'Save settings and templates'),
+        label: Text(_saving ? 'Saving…' : 'Save settings and templates'),
       ),
     ],
   );
 
   Widget _field(Widget child, {double width = 230}) =>
       SizedBox(width: width, child: child);
+
+  Widget _switchTitle(
+    String label,
+    bool enabled, {
+    String disabledLabel = 'Muted',
+  }) => Text(
+    '$label — ${enabled ? 'On' : disabledLabel}',
+    style: const TextStyle(fontWeight: FontWeight.w600),
+  );
 
   Widget _minutesField({
     required Key key,
@@ -575,7 +652,7 @@ final class _SettingsTemplatesSurfaceState
     required bool enabled,
     required ValueChanged<int> onChanged,
   }) {
-    final options = <int>{60, 120, 240, 480, 720, 1440, 2880, 4320};
+    final options = <int>{0, 60, 120, 240, 480, 720, 1440, 2880, 4320};
     options.add(valueMinutes);
     final ordered = options.toList()..sort();
     return _field(
@@ -596,33 +673,31 @@ final class _SettingsTemplatesSurfaceState
     );
   }
 
-  Widget _hourField({
+  Widget _timeField({
     required Key key,
     required String label,
-    required int value,
-    required ValueChanged<int> onChanged,
+    required LocalTime value,
+    required bool enabled,
+    required ValueChanged<LocalTime> onChanged,
   }) => _field(
-    DropdownButtonFormField<int>(
-      key: key,
-      isExpanded: true,
-      initialValue: value,
-      decoration: InputDecoration(labelText: label),
-      items: [
-        for (var hour = 0; hour < 24; hour++)
-          DropdownMenuItem(value: hour, child: Text(_hourLabel(hour))),
-      ],
-      onChanged: (next) => setState(() => onChanged(next!)),
+    IgnorePointer(
+      ignoring: !enabled,
+      child: Opacity(
+        opacity: enabled ? 1 : .5,
+        child: ClinicalTimePickerField(
+          key: key,
+          label: label,
+          value: value,
+          twelveHour: _timeDisplay == TimeDisplayPreference.twelveHour,
+          onChanged: (next) => setState(() => onChanged(next)),
+        ),
+      ),
     ),
   );
 }
 
-String _hourLabel(int hour) {
-  final suffix = hour < 12 ? 'AM' : 'PM';
-  final displayHour = hour % 12 == 0 ? 12 : hour % 12;
-  return '$displayHour:00 $suffix';
-}
-
 String _leadTimeLabel(int minutes) {
+  if (minutes == 0) return 'Never';
   final hours = minutes / 60;
   final value = hours == hours.roundToDouble()
       ? hours.toInt().toString()
@@ -716,24 +791,25 @@ final class _TemplateEditor extends StatelessWidget {
                 ),
               ),
               _sized(
-                TextFormField(
+                ClinicalTimePickerField(
                   key: Key('template-start-$index'),
-                  initialValue: draft.start,
-                  inputFormatters: const [],
-                  decoration: const InputDecoration(labelText: 'Start (HH:MM)'),
+                  label: 'Start',
+                  value: draft.startTime ?? LocalTime(7, 0),
+                  twelveHour: timeDisplay == TimeDisplayPreference.twelveHour,
                   onChanged: (value) {
-                    draft.start = value;
+                    draft.start = value.military;
                     onChanged();
                   },
                 ),
               ),
               _sized(
-                TextFormField(
+                ClinicalTimePickerField(
                   key: Key('template-end-$index'),
-                  initialValue: draft.end,
-                  decoration: const InputDecoration(labelText: 'End (HH:MM)'),
+                  label: 'End',
+                  value: draft.endTime ?? LocalTime(15, 0),
+                  twelveHour: timeDisplay == TimeDisplayPreference.twelveHour,
                   onChanged: (value) {
-                    draft.end = value;
+                    draft.end = value.military;
                     onChanged();
                   },
                 ),
@@ -831,10 +907,10 @@ final class _TemplateDraft {
         endValue.minutesSinceMidnight - startValue.minutesSinceMidnight;
     if (minutes < 0) minutes += 24 * 60;
     final range = preference == TimeDisplayPreference.military
-        ? '${startValue.military}â€“${endValue.military}'
-        : '${startValue.twelveHour}â€“${endValue.twelveHour}';
+        ? '${startValue.military}–${endValue.military}'
+        : '${startValue.twelveHour}–${endValue.twelveHour}';
     final hours = minutes / 60;
-    return '$range Â· ${hours == hours.roundToDouble() ? hours.toInt() : hours.toStringAsFixed(2)} hours automatically';
+    return '$range · ${hours == hours.roundToDouble() ? hours.toInt() : hours.toStringAsFixed(2)} hours automatically';
   }
 
   ScheduleTemplate toTemplate(

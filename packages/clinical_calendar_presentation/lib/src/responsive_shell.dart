@@ -45,6 +45,7 @@ final class ResponsiveShellSlots {
     required this.placementDock,
     required this.insightRail,
     required this.mobilePlacementSummary,
+    required this.mobileAttention,
     required this.profileAvatar,
   });
 
@@ -53,6 +54,7 @@ final class ResponsiveShellSlots {
   final Widget placementDock;
   final Widget insightRail;
   final Widget mobilePlacementSummary;
+  final Widget mobileAttention;
   final Widget profileAvatar;
 }
 
@@ -63,7 +65,8 @@ final class ResponsiveApplicationShell extends StatelessWidget {
     required this.environmentName,
     required this.onOpenMenu,
     required this.onOpenDestination,
-    this.mobileIndex = 0,
+    required this.onAddSchedule,
+    this.mobileIndex = 1,
     super.key,
   });
 
@@ -74,6 +77,7 @@ final class ResponsiveApplicationShell extends StatelessWidget {
   final String environmentName;
   final VoidCallback onOpenMenu;
   final ValueChanged<ClinicalCalendarDestination> onOpenDestination;
+  final VoidCallback onAddSchedule;
   final int mobileIndex;
 
   @override
@@ -81,7 +85,8 @@ final class ResponsiveApplicationShell extends StatelessWidget {
     builder: (context, constraints) {
       final desktop =
           constraints.maxWidth >= desktopMinimumWidth &&
-          constraints.maxHeight >= desktopMinimumHeight;
+          constraints.maxHeight >= desktopMinimumHeight &&
+          constraints.maxWidth > constraints.maxHeight;
       return desktop ? _desktop(context) : _mobile(context);
     },
   );
@@ -95,6 +100,11 @@ final class ResponsiveApplicationShell extends StatelessWidget {
             onOpenMenu: onOpenMenu,
             onOpenHelp: () =>
                 onOpenDestination(ClinicalCalendarDestination.help),
+            onAddSchedule: onAddSchedule,
+            onOpenNotifications: () =>
+                onOpenDestination(ClinicalCalendarDestination.notifications),
+            onOpenSynchronization: () =>
+                onOpenDestination(ClinicalCalendarDestination.synchronization),
             profileAvatar: slots.profileAvatar,
           ),
           Expanded(
@@ -149,8 +159,8 @@ final class ResponsiveApplicationShell extends StatelessWidget {
       child: Column(
         children: [
           _CompactHeader(
-            environmentName: environmentName,
             onOpenMenu: onOpenMenu,
+            onAddSchedule: onAddSchedule,
             profileAvatar: slots.profileAvatar,
           ),
           Expanded(
@@ -161,13 +171,39 @@ final class ResponsiveApplicationShell extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   KeyedSubtree(
-                    key: const Key('mobile-placement-summary'),
-                    child: slots.mobilePlacementSummary,
-                  ),
-                  const SizedBox(height: 12),
-                  KeyedSubtree(
                     key: const Key('central-content'),
                     child: slots.centralContent,
+                  ),
+                  const SizedBox(height: 12),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final placement = KeyedSubtree(
+                        key: const Key('mobile-placement-summary'),
+                        child: slots.mobilePlacementSummary,
+                      );
+                      final attention = KeyedSubtree(
+                        key: const Key('mobile-attention'),
+                        child: slots.mobileAttention,
+                      );
+                      if (constraints.maxWidth >= 720) {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: placement),
+                            const SizedBox(width: 12),
+                            Expanded(child: attention),
+                          ],
+                        );
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          placement,
+                          const SizedBox(height: 12),
+                          attention,
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                   KeyedSubtree(
@@ -190,26 +226,33 @@ final class ResponsiveApplicationShell extends StatelessWidget {
             onOpenDestination(ClinicalCalendarDestination.calendar);
             return;
           case 1:
-            onOpenDestination(ClinicalCalendarDestination.planning);
+            onOpenDestination(ClinicalCalendarDestination.calendar);
             return;
           case 2:
-            onOpenDestination(ClinicalCalendarDestination.help);
+            onOpenDestination(ClinicalCalendarDestination.clinicalPlacements);
             return;
           case 3:
-            onOpenMenu();
+            onOpenDestination(ClinicalCalendarDestination.notifications);
+            return;
+          case 4:
+            onOpenDestination(ClinicalCalendarDestination.settings);
             return;
         }
       },
       destinations: const [
+        NavigationDestination(icon: Icon(Icons.today_outlined), label: 'Today'),
         NavigationDestination(
-          icon: Icon(Icons.calendar_month),
+          icon: Icon(Icons.calendar_month_outlined),
           label: 'Calendar',
         ),
         NavigationDestination(
-          icon: Icon(Icons.add_box_outlined),
-          label: 'Planning',
+          icon: Icon(Icons.track_changes_outlined),
+          label: 'Placements',
         ),
-        NavigationDestination(icon: Icon(Icons.help_outline), label: 'Help'),
+        NavigationDestination(
+          icon: Icon(Icons.notifications_outlined),
+          label: 'Attention',
+        ),
         NavigationDestination(
           icon: Icon(Icons.settings_outlined),
           label: 'Settings',
@@ -404,12 +447,18 @@ final class _CommandBar extends StatelessWidget {
     required this.environmentName,
     required this.onOpenMenu,
     required this.onOpenHelp,
+    required this.onAddSchedule,
+    required this.onOpenNotifications,
+    required this.onOpenSynchronization,
     required this.profileAvatar,
   });
 
   final String environmentName;
   final VoidCallback onOpenMenu;
   final VoidCallback onOpenHelp;
+  final VoidCallback onAddSchedule;
+  final VoidCallback onOpenNotifications;
+  final VoidCallback onOpenSynchronization;
   final Widget profileAvatar;
 
   @override
@@ -438,11 +487,30 @@ final class _CommandBar extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineSmall,
           ),
         ),
-        Text(
-          environmentName.toUpperCase(),
-          style: Theme.of(context).textTheme.labelMedium,
+        FilledButton.icon(
+          key: const Key('command-add-schedule'),
+          onPressed: onAddSchedule,
+          icon: const Icon(Icons.add),
+          label: const Text('Add schedule'),
         ),
         const SizedBox(width: 8),
+        IconButton(
+          key: const Key('command-notifications'),
+          tooltip: 'Needs attention',
+          onPressed: onOpenNotifications,
+          icon: const Icon(Icons.notifications_outlined),
+        ),
+        TextButton.icon(
+          key: const Key('command-sync-status'),
+          onPressed: onOpenSynchronization,
+          icon: const Icon(Icons.sync_outlined),
+          label: const Text('Sync status'),
+        ),
+        Text(
+          environmentName.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall,
+        ),
+        const SizedBox(width: 4),
         IconButton(
           key: const Key('desktop-help-action'),
           tooltip: 'Help',
@@ -457,13 +525,13 @@ final class _CommandBar extends StatelessWidget {
 
 final class _CompactHeader extends StatelessWidget {
   const _CompactHeader({
-    required this.environmentName,
     required this.onOpenMenu,
+    required this.onAddSchedule,
     required this.profileAvatar,
   });
 
-  final String environmentName;
   final VoidCallback onOpenMenu;
+  final VoidCallback onAddSchedule;
   final Widget profileAvatar;
 
   @override
@@ -494,11 +562,12 @@ final class _CompactHeader extends StatelessWidget {
             style: Theme.of(context).textTheme.titleLarge,
           ),
         ),
-        Text(
-          environmentName.toUpperCase(),
-          style: Theme.of(context).textTheme.labelMedium,
+        IconButton(
+          key: const Key('compact-add-schedule'),
+          tooltip: 'Add schedule',
+          onPressed: onAddSchedule,
+          icon: const Icon(Icons.add),
         ),
-        const SizedBox(width: 8),
         profileAvatar,
       ],
     ),

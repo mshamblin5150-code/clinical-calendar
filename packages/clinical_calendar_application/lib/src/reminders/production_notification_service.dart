@@ -119,7 +119,9 @@ final class ProductionNotificationService implements NotificationService {
       synchronizedSnoozes: snoozes,
       disabledKinds: plan.disabledKinds,
       quietStartsAtHour: device.quietStartsAtHour,
+      quietStartsAtMinute: device.quietStartsAtMinute,
       quietEndsAtHour: device.quietEndsAtHour,
+      quietEndsAtMinute: device.quietEndsAtMinute,
     );
     _latest = {
       for (final occurrence in desired)

@@ -89,7 +89,9 @@ final class ReminderPolicy {
     Map<String, DateTime> synchronizedSnoozes = const {},
     Set<ReminderKind> disabledKinds = const {},
     int quietStartsAtHour = 21,
+    int quietStartsAtMinute = 0,
     int quietEndsAtHour = 7,
+    int quietEndsAtMinute = 0,
   }) {
     if (quietStartsAtHour < 0 || quietStartsAtHour > 23) {
       throw ArgumentError.value(
@@ -103,6 +105,20 @@ final class ReminderPolicy {
         quietEndsAtHour,
         'quietEndsAtHour',
         'must be between 0 and 23',
+      );
+    }
+    if (quietStartsAtMinute < 0 || quietStartsAtMinute > 59) {
+      throw ArgumentError.value(
+        quietStartsAtMinute,
+        'quietStartsAtMinute',
+        'must be between 0 and 59',
+      );
+    }
+    if (quietEndsAtMinute < 0 || quietEndsAtMinute > 59) {
+      throw ArgumentError.value(
+        quietEndsAtMinute,
+        'quietEndsAtMinute',
+        'must be between 0 and 59',
       );
     }
     final result = <ReminderOccurrence>[];
@@ -132,7 +148,9 @@ final class ReminderPolicy {
         requested,
         deviceTimeZoneId,
         quietStartsAtHour,
+        quietStartsAtMinute,
         quietEndsAtHour,
+        quietEndsAtMinute,
       );
       result.add(
         ReminderOccurrence(
@@ -197,13 +215,23 @@ final class ReminderPolicy {
     return timeZones.fromLocal(wallClock, zone).toUtc();
   }
 
-  DateTime _outsideQuietHours(DateTime utc, String zone, int starts, int ends) {
+  DateTime _outsideQuietHours(
+    DateTime utc,
+    String zone,
+    int startHour,
+    int startMinute,
+    int endHour,
+    int endMinute,
+  ) {
     final local = timeZones.toLocal(utc, zone);
+    final starts = startHour * 60 + startMinute;
+    final ends = endHour * 60 + endMinute;
+    final current = local.hour * 60 + local.minute;
     final inQuiet = starts > ends
-        ? local.hour >= starts || local.hour < ends
-        : local.hour >= starts && local.hour < ends;
+        ? current >= starts || current < ends
+        : current >= starts && current < ends;
     if (!inQuiet) return utc;
-    final tomorrow = local.hour >= starts
+    final tomorrow = current >= starts
         ? local.add(const Duration(days: 1))
         : local;
     // UTC is only a timezone-naive carrier for these wall-clock fields.
@@ -211,7 +239,8 @@ final class ReminderPolicy {
       tomorrow.year,
       tomorrow.month,
       tomorrow.day,
-      ends,
+      endHour,
+      endMinute,
     );
     return timeZones.fromLocal(wake, zone).toUtc();
   }
@@ -263,25 +292,27 @@ final class DefaultReminderSchedules {
     bool enabled = true,
   }) {
     if (!enabled) return const [];
-    _requirePositive(first, 'first');
-    _requirePositive(second, 'second');
+    if (first.isNegative || second.isNegative) {
+      throw ArgumentError('Reminder lead times cannot be negative.');
+    }
     return [
       for (final lead in [first, second])
-        ReminderCandidate(
-          kind: kind,
-          subjectId: '$subjectId:lead-${lead.inMinutes}',
-          anchorUtc: _subtractWallClock(
-            startsAtUtc,
-            lead,
-            commitmentTimeZoneId,
+        if (lead > Duration.zero)
+          ReminderCandidate(
+            kind: kind,
+            subjectId: '$subjectId:lead-${lead.inMinutes}',
+            anchorUtc: _subtractWallClock(
+              startsAtUtc,
+              lead,
+              commitmentTimeZoneId,
+            ),
+            title: kind == ReminderKind.upcomingWorkShift
+                ? 'Upcoming work shift'
+                : 'Upcoming clinical session',
+            route: route,
+            detailedBody: detailedBody,
+            intendedTimeZoneId: commitmentTimeZoneId,
           ),
-          title: kind == ReminderKind.upcomingWorkShift
-              ? 'Upcoming work shift'
-              : 'Upcoming clinical session',
-          route: route,
-          detailedBody: detailedBody,
-          intendedTimeZoneId: commitmentTimeZoneId,
-        ),
     ];
   }
 

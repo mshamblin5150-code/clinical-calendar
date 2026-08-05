@@ -17,6 +17,7 @@ void main() {
     Size(390, 844),
     Size(844, 390),
     Size(768, 1024),
+    Size(1056, 1691),
     Size(932, 430),
     Size(1024, 768),
     Size(1440, 900),
@@ -28,7 +29,10 @@ void main() {
       (tester) async {
         await _pumpAt(tester, viewport);
 
-        final desktop = viewport.width >= 960 && viewport.height >= 600;
+        final desktop =
+            viewport.width >= 960 &&
+            viewport.height >= 600 &&
+            viewport.width > viewport.height;
         expect(
           find.byKey(Key(desktop ? 'command-bar' : 'compact-header')),
           findsOneWidget,
@@ -56,10 +60,7 @@ void main() {
           find.byType(PlacementMobileSummary),
           desktop ? findsNothing : findsOneWidget,
         );
-        expect(
-          find.byKey(const Key('attention-rail')),
-          desktop ? findsOneWidget : findsNothing,
-        );
+        expect(find.byKey(const Key('attention-rail')), findsOneWidget);
 
         await tester.ensureVisible(
           find.byKey(const Key('primary-planning-action')),
@@ -76,12 +77,12 @@ void main() {
     );
   }
 
-  testWidgets('mobile Settings exposes the complete application menu', (
+  testWidgets('mobile application menu exposes every destination', (
     tester,
   ) async {
     await _pumpAt(tester, const Size(390, 844));
 
-    await tester.tap(find.text('Settings').last);
+    await tester.tap(find.byKey(const Key('mobile-menu-action')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('application-menu')), findsOneWidget);
@@ -94,6 +95,46 @@ void main() {
         findsOneWidget,
       );
     }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile navigation matches the accepted Variant F order', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(390, 844));
+
+    for (final label in const [
+      'Today',
+      'Calendar',
+      'Placements',
+      'Attention',
+      'Settings',
+    ]) {
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('bottom-navigation')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+      );
+    }
+
+    await tester.tap(find.text('Settings').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('settings-templates-surface')), findsOneWidget);
+  });
+
+  testWidgets('portrait tablet compacts progress and attention side by side', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(1056, 1691));
+
+    final placement = tester.getRect(
+      find.byKey(const Key('mobile-placement-summary')),
+    );
+    final attention = tester.getRect(find.byKey(const Key('mobile-attention')));
+    expect(placement.top, attention.top);
+    expect(placement.right, lessThan(attention.left));
     expect(tester.takeException(), isNull);
   });
 
@@ -351,6 +392,10 @@ void main() {
       warnIfMissed: false,
     );
     await tester.pumpAndSettle();
+    expect(find.text('1 selected date · Clinical Session'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('planning-tray-toggle')));
+    await tester.tap(find.byKey(const Key('planning-tray-toggle')));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('selected-date-count')));
     expect(find.text('1 selected date'), findsOneWidget);
 
@@ -404,9 +449,7 @@ void main() {
     (tester) async {
       await _pumpAt(tester, const Size(390, 844));
 
-      await tester.tap(find.text('Settings').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Notifications'));
+      await tester.tap(find.text('Attention').last);
       await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('notification-center-surface')),
@@ -496,9 +539,7 @@ void main() {
       dependencies: _dependencies(repositories: repositories),
     );
 
-    await tester.tap(find.text('Settings').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Notifications'));
+    await tester.tap(find.text('Attention').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Synchronization needs attention'));
     await tester.pumpAndSettle();
@@ -530,9 +571,7 @@ void main() {
         dependencies: _dependencies(repositories: repositories),
       );
 
-      await tester.tap(find.text('Settings').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Notifications'));
+      await tester.tap(find.text('Attention').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Synchronization needs attention'));
       await tester.pumpAndSettle();

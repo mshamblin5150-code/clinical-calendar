@@ -25,9 +25,12 @@ final class NotificationPreferences {
     this.protectedDaySecondLeadDays = 1,
     this.weeklySummaryWeekday = DateTime.sunday,
     this.weeklySummaryHour = 18,
+    this.weeklySummaryMinute = 0,
     this.noBackupReminderDays = 7,
     this.staleBackupReminderDays = 30,
-  }) : upcomingWorkShiftsEnabled =
+  }) : assert(weeklySummaryHour >= 0 && weeklySummaryHour <= 23),
+       assert(weeklySummaryMinute >= 0 && weeklySummaryMinute <= 59),
+       upcomingWorkShiftsEnabled =
            upcomingWorkShiftsEnabled ?? upcomingCommitmentsEnabled,
        upcomingClinicalSessionsEnabled =
            upcomingClinicalSessionsEnabled ?? upcomingCommitmentsEnabled;
@@ -61,6 +64,7 @@ final class NotificationPreferences {
     weeklySummaryWeekday:
         json['weeklySummaryWeekday'] as int? ?? DateTime.sunday,
     weeklySummaryHour: json['weeklySummaryHour'] as int? ?? 18,
+    weeklySummaryMinute: json['weeklySummaryMinute'] as int? ?? 0,
     noBackupReminderDays: json['noBackupReminderDays'] as int? ?? 7,
     staleBackupReminderDays: json['staleBackupReminderDays'] as int? ?? 30,
   );
@@ -81,6 +85,7 @@ final class NotificationPreferences {
   final int protectedDaySecondLeadDays;
   final int weeklySummaryWeekday;
   final int weeklySummaryHour;
+  final int weeklySummaryMinute;
   final int noBackupReminderDays;
   final int staleBackupReminderDays;
 
@@ -104,6 +109,7 @@ final class NotificationPreferences {
     int? protectedDaySecondLeadDays,
     int? weeklySummaryWeekday,
     int? weeklySummaryHour,
+    int? weeklySummaryMinute,
     int? noBackupReminderDays,
     int? staleBackupReminderDays,
   }) => NotificationPreferences(
@@ -136,6 +142,7 @@ final class NotificationPreferences {
         protectedDaySecondLeadDays ?? this.protectedDaySecondLeadDays,
     weeklySummaryWeekday: weeklySummaryWeekday ?? this.weeklySummaryWeekday,
     weeklySummaryHour: weeklySummaryHour ?? this.weeklySummaryHour,
+    weeklySummaryMinute: weeklySummaryMinute ?? this.weeklySummaryMinute,
     noBackupReminderDays: noBackupReminderDays ?? this.noBackupReminderDays,
     staleBackupReminderDays:
         staleBackupReminderDays ?? this.staleBackupReminderDays,
@@ -159,6 +166,7 @@ final class NotificationPreferences {
     'protectedDaySecondLeadDays': protectedDaySecondLeadDays,
     'weeklySummaryWeekday': weeklySummaryWeekday,
     'weeklySummaryHour': weeklySummaryHour,
+    'weeklySummaryMinute': weeklySummaryMinute,
     'noBackupReminderDays': noBackupReminderDays,
     'staleBackupReminderDays': staleBackupReminderDays,
   };

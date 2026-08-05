@@ -178,10 +178,11 @@ final class RepositoryReminderCandidateSource
         weekId: CalendarWeekConfiguration(
           weekStartsOn: facts.settings.weekStart,
         ).weekContaining(today).start.toString(),
-        sundayAtConfiguredTimeUtc: _nextWeekdayHour(
+        sundayAtConfiguredTimeUtc: _nextWeekdayTime(
           now,
           preferences.weeklySummaryWeekday,
           preferences.weeklySummaryHour,
+          preferences.weeklySummaryMinute,
         ),
         route: ReminderWorkflowRoutes.summary,
       ),
@@ -282,14 +283,24 @@ final class RepositoryReminderCandidateSource
       )
       .toUtc();
 
-  DateTime _nextWeekdayHour(DateTime nowUtc, int weekday, int hour) {
+  DateTime _nextWeekdayTime(
+    DateTime nowUtc,
+    int weekday,
+    int hour,
+    int minute,
+  ) {
     final local = _timeZones.toLocal(nowUtc, deviceTimeZoneId);
     var days = (weekday - local.weekday + 7) % 7;
-    if (days == 0 && local.hour >= hour) days = 7;
-    return _localDateAtHour(
-      LocalDate(local.year, local.month, local.day).addDays(days),
-      hour,
-    );
+    final configuredMinutes = hour * 60 + minute;
+    final localMinutes = local.hour * 60 + local.minute;
+    if (days == 0 && localMinutes >= configuredMinutes) days = 7;
+    final date = LocalDate(local.year, local.month, local.day).addDays(days);
+    return _timeZones
+        .fromLocal(
+          DateTime.utc(date.year, date.month, date.day, hour, minute),
+          deviceTimeZoneId,
+        )
+        .toUtc();
   }
 }
 

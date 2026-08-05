@@ -257,6 +257,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   late final EvaluationAttentionController _attentionController;
   late final ConflictResolutionController _conflictController;
   BatchSchedulingController? _batchController;
+  final _planningRegionKey = GlobalKey<_PlanningRegionState>();
   late final SupportApplicationService _supportService;
   Set<LocalDate> _selectedDates = const {};
   int _calendarRevision = 0;
@@ -416,6 +417,24 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     );
   }
 
+  void _openPlanning() => _openPlanningFor(BatchSchedulingReset.addSchedule);
+
+  void _openPlanningFor(BatchSchedulingReset reset) {
+    _resetPlanning(reset);
+    _planningRegionKey.currentState?.expand();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _planningRegionKey.currentState?.expand();
+      final context = _planningRegionKey.currentContext;
+      if (context != null) {
+        Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 250),
+          alignment: .1,
+        );
+      }
+    });
+  }
+
   Future<void> _reloadSchedulingSurfaces() async {
     if (mounted) setState(() => _calendarRevision++);
     await Future.wait([
@@ -456,7 +475,9 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       enabled: preferences.deliveryEnabled,
       detailedPreview: preferences.detailedPreview,
       quietStartsAtHour: preferences.quietStartsAtHour,
+      quietStartsAtMinute: preferences.quietStartsAtMinute,
       quietEndsAtHour: preferences.quietEndsAtHour,
+      quietEndsAtMinute: preferences.quietEndsAtMinute,
     );
     await store.write(policy);
     if (mounted) setState(() => _notificationDevicePolicy = policy);
@@ -491,7 +512,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         _updateCalendarSelection({..._selectedDates, date});
         if (!mounted) return;
         setState(() => _destination = null);
-        _resetPlanning(BatchSchedulingReset.planningIncomplete);
+        _openPlanningFor(BatchSchedulingReset.planningIncomplete);
       case 'evaluation':
         if (segments.length != 3) return;
         _attentionController.selectPlacement(segments[2]);
@@ -580,7 +601,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         }
         if (!mounted) return;
         setState(() => _destination = null);
-        _resetPlanning(BatchSchedulingReset.planningIncomplete);
+        _openPlanningFor(BatchSchedulingReset.planningIncomplete);
       case AttentionDestination.documentEvaluation:
         final placementId = item.clinicalPlacementId;
         if (placementId != null) {
@@ -878,10 +899,6 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       _resetPlanning(BatchSchedulingReset.addSchedule);
       return;
     }
-    if (destination == ClinicalCalendarDestination.settings) {
-      _showMenu();
-      return;
-    }
     setState(() {
       _destination = destination;
       _entry = DestinationEntry.direct;
@@ -933,6 +950,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       environmentName: widget.environmentName,
       onOpenMenu: _showMenu,
       onOpenDestination: _openDirect,
+      onAddSchedule: _openPlanning,
       slots: ResponsiveShellSlots(
         placementDock: _PlacementLoadState(
           controller: _placementController,
@@ -985,7 +1003,13 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             studentId: widget.studentId,
           ),
         ),
+        mobileAttention: AttentionRail(
+          controller: _attentionController,
+          onOpenAction: _openAttentionItem,
+          onOpenAll: _openAttentionCenter,
+        ),
         planningRegion: _PlanningRegion(
+          key: _planningRegionKey,
           controller: _batchController,
           onAddSchedule: () => _resetPlanning(BatchSchedulingReset.addSchedule),
           onPlanningIncomplete: () =>
@@ -1100,7 +1124,9 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
                     deliveryEnabled: devicePolicy.effectiveEnabled,
                     detailedPreview: devicePolicy.detailedPreview,
                     quietStartsAtHour: devicePolicy.quietStartsAtHour,
+                    quietStartsAtMinute: devicePolicy.quietStartsAtMinute,
                     quietEndsAtHour: devicePolicy.quietEndsAtHour,
+                    quietEndsAtMinute: devicePolicy.quietEndsAtMinute,
                   ),
             onSaveDeviceNotifications: devicePolicy == null
                 ? null
@@ -1327,16 +1353,28 @@ final class _RecoveryOtpDialogState extends State<_RecoveryOtpDialog> {
   }
 }
 
-final class _PlanningRegion extends StatelessWidget {
+final class _PlanningRegion extends StatefulWidget {
   const _PlanningRegion({
     required this.controller,
     required this.onAddSchedule,
     required this.onPlanningIncomplete,
+    super.key,
   });
 
   final BatchSchedulingController? controller;
   final VoidCallback onAddSchedule;
   final VoidCallback onPlanningIncomplete;
+
+  @override
+  State<_PlanningRegion> createState() => _PlanningRegionState();
+}
+
+final class _PlanningRegionState extends State<_PlanningRegion> {
+  bool _expanded = false;
+
+  void expand() {
+    if (!_expanded) setState(() => _expanded = true);
+  }
 
   @override
   Widget build(BuildContext context) => ShellPanel(
@@ -1353,26 +1391,63 @@ final class _PlanningRegion extends StatelessWidget {
           children: [
             FilledButton.icon(
               key: const Key('primary-planning-action'),
-              onPressed: controller == null ? null : onAddSchedule,
+              onPressed: widget.controller == null
+                  ? null
+                  : () {
+                      expand();
+                      widget.onAddSchedule();
+                    },
               icon: const Icon(Icons.add),
               label: const Text('Add schedule'),
             ),
             OutlinedButton.icon(
               key: const Key('planning-incomplete-action'),
-              onPressed: controller == null ? null : onPlanningIncomplete,
+              onPressed: widget.controller == null
+                  ? null
+                  : () {
+                      expand();
+                      widget.onPlanningIncomplete();
+                    },
               icon: const Icon(Icons.warning_amber_rounded),
               label: const Text('Planning Incomplete'),
             ),
+            if (widget.controller != null)
+              OutlinedButton.icon(
+                key: const Key('planning-tray-toggle'),
+                onPressed: () => setState(() => _expanded = !_expanded),
+                icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+                label: Text(_expanded ? 'Collapse' : 'Expand'),
+              ),
           ],
         ),
-        if (controller != null) ...[
+        if (widget.controller != null && !_expanded) ...[
+          const SizedBox(height: 10),
+          AnimatedBuilder(
+            animation: widget.controller!,
+            builder: (context, _) {
+              final count = widget.controller!.selectedDates.length;
+              return Text(
+                '$count selected ${count == 1 ? 'date' : 'dates'} · '
+                '${_batchTypeLabel(widget.controller!.type)}',
+                key: const Key('planning-tray-summary'),
+              );
+            },
+          ),
+        ],
+        if (widget.controller != null && _expanded) ...[
           const SizedBox(height: 12),
-          StagedBatchSchedulingTray(controller: controller!),
+          StagedBatchSchedulingTray(controller: widget.controller!),
         ],
       ],
     ),
   );
 }
+
+String _batchTypeLabel(BatchCommitmentType type) => switch (type) {
+  BatchCommitmentType.workShift => 'Work Shift',
+  BatchCommitmentType.clinicalSession => 'Clinical Session',
+  BatchCommitmentType.protectedDay => 'Protected Day',
+};
 
 final class _PlacementLoadState extends StatelessWidget {
   const _PlacementLoadState({

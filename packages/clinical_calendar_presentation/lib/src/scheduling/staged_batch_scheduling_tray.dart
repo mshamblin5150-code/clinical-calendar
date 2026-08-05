@@ -3,6 +3,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../date_input.dart';
+import '../time_input.dart';
 import '../variant_f_theme.dart';
 import 'batch_scheduling_controller.dart';
 
@@ -184,11 +185,9 @@ final class _TypeAndTimeStage extends StatelessWidget {
                     '${controller.useTwelveHourTime}',
                   ),
                   label: 'Start',
-                  value: controller.startInput,
-                  period: controller.startPeriod,
+                  value: controller.startTime ?? LocalTime(8, 0),
                   twelveHour: controller.useTwelveHourTime,
-                  onChanged: controller.setStartInput,
-                  onPeriodChanged: controller.setStartPeriod,
+                  onChanged: controller.chooseStartTime,
                 ),
                 _TimeInput(
                   key: ValueKey(
@@ -196,11 +195,9 @@ final class _TypeAndTimeStage extends StatelessWidget {
                     '${controller.useTwelveHourTime}',
                   ),
                   label: 'End',
-                  value: controller.endInput,
-                  period: controller.endPeriod,
+                  value: controller.endTime ?? LocalTime(16, 0),
                   twelveHour: controller.useTwelveHourTime,
-                  onChanged: controller.setEndInput,
-                  onPeriodChanged: controller.setEndPeriod,
+                  onChanged: controller.chooseEndTime,
                 ),
               ];
               return compact
@@ -240,54 +237,22 @@ final class _TimeInput extends StatelessWidget {
   const _TimeInput({
     required this.label,
     required this.value,
-    required this.period,
     required this.twelveHour,
     required this.onChanged,
-    required this.onPeriodChanged,
     super.key,
   });
 
   final String label;
-  final String value;
-  final String period;
+  final LocalTime value;
   final bool twelveHour;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onPeriodChanged;
+  final ValueChanged<LocalTime> onChanged;
 
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Expanded(
-        child: TextFormField(
-          initialValue: value,
-          decoration: InputDecoration(
-            labelText: label,
-            hintText: twelveHour ? '8:30' : '0830 or 08:30',
-          ),
-          keyboardType: TextInputType.datetime,
-          onChanged: onChanged,
-        ),
-      ),
-      if (twelveHour) ...[
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 82,
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            initialValue: period,
-            decoration: const InputDecoration(labelText: 'AM/PM'),
-            items: const [
-              DropdownMenuItem(value: 'AM', child: Text('AM')),
-              DropdownMenuItem(value: 'PM', child: Text('PM')),
-            ],
-            onChanged: (value) {
-              if (value != null) onPeriodChanged(value);
-            },
-          ),
-        ),
-      ],
-    ],
+  Widget build(BuildContext context) => ClinicalTimePickerField(
+    label: label,
+    value: value,
+    twelveHour: twelveHour,
+    onChanged: onChanged,
   );
 }
 
