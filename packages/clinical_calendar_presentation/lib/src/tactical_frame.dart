@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'mechanical_pixel_tiles.dart';
+import 'variant_f_raster_assets.dart';
 import 'variant_f_theme.dart';
 
 /// A substantial mechanical panel adapted from the Variant F console chassis.
@@ -30,52 +31,33 @@ final class VariantFTacticalFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final edge = accent ?? context.clinicalColors.insetBorder;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bezel = constraints.maxWidth < 500 ? 0.0 : mechanicalBezel;
-        return CustomPaint(
-          painter: _MechanicalPanelPainter(
-            edge: edge,
-            rail: context.clinicalColors.insetBorder,
-            metal: context.clinicalColors.structureRaised,
-            chamfer: chamfer,
-            bezel: bezel,
-          ),
-          foregroundPainter: _MechanicalPanelHardwarePainter(
-            edge: edge,
-            rail: context.clinicalColors.insetBorder,
-            chamfer: chamfer,
-            bezel: bezel,
-            statusLight: statusLight,
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(bezel),
-            child: ClipPath(
-              clipper: VariantFChamferClipper(
-                chamfer: (chamfer - bezel / 2).clamp(4, chamfer),
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: recessed
-                        ? [
-                            context.clinicalColors.structureRaised,
-                            context.clinicalColors.structure,
-                            context.clinicalColors.canvas,
-                          ]
-                        : [
-                            context.clinicalColors.structure,
-                            context.clinicalColors.structureRaised,
-                          ],
-                    stops: recessed ? const [0, .45, 1] : const [0, 1],
-                  ),
-                ),
-                child: Padding(padding: padding, child: child),
+        final chrome = constraints.maxWidth < 500
+            ? 4.0
+            : mechanicalBezel.clamp(7.0, 14.0);
+        return VariantFNineSliceFrame(
+          chromeInsets: EdgeInsets.all(chrome),
+          contentPadding: padding.resolve(Directionality.of(context)),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: recessed
+                    ? [
+                        context.clinicalColors.structureRaised,
+                        context.clinicalColors.structure,
+                        context.clinicalColors.canvas,
+                      ]
+                    : [
+                        context.clinicalColors.structure,
+                        context.clinicalColors.structureRaised,
+                      ],
+                stops: recessed ? const [0, .45, 1] : const [0, 1],
               ),
             ),
+            child: child,
           ),
         );
       },
@@ -140,6 +122,8 @@ Path variantFChamferPath(Size size, double requestedChamfer) {
     ..close();
 }
 
+// Retained as a deterministic fallback while raster assets are decoded.
+// ignore: unused_element
 final class _MechanicalPanelPainter extends CustomPainter {
   const _MechanicalPanelPainter({
     required this.edge,
@@ -208,6 +192,8 @@ final class _MechanicalPanelPainter extends CustomPainter {
       oldDelegate.bezel != bezel;
 }
 
+// Retained as a deterministic fallback while raster assets are decoded.
+// ignore: unused_element
 final class _MechanicalPanelHardwarePainter extends CustomPainter {
   const _MechanicalPanelHardwarePainter({
     required this.edge,

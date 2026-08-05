@@ -515,13 +515,18 @@ final class _DayNumber extends StatelessWidget {
           ),
         ),
       ),
-      const Spacer(),
-      if (selected)
-        Icon(
-          Icons.check_circle,
-          size: 17,
-          color: context.clinicalColors.clinical,
+      Expanded(
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: selected
+              ? Icon(
+                  Icons.check_circle,
+                  size: 17,
+                  color: context.clinicalColors.clinical,
+                )
+              : const SizedBox.shrink(),
         ),
+      ),
     ],
   );
 }

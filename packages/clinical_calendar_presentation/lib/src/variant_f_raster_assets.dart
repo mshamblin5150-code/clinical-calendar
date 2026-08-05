@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 const _assetRoot = 'assets/variant_f_raster';
+const _nineSlicePanelAsset = '$_assetRoot/panel-nine-slice-v2.png';
 
 enum VariantFRasterHardware {
   cornerClamp,
@@ -28,6 +29,39 @@ enum VariantFRasterRail {
 
 enum VariantFRasterPanel { calendar, placements, planning, status }
 
+/// Normalized visible bounds within the complete `panel-atlas.png` image.
+///
+/// The generated panel rasters cross the nominal 2x2 cell boundaries. Grid
+/// slicing therefore cuts the wide frames and includes adjacent-frame pixels
+/// in the narrow frames. These are the measured connected-alpha bounds for
+/// each complete panel.
+Rect variantFRasterPanelCrop(VariantFRasterPanel panel) => switch (panel) {
+  VariantFRasterPanel.calendar => const Rect.fromLTRB(
+    28 / 1254,
+    62 / 1254,
+    763 / 1254,
+    590 / 1254,
+  ),
+  VariantFRasterPanel.placements => const Rect.fromLTRB(
+    807 / 1254,
+    32 / 1254,
+    1204 / 1254,
+    603 / 1254,
+  ),
+  VariantFRasterPanel.planning => const Rect.fromLTRB(
+    39 / 1254,
+    809 / 1254,
+    754 / 1254,
+    1166 / 1254,
+  ),
+  VariantFRasterPanel.status => const Rect.fromLTRB(
+    792 / 1254,
+    636 / 1254,
+    1215 / 1254,
+    1221 / 1254,
+  ),
+};
+
 /// Marks content mounted inside a rendered housing so it does not repaint a
 /// second opaque/vector panel over the raster chrome.
 final class VariantFRasterPanelInterior extends InheritedWidget {
@@ -41,6 +75,68 @@ final class VariantFRasterPanelInterior extends InheritedWidget {
   @override
   bool updateShouldNotify(covariant VariantFRasterPanelInterior oldWidget) =>
       false;
+}
+
+/// High-resolution raster housing that preserves its corners and rails while
+/// stretching only the dark interior seams.
+final class VariantFNineSliceFrame extends StatefulWidget {
+  const VariantFNineSliceFrame({
+    required this.child,
+    this.chromeInsets = const EdgeInsets.all(14),
+    this.contentPadding = EdgeInsets.zero,
+    super.key,
+  });
+
+  final Widget child;
+  final EdgeInsets chromeInsets;
+  final EdgeInsets contentPadding;
+
+  @override
+  State<VariantFNineSliceFrame> createState() => _VariantFNineSliceFrameState();
+}
+
+final class _VariantFNineSliceFrameState extends State<VariantFNineSliceFrame> {
+  ImageStream? _stream;
+  ImageInfo? _image;
+  late final ImageStreamListener _listener = ImageStreamListener((image, _) {
+    if (!mounted) return;
+    setState(() => _image = image);
+  });
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = AssetImage(
+      _nineSlicePanelAsset,
+      package: 'clinical_calendar_presentation',
+    ).resolve(createLocalImageConfiguration(context));
+    if (next.key == _stream?.key) return;
+    _stream?.removeListener(_listener);
+    _image?.dispose();
+    _image = null;
+    _stream = next..addListener(_listener);
+  }
+
+  @override
+  void dispose() {
+    _stream?.removeListener(_listener);
+    _image?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _image == null
+        ? null
+        : _NineSlicePanelPainter(
+            image: _image!.image,
+            destinationInsets: widget.chromeInsets,
+          ),
+    child: Padding(
+      padding: widget.chromeInsets.add(widget.contentPadding),
+      child: ClipRect(clipBehavior: Clip.hardEdge, child: widget.child),
+    ),
+  );
 }
 
 final class VariantFRasterHardwareSprite extends StatelessWidget {
@@ -85,25 +181,111 @@ final class VariantFRasterPanelFrame extends StatelessWidget {
   final EdgeInsets padding;
 
   @override
-  Widget build(BuildContext context) => Stack(
-    fit: StackFit.expand,
-    children: [
-      Positioned.fill(
-        child: IgnorePointer(
-          child: _AtlasSprite(
-            asset: '$_assetRoot/panel-atlas.png',
-            columns: 2,
-            rows: 2,
-            index: panel.index,
+  Widget build(BuildContext context) {
+    final minimum = switch (panel) {
+      VariantFRasterPanel.calendar => const EdgeInsets.fromLTRB(38, 46, 38, 46),
+      VariantFRasterPanel.placements => const EdgeInsets.fromLTRB(
+        30,
+        44,
+        30,
+        44,
+      ),
+      VariantFRasterPanel.planning => const EdgeInsets.fromLTRB(34, 46, 34, 42),
+      VariantFRasterPanel.status => const EdgeInsets.fromLTRB(30, 44, 34, 44),
+    };
+    final safeInsets = EdgeInsets.fromLTRB(
+      padding.left > minimum.left ? padding.left : minimum.left,
+      padding.top > minimum.top ? padding.top : minimum.top,
+      padding.right > minimum.right ? padding.right : minimum.right,
+      padding.bottom > minimum.bottom ? padding.bottom : minimum.bottom,
+    );
+    return VariantFNineSliceFrame(
+      chromeInsets: safeInsets,
+      child: VariantFRasterPanelInterior(
+        child: ClipRect(clipBehavior: Clip.hardEdge, child: child),
+      ),
+    );
+  }
+}
+
+final class _NineSlicePanelPainter extends CustomPainter {
+  const _NineSlicePanelPainter({
+    required this.image,
+    required this.destinationInsets,
+  });
+
+  final ui.Image image;
+  final EdgeInsets destinationInsets;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    const sourceInsets = EdgeInsets.fromLTRB(120, 145, 120, 170);
+    final horizontalScale =
+        (size.width / (destinationInsets.left + destinationInsets.right)).clamp(
+          0.0,
+          1.0,
+        );
+    final verticalScale =
+        (size.height / (destinationInsets.top + destinationInsets.bottom))
+            .clamp(0.0, 1.0);
+    final destination = EdgeInsets.fromLTRB(
+      destinationInsets.left * horizontalScale,
+      destinationInsets.top * verticalScale,
+      destinationInsets.right * horizontalScale,
+      destinationInsets.bottom * verticalScale,
+    );
+    final sourceX = <double>[
+      0,
+      sourceInsets.left,
+      image.width - sourceInsets.right,
+      image.width.toDouble(),
+    ];
+    final sourceY = <double>[
+      0,
+      sourceInsets.top,
+      image.height - sourceInsets.bottom,
+      image.height.toDouble(),
+    ];
+    final destinationX = <double>[
+      0,
+      destination.left,
+      size.width - destination.right,
+      size.width,
+    ];
+    final destinationY = <double>[
+      0,
+      destination.top,
+      size.height - destination.bottom,
+      size.height,
+    ];
+    final paint = Paint()..filterQuality = FilterQuality.high;
+    for (var row = 0; row < 3; row++) {
+      for (var column = 0; column < 3; column++) {
+        canvas.drawImageRect(
+          image,
+          Rect.fromLTRB(
+            sourceX[column],
+            sourceY[row],
+            sourceX[column + 1],
+            sourceY[row + 1],
           ),
-        ),
-      ),
-      Padding(
-        padding: padding,
-        child: VariantFRasterPanelInterior(child: child),
-      ),
-    ],
-  );
+          Rect.fromLTRB(
+            destinationX[column],
+            destinationY[row],
+            destinationX[column + 1],
+            destinationY[row + 1],
+          ),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _NineSlicePanelPainter oldDelegate) =>
+      oldDelegate.image != image ||
+      oldDelegate.destinationInsets != destinationInsets;
 }
 
 final class _AtlasSprite extends StatefulWidget {
@@ -192,16 +374,15 @@ final class _AtlasSpritePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final cellWidth = image.width / columns;
     final cellHeight = image.height / rows;
-    final column = index % columns;
-    final row = index ~/ columns;
+    final source = Rect.fromLTWH(
+      (index % columns) * cellWidth,
+      (index ~/ columns) * cellHeight,
+      cellWidth,
+      cellHeight,
+    );
     canvas.drawImageRect(
       image,
-      Rect.fromLTWH(
-        column * cellWidth,
-        row * cellHeight,
-        cellWidth,
-        cellHeight,
-      ),
+      source,
       Offset.zero & size,
       Paint()..filterQuality = FilterQuality.none,
     );
