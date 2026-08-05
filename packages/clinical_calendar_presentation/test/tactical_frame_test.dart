@@ -11,7 +11,7 @@ void main() {
     expect(path.contains(const Offset(118, 78)), isFalse);
   });
 
-  testWidgets('Variant F frame renders layered clipped panel geometry', (
+  testWidgets('Variant F frame renders a raster-backed clipped panel', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -26,7 +26,8 @@ void main() {
       ),
     );
 
-    expect(find.byType(ClipPath), findsOneWidget);
+    expect(find.byType(VariantFNineSliceFrame), findsOneWidget);
+    expect(find.byType(ClipRect), findsOneWidget);
     expect(find.byType(CustomPaint), findsWidgets);
     expect(find.text('TACTICAL PANEL'), findsOneWidget);
     expect(buildVariantFTheme().cardTheme.shape, isA<BeveledRectangleBorder>());
@@ -113,5 +114,74 @@ void main() {
       findsNWidgets(VariantFRasterRail.values.length),
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('raster panel clips oversized content inside its armor band', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildVariantFTheme(),
+        home: const Center(
+          child: SizedBox.square(
+            dimension: 200,
+            child: VariantFRasterPanelFrame(
+              panel: VariantFRasterPanel.calendar,
+              padding: EdgeInsets.all(32),
+              child: OverflowBox(
+                maxWidth: 400,
+                maxHeight: 400,
+                child: SizedBox.square(
+                  dimension: 400,
+                  child: ColoredBox(color: Colors.red),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(VariantFRasterPanelInterior),
+        matching: find.byType(ClipRect),
+      ),
+      findsOneWidget,
+      reason: 'Raster-panel content has no interior paint boundary.',
+    );
+  });
+
+  test('raster panels trim transparent atlas margins before scaling', () {
+    for (final panel in VariantFRasterPanel.values) {
+      final crop = variantFRasterPanelCrop(panel);
+      expect(crop, isNot(const Rect.fromLTWH(0, 0, 1, 1)));
+      expect(crop.left, inInclusiveRange(0, 1));
+      expect(crop.top, inInclusiveRange(0, 1));
+      expect(crop.right, inInclusiveRange(0, 1));
+      expect(crop.bottom, inInclusiveRange(0, 1));
+    }
+
+    expect(
+      variantFRasterPanelCrop(VariantFRasterPanel.calendar).right,
+      greaterThan(.5),
+      reason: 'The calendar sprite crosses the nominal left atlas cell.',
+    );
+    expect(
+      variantFRasterPanelCrop(VariantFRasterPanel.placements).left,
+      greaterThan(.6),
+      reason: 'The placement crop must exclude the adjacent calendar sprite.',
+    );
+    expect(
+      variantFRasterPanelCrop(VariantFRasterPanel.planning).right,
+      greaterThan(.5),
+      reason: 'The planning sprite crosses the nominal left atlas cell.',
+    );
+    expect(
+      variantFRasterPanelCrop(VariantFRasterPanel.status).left,
+      greaterThan(.6),
+      reason: 'The status crop must exclude the adjacent planning sprite.',
+    );
   });
 }
