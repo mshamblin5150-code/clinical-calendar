@@ -1,30 +1,34 @@
-# Issue tracker: Local Markdown
+# Issue tracker: GitHub Issues
 
-Issues and specs (you may know a spec as a PRD) for this repo live as Markdown files in `.scratch/`.
+GitHub Issues in `mshamblin5150-code/clinical-calendar` are the canonical tracker for product, planning, research, and implementation work. Files already under `.scratch/` are historical records only; do not create new local Markdown tickets or maintain a second copy of a GitHub issue there.
 
 ## Conventions
 
-- One feature per directory: `.scratch/<feature-slug>/`
-- The spec is `.scratch/<feature-slug>/spec.md`
-- Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`—never a single combined tickets file
-- Triage state is recorded as a `Status:` line near the top of each issue file (see `triage-labels.md` for the role strings)
-- Comments and conversation history append to the bottom of the file under a `## Comments` heading
+- One GitHub Issue owns one question or implementation outcome.
+- Use the five triage-role labels from `triage-labels.md` and the repository's type labels (`research`, `prototype`, `grilling`, or `task`).
+- Use the issue body for the current question and acceptance boundary. Add evidence, decisions, and conversation as issue comments rather than shadow files.
+- Store substantial research or specification artifacts under `docs/` and link them from their owning issue.
+- Use native GitHub sub-issues for parent/child relationships and native issue dependencies for `blocked by` relationships.
+- Do not duplicate GitHub Issues under `.scratch/`.
 
-## When a skill says “publish to the issue tracker”
+## When a skill says "publish to the issue tracker"
 
-Create a new file under `.scratch/<feature-slug>/` (creating the directory if needed).
+Create a GitHub Issue in `mshamblin5150-code/clinical-calendar`, apply the appropriate type and triage labels, and return its URL.
 
-## When a skill says “fetch the relevant ticket”
+## When a skill says "fetch the relevant ticket"
 
-Read the file at the referenced path. The user will normally pass the path or the issue number directly.
+Fetch the referenced GitHub Issue by URL or issue number, including relevant comments, sub-issues, and dependencies.
 
 ## Wayfinding operations
 
-Used by `/wayfinder`. The **map** is a file with one **child** file per ticket.
+Used by `/wayfinder`:
 
-- **Map**: `.scratch/<effort>/map.md`—the Notes / Decisions-so-far / Fog body.
-- **Child ticket**: `.scratch/<effort>/issues/NN-<slug>.md`, numbered from `01`, with the question in the body. A `Type:` line records the ticket type (`research`/`prototype`/`grilling`/`task`); a `Status:` line records `claimed`/`resolved`.
-- **Blocking**: a `Blocked by: NN, NN` line near the top. A ticket is unblocked when every file it lists is `resolved`.
-- **Frontier**: scan `.scratch/<effort>/issues/` for files that are open, unblocked, and unclaimed; first by number wins.
-- **Claim**: set `Status: claimed` and save before any work.
-- **Resolve**: append the answer under an `## Answer` heading, set `Status: resolved`, then append a context pointer (gist + link) to the map's Decisions-so-far in `map.md`.
+- **Map**: one open GitHub Issue labelled `wayfinder:map`. Its body contains Destination, Notes, Decisions so far, Not yet specified, and Out of scope.
+- **Child ticket**: a native GitHub sub-issue of the map labelled with exactly one Wayfinder type (`wayfinder:research`, `wayfinder:prototype`, `wayfinder:grilling`, or `wayfinder:task`) plus the matching repository type label.
+- **Blocking**: use GitHub's native issue dependency relationship. Do not encode dependency numbers only in prose.
+- **Frontier**: the open, unassigned child issues whose native blockers are all closed; when several are available, take the earliest child in map order.
+- **Claim**: assign the issue to the developer driving the map before doing any work.
+- **Resolve**: post the answer as a resolution comment, close the child issue as completed, and append a linked one-line gist to the map's Decisions so far.
+- **Research artifact**: commit the cited note under `docs/research/`, link it from the research issue, then resolve the issue.
+
+The historical `.scratch/clinical-calendar-mvp/` tree remains reference material. It is not the active tracker and must not receive new tickets or status updates.
