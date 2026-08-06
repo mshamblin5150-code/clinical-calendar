@@ -1,7 +1,8 @@
 # Botanical Study Android concept
 
-Status: dashboard direction and final display name awaiting maintainer review in
-GitHub issue #115.
+Status: dashboard direction and Botanical Study display name approved by the
+maintainer; matching Theme Gallery surface awaiting review in GitHub issue
+#115.
 
 This concept is grounded in direct inspection of digitized Smithsonian
 herbarium sheets, public-domain botanical plates in the Biodiversity Heritage
@@ -24,15 +25,18 @@ not production UI, a golden, or raster-frame source art.
 
 - `calendar-dashboard-concept-v1.png` preserves the Android-tablet Calendar
   regions while using a warm ivory and pale sage nine-slice housing.
+- `theme-gallery-concept-v1.png` carries the approved identity into Settings,
+  uses the dashboard as its thumbnail, presents the five semantic swatches,
+  and makes Botanical Study a selected Preview candidate without applying it.
 - Opaque content bays keep decorative line art outside live information.
 - Accession tabs, measurement rules, mounting-strip geometry, and botanical
   corner studies make the identity specific without becoming floral wallpaper.
 - Icons, rails, outlines, patterns, and complete text labels keep calendar and
   progress semantics redundant rather than color-only.
 
-## Final-name recommendation
+## Final name
 
-Use **Botanical Study**. The name accurately describes the approved research
+**Botanical Study** is approved. The name accurately describes the research
 desk and scientific-illustration character, stays contemporary and
 professional, and avoids the antique or decorative implications of names such
 as Herbarium, Garden Journal, or Botanical Archive.
