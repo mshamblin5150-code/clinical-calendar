@@ -55,9 +55,15 @@ final class SupportHelpSurface extends StatelessWidget {
     (
       title: 'Evaluation Plans',
       body:
-          'Initial and Final Self-Assessments, two-part Interim Reviews, and the '
-          'Final Placement Review remain separate requirements. Documenting a '
-          'requirement records evidence; it does not upload the evaluation.',
+          'Open Clinical Placements, select a placement, then choose Open Reviews '
+          '& Evaluations. In Evaluation Plan configuration, set the Interim '
+          'Review cadence using Completed Hours and switch the Initial '
+          'Self-Assessment, Final Self-Assessment, and Final Placement Review '
+          'between Required and Not required. Choose Preview Evaluation Plan '
+          'changes to review the impact before saving. Each Interim threshold '
+          'keeps the Student Reviews Primary Preceptor and Primary Preceptor '
+          'Reviews Student as separate requirements. Documenting a requirement '
+          'records evidence; it does not upload the evaluation.',
     ),
     (
       title: 'Attention and notifications',

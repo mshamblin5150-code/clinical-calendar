@@ -229,6 +229,28 @@ void main() {
     );
   });
 
+  testWidgets('portrait tablet Agenda owns a vertical scrollable', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(1056, 1691));
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(CalendarPeriodView),
+        matching: find.text('Agenda'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final agenda = find.byKey(const Key('agenda-view'));
+    expect(agenda, findsOneWidget);
+    expect(
+      find.descendant(of: agenda, matching: find.byType(Scrollable)),
+      findsOneWidget,
+      reason: 'Agenda must scroll within the clipped portrait calendar bay.',
+    );
+  });
+
   testWidgets('menu entry uses Back and returns to the application menu', (
     tester,
   ) async {

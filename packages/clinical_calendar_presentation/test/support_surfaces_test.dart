@@ -439,6 +439,17 @@ void main() {
     expect(find.text('Calendar state'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  test('Help explains where and how to configure Evaluation Plans', () {
+    final section = SupportHelpSurface.workflowSections.singleWhere(
+      (section) => section.title == 'Evaluation Plans',
+    );
+
+    expect(section.body, contains('Open Reviews & Evaluations'));
+    expect(section.body, contains('Interim Review cadence'));
+    expect(section.body, contains('Not required'));
+    expect(section.body, contains('Preview Evaluation Plan changes'));
+  });
 }
 
 Future<void> _pump(
