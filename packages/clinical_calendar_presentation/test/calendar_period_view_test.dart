@@ -150,6 +150,31 @@ void main() {
     },
   );
 
+  testWidgets('Agenda scrolls within a bounded compact calendar bay', (
+    tester,
+  ) async {
+    await _pumpCalendar(
+      tester,
+      source: _MemoryCalendarDataSource(_snapshot()),
+      surfaceSize: const Size(500, 400),
+      initialPeriod: CalendarPeriod.agenda,
+      bounded: true,
+    );
+
+    final agenda = find.byKey(const Key('agenda-view'));
+    final scrollable = find.descendant(
+      of: agenda,
+      matching: find.byType(Scrollable),
+    );
+    expect(scrollable, findsOneWidget);
+    final position = tester.state<ScrollableState>(scrollable).position;
+    expect(position.maxScrollExtent, greaterThan(0));
+
+    await tester.drag(agenda, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(position.pixels, greaterThan(0));
+  });
+
   testWidgets('cross-month Week and overnight continuation remain visible', (
     tester,
   ) async {
@@ -234,29 +259,31 @@ Future<void> _pumpCalendar(
   Set<LocalDate> selectedDates = const {},
   ValueChanged<Set<LocalDate>>? onSelectionChanged,
   ValueChanged<CalendarItemReference>? onOpenItem,
+  bool bounded = false,
 }) async {
   tester.view.physicalSize = surfaceSize;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+  final calendar = CalendarPeriodView(
+    key: ValueKey('$weekStartsOn-$initialAnchor-$initialPeriod'),
+    dataSource: source,
+    studentId: _studentId,
+    today: _today,
+    initialAnchor: initialAnchor ?? LocalDate(2026, 8, 3),
+    initialPeriod: initialPeriod,
+    weekStartsOn: weekStartsOn,
+    initialSelectedDates: selectedDates,
+    onSelectionChanged: onSelectionChanged,
+    onOpenItem: onOpenItem,
+  );
   await tester.pumpWidget(
     MaterialApp(
       theme: buildVariantFTheme(),
       home: Scaffold(
-        body: SingleChildScrollView(
-          child: CalendarPeriodView(
-            key: ValueKey('$weekStartsOn-$initialAnchor-$initialPeriod'),
-            dataSource: source,
-            studentId: _studentId,
-            today: _today,
-            initialAnchor: initialAnchor ?? LocalDate(2026, 8, 3),
-            initialPeriod: initialPeriod,
-            weekStartsOn: weekStartsOn,
-            initialSelectedDates: selectedDates,
-            onSelectionChanged: onSelectionChanged,
-            onOpenItem: onOpenItem,
-          ),
-        ),
+        body: bounded
+            ? SizedBox.expand(child: calendar)
+            : SingleChildScrollView(child: calendar),
       ),
     ),
   );

@@ -197,7 +197,8 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                   onNext: () => _navigate(1),
                   onPeriod: _changePeriod,
                 ),
-                if (_period == CalendarPeriod.week &&
+                if ((_period == CalendarPeriod.week ||
+                        _period == CalendarPeriod.agenda) &&
                     outerConstraints.hasBoundedHeight)
                   Expanded(child: periodView)
                 else
@@ -774,31 +775,31 @@ final class _AgendaView extends StatelessWidget {
               entry.endDate == LocalDate(anchor.year, anchor.month, day))
             (date: LocalDate(anchor.year, anchor.month, day), entry: entry),
     ];
-    if (rows.isEmpty) {
-      return const SizedBox(
-        key: Key('agenda-view'),
-        height: 160,
-        child: Center(child: Text('No commitments in this month.')),
-      );
-    }
-    return Column(
+    return SingleChildScrollView(
       key: const Key('agenda-view'),
-      children: [
-        for (final row in rows)
-          _AgendaRow(
-            date: row.date,
-            entry: row.entry,
-            today: row.date == today,
-            selected: selectedDates.contains(row.date),
-            compact: compact,
-            twelveHourTime: twelveHourTime,
-            onTap: () => onActivate(
-              row.date,
-              snapshot.entriesOn(row.date),
-              preferredEntry: row.entry,
+      child: rows.isEmpty
+          ? const SizedBox(
+              height: 160,
+              child: Center(child: Text('No commitments in this month.')),
+            )
+          : Column(
+              children: [
+                for (final row in rows)
+                  _AgendaRow(
+                    date: row.date,
+                    entry: row.entry,
+                    today: row.date == today,
+                    selected: selectedDates.contains(row.date),
+                    compact: compact,
+                    twelveHourTime: twelveHourTime,
+                    onTap: () => onActivate(
+                      row.date,
+                      snapshot.entriesOn(row.date),
+                      preferredEntry: row.entry,
+                    ),
+                  ),
+              ],
             ),
-          ),
-      ],
     );
   }
 }
