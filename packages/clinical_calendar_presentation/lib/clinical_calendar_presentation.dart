@@ -32,6 +32,7 @@ export 'src/support/student_profile_onboarding_dialog.dart';
 export 'src/support/student_profile_surface.dart';
 export 'src/support/support_help_surface.dart';
 export 'src/theme_contract.dart';
+export 'src/theme_gallery.dart';
 export 'src/tactical_frame.dart';
 export 'src/mechanical_pixel_tiles.dart';
 export 'src/time_input.dart';
