@@ -1,0 +1,33 @@
+﻿{
+    "schemaVersion":  1,
+    "capturedAtUtc":  "2026-08-07T12:48:49.1825518Z",
+    "fixture":  "containment-drone-fictional-v1",
+    "application":  {
+                        "packageId":  "com.clinicalcalendar.clinical_calendar",
+                        "versionName":  "0.1.0",
+                        "versionCode":  40,
+                        "BuildConfiguration":  "profile",
+                        "commit":  "3c52827fac814181d6879c4e38ebf6ad01c27209",
+                        "artifact":  {
+                                         "sha256":  "d512f41c58551d88009a2eeef0508bd69b1f4816fca3d2912120b18f74a8072d"
+                                     }
+                    },
+    "device":  {
+                   "manufacturer":  "samsung",
+                   "model":  "SM-X920",
+                   "androidVersion":  "16",
+                   "refreshRateHz":  120.00001,
+                   "frameIntervalMs":  8.333
+               },
+    "measurement":  {
+                        "sampleSeconds":  10,
+                        "renderedFrames":  73,
+                        "uiThreadFrameTimeMsP95":  3.403,
+                        "rasterThreadFrameTimeMsP95":  5.627,
+                        "retainedMemoryKb":  {
+                                                 "postLaunch":  219508,
+                                                 "afterSample":  215258,
+                                                 "delta":  -4250
+                                             }
+                    }
+}

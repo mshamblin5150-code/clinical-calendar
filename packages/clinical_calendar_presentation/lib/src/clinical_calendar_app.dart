@@ -43,8 +43,7 @@ final class ClinicalCalendarApp extends StatelessWidget {
     required this.environmentName,
     required this.studentId,
     this.chooseAvatar,
-    this.visualTheme = const VariantFVisualTheme(),
-    this.helpGuides,
+    this.themeId = variantFThemeId,
     this.onLaunchOrResume,
     this.connectivityChanges,
     this.onConnectivityChanged,
@@ -69,8 +68,7 @@ final class ClinicalCalendarApp extends StatelessWidget {
   final String environmentName;
   final String studentId;
   final AvatarChooser? chooseAvatar;
-  final ClinicalCalendarVisualTheme visualTheme;
-  final ThemeHelpGuideRegistry? helpGuides;
+  final String themeId;
   final Future<void> Function()? onLaunchOrResume;
   final Stream<bool>? connectivityChanges;
   final Future<void> Function(bool connected)? onConnectivityChanged;
@@ -93,37 +91,40 @@ final class ClinicalCalendarApp extends StatelessWidget {
   final ScheduleDateFactory? scheduleDateFactory;
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner: false,
-    title: 'Clinical Calendar',
-    theme: visualTheme.createThemeData(),
-    home: ClinicalCalendarLifecycleHost(
-      onLaunchOrResume: onLaunchOrResume,
-      connectivityChanges: connectivityChanges,
-      onConnectivityChanged: onConnectivityChanged,
-      child: _ApplicationHost(
-        dependencies: dependencies,
-        environmentName: environmentName,
-        studentId: studentId,
-        chooseAvatar: chooseAvatar,
-        themeId: visualTheme.id,
-        helpGuides: helpGuides ?? ThemeHelpGuideRegistry.standard(),
-        identity: identity,
-        identityEmail: identityEmail,
-        onLocalCopyRemoved: onLocalCopyRemoved,
-        createAccountBackup: createAccountBackup,
-        portableBackupWorkflows: portableBackupWorkflows,
-        exportWorkflowFactory: exportWorkflowFactory,
-        recoveryStore: recoveryStore,
-        recoveryService: recoveryService,
-        recoveryProofGate: recoveryProofGate,
-        notificationInteractions: notificationInteractions,
-        notificationDevicePolicyStore: notificationDevicePolicyStore,
-        notificationDeviceClass: notificationDeviceClass,
-        scheduleDateFactory: scheduleDateFactory,
+  Widget build(BuildContext context) {
+    final themeBundle = ClinicalCalendarThemeBundleRegistry.standard
+        .resolveRoot(themeId);
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Clinical Calendar',
+      theme: themeBundle.standardPresentation.createThemeData(),
+      home: ClinicalCalendarLifecycleHost(
+        onLaunchOrResume: onLaunchOrResume,
+        connectivityChanges: connectivityChanges,
+        onConnectivityChanged: onConnectivityChanged,
+        child: _ApplicationHost(
+          dependencies: dependencies,
+          environmentName: environmentName,
+          studentId: studentId,
+          chooseAvatar: chooseAvatar,
+          themeBundle: themeBundle,
+          identity: identity,
+          identityEmail: identityEmail,
+          onLocalCopyRemoved: onLocalCopyRemoved,
+          createAccountBackup: createAccountBackup,
+          portableBackupWorkflows: portableBackupWorkflows,
+          exportWorkflowFactory: exportWorkflowFactory,
+          recoveryStore: recoveryStore,
+          recoveryService: recoveryService,
+          recoveryProofGate: recoveryProofGate,
+          notificationInteractions: notificationInteractions,
+          notificationDevicePolicyStore: notificationDevicePolicyStore,
+          notificationDeviceClass: notificationDeviceClass,
+          scheduleDateFactory: scheduleDateFactory,
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Bridges Flutter host lifecycle/connectivity events into synchronization.
@@ -206,8 +207,7 @@ final class _ApplicationHost extends StatefulWidget {
     required this.environmentName,
     required this.studentId,
     required this.chooseAvatar,
-    required this.themeId,
-    required this.helpGuides,
+    required this.themeBundle,
     required this.identity,
     required this.identityEmail,
     required this.onLocalCopyRemoved,
@@ -227,8 +227,7 @@ final class _ApplicationHost extends StatefulWidget {
   final String environmentName;
   final String studentId;
   final AvatarChooser? chooseAvatar;
-  final String themeId;
-  final ThemeHelpGuideRegistry helpGuides;
+  final ClinicalCalendarThemeBundle themeBundle;
   final PasswordlessIdentityService? identity;
   final String? identityEmail;
   final Future<void> Function()? onLocalCopyRemoved;
@@ -946,7 +945,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     }
 
     final settings = _support?.settings.value ?? StudentSettings();
-    return ResponsiveApplicationShell(
+    return widget.themeBundle.shellRenderer.build(
       environmentName: widget.environmentName,
       onOpenMenu: _showMenu,
       onOpenDestination: _openDirect,
@@ -1135,9 +1134,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
           ),
         );
       case ClinicalCalendarDestination.help:
-        return SupportHelpSurface(
-          themeGuide: widget.helpGuides.resolve(widget.themeId),
-        );
+        return SupportHelpSurface(themeGuide: widget.themeBundle.helpGuide);
       case ClinicalCalendarDestination.notifications:
         return AttentionCenterSurface(
           controller: _attentionController,
