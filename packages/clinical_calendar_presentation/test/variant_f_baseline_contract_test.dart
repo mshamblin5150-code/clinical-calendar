@@ -13,6 +13,39 @@ void main() {
   final manifestFile = File(
     '${packageRoot.path}/test/baselines/variant_f_asset_manifest.json',
   );
+  final renderRoot = Directory(
+    '${packageRoot.path}/test/baselines/variant_f_renders',
+  );
+
+  test('Windows and Linux freeze the same valid render matrix', () async {
+    final platformRenders = <String, Map<String, File>>{};
+    for (final platform in const ['windows', 'linux']) {
+      final files = Directory('${renderRoot.path}/$platform')
+          .listSync()
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.png'));
+      platformRenders[platform] = {
+        for (final file in files)
+          file.uri.pathSegments.last.replaceAll('.png', ''): file,
+      };
+    }
+
+    expect(platformRenders['windows']!.keys, platformRenders['linux']!.keys);
+    expect(platformRenders['windows'], hasLength(14));
+    for (final name in platformRenders['windows']!.keys) {
+      final dimensions = <(int, int)>[];
+      for (final platform in const ['windows', 'linux']) {
+        final codec = await ui.instantiateImageCodec(
+          await platformRenders[platform]![name]!.readAsBytes(),
+        );
+        final frame = await codec.getNextFrame();
+        dimensions.add((frame.image.width, frame.image.height));
+        frame.image.dispose();
+        codec.dispose();
+      }
+      expect(dimensions[0], dimensions[1], reason: name);
+    }
+  });
 
   test(
     'protected Variant F raster assets match the pre-catalog manifest',
