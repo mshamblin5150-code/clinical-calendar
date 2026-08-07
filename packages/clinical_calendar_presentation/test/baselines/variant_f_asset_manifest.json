@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "fixture": "pre-catalog-containment-drone-47-alpha",
+  "assets": [
+    {
+      "path": "assets/variant_f_raster/panel-nine-slice-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1217635,
+      "sha256": "9ff3968a94d497dc6f76f2b14f370c5a24c3bb4969397ee220da005093c15ad7"
+    },
+    {
+      "path": "assets/variant_f_raster/hardware-atlas.png",
+      "width": 1774,
+      "height": 887,
+      "bytes": 628620,
+      "sha256": "0abc02903e8fb954fe80fb91e71aaaa7ee5a5020160e7138cb8b75e516f949e1"
+    },
+    {
+      "path": "assets/variant_f_raster/panel-atlas.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1019583,
+      "sha256": "01df9ab1ee87dc41852dd61c8193a7b453eb92695e323bf1861ba891120d65ae"
+    },
+    {
+      "path": "assets/variant_f_raster/rail-atlas.png",
+      "width": 1402,
+      "height": 1122,
+      "bytes": 406490,
+      "sha256": "2acf4e26ad10db07a49fadcf78064e24d04724ad680390508593f06761cb2649"
+    }
+  ],
+  "protectedRenderer": {
+    "path": "lib/src/variant_f_raster_assets.dart",
+    "sha256": "a65b68882750d51f363a4c929359562deda0e7080338072a7a49ce81fd0a3f96"
+  },
+  "primaryFrameGeometry": {
+    "cuts": [120, 145, 120, 170],
+    "safeInsets": {
+      "calendar": [38, 46, 38, 46],
+      "placements": [30, 44, 30, 44],
+      "planning": [34, 46, 34, 42],
+      "status": [30, 44, 34, 44]
+    }
+  }
+}
