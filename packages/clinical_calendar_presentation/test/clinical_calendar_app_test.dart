@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const studentId = '00000000-0000-4000-8000-000000000001';
@@ -22,6 +25,63 @@ void main() {
     Size(1024, 768),
     Size(1440, 900),
   ];
+
+  group('accepted pre-catalog Variant F renders', () {
+    setUpAll(() async {
+      final font = await File(
+        '../clinical_calendar_platform/assets/fonts/'
+        'LiberationSansNarrow-Regular.ttf',
+      ).readAsBytes();
+      await (FontLoader(
+        'Roboto',
+      )..addFont(Future.value(ByteData.sublistView(font)))).load();
+      final dartExecutable = File(Platform.resolvedExecutable);
+      final inferredFlutterRoot =
+          dartExecutable.parent.parent.parent.parent.parent.path;
+      final flutterRoot =
+          Platform.environment['FLUTTER_ROOT'] ?? inferredFlutterRoot;
+      final icons = await File(
+        '$flutterRoot/bin/cache/artifacts/material_fonts/'
+        'MaterialIcons-Regular.otf',
+      ).readAsBytes();
+      await (FontLoader(
+        'MaterialIcons',
+      )..addFont(Future.value(ByteData.sublistView(icons)))).load();
+    });
+
+    const calendarFixtures = <String, Size>{
+      'calendar-compact': Size(390, 844),
+      'calendar-portrait-tablet': Size(768, 1024),
+      'calendar-landscape-desktop': Size(1440, 900),
+    };
+
+    for (final fixture in calendarFixtures.entries) {
+      testWidgets(fixture.key, (tester) async {
+        await _pumpAcceptedRenderAt(tester, fixture.value);
+        await _expectAppGolden(tester, fixture.key);
+      });
+    }
+
+    testWidgets('settings-320', (tester) async {
+      await _pumpAcceptedRenderAt(tester, const Size(320, 700));
+      await tester.tap(find.text('Settings').last);
+      await tester.pumpAndSettle();
+      await _expectAppGolden(tester, 'settings-320');
+    });
+
+    for (final destination in applicationMenuDestinations) {
+      testWidgets('destination-${destination.name}', (tester) async {
+        await _pumpAcceptedRenderAt(tester, const Size(1024, 768));
+        await tester.tap(find.byKey(const Key('desktop-menu-action')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(destination.label));
+        await tester.pumpAndSettle();
+
+        expect(find.text(destination.label), findsWidgets);
+        await _expectAppGolden(tester, 'destination-${destination.name}');
+      });
+    }
+  });
 
   for (final viewport in requiredViewports) {
     testWidgets(
@@ -743,6 +803,22 @@ void main() {
     expect(metrics.cornerRadius, lessThanOrEqualTo(4));
     expect(metrics.minimumTouchTarget, 44);
   });
+}
+
+Future<void> _expectAppGolden(WidgetTester tester, String name) async {
+  try {
+    await expectLater(
+      find.byType(ClinicalCalendarApp),
+      matchesGoldenFile('baselines/variant_f_renders/$name.png'),
+    );
+  } finally {
+    debugDefaultTargetPlatformOverride = null;
+  }
+}
+
+Future<void> _pumpAcceptedRenderAt(WidgetTester tester, Size size) async {
+  debugDefaultTargetPlatformOverride = TargetPlatform.android;
+  await _pumpAt(tester, size);
 }
 
 Future<void> _pumpAt(
