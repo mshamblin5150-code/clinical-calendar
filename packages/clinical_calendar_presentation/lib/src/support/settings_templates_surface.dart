@@ -305,7 +305,7 @@ final class _SettingsTemplatesSurfaceState
                 selectedThemeId:
                     _themeId == variantFThemeId || _themeId == graphiteThemeId
                     ? _themeId
-                  : graphiteThemeId,
+                    : graphiteThemeId,
               ),
               const SizedBox(height: 12),
             ],
