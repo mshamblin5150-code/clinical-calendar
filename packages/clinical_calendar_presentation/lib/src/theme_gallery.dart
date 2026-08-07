@@ -199,6 +199,7 @@ final class _ThemeMasterRow extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     button: true,
     selected: selected,
+    excludeSemantics: true,
     label: [
       bundle.metadata.displayName,
       bundle.metadata.personality,
@@ -298,8 +299,16 @@ final class _ThemeRuntimeThumbnail extends StatelessWidget {
             marks: bundle.marks,
             child: AspectRatio(
               aspectRatio: bundle.gallery.thumbnailViewport.aspectRatio,
-              child: bundle.shellRenderer.buildFrame(
-                child: const _PinnedCalendarFixture(),
+              child: ClipRect(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: SizedBox.fromSize(
+                    size: bundle.gallery.thumbnailViewport,
+                    child: bundle.shellRenderer.buildFrame(
+                      child: const _PinnedCalendarFixture(),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -420,9 +429,7 @@ List<String> _stateLabels({
   return [
     if (!appliedUsesFallback && bundle.id == appliedThemeId) 'Applied',
     if (bundle.id == variantFThemeId) 'Unchanged',
-    if (bundle.id == selectedThemeId &&
-        (bundle.id != appliedThemeId || appliedUsesFallback))
-      'Selected',
+    if (bundle.id == selectedThemeId) 'Selected',
     if (appliedUsesFallback && bundle.id == graphiteThemeId) 'Fallback in use',
   ];
 }

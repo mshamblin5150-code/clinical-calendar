@@ -231,6 +231,42 @@ final class _SettingsTemplatesSurfaceState
                     onChanged: (value) => setState(() => _timeDisplay = value!),
                   ),
                 ),
+                if (!ClinicalCalendarThemeBundleRegistry
+                    .standard
+                    .isSelectableCatalogComplete)
+                  _field(
+                    DropdownButtonFormField<String>(
+                      key: const Key('theme-setting'),
+                      isExpanded: true,
+                      initialValue: _themeId == StudentSettings.variantFThemeId
+                          ? _themeId
+                          : null,
+                      decoration: const InputDecoration(labelText: 'Theme'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: StudentSettings.variantFThemeId,
+                          child: Text('Containment Drone 47-Alpha'),
+                        ),
+                      ],
+                      onChanged: (value) => setState(() => _themeId = value!),
+                    ),
+                    width: 280,
+                  ),
+                if (!ClinicalCalendarThemeBundleRegistry
+                        .standard
+                        .isSelectableCatalogComplete &&
+                    _themeId != StudentSettings.variantFThemeId)
+                  _field(
+                    Semantics(
+                      key: const Key('theme-fallback-in-use'),
+                      label: 'Graphite, Fallback in use',
+                      child: const Text(
+                        'Saved theme unavailable in this app version.\n'
+                        'Graphite — Fallback in use',
+                      ),
+                    ),
+                    width: 280,
+                  ),
                 _field(
                   DropdownButtonFormField<SynchronizationPreference>(
                     key: const Key('synchronization-setting'),
@@ -256,19 +292,23 @@ final class _SettingsTemplatesSurfaceState
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              'THEME GALLERY',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            ThemeGallery(
-              appliedThemeId: _themeId,
-              selectedThemeId:
-                  _themeId == variantFThemeId || _themeId == graphiteThemeId
-                  ? _themeId
+            if (ClinicalCalendarThemeBundleRegistry
+                .standard
+                .isSelectableCatalogComplete) ...[
+              Text(
+                'THEME GALLERY',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              ThemeGallery(
+                appliedThemeId: _themeId,
+                selectedThemeId:
+                    _themeId == variantFThemeId || _themeId == graphiteThemeId
+                    ? _themeId
                   : graphiteThemeId,
-            ),
-            const SizedBox(height: 12),
+              ),
+              const SizedBox(height: 12),
+            ],
             Text(
               'NOTIFICATION PREFERENCES',
               style: Theme.of(context).textTheme.titleMedium,

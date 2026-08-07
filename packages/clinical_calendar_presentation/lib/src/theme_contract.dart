@@ -9,6 +9,8 @@ import 'variant_f_theme.dart';
 
 const variantFThemeId = 'variant-f';
 const graphiteThemeId = 'graphite';
+const themeGalleryFixtureId = 'theme-gallery-android-tablet-calendar-v1';
+const themeGalleryViewport = Size(1280, 800);
 
 enum ThemeBundleOrigin { compiled, runtime, remote }
 
@@ -564,8 +566,8 @@ final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: variantFThemeId,
     rendererId: 'variant-f-existing-responsive-shell',
-    thumbnailFixtureId: 'variant-f-pinned-calendar-v1',
-    thumbnailViewport: Size(1280, 800),
+    thumbnailFixtureId: themeGalleryFixtureId,
+    thumbnailViewport: themeGalleryViewport,
     swatches: [
       ThemeGallerySwatch(
         role: ThemeGallerySwatchRole.canvas,
@@ -687,8 +689,8 @@ final class GraphiteThemeBundle implements ClinicalCalendarThemeBundle {
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: graphiteThemeId,
     rendererId: 'graphite-additive-responsive-shell-v1',
-    thumbnailFixtureId: 'graphite-pinned-calendar-v1',
-    thumbnailViewport: Size(1280, 800),
+    thumbnailFixtureId: themeGalleryFixtureId,
+    thumbnailViewport: themeGalleryViewport,
     swatches: [
       ThemeGallerySwatch(
         role: ThemeGallerySwatchRole.canvas,
