@@ -492,6 +492,40 @@ void main() {
     );
     expect(find.textContaining('delivery remains deferred'), findsOneWidget);
     expect(find.text('Clinical Session'), findsOneWidget);
+    expect(find.text(guide.calendarStates.first.nonColorCue), findsNothing);
+    expect(
+      find.text(guide.calendarStates.first.enhancedBehavior),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Graphite Help renders its complete theme-specific guidance', (
+    tester,
+  ) async {
+    final bundle = const GraphiteThemeBundle();
+    final clinicalSession = bundle.helpGuide.calendarStates.first;
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bundle.standardPresentation.createThemeData(),
+        home: Scaffold(
+          body: ClinicalCalendarSemanticMarkScope(
+            marks: bundle.marks,
+            child: SupportHelpSurface(themeGuide: bundle.helpGuide),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text(clinicalSession.nonColorCue),
+      400,
+    );
+    expect(find.text(clinicalSession.nonColorCue), findsOneWidget);
+    expect(find.text(clinicalSession.enhancedBehavior), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
