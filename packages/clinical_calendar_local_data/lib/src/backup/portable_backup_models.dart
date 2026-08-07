@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:clinical_calendar_application/clinical_calendar_application.dart';
+
 enum PortableBackupFailureKind {
   weakPassphrase,
   tooLarge,
@@ -205,6 +207,22 @@ final class DefaultPortableBackupMigrator implements PortableBackupMigrator {
         }
       }
       payload['source_database_schema_version'] = 4;
+    }
+    if (sourceVersion == 12 && tables is Map<dynamic, dynamic>) {
+      final settings = tables['settings'];
+      if (settings is List) {
+        for (final row in settings) {
+          if (row is Map) {
+            final theme = row['theme'];
+            if (theme == 'borg_tactical' ||
+                theme is String && theme.trim().isEmpty) {
+              row['theme'] = StudentSettings.variantFThemeId;
+            }
+            row.putIfAbsent('enhanced_accessibility', () => 0);
+          }
+        }
+      }
+      payload['source_database_schema_version'] = 13;
     }
     return payload;
   }

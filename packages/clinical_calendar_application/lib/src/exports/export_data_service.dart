@@ -169,6 +169,7 @@ Map<String, Object?> _settingsJson(StudentSettings value) => {
   'week_start': value.weekStart,
   'time_display': value.timeDisplay.name,
   'theme_id': value.themeId,
+  'enhanced_accessibility': value.enhancedAccessibility,
   'synchronization': value.synchronization.name,
   'notifications': value.notifications.toJson(),
 };

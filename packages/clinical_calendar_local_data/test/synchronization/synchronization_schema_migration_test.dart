@@ -19,6 +19,81 @@ const _legacySettingsId = '00000000-0000-4000-8000-000000000005';
 
 void main() {
   test(
+    'pre-catalog settings migrate to variant-f in storage and pending synchronization',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'clinical-calendar-settings-v13-',
+      );
+      final path = '${directory.path}${Platform.pathSeparator}calendar.db';
+      final raw = sqlite3.open(path);
+      raw.execute('PRAGMA key = "x\'$_key\'"');
+      final runner = DatabaseMigrationRunner.forTesting((version, _) {
+        if (version == 13) throw StateError('stop at version twelve');
+      });
+      try {
+        runner.migrate(raw, 0);
+      } on ClinicalCalendarDatabaseException catch (error) {
+        expect(error.kind, DatabaseFailureKind.migrationFailed);
+      }
+      expect(raw.userVersion, 12);
+      raw.execute(
+        '''INSERT INTO student_profiles
+        (id, student_id, revision, created_at_utc, updated_at_utc, display_name)
+        VALUES (?, ?, 0, ?, ?, 'Student')''',
+        [_studentId, _studentId, _createdAt, _createdAt],
+      );
+      raw.execute(
+        '''INSERT INTO settings
+        (id, student_id, revision, created_at_utc, updated_at_utc, theme)
+        VALUES (?, ?, 1, ?, ?, 'borg_tactical')''',
+        [_studentId, _studentId, _createdAt, _createdAt],
+      );
+      raw.execute(
+        '''INSERT INTO outbox_operations
+        (id, student_id, idempotency_key, entity_type, entity_id,
+         operation_type, base_revision, payload_json, created_at_utc)
+        VALUES (?, ?, ?, 'settings', ?, 'upsert', 0, ?, ?)''',
+        [
+          '00000000-0000-4000-8000-000000000098',
+          _studentId,
+          '00000000-0000-4000-8000-000000000099',
+          _studentId,
+          jsonEncode({
+            'value': {'theme': 'borg_tactical'},
+          }),
+          _createdAt,
+        ],
+      );
+      raw.close();
+
+      final database = await ClinicalCalendarDatabase.open(
+        path: path,
+        secureStorage: _Storage(),
+      );
+      try {
+        final settings = database.select('SELECT * FROM settings').single;
+        expect(settings['theme'], StudentSettings.variantFThemeId);
+        expect(settings['enhanced_accessibility'], 0);
+        final payload =
+            jsonDecode(
+                  database
+                          .select(
+                            "SELECT payload_json FROM outbox_operations WHERE entity_type = 'settings'",
+                          )
+                          .single['payload_json']
+                      as String,
+                )
+                as Map<String, dynamic>;
+        expect(payload['value']['theme'], StudentSettings.variantFThemeId);
+        expect(payload['value']['enhanced_accessibility'], isFalse);
+      } finally {
+        await database.close();
+        await directory.delete(recursive: true);
+      }
+    },
+  );
+
+  test(
     'version four upgrades sync health and conflict evidence atomically',
     () async {
       final directory = await Directory.systemTemp.createTemp(

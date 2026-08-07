@@ -123,9 +123,12 @@ void main() {
       ),
       throwsArgumentError,
     );
-    await service.saveSettings(
+    final authoritative = await service.saveSettings(
       expectedRevision: 0,
-      settings: StudentSettings(),
+      settings: StudentSettings(
+        themeId: 'future-theme',
+        enhancedAccessibility: true,
+      ),
     );
     await expectLater(
       service.saveSettings(
@@ -133,14 +136,63 @@ void main() {
         settings: StudentSettings(weekStart: DateTime.monday),
       ),
       throwsA(
-        isA<RepositoryException>().having(
-          (error) => error.kind,
-          'kind',
-          RepositoryFailureKind.concurrentModification,
-        ),
+        isA<RepositoryException>()
+            .having(
+              (error) => error.kind,
+              'kind',
+              RepositoryFailureKind.concurrentModification,
+            )
+            .having(
+              (error) => error.message,
+              'actionable message',
+              contains('changed'),
+            ),
       ),
     );
+    final afterFailure = (await service.load()).settings;
+    expect(afterFailure.revision, authoritative.revision);
+    expect(afterFailure.value.themeId, 'future-theme');
+    expect(afterFailure.value.enhancedAccessibility, isTrue);
   });
+
+  test(
+    'settings persistence failure keeps prior values and is actionable',
+    () async {
+      final authoritative = await service.saveSettings(
+        expectedRevision: 0,
+        settings: StudentSettings(
+          themeId: 'future-theme',
+          enhancedAccessibility: true,
+        ),
+      );
+      registry.repositories.studentSettings.failNextPut = true;
+
+      await expectLater(
+        service.saveSettings(
+          expectedRevision: authoritative.revision,
+          settings: StudentSettings(),
+        ),
+        throwsA(
+          isA<RepositoryException>()
+              .having(
+                (error) => error.kind,
+                'kind',
+                RepositoryFailureKind.persistenceFailure,
+              )
+              .having(
+                (error) => error.message,
+                'actionable message',
+                contains('Try again'),
+              ),
+        ),
+      );
+
+      final afterFailure = (await service.load()).settings;
+      expect(afterFailure.revision, authoritative.revision);
+      expect(afterFailure.value.themeId, 'future-theme');
+      expect(afterFailure.value.enhancedAccessibility, isTrue);
+    },
+  );
 }
 
 final class _MemoryRegistry implements RepositoryRegistry {
@@ -233,6 +285,7 @@ final class _MemoryStudentProfileRepository
 final class _MemoryStudentSettingsRepository
     implements StudentSettingsRepository {
   StoredDomainRecord<StudentSettings>? _record;
+  bool failNextPut = false;
 
   @override
   StoredDomainRecord<StudentSettings>? find({required String studentId}) =>
@@ -245,6 +298,13 @@ final class _MemoryStudentSettingsRepository
     required int expectedRevision,
     required MutationToken mutation,
   }) {
+    if (failNextPut) {
+      failNextPut = false;
+      throw const RepositoryException(
+        RepositoryFailureKind.persistenceFailure,
+        'Simulated settings persistence failure.',
+      );
+    }
     _expected(expectedRevision, _record?.revision ?? 0);
     _record = StoredDomainRecord(
       value: settings,

@@ -233,7 +233,9 @@ final class _SettingsTemplatesSurfaceState
                   DropdownButtonFormField<String>(
                     key: const Key('theme-setting'),
                     isExpanded: true,
-                    initialValue: _themeId,
+                    initialValue: _themeId == StudentSettings.variantFThemeId
+                        ? _themeId
+                        : null,
                     decoration: const InputDecoration(labelText: 'Theme'),
                     items: const [
                       DropdownMenuItem(
@@ -245,6 +247,18 @@ final class _SettingsTemplatesSurfaceState
                   ),
                   width: 280,
                 ),
+                if (_themeId != StudentSettings.variantFThemeId)
+                  _field(
+                    Semantics(
+                      key: const Key('theme-fallback-in-use'),
+                      label: 'Graphite, Fallback in use',
+                      child: const Text(
+                        'Saved theme unavailable in this app version.\n'
+                        'Graphite — Fallback in use',
+                      ),
+                    ),
+                    width: 280,
+                  ),
                 _field(
                   DropdownButtonFormField<SynchronizationPreference>(
                     key: const Key('synchronization-setting'),

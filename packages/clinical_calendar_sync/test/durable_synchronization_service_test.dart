@@ -107,6 +107,70 @@ void main() {
   );
 
   test(
+    'unknown theme and Enhanced accessibility synchronize without normalization',
+    () async {
+      await _putSettings(
+        first.registry,
+        DateTime.monday,
+        92,
+        clock.nowUtc(),
+        themeId: 'future-theme',
+        enhancedAccessibility: true,
+      );
+
+      await _service(first, server, clock).syncNow();
+      await _service(second, server, clock).syncNow();
+
+      final synchronized = await second.registry.read((repositories) {
+        final support = repositories as SupportLocalReadRepositories;
+        return support.studentSettings.find(studentId: _studentId)!.value;
+      });
+      expect(synchronized.themeId, 'future-theme');
+      expect(synchronized.enhancedAccessibility, isTrue);
+    },
+  );
+
+  test(
+    'legacy synchronized theme resolves and persists as variant-f',
+    () async {
+      final payload = jsonEncode({
+        'schema_version': 1,
+        'entity_type': 'settings',
+        'entity_id': _studentId,
+        'student_id': _studentId,
+        'revision': 1,
+        'created_at_utc': _baseTime.toIso8601String(),
+        'updated_at_utc': _baseTime.toIso8601String(),
+        'deleted_at_utc': null,
+        'value': {
+          'week_start': DateTime.sunday,
+          'time_display': 'military',
+          'theme': 'borg_tactical',
+          'synchronization_mode': 'enabled',
+          'notification_preferences_json': '{}',
+          'active_placement_id': null,
+        },
+      });
+      server.feed.add(
+        RemoteSynchronizationChange(
+          cursor: 1,
+          entityType: 'settings',
+          entityId: _studentId,
+          revision: 1,
+          operationType: OutboxOperationType.upsert,
+          payloadJson: payload,
+        ),
+      );
+
+      await _service(second, server, clock).syncNow();
+
+      final row = second.database.select('SELECT * FROM settings').single;
+      expect(row['theme'], StudentSettings.variantFThemeId);
+      expect(row['enhanced_accessibility'], 0);
+    },
+  );
+
+  test(
     'termination after push response replays one idempotent operation',
     () async {
       await _putPreceptor(first.registry, 'Durable Push', 2, clock.nowUtc());
@@ -572,13 +636,19 @@ Future<void> _putSettings(
   SqliteRepositoryRegistry registry,
   int weekStart,
   int sequence,
-  DateTime atUtc,
-) async {
+  DateTime atUtc, {
+  String themeId = StudentSettings.variantFThemeId,
+  bool enhancedAccessibility = false,
+}) async {
   await registry.mutate((repositories) {
     final support = repositories as SupportLocalWriteRepositories;
     support.studentSettings.put(
       studentId: _studentId,
-      settings: StudentSettings(weekStart: weekStart),
+      settings: StudentSettings(
+        weekStart: weekStart,
+        themeId: themeId,
+        enhancedAccessibility: enhancedAccessibility,
+      ),
       expectedRevision: 0,
       mutation: MutationToken(
         operationId: _id(1000 + sequence * 2),

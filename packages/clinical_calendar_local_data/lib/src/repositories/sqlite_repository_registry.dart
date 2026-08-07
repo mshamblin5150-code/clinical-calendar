@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 // ignore: implementation_imports
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../backup/portable_backup_crypto.dart';
 import '../backup/portable_backup_models.dart';
@@ -78,7 +79,15 @@ final class SqliteRepositoryRegistry
     _requireInitialized();
     final repositories = _Repositories(this, writable: true);
     try {
-      return _database.transaction(() => callback(repositories));
+      try {
+        return _database.transaction(() => callback(repositories));
+      } on SqliteException catch (error) {
+        throw RepositoryException(
+          RepositoryFailureKind.persistenceFailure,
+          'The local database write failed.',
+          cause: error,
+        );
+      }
     } finally {
       repositories.close();
     }
@@ -936,6 +945,7 @@ Map<String, Object?> _restorePayloadValue(
     'week_start': _int(row, 'week_start'),
     'time_display': _text(row, 'time_display'),
     'theme': _text(row, 'theme'),
+    'enhanced_accessibility': _int(row, 'enhanced_accessibility') == 1,
     'synchronization_mode': _text(row, 'synchronization_mode'),
     'notification_preferences_json': _text(
       row,
@@ -2556,7 +2566,12 @@ final class _ActivePlacementSelectionRepository
     final timeDisplay = existing == null
         ? 'military'
         : _text(existing, 'time_display');
-    final theme = existing == null ? 'borg_tactical' : _text(existing, 'theme');
+    final theme = existing == null
+        ? StudentSettings.variantFThemeId
+        : _normalizeThemeId(_text(existing, 'theme'));
+    final enhancedAccessibility = existing == null
+        ? 0
+        : _int(existing, 'enhanced_accessibility');
     final synchronizationMode = existing == null
         ? 'enabled'
         : _text(existing, 'synchronization_mode');
@@ -2567,6 +2582,7 @@ final class _ActivePlacementSelectionRepository
       'week_start': weekStart,
       'time_display': timeDisplay,
       'theme': theme,
+      'enhanced_accessibility': enhancedAccessibility == 1,
       'synchronization_mode': synchronizationMode,
       'notification_preferences_json': notificationPreferences,
       'active_placement_id': activeId,
@@ -2586,9 +2602,10 @@ final class _ActivePlacementSelectionRepository
       '''INSERT INTO settings
         (id, student_id, revision, created_at_utc, updated_at_utc,
          deleted_at_utc, week_start, time_display, theme,
+         enhanced_accessibility,
          synchronization_mode, notification_preferences_json,
          active_placement_id)
-        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(student_id) DO UPDATE SET
           revision = excluded.revision,
           updated_at_utc = excluded.updated_at_utc,
@@ -2596,6 +2613,7 @@ final class _ActivePlacementSelectionRepository
           week_start = excluded.week_start,
           time_display = excluded.time_display,
           theme = excluded.theme,
+          enhanced_accessibility = excluded.enhanced_accessibility,
           synchronization_mode = excluded.synchronization_mode,
           notification_preferences_json = excluded.notification_preferences_json,
           active_placement_id = excluded.active_placement_id''',
@@ -2608,6 +2626,7 @@ final class _ActivePlacementSelectionRepository
         weekStart,
         timeDisplay,
         theme,
+        enhancedAccessibility,
         synchronizationMode,
         notificationPreferences,
         activeId,
@@ -2867,6 +2886,7 @@ final class _StudentSettingsRepository implements StudentSettingsRepository {
             _ => throw const FormatException(),
           },
           themeId: _normalizeThemeId(_text(row, 'theme')),
+          enhancedAccessibility: _int(row, 'enhanced_accessibility') == 1,
           synchronization: switch (_text(row, 'synchronization_mode')) {
             'enabled' => SynchronizationPreference.enabled,
             'paused' => SynchronizationPreference.paused,
@@ -2921,6 +2941,7 @@ final class _StudentSettingsRepository implements StudentSettingsRepository {
       'week_start': settings.weekStart,
       'time_display': _timeDisplay(settings.timeDisplay),
       'theme': settings.themeId,
+      'enhanced_accessibility': settings.enhancedAccessibility,
       'synchronization_mode': _synchronization(settings.synchronization),
       'notification_preferences_json': notificationJson,
       'active_placement_id': activePlacementId,
@@ -2955,9 +2976,10 @@ final class _StudentSettingsRepository implements StudentSettingsRepository {
       '''INSERT INTO settings
         (id, student_id, revision, created_at_utc, updated_at_utc,
          deleted_at_utc, week_start, time_display, theme,
+         enhanced_accessibility,
          synchronization_mode, notification_preferences_json,
          active_placement_id)
-        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(student_id) DO UPDATE SET
           revision = excluded.revision,
           updated_at_utc = excluded.updated_at_utc,
@@ -2965,6 +2987,7 @@ final class _StudentSettingsRepository implements StudentSettingsRepository {
           week_start = excluded.week_start,
           time_display = excluded.time_display,
           theme = excluded.theme,
+          enhanced_accessibility = excluded.enhanced_accessibility,
           synchronization_mode = excluded.synchronization_mode,
           notification_preferences_json = excluded.notification_preferences_json,
           active_placement_id = excluded.active_placement_id''',
@@ -2977,6 +3000,7 @@ final class _StudentSettingsRepository implements StudentSettingsRepository {
         settings.weekStart,
         _timeDisplay(settings.timeDisplay),
         settings.themeId,
+        settings.enhancedAccessibility ? 1 : 0,
         _synchronization(settings.synchronization),
         notificationJson,
         activePlacementId,

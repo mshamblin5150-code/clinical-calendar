@@ -26,5 +26,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/graphite_raster/
     - assets/placement_icons/
     - assets/variant_f_raster/

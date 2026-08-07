@@ -4,6 +4,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../date_input.dart';
+import '../theme_contract.dart';
 import '../variant_f_theme.dart';
 import 'calendar_data_source.dart';
 import 'calendar_models.dart';
@@ -437,6 +438,7 @@ final class _MonthDayCell extends StatelessWidget {
       child: CustomPaint(
         painter: _DayCellPainter(
           colors: context.clinicalColors,
+          todayAccent: _todayAccent(context),
           protected: protected,
           work: work,
           today: today,
@@ -501,44 +503,51 @@ final class _DayNumber extends StatelessWidget {
   final bool selected;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      DecoratedBox(
-        decoration: BoxDecoration(
-          color: today ? const Color(0xFF321512) : Colors.transparent,
-          border: today
-              ? Border.all(color: context.clinicalColors.urgent)
-              : null,
-          shape: today ? BoxShape.circle : BoxShape.rectangle,
-        ),
-        child: SizedBox(
-          width: 23,
-          height: 23,
-          child: Center(
-            child: Text(
-              '${date.day}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: today ? const Color(0xFFFFD8D2) : null,
-                fontWeight: today ? FontWeight.w700 : null,
+  Widget build(BuildContext context) {
+    final graphite = _usesGraphiteMarks(context);
+    return Row(
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: today ? _todayBackground(context) : Colors.transparent,
+            border: today ? Border.all(color: _todayAccent(context)) : null,
+            shape: today ? BoxShape.circle : BoxShape.rectangle,
+          ),
+          child: SizedBox(
+            width: 23,
+            height: 23,
+            child: Center(
+              child: Text(
+                '${date.day}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: today ? _todayForeground(context) : null,
+                  fontWeight: today ? FontWeight.w700 : null,
+                ),
               ),
             ),
           ),
         ),
-      ),
-      Expanded(
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: selected
-              ? Icon(
-                  Icons.check_circle,
-                  size: 17,
-                  color: context.clinicalColors.clinical,
-                )
-              : const SizedBox.shrink(),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: graphite && today
+                ? ThemeSemanticMarkIcon(
+                    role: ThemeSemanticRole.todayOrUrgent,
+                    size: 15,
+                    color: _todayAccent(context),
+                  )
+                : selected
+                ? Icon(
+                    Icons.check_circle,
+                    size: 17,
+                    color: context.clinicalColors.clinical,
+                  )
+                : const SizedBox.shrink(),
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 final class _CompactMarkers extends StatelessWidget {
@@ -547,24 +556,37 @@ final class _CompactMarkers extends StatelessWidget {
   final List<CalendarEntry> entries;
 
   @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 3,
-    runSpacing: 3,
-    children: [
-      for (final entry in entries.take(6))
-        Container(
-          key: Key('compact-${entry.kind.name}-${entry.id}'),
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(
-            color: _entryAccent(context, entry),
-            shape: entry.kind == CalendarEntryKind.protectedDay
-                ? BoxShape.rectangle
-                : BoxShape.circle,
-          ),
-        ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final graphite =
+        ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
+        graphiteThemeId;
+    return Wrap(
+      spacing: 3,
+      runSpacing: 3,
+      children: [
+        for (final entry in entries.take(6))
+          if (graphite)
+            ThemeSemanticMarkIcon(
+              key: Key('compact-${entry.kind.name}-${entry.id}'),
+              role: _entryRole(entry.kind),
+              size: 11,
+              color: _entryAccent(context, entry),
+            )
+          else
+            Container(
+              key: Key('compact-${entry.kind.name}-${entry.id}'),
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: _entryAccent(context, entry),
+                shape: entry.kind == CalendarEntryKind.protectedDay
+                    ? BoxShape.rectangle
+                    : BoxShape.circle,
+              ),
+            ),
+      ],
+    );
+  }
 }
 
 final class _MonthEventCard extends StatelessWidget {
@@ -602,11 +624,28 @@ final class _MonthEventCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 10),
             ),
-            Text(
-              entry.assignment ?? entry.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 10),
+            Row(
+              children: [
+                if (ClinicalCalendarSemanticMarkScope.maybeOf(
+                      context,
+                    )?.themeId ==
+                    graphiteThemeId) ...[
+                  ThemeSemanticMarkIcon(
+                    role: _entryRole(entry.kind),
+                    size: 11,
+                    color: _entryAccent(context, entry),
+                  ),
+                  const SizedBox(width: 3),
+                ],
+                Expanded(
+                  child: Text(
+                    entry.assignment ?? entry.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -705,7 +744,7 @@ final class _WeekDay extends StatelessWidget {
             : context.clinicalColors.structure,
         border: Border.all(
           color: today
-              ? context.clinicalColors.urgent
+              ? _todayAccent(context)
               : selected
               ? context.clinicalColors.clinical
               : context.clinicalColors.insetBorder,
@@ -719,12 +758,26 @@ final class _WeekDay extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                '${_weekdayName(date.asUtcCalendarDate.weekday)}, '
-                '${_monthAbbreviation(date.month)} ${date.day}',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: today ? context.clinicalColors.urgent : null,
-                ),
+              Row(
+                children: [
+                  if (today && _usesGraphiteMarks(context)) ...[
+                    ThemeSemanticMarkIcon(
+                      role: ThemeSemanticRole.todayOrUrgent,
+                      size: 16,
+                      color: _todayAccent(context),
+                    ),
+                    const SizedBox(width: 5),
+                  ],
+                  Expanded(
+                    child: Text(
+                      '${_weekdayName(date.asUtcCalendarDate.weekday)}, '
+                      '${_monthAbbreviation(date.month)} ${date.day}',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: today ? _todayAccent(context) : null,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 6),
               if (entries.isEmpty)
@@ -929,11 +982,18 @@ final class _AgendaAssignment extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Icon(
-        _entryIcon(entry.kind),
-        size: 17,
-        color: _entryAccent(context, entry),
-      ),
+      if (_usesGraphiteMarks(context))
+        ThemeSemanticMarkIcon(
+          role: _entryRole(entry.kind),
+          size: 17,
+          color: _entryAccent(context, entry),
+        )
+      else
+        Icon(
+          _variantEntryIcon(entry.kind),
+          size: 17,
+          color: _entryAccent(context, entry),
+        ),
       const SizedBox(width: 7),
       Expanded(
         child: Text(
@@ -977,7 +1037,25 @@ final class _PeriodEntryRow extends StatelessWidget {
                 : entry.timeLabel(twelveHour: twelveHourTime),
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          Text(entry.title, style: Theme.of(context).textTheme.labelLarge),
+          Row(
+            children: [
+              if (ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
+                  graphiteThemeId) ...[
+                ThemeSemanticMarkIcon(
+                  role: _entryRole(entry.kind),
+                  size: 16,
+                  color: _entryAccent(context, entry),
+                ),
+                const SizedBox(width: 5),
+              ],
+              Expanded(
+                child: Text(
+                  entry.title,
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+            ],
+          ),
           if (entry.assignment != null)
             Text(
               entry.assignment!,
@@ -1015,6 +1093,7 @@ final class _CalendarLoadFailure extends StatelessWidget {
 final class _DayCellPainter extends CustomPainter {
   const _DayCellPainter({
     required this.colors,
+    required this.todayAccent,
     required this.protected,
     required this.work,
     required this.today,
@@ -1023,6 +1102,7 @@ final class _DayCellPainter extends CustomPainter {
   });
 
   final ClinicalCalendarColors colors;
+  final Color todayAccent;
   final bool protected;
   final bool work;
   final bool today;
@@ -1064,7 +1144,7 @@ final class _DayCellPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = today ? 2 : 1
-        ..color = today ? colors.urgent : colors.insetBorder,
+        ..color = today ? todayAccent : colors.insetBorder,
     );
     if (selected) {
       final paint = Paint()
@@ -1112,6 +1192,7 @@ final class _DayCellPainter extends CustomPainter {
   @override
   bool shouldRepaint(_DayCellPainter oldDelegate) =>
       colors != oldDelegate.colors ||
+      todayAccent != oldDelegate.todayAccent ||
       protected != oldDelegate.protected ||
       work != oldDelegate.work ||
       today != oldDelegate.today ||
@@ -1204,11 +1285,33 @@ Color _entryAccent(BuildContext context, CalendarEntry entry) =>
         context.clinicalColors.protectedDayAccent,
     };
 
-IconData _entryIcon(CalendarEntryKind kind) => switch (kind) {
+ThemeSemanticRole _entryRole(CalendarEntryKind kind) => switch (kind) {
+  CalendarEntryKind.workShift => ThemeSemanticRole.workShift,
+  CalendarEntryKind.clinicalSession => ThemeSemanticRole.clinicalSession,
+  CalendarEntryKind.protectedDay => ThemeSemanticRole.protectedDay,
+};
+
+IconData _variantEntryIcon(CalendarEntryKind kind) => switch (kind) {
   CalendarEntryKind.workShift => Icons.work_outline,
   CalendarEntryKind.clinicalSession => Icons.medical_services_outlined,
   CalendarEntryKind.protectedDay => Icons.shield_outlined,
 };
+
+bool _usesGraphiteMarks(BuildContext context) =>
+    ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
+    graphiteThemeId;
+
+Color _todayAccent(BuildContext context) => _usesGraphiteMarks(context)
+    ? Theme.of(context).colorScheme.primary
+    : context.clinicalColors.urgent;
+
+Color _todayBackground(BuildContext context) => _usesGraphiteMarks(context)
+    ? Theme.of(context).colorScheme.primaryContainer
+    : const Color(0xFF321512);
+
+Color _todayForeground(BuildContext context) => _usesGraphiteMarks(context)
+    ? Theme.of(context).colorScheme.onPrimaryContainer
+    : const Color(0xFFFFD8D2);
 
 String _dateSemanticLabel(
   LocalDate date, {

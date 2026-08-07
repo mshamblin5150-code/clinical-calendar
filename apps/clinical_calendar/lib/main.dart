@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
@@ -12,6 +14,7 @@ import 'package:clinical_calendar_presentation/clinical_calendar_identity_presen
 import 'package:clinical_calendar_sync/clinical_calendar_sync.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'config/app_environment.dart';
 
@@ -21,6 +24,16 @@ typedef ProductionRepositoryBootstrap =
       SecureStorage secureStorage,
       IdentifierGenerator identifiers,
     );
+
+typedef AuthoritativeThemeLoader =
+    Future<String> Function(
+      RepositoryRegistry repositories,
+      Clock clock,
+      IdentifierGenerator identifiers,
+      String studentId,
+    );
+
+typedef GraphiteAssetPreflight = Future<void> Function();
 
 abstract interface class ConnectivityStatusSource {
   Future<bool> current();
@@ -80,6 +93,10 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   RecoveryReauthenticationGate? recoveryReauthentication,
   NativeByteFileSaver? accountBackupFileSaver,
   BackupByteFilePicker? portableBackupFilePicker,
+  bool resolveAuthoritativeTheme = false,
+  VoidCallback? onPresentationRestart,
+  AuthoritativeThemeLoader? authoritativeThemeLoader,
+  GraphiteAssetPreflight? graphiteAssetPreflight,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
   final identifierGenerator = identifiers ?? ProcessIdentifierGenerator();
@@ -225,6 +242,31 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     secureStorage: storage,
     files: const DartIoFileService(),
   );
+  var appliedThemeId = variantFThemeId;
+  if (resolveAuthoritativeTheme) {
+    try {
+      appliedThemeId =
+          await (authoritativeThemeLoader ?? _loadAuthoritativeTheme)(
+            applicationRepositories,
+            applicationClock,
+            identifierGenerator,
+            studentId,
+          );
+    } on Object catch (error) {
+      throw _AuthoritativeSettingsUnavailable(error);
+    }
+  }
+  if (ClinicalCalendarThemeBundleRegistry.standard
+          .resolveApplied(appliedThemeId)
+          .bundle
+          .id ==
+      graphiteThemeId) {
+    try {
+      await (graphiteAssetPreflight ?? _preflightGraphiteFrame)();
+    } on Object catch (error) {
+      throw _GraphitePresentationUnavailable(error);
+    }
+  }
   final recoveryStore = baseRepositories is RecoveryStore
       ? baseRepositories as RecoveryStore
       : null;
@@ -388,6 +430,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     dependencies: dependencies,
     environmentName: configuredEnvironment.name,
     studentId: studentId,
+    themeId: appliedThemeId,
+    onPresentationRestart: onPresentationRestart,
     onLaunchOrResume: onLaunchOrResume,
     connectivityChanges: connectivityChanges,
     onConnectivityChanged: onConnectivityChanged,
@@ -425,6 +469,52 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   );
 }
 
+Future<String> _loadAuthoritativeTheme(
+  RepositoryRegistry repositories,
+  Clock clock,
+  IdentifierGenerator identifiers,
+  String studentId,
+) async {
+  final support = await SupportApplicationService(
+    repositories: repositories,
+    clock: clock,
+    identifiers: identifiers,
+    studentId: studentId,
+  ).load();
+  return support.settings.value.themeId;
+}
+
+Future<void> _preflightGraphiteFrame() async {
+  final bytes = await rootBundle.load(
+    'packages/clinical_calendar_presentation/$graphiteFrameAsset',
+  );
+  if (bytes.lengthInBytes < 33 ||
+      bytes.getUint32(16, Endian.big) != 1536 ||
+      bytes.getUint32(20, Endian.big) != 1024 ||
+      bytes.getUint8(25) != 6) {
+    throw StateError('The Graphite frame is not a 1536 by 1024 RGBA PNG.');
+  }
+  final encoded = bytes.buffer.asUint8List(
+    bytes.offsetInBytes,
+    bytes.lengthInBytes,
+  );
+  final codec = await ui.instantiateImageCodec(encoded);
+  try {
+    final decoded = await codec.getNextFrame();
+    try {
+      if (decoded.image.width != 1536 || decoded.image.height != 1024) {
+        throw StateError(
+          'The decoded Graphite frame is not 1536 by 1024 pixels.',
+        );
+      }
+    } finally {
+      decoded.image.dispose();
+    }
+  } finally {
+    codec.dispose();
+  }
+}
+
 Future<String> _loadDeviceTimeZoneId() async {
   try {
     return await const FlutterDeviceTimeZoneProvider()
@@ -452,6 +542,8 @@ Future<Widget> buildProductionRoot({
   PasswordlessIdentityGateway? identityGateway,
   ConnectivityStatusSource? connectivitySource,
   DeviceDescriptor? currentDevice,
+  AuthoritativeThemeLoader? authoritativeThemeLoader,
+  GraphiteAssetPreflight? graphiteAssetPreflight,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
   final identifierGenerator = identifiers ?? ProcessIdentifierGenerator();
@@ -492,6 +584,8 @@ Future<Widget> buildProductionRoot({
     initialSession: await identity.restoreForOfflineLaunch(),
     localCopy: localCopy,
     connectivitySource: connectivitySource,
+    authoritativeThemeLoader: authoritativeThemeLoader,
+    graphiteAssetPreflight: graphiteAssetPreflight,
   );
 }
 
@@ -505,6 +599,8 @@ final class _ProductionIdentityGate extends StatefulWidget {
     required this.initialSession,
     required this.localCopy,
     required this.connectivitySource,
+    required this.authoritativeThemeLoader,
+    required this.graphiteAssetPreflight,
     this.repositoryBootstrap,
   });
 
@@ -516,6 +612,8 @@ final class _ProductionIdentityGate extends StatefulWidget {
   final IdentitySession? initialSession;
   final _DeferredLocalDeviceCopyController localCopy;
   final ConnectivityStatusSource? connectivitySource;
+  final AuthoritativeThemeLoader? authoritativeThemeLoader;
+  final GraphiteAssetPreflight? graphiteAssetPreflight;
   final ProductionRepositoryBootstrap? repositoryBootstrap;
 
   @override
@@ -526,6 +624,7 @@ final class _ProductionIdentityGate extends StatefulWidget {
 final class _ProductionIdentityGateState
     extends State<_ProductionIdentityGate> {
   Future<ClinicalCalendarApp>? _application;
+  IdentitySession? _activeSession;
 
   @override
   void initState() {
@@ -534,6 +633,7 @@ final class _ProductionIdentityGateState
   }
 
   void _open(IdentitySession session) {
+    _activeSession = session;
     _application = buildProductionApplication(
       secureStorage: widget.secureStorage,
       identifiers: widget.identifiers,
@@ -550,12 +650,26 @@ final class _ProductionIdentityGateState
       identity: widget.identity,
       identityEmail: session.email,
       onLocalCopyRemoved: _onLocalCopyRemoved,
+      resolveAuthoritativeTheme: true,
+      onPresentationRestart: () {
+        if (mounted) setState(() => _open(session));
+      },
+      authoritativeThemeLoader: widget.authoritativeThemeLoader,
+      graphiteAssetPreflight: widget.graphiteAssetPreflight,
     );
   }
 
   Future<void> _onLocalCopyRemoved() async {
     if (!mounted) return;
-    setState(() => _application = null);
+    setState(() {
+      _activeSession = null;
+      _application = null;
+    });
+  }
+
+  void _retryOpen() {
+    final session = _activeSession;
+    if (session != null) setState(() => _open(session));
   }
 
   @override
@@ -564,6 +678,7 @@ final class _ProductionIdentityGateState
     if (application == null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
+        theme: buildGraphiteTheme(),
         home: PasswordlessSignInSurface(
           identity: widget.identity,
           onSignedIn: (session) async => setState(() => _open(session)),
@@ -573,14 +688,41 @@ final class _ProductionIdentityGateState
     return FutureBuilder<ClinicalCalendarApp>(
       future: application,
       builder: (context, snapshot) {
+        if (snapshot.error is _AuthoritativeSettingsUnavailable) {
+          return _AuthoritativeSettingsFailureApplication(onRetry: _retryOpen);
+        }
+        if (snapshot.error is _GraphitePresentationUnavailable) {
+          return _GraphitePresentationFailureApplication(onRestart: _retryOpen);
+        }
         if (snapshot.hasError) return const _StartupFailureApplication();
         if (snapshot.data case final app?) return app;
-        return const MaterialApp(
-          home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: buildGraphiteTheme(),
+          home: Scaffold(
+            body: Center(
+              child: Semantics(
+                label: 'Loading authoritative Student settings',
+                child: const CircularProgressIndicator(),
+              ),
+            ),
+          ),
         );
       },
     );
   }
+}
+
+final class _AuthoritativeSettingsUnavailable implements Exception {
+  const _AuthoritativeSettingsUnavailable(this.cause);
+
+  final Object cause;
+}
+
+final class _GraphitePresentationUnavailable implements Exception {
+  const _GraphitePresentationUnavailable(this.cause);
+
+  final Object cause;
 }
 
 final class _DeferredLocalDeviceCopyController
@@ -704,6 +846,16 @@ final class _StartupFailureApplication extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
     title: 'Clinical Calendar',
+    theme: ThemeData(
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF0D1013),
+      colorScheme: const ColorScheme.dark(
+        primary: Color(0xFF37D6B4),
+        onPrimary: Color(0xFF06251E),
+        surface: Color(0xFF151A1F),
+        onSurface: Color(0xFFF4F6F7),
+      ),
+    ),
     home: Scaffold(
       body: SafeArea(
         child: Center(
@@ -732,5 +884,41 @@ final class _StartupFailureApplication extends StatelessWidget {
         ),
       ),
     ),
+  );
+}
+
+final class _AuthoritativeSettingsFailureApplication extends StatelessWidget {
+  const _AuthoritativeSettingsFailureApplication({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => CodeOnlyPresentationRecoveryApplication(
+    surfaceKey: const Key('authoritative-settings-unavailable'),
+    icon: Icons.sync_problem_outlined,
+    title: 'Student settings are unavailable.',
+    guidance:
+        'The authenticated Calendar remains hidden. Check the connection or '
+        'the valid offline copy, then try loading settings again.',
+    actionLabel: 'Retry settings',
+    onAction: onRetry,
+  );
+}
+
+final class _GraphitePresentationFailureApplication extends StatelessWidget {
+  const _GraphitePresentationFailureApplication({required this.onRestart});
+
+  final VoidCallback onRestart;
+
+  @override
+  Widget build(BuildContext context) => CodeOnlyPresentationRecoveryApplication(
+    surfaceKey: const Key('graphite-presentation-unavailable'),
+    icon: Icons.restart_alt,
+    title: 'Presentation could not start.',
+    guidance:
+        'No Calendar or Student data was displayed. Restart the presentation. '
+        'If this continues, record the app version and device model for Help.',
+    actionLabel: 'Restart',
+    onAction: onRestart,
   );
 }

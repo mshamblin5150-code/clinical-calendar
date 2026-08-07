@@ -269,6 +269,45 @@ void main() {
   );
 
   test(
+    'pre-catalog backup settings migrate to variant-f and Standard',
+    () async {
+      source.execute(
+        '''INSERT INTO settings
+        (id, student_id, revision, created_at_utc, updated_at_utc,
+         theme, enhanced_accessibility)
+        VALUES (?, ?, 1, ?, ?, 'variant-f', 0)''',
+        [_studentId, _studentId, _createdAt, _createdAt],
+      );
+      final current = await _service(source, sink, crypto)
+          .createEncryptedBackup(
+            passphrase: _passphrase,
+            createdAtUtc: DateTime.parse(_createdAt),
+          );
+      final legacy = await _rewritePayload(crypto, current, (payload) {
+        payload['source_database_schema_version'] = 12;
+        final tables = payload['tables'] as Map<String, dynamic>;
+        final settings =
+            (tables['settings'] as List<dynamic>).single
+                as Map<String, dynamic>;
+        settings
+          ..['theme'] = 'borg_tactical'
+          ..remove('enhanced_accessibility');
+      });
+
+      final preview = await _service(
+        target,
+        sink,
+        crypto,
+      ).previewRestore(encryptedBytes: legacy, passphrase: _passphrase);
+      await _service(target, sink, crypto).applyRestore(preview: preview);
+
+      final restored = target.select('SELECT * FROM settings').single;
+      expect(restored['theme'], StudentSettings.variantFThemeId);
+      expect(restored['enhanced_accessibility'], 0);
+    },
+  );
+
+  test(
     'equal revision with different content requires an explicit choice',
     () async {
       _insertPreceptor(source, name: 'Backup Name', revision: 1);
@@ -520,6 +559,60 @@ void main() {
       );
       expect(second.applied, 0);
       expect(target.select('SELECT * FROM outbox_operations'), hasLength(4));
+    },
+  );
+
+  test(
+    'portable backup restores unknown theme and Enhanced accessibility',
+    () async {
+      source.execute(
+        '''INSERT INTO settings
+          (id, student_id, revision, created_at_utc, updated_at_utc,
+           theme, enhanced_accessibility)
+          VALUES (?, ?, 1, ?, ?, 'future-theme', 1)''',
+        [_studentId, _studentId, _createdAt, _createdAt],
+      );
+      final encrypted = await _service(source, sink, crypto)
+          .createEncryptedBackup(
+            passphrase: _passphrase,
+            createdAtUtc: DateTime.parse(_createdAt),
+          );
+      final registry = SqliteRepositoryRegistry(
+        studentId: _studentId,
+        database: target,
+        identifierGenerator: _Identifiers(),
+      );
+      await registry.initialize();
+      final preview = await registry.runPortableBackupExclusive(
+        (service) => service.previewRestore(
+          encryptedBytes: encrypted,
+          passphrase: _passphrase,
+        ),
+        crypto: crypto,
+      );
+      await registry.runPortableBackupExclusive(
+        (service) => service.applyRestore(preview: preview),
+        crypto: crypto,
+      );
+
+      await registry.read((repositories) {
+        final support = repositories as SupportLocalReadRepositories;
+        final restored = support.studentSettings
+            .find(studentId: _studentId)!
+            .value;
+        expect(restored.themeId, 'future-theme');
+        expect(restored.enhancedAccessibility, isTrue);
+
+        final settingsIntent = repositories.outbox
+            .pending(studentId: _studentId, asOfUtc: DateTime.utc(2026, 8, 4))
+            .singleWhere((operation) => operation.entityType == 'settings');
+        expect(
+          settingsIntent.payloadJson,
+          contains('"enhanced_accessibility":true'),
+        );
+        expect(settingsIntent.payloadJson, isNot(contains('preview')));
+        expect(settingsIntent.payloadJson, isNot(contains('asset')));
+      });
     },
   );
 

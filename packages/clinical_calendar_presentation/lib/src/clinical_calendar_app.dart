@@ -4,11 +4,13 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'calendar/calendar_data_source.dart';
 import 'calendar/calendar_models.dart';
 import 'calendar/calendar_period_view.dart';
 import 'backup/backup_restore_surface.dart';
+import 'code_only_presentation_recovery.dart';
 import 'commitments/commitment_lifecycle_controller.dart';
 import 'commitments/commitment_lifecycle_surface.dart';
 import 'conflict_resolution/conflict_resolution_controller.dart';
@@ -17,6 +19,7 @@ import 'evaluation_attention/attention_surfaces.dart';
 import 'evaluation_attention/evaluation_attention_controller.dart';
 import 'evaluation_attention/evaluation_plan_surface.dart';
 import 'exports/export_surface.dart';
+import 'graphite_frame.dart';
 import 'identity/identity_devices_surface.dart';
 import 'placements/placement_management_surface.dart';
 import 'placements/placement_progress_controller.dart';
@@ -61,6 +64,7 @@ final class ClinicalCalendarApp extends StatelessWidget {
     this.recoveryService,
     this.recoveryProofGate,
     this.scheduleDateFactory,
+    this.onPresentationRestart,
     super.key,
   });
 
@@ -89,41 +93,66 @@ final class ClinicalCalendarApp extends StatelessWidget {
   final RecoveryApplicationService? recoveryService;
   final OneShotRecoveryReauthenticationGate? recoveryProofGate;
   final ScheduleDateFactory? scheduleDateFactory;
+  final VoidCallback? onPresentationRestart;
 
   @override
   Widget build(BuildContext context) {
-    final themeBundle = ClinicalCalendarThemeBundleRegistry.standard
-        .resolveRoot(themeId);
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Clinical Calendar',
-      theme: themeBundle.standardPresentation.createThemeData(),
-      home: ClinicalCalendarLifecycleHost(
-        onLaunchOrResume: onLaunchOrResume,
-        connectivityChanges: connectivityChanges,
-        onConnectivityChanged: onConnectivityChanged,
-        child: _ApplicationHost(
-          dependencies: dependencies,
-          environmentName: environmentName,
-          studentId: studentId,
-          chooseAvatar: chooseAvatar,
-          themeBundle: themeBundle,
-          identity: identity,
-          identityEmail: identityEmail,
-          onLocalCopyRemoved: onLocalCopyRemoved,
-          createAccountBackup: createAccountBackup,
-          portableBackupWorkflows: portableBackupWorkflows,
-          exportWorkflowFactory: exportWorkflowFactory,
-          recoveryStore: recoveryStore,
-          recoveryService: recoveryService,
-          recoveryProofGate: recoveryProofGate,
-          notificationInteractions: notificationInteractions,
-          notificationDevicePolicyStore: notificationDevicePolicyStore,
-          notificationDeviceClass: notificationDeviceClass,
-          scheduleDateFactory: scheduleDateFactory,
+    try {
+      final resolution = ClinicalCalendarThemeBundleRegistry.standard
+          .resolveApplied(themeId);
+      final themeBundle = resolution.bundle;
+      final theme = themeBundle.standardPresentation.createThemeData();
+      return GraphitePresentationFailureBoundary(
+        onRestart: onPresentationRestart,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Clinical Calendar',
+          theme: theme,
+          home: ClinicalCalendarLifecycleHost(
+            onLaunchOrResume: onLaunchOrResume,
+            connectivityChanges: connectivityChanges,
+            onConnectivityChanged: onConnectivityChanged,
+            child: ClinicalCalendarSemanticMarkScope(
+              marks: themeBundle.marks,
+              child: _ApplicationHost(
+                dependencies: dependencies,
+                environmentName: environmentName,
+                studentId: studentId,
+                chooseAvatar: chooseAvatar,
+                themeBundle: themeBundle,
+                identity: identity,
+                identityEmail: identityEmail,
+                onLocalCopyRemoved: onLocalCopyRemoved,
+                createAccountBackup: createAccountBackup,
+                portableBackupWorkflows: portableBackupWorkflows,
+                exportWorkflowFactory: exportWorkflowFactory,
+                recoveryStore: recoveryStore,
+                recoveryService: recoveryService,
+                recoveryProofGate: recoveryProofGate,
+                notificationInteractions: notificationInteractions,
+                notificationDevicePolicyStore: notificationDevicePolicyStore,
+                notificationDeviceClass: notificationDeviceClass,
+                scheduleDateFactory: scheduleDateFactory,
+              ),
+            ),
+          ),
         ),
-      ),
-    );
+      );
+    } on Object {
+      final restart = onPresentationRestart;
+      return CodeOnlyPresentationRecoveryApplication(
+        surfaceKey: const Key('theme-construction-recovery'),
+        icon: Icons.restart_alt,
+        title: 'Presentation could not start.',
+        guidance:
+            'No Calendar or Student data was displayed. Restart the '
+            'presentation. If this continues, record the app version '
+            'and device model for Help.',
+        actionLabel: restart == null ? 'Close app' : 'Restart',
+        actionKey: const Key('restart-presentation'),
+        onAction: restart ?? SystemNavigator.pop,
+      );
+    }
   }
 }
 
@@ -936,7 +965,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   Widget build(BuildContext context) {
     final destination = _destination;
     if (destination != null) {
-      return DestinationSurface(
+      return widget.themeBundle.shellRenderer.buildDestination(
         destination: destination,
         entry: _entry,
         onExit: _exitDestination,

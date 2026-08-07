@@ -31,6 +31,16 @@ void main() {
     await tester.tap(find.byKey(const Key('send-identity-code')));
     await tester.pumpAndSettle();
     expect(gateway.codeEmail, 'student@example.com');
+    expect(
+      tester
+          .widget<TextButton>(find.byKey(const Key('resend-identity-code')))
+          .onPressed,
+      isNull,
+    );
+    await tester.pump(const Duration(seconds: 30));
+    await tester.tap(find.byKey(const Key('resend-identity-code')));
+    await tester.pump();
+    expect(gateway.codeSends, 2);
 
     await tester.enterText(find.byKey(const Key('identity-otp')), '123456');
     await tester.tap(find.byKey(const Key('verify-identity-code')));
@@ -154,8 +164,13 @@ PasswordlessIdentityService _service(
 final class _Gateway implements PasswordlessIdentityGateway {
   String? codeEmail;
   String? changedEmail;
+  int codeSends = 0;
   @override
-  Future<void> sendSignInCode(String email) async => codeEmail = email;
+  Future<void> sendSignInCode(String email) async {
+    codeEmail = email;
+    codeSends++;
+  }
+
   @override
   Future<IdentitySession> verifySignInCode(String email, String code) async =>
       _session;

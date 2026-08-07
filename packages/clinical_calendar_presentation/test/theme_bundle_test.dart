@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   const bundle = VariantFThemeBundle();
+  const graphite = GraphiteThemeBundle();
 
   test('Containment Drone is one complete internally owned bundle', () {
     ClinicalCalendarThemeBundleValidator.validate(const [bundle]);
@@ -39,6 +40,104 @@ void main() {
     expect(resolved.marks.themeId, resolved.id);
     expect(resolved.helpGuide.themeId, resolved.id);
   });
+
+  test('Graphite is a complete independently owned fallback bundle', () {
+    ClinicalCalendarThemeBundleValidator.validate(const [graphite]);
+
+    expect(graphite.id, graphiteThemeId);
+    expect(graphite.metadata.displayName, 'Graphite');
+    expect(graphite.standardPresentation, isA<GraphiteVisualTheme>());
+    expect(graphite.shellRenderer, isA<GraphiteShellRenderer>());
+    expect(graphite.frame.sourceSize, const Size(1536, 1024));
+    expect(
+      graphite.frame.sourceCuts,
+      const EdgeInsets.fromLTRB(120, 145, 120, 170),
+    );
+    expect(graphite.frame.assetPaths, hasLength(1));
+    expect(graphite.gallery.swatches, hasLength(5));
+    expect(graphite.marks.marks, hasLength(5));
+    expect(graphite.helpGuide.calendarStates, hasLength(5));
+    expect(graphite.frame.safeInsets, const {
+      ThemeFrameRegion.calendar: graphiteCalendarSafeInsets,
+      ThemeFrameRegion.placements: graphitePlacementsSafeInsets,
+      ThemeFrameRegion.planning: graphitePlanningSafeInsets,
+      ThemeFrameRegion.status: graphiteStatusSafeInsets,
+    });
+    expect(
+      graphite.marks.marks.map((mark) => mark.icon),
+      everyElement(isA<IconData>()),
+    );
+    expect(
+      graphite.helpGuide.calendarStates,
+      everyElement(
+        isA<CalendarStateGuide>()
+            .having((state) => state.nonColorCue, 'non-color cue', isNotEmpty)
+            .having(
+              (state) => state.enhancedBehavior,
+              'Enhanced behavior',
+              isNotEmpty,
+            ),
+      ),
+    );
+  });
+
+  test('unknown applied ID falls back without changing the stored ID', () {
+    final resolved = ClinicalCalendarThemeBundleRegistry.standard
+        .resolveApplied('future-theme');
+
+    expect(resolved.storedId, 'future-theme');
+    expect(resolved.bundle, isA<GraphiteThemeBundle>());
+    expect(resolved.isFallback, isTrue);
+  });
+
+  test('Graphite remains fallback until the complete catalog activates', () {
+    final resolved = ClinicalCalendarThemeBundleRegistry.standard
+        .resolveApplied(graphiteThemeId);
+
+    expect(resolved.storedId, graphiteThemeId);
+    expect(resolved.bundle, isA<GraphiteThemeBundle>());
+    expect(resolved.isFallback, isTrue);
+  });
+
+  test(
+    'candidate preflight failure preserves the valid applied bundle',
+    () async {
+      final registry = ClinicalCalendarThemeBundleRegistry.standard;
+      final applied = registry.resolveApplied(variantFThemeId);
+
+      final failed = await registry.preflightCandidate(
+        applied: applied,
+        candidateId: graphiteThemeId,
+        preflight: (_) async => throw StateError('asset decode failed'),
+      );
+
+      expect(failed.previewUnavailable, isTrue);
+      expect(failed.applied, same(applied));
+      expect(failed.candidate, isNull);
+      expect(failed.effectiveBundle, same(applied.bundle));
+    },
+  );
+
+  test(
+    'successful candidate preflight returns the complete candidate',
+    () async {
+      final registry = ClinicalCalendarThemeBundleRegistry.standard;
+      final applied = registry.resolveApplied(variantFThemeId);
+
+      final result = await registry.preflightCandidate(
+        applied: applied,
+        candidateId: graphiteThemeId,
+        preflight: (candidate) async {
+          ClinicalCalendarThemeBundleValidator.validate([candidate]);
+        },
+      );
+
+      expect(result.previewUnavailable, isFalse);
+      expect(result.applied, same(applied));
+      expect(result.candidate, isA<GraphiteThemeBundle>());
+      expect(result.effectiveBundle, same(result.candidate));
+    },
+  );
 
   test('partial catalog is not selectable or visible', () {
     final registry = ClinicalCalendarThemeBundleRegistry.standard;
@@ -148,6 +247,105 @@ void main() {
       find.byKey(bundleKey),
       matchesReferenceImage(directImage),
     );
+  });
+
+  testWidgets('Graphite shell uses only Graphite-owned raster framing', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: graphite.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: graphite.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
+    expect(find.byType(VariantFNineSliceFrame), findsNothing);
+  });
+
+  testWidgets(
+    'Graphite destination keeps compact chrome and no Variant frame',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: graphite.standardPresentation.createThemeData(),
+          home: graphite.shellRenderer.buildDestination(
+            destination: ClinicalCalendarDestination.settings,
+            entry: DestinationEntry.direct,
+            onExit: _noop,
+            child: const ShellPanel(
+              label: 'Settings fixture',
+              child: Text('Fictional content'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VariantFNineSliceFrame), findsNothing);
+      expect(
+        tester
+            .widget<GraphiteNineSliceFrame>(find.byType(GraphiteNineSliceFrame))
+            .chromeInsets,
+        graphiteCompactDestinationInsets,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('late Graphite failure replaces the complete application', (
+    tester,
+  ) async {
+    var restarted = false;
+    await tester.pumpWidget(
+      GraphitePresentationFailureBoundary(
+        onRestart: () => restarted = true,
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Column(
+                children: [
+                  const Text('Fictional Student calendar data'),
+                  FilledButton(
+                    onPressed: () => GraphitePresentationFailureBoundary.report(
+                      context,
+                      StateError('late decode'),
+                    ),
+                    child: const Text('Fail frame'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Fail frame'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('graphite-presentation-unavailable')),
+      findsOneWidget,
+    );
+    expect(find.text('Fictional Student calendar data'), findsNothing);
+    await tester.tap(find.text('Restart'));
+    expect(restarted, isTrue);
   });
 }
 

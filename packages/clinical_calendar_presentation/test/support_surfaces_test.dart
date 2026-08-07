@@ -415,6 +415,55 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Settings labels unknown applied theme as Graphite fallback', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      SettingsTemplatesSurface(
+        settings: StudentSettings(themeId: 'future-theme'),
+        scheduleTemplates: const [],
+        newTemplateId: () => _id(40),
+        onSaveSettings: (_) async {},
+        onSaveTemplate: (_) async {},
+        onRemoveTemplate: (_) async {},
+      ),
+      size: const Size(768, 1024),
+    );
+
+    expect(find.byKey(const Key('theme-fallback-in-use')), findsOneWidget);
+    expect(find.textContaining('Fallback in use'), findsOneWidget);
+    expect(
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('theme-setting')),
+          )
+          .initialValue,
+      isNull,
+    );
+  });
+
+  testWidgets('Settings does not label pre-activation Graphite as Applied', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      SettingsTemplatesSurface(
+        settings: StudentSettings(themeId: graphiteThemeId),
+        scheduleTemplates: const [],
+        newTemplateId: () => _id(41),
+        onSaveSettings: (_) async {},
+        onSaveTemplate: (_) async {},
+        onRemoveTemplate: (_) async {},
+      ),
+      size: const Size(768, 1024),
+    );
+
+    expect(find.byKey(const Key('theme-fallback-in-use')), findsOneWidget);
+    expect(find.textContaining('Fallback in use'), findsOneWidget);
+    expect(find.textContaining('Graphite — Applied'), findsNothing);
+  });
+
   testWidgets('Help keeps shared workflows separate from theme bundle', (
     tester,
   ) async {

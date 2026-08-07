@@ -3,6 +3,8 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/src/evaluation_attention/attention_surfaces.dart';
 import 'package:clinical_calendar_presentation/src/evaluation_attention/evaluation_attention_controller.dart';
 import 'package:clinical_calendar_presentation/src/evaluation_attention/evaluation_plan_surface.dart';
+import 'package:clinical_calendar_presentation/src/graphite_theme.dart';
+import 'package:clinical_calendar_presentation/src/theme_contract.dart';
 import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -177,6 +179,26 @@ void main() {
     },
   );
 
+  testWidgets('Graphite attention renders its bundle-owned status marks', (
+    tester,
+  ) async {
+    final harness = _Harness(withEveryAttentionFamily: true);
+    await harness.controller.load();
+    await _pump(
+      tester,
+      AttentionCenterSurface(
+        controller: harness.controller,
+        notificationMode: false,
+        onOpenAction: (_) {},
+      ),
+      const Size(390, 844),
+      graphite: true,
+    );
+
+    expect(find.byKey(const Key('theme-mark-scheduledProgress')), findsWidgets);
+    expect(find.byKey(const Key('theme-mark-todayOrUrgent')), findsWidgets);
+  });
+
   testWidgets('Evaluation Plan surface fits compact phone landscapes', (
     tester,
   ) async {
@@ -194,15 +216,25 @@ void main() {
   });
 }
 
-Future<void> _pump(WidgetTester tester, Widget child, Size size) async {
+Future<void> _pump(
+  WidgetTester tester,
+  Widget child,
+  Size size, {
+  bool graphite = false,
+}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
   await tester.pumpWidget(
-    MaterialApp(
-      theme: buildVariantFTheme(),
-      home: Scaffold(body: SafeArea(child: child)),
+    ClinicalCalendarSemanticMarkScope(
+      marks: graphite
+          ? const GraphiteThemeBundle().marks
+          : const VariantFThemeBundle().marks,
+      child: MaterialApp(
+        theme: graphite ? buildGraphiteTheme() : buildVariantFTheme(),
+        home: Scaffold(body: SafeArea(child: child)),
+      ),
     ),
   );
   await tester.pump();

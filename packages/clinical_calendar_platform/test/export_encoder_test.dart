@@ -73,6 +73,12 @@ void main() {
           'schema_name': PortableExportSnapshot.currentSchemaName,
           'schema_version': PortableExportSnapshot.currentSchemaVersion,
           'records': {
+            'student_settings': {
+              'value': {
+                'theme_id': 'future-theme',
+                'enhanced_accessibility': true,
+              },
+            },
             'preceptors': [
               {'name': 'Zoë Müller'},
             ],
@@ -88,6 +94,10 @@ void main() {
 
       expect(decoded['schema_version'], 1);
       expect(text, contains('Zoë Müller'));
+      expect(text, contains('"theme_id": "future-theme"'));
+      expect(text, contains('"enhanced_accessibility": true'));
+      expect(text, isNot(contains('preview_theme_id')));
+      expect(text, isNot(contains('theme_assets')));
       expect(text, isNot(contains('encryption_key')));
       expect(text, isNot(contains('service_role')));
       expect(text, isNot(contains('access_token')));
