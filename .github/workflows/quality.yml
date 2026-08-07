@@ -21,5 +21,19 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
+      - name: Generate issue 125 Linux goldens
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/issue-125-linux-goldens'
+        working-directory: packages/clinical_calendar_presentation
+        run: >-
+          flutter test test/clinical_calendar_app_test.dart
+          --plain-name 'accepted pre-catalog Variant F renders'
+          --update-goldens
+      - name: Upload issue 125 Linux goldens
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/issue-125-linux-goldens'
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-125-linux-goldens
+          path: packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux
+          if-no-files-found: error
       - name: Run shared quality gate
         run: dart run tool/quality.dart
