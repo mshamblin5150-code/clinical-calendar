@@ -2,7 +2,9 @@
 
 These files freeze the accepted Standard-mode Containment Drone 47-Alpha
 presentation before theme-catalog plumbing. The fixture uses deterministic,
-fictional January 2026 data and an Android target platform.
+fictional January 2026 data and an Android target platform. Exact baselines are
+stored separately for Windows development hosts and the pinned Linux CI runner
+because Flutter's raster backend is host-dependent.
 
 Coverage includes compact, portrait-tablet, and landscape/desktop Calendar;
 320-pixel Settings; and every top-level application-menu destination. The test
