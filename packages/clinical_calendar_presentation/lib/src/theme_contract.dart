@@ -1,23 +1,203 @@
 import 'package:flutter/material.dart';
 
+import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
-/// A replaceable visual theme. Workflow widgets consume semantic ThemeData and
-/// never need to know the theme identifier.
-abstract interface class ClinicalCalendarVisualTheme {
-  String get id;
+const variantFThemeId = 'variant-f';
+
+enum ThemeBundleOrigin { compiled, runtime, remote }
+
+abstract interface class ThemeOwnedComponent {
+  String get themeId;
+}
+
+@immutable
+final class ThemeCatalogMetadata implements ThemeOwnedComponent {
+  const ThemeCatalogMetadata({
+    required this.themeId,
+    required this.displayName,
+    required this.personality,
+  });
+
+  @override
+  final String themeId;
+  final String displayName;
+  final String personality;
+}
+
+/// Standard presentation tokens and Material styling for one complete bundle.
+abstract interface class ClinicalCalendarStandardPresentation
+    implements ThemeOwnedComponent {
+  ClinicalCalendarColors get semanticColors;
 
   ThemeData createThemeData();
+}
+
+/// Kept as the narrow public name used by existing presentation tests.
+abstract interface class ClinicalCalendarVisualTheme
+    implements ClinicalCalendarStandardPresentation {
+  String get id;
 }
 
 final class VariantFVisualTheme implements ClinicalCalendarVisualTheme {
   const VariantFVisualTheme();
 
   @override
-  String get id => 'variant-f';
+  String get id => variantFThemeId;
+
+  @override
+  String get themeId => id;
+
+  @override
+  ClinicalCalendarColors get semanticColors => variantFSemanticColors;
 
   @override
   ThemeData createThemeData() => buildVariantFTheme();
+}
+
+abstract interface class ClinicalCalendarShellRenderer
+    implements ThemeOwnedComponent {
+  String get rendererId;
+
+  Widget build({
+    required ResponsiveShellSlots slots,
+    required String environmentName,
+    required VoidCallback onOpenMenu,
+    required ValueChanged<ClinicalCalendarDestination> onOpenDestination,
+    required VoidCallback onOpenAttention,
+    required VoidCallback onAddSchedule,
+    int mobileIndex = 1,
+    Key? key,
+  });
+}
+
+final class VariantFShellRenderer implements ClinicalCalendarShellRenderer {
+  const VariantFShellRenderer();
+
+  @override
+  String get themeId => variantFThemeId;
+
+  @override
+  String get rendererId => 'variant-f-existing-responsive-shell';
+
+  @override
+  Widget build({
+    required ResponsiveShellSlots slots,
+    required String environmentName,
+    required VoidCallback onOpenMenu,
+    required ValueChanged<ClinicalCalendarDestination> onOpenDestination,
+    required VoidCallback onOpenAttention,
+    required VoidCallback onAddSchedule,
+    int mobileIndex = 1,
+    Key? key,
+  }) => ResponsiveApplicationShell(
+    key: key,
+    slots: slots,
+    environmentName: environmentName,
+    onOpenMenu: onOpenMenu,
+    onOpenDestination: onOpenDestination,
+    onOpenAttention: onOpenAttention,
+    onAddSchedule: onAddSchedule,
+    mobileIndex: mobileIndex,
+  );
+}
+
+enum ThemeFrameRegion { calendar, placements, planning, status }
+
+@immutable
+final class ThemeFrameDescriptor implements ThemeOwnedComponent {
+  const ThemeFrameDescriptor({
+    required this.themeId,
+    required this.assetPackage,
+    required this.primaryAsset,
+    required this.assetPaths,
+    required this.sourceSize,
+    required this.sourceCuts,
+    required this.safeInsets,
+  });
+
+  @override
+  final String themeId;
+  final String assetPackage;
+  final String primaryAsset;
+  final List<String> assetPaths;
+  final Size sourceSize;
+  final EdgeInsets sourceCuts;
+  final Map<ThemeFrameRegion, EdgeInsets> safeInsets;
+}
+
+enum ThemeGallerySwatchRole {
+  canvas,
+  structure,
+  clinicalSession,
+  workShift,
+  urgent,
+}
+
+@immutable
+final class ThemeGallerySwatch {
+  const ThemeGallerySwatch({
+    required this.role,
+    required this.label,
+    required this.colorName,
+    required this.color,
+  });
+
+  final ThemeGallerySwatchRole role;
+  final String label;
+  final String colorName;
+  final Color color;
+}
+
+@immutable
+final class ThemeGalleryData implements ThemeOwnedComponent {
+  const ThemeGalleryData({
+    required this.themeId,
+    required this.rendererId,
+    required this.thumbnailFixtureId,
+    required this.thumbnailViewport,
+    required this.swatches,
+  });
+
+  @override
+  final String themeId;
+  final String rendererId;
+  final String thumbnailFixtureId;
+  final Size thumbnailViewport;
+  final List<ThemeGallerySwatch> swatches;
+}
+
+enum ThemeSemanticRole {
+  clinicalSession,
+  workShift,
+  protectedDay,
+  scheduledProgress,
+  todayOrUrgent,
+}
+
+@immutable
+final class ThemeSemanticMark {
+  const ThemeSemanticMark({
+    required this.role,
+    required this.markId,
+    required this.description,
+  });
+
+  final ThemeSemanticRole role;
+  final String markId;
+  final String description;
+}
+
+@immutable
+final class ClinicalCalendarSemanticMarks implements ThemeOwnedComponent {
+  const ClinicalCalendarSemanticMarks({
+    required this.themeId,
+    required this.marks,
+  });
+
+  @override
+  final String themeId;
+  final List<ThemeSemanticMark> marks;
 }
 
 /// One theme-specific calendar-state explanation used by Help.
@@ -34,9 +214,7 @@ final class CalendarStateGuide {
   final Color color;
 }
 
-abstract interface class ThemeHelpGuide {
-  String get themeId;
-
+abstract interface class ThemeHelpGuide implements ThemeOwnedComponent {
   String get title;
 
   List<CalendarStateGuide> get calendarStates;
@@ -46,7 +224,7 @@ final class VariantFHelpGuide implements ThemeHelpGuide {
   const VariantFHelpGuide();
 
   @override
-  String get themeId => 'variant-f';
+  String get themeId => variantFThemeId;
 
   @override
   String get title => 'Containment Drone 47-Alpha calendar states';
@@ -81,35 +259,241 @@ final class VariantFHelpGuide implements ThemeHelpGuide {
   ];
 }
 
-final class GenericThemeHelpGuide implements ThemeHelpGuide {
-  const GenericThemeHelpGuide(this.themeId);
-
-  @override
-  final String themeId;
-
-  @override
-  String get title => 'Calendar states';
-
-  @override
-  List<CalendarStateGuide> get calendarStates => const [
-    CalendarStateGuide(
-      label: 'Calendar state',
-      description: 'Use labels and accessible descriptions to identify items.',
-      color: VariantFColors.muted,
-    ),
-  ];
+abstract interface class ClinicalCalendarThemeBundle {
+  String get id;
+  ThemeBundleOrigin get origin;
+  ThemeCatalogMetadata get metadata;
+  ClinicalCalendarStandardPresentation get standardPresentation;
+  ClinicalCalendarShellRenderer get shellRenderer;
+  ThemeFrameDescriptor get frame;
+  ThemeGalleryData get gallery;
+  ClinicalCalendarSemanticMarks get marks;
+  ThemeHelpGuide get helpGuide;
 }
 
-/// Selects only visual-state guidance. Shared workflow Help remains independent.
-final class ThemeHelpGuideRegistry {
-  ThemeHelpGuideRegistry([Iterable<ThemeHelpGuide> guides = const []])
-    : _guides = {for (final guide in guides) guide.themeId: guide};
+final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
+  const VariantFThemeBundle();
 
-  factory ThemeHelpGuideRegistry.standard() =>
-      ThemeHelpGuideRegistry(const [VariantFHelpGuide()]);
+  @override
+  String get id => variantFThemeId;
 
-  final Map<String, ThemeHelpGuide> _guides;
+  @override
+  ThemeBundleOrigin get origin => ThemeBundleOrigin.compiled;
 
-  ThemeHelpGuide resolve(String themeId) =>
-      _guides[themeId] ?? GenericThemeHelpGuide(themeId);
+  @override
+  ThemeCatalogMetadata get metadata => const ThemeCatalogMetadata(
+    themeId: variantFThemeId,
+    displayName: 'Containment Drone 47-Alpha',
+    personality:
+        'The accepted gunmetal tactical identity, preserved unchanged.',
+  );
+
+  @override
+  ClinicalCalendarStandardPresentation get standardPresentation =>
+      const VariantFVisualTheme();
+
+  @override
+  ClinicalCalendarShellRenderer get shellRenderer =>
+      const VariantFShellRenderer();
+
+  @override
+  ThemeFrameDescriptor get frame => const ThemeFrameDescriptor(
+    themeId: variantFThemeId,
+    assetPackage: 'clinical_calendar_presentation',
+    primaryAsset: 'assets/variant_f_raster/panel-nine-slice-v2.png',
+    assetPaths: [
+      'assets/variant_f_raster/panel-nine-slice-v2.png',
+      'assets/variant_f_raster/hardware-atlas.png',
+      'assets/variant_f_raster/panel-atlas.png',
+      'assets/variant_f_raster/rail-atlas.png',
+    ],
+    sourceSize: Size(1536, 1024),
+    sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
+    safeInsets: {
+      ThemeFrameRegion.calendar: EdgeInsets.fromLTRB(38, 46, 38, 46),
+      ThemeFrameRegion.placements: EdgeInsets.fromLTRB(30, 44, 30, 44),
+      ThemeFrameRegion.planning: EdgeInsets.fromLTRB(34, 46, 34, 42),
+      ThemeFrameRegion.status: EdgeInsets.fromLTRB(30, 44, 34, 44),
+    },
+  );
+
+  @override
+  ThemeGalleryData get gallery => const ThemeGalleryData(
+    themeId: variantFThemeId,
+    rendererId: 'variant-f-existing-responsive-shell',
+    thumbnailFixtureId: 'variant-f-pinned-calendar-v1',
+    thumbnailViewport: Size(1280, 800),
+    swatches: [
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.canvas,
+        label: 'Canvas',
+        colorName: 'near-black graphite',
+        color: VariantFColors.background,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.structure,
+        label: 'Structure',
+        colorName: 'gunmetal green',
+        color: VariantFColors.surface,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.clinicalSession,
+        label: 'Clinical Session',
+        colorName: 'collective green',
+        color: VariantFColors.primary,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.workShift,
+        label: 'Work Shift',
+        colorName: 'green steel',
+        color: VariantFColors.workMachinery,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.urgent,
+        label: 'Urgent',
+        colorName: 'optic red',
+        color: VariantFColors.urgent,
+      ),
+    ],
+  );
+
+  @override
+  ClinicalCalendarSemanticMarks get marks =>
+      const ClinicalCalendarSemanticMarks(
+        themeId: variantFThemeId,
+        marks: [
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.clinicalSession,
+            markId: 'medical-services-outline',
+            description: 'Outlined medical-services icon',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.workShift,
+            markId: 'work-outline',
+            description: 'Outlined work icon',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.protectedDay,
+            markId: 'protected-shield',
+            description: 'Shield mark',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.scheduledProgress,
+            markId: 'labelled-progress-segment',
+            description: 'Scheduled label and progress segment',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.todayOrUrgent,
+            markId: 'outlined-date-border',
+            description: 'Outlined date border with explicit status text',
+          ),
+        ],
+      );
+
+  @override
+  ThemeHelpGuide get helpGuide => const VariantFHelpGuide();
+}
+
+final class InvalidThemeBundle implements Exception {
+  const InvalidThemeBundle(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'InvalidThemeBundle: $message';
+}
+
+abstract final class ClinicalCalendarThemeBundleValidator {
+  static void validate(Iterable<ClinicalCalendarThemeBundle> bundles) {
+    final seen = <String>{};
+    for (final bundle in bundles) {
+      final id = bundle.id.trim();
+      if (id.isEmpty) {
+        throw const InvalidThemeBundle('Theme identifiers cannot be empty.');
+      }
+      if (!seen.add(id)) {
+        throw InvalidThemeBundle('Duplicate theme identifier: $id.');
+      }
+      if (bundle.origin != ThemeBundleOrigin.compiled) {
+        throw InvalidThemeBundle(
+          'Theme $id is not a compile-time local bundle.',
+        );
+      }
+
+      final owned = <ThemeOwnedComponent>[
+        bundle.metadata,
+        bundle.standardPresentation,
+        bundle.shellRenderer,
+        bundle.frame,
+        bundle.gallery,
+        bundle.marks,
+        bundle.helpGuide,
+      ];
+      for (final component in owned) {
+        if (component.themeId != id) {
+          throw InvalidThemeBundle(
+            'Theme $id borrows a component owned by ${component.themeId}.',
+          );
+        }
+      }
+
+      if (bundle.metadata.displayName.trim().isEmpty ||
+          bundle.metadata.personality.trim().isEmpty ||
+          bundle.frame.assetPackage.trim().isEmpty ||
+          bundle.frame.primaryAsset.trim().isEmpty ||
+          bundle.frame.assetPaths.isEmpty ||
+          !bundle.frame.assetPaths.contains(bundle.frame.primaryAsset) ||
+          bundle.frame.sourceSize.isEmpty ||
+          bundle.frame.safeInsets.length != ThemeFrameRegion.values.length ||
+          bundle.gallery.thumbnailFixtureId.trim().isEmpty ||
+          bundle.gallery.thumbnailViewport.isEmpty ||
+          bundle.gallery.swatches.length !=
+              ThemeGallerySwatchRole.values.length ||
+          bundle.marks.marks.length != ThemeSemanticRole.values.length ||
+          bundle.helpGuide.title.trim().isEmpty ||
+          bundle.helpGuide.calendarStates.length !=
+              ThemeSemanticRole.values.length) {
+        throw InvalidThemeBundle('Theme $id is incomplete.');
+      }
+      if (bundle.gallery.rendererId != bundle.shellRenderer.rendererId) {
+        throw InvalidThemeBundle(
+          'Theme $id gallery is not generated by its shell renderer.',
+        );
+      }
+      if ({for (final swatch in bundle.gallery.swatches) swatch.role}.length !=
+              ThemeGallerySwatchRole.values.length ||
+          {for (final mark in bundle.marks.marks) mark.role}.length !=
+              ThemeSemanticRole.values.length) {
+        throw InvalidThemeBundle('Theme $id has incomplete semantic roles.');
+      }
+    }
+  }
+}
+
+/// Closed root resolver. It has no registration API and exposes no selectable
+/// catalog until the ratified seven complete bundles exist together.
+final class ClinicalCalendarThemeBundleRegistry {
+  ClinicalCalendarThemeBundleRegistry._(this._bundles) {
+    ClinicalCalendarThemeBundleValidator.validate(_bundles.values);
+  }
+
+  static final standard = ClinicalCalendarThemeBundleRegistry._({
+    variantFThemeId: const VariantFThemeBundle(),
+  });
+
+  final Map<String, ClinicalCalendarThemeBundle> _bundles;
+
+  bool get isSelectableCatalogComplete => false;
+
+  List<ClinicalCalendarThemeBundle> get selectableBundles => const [];
+
+  ClinicalCalendarThemeBundle resolveRoot(String id) {
+    final bundle = _bundles[id];
+    if (bundle == null) {
+      throw InvalidThemeBundle(
+        'Theme $id is unavailable before the complete catalog ships.',
+      );
+    }
+    return bundle;
+  }
 }
