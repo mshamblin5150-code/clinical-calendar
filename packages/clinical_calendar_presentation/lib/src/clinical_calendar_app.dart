@@ -9,6 +9,7 @@ import 'calendar/calendar_data_source.dart';
 import 'calendar/calendar_models.dart';
 import 'calendar/calendar_period_view.dart';
 import 'backup/backup_restore_surface.dart';
+import 'code_only_presentation_recovery.dart';
 import 'commitments/commitment_lifecycle_controller.dart';
 import 'commitments/commitment_lifecycle_surface.dart';
 import 'conflict_resolution/conflict_resolution_controller.dart';
@@ -134,68 +135,20 @@ final class ClinicalCalendarApp extends StatelessWidget {
         ),
       );
     } on Object {
-      return _ThemeConstructionRecoveryApplication(
-        onRestart: onPresentationRestart,
+      return CodeOnlyPresentationRecoveryApplication(
+        surfaceKey: const Key('theme-construction-recovery'),
+        icon: Icons.restart_alt,
+        title: 'Presentation could not start.',
+        guidance:
+            'No Calendar or Student data was displayed. Restart the '
+            'presentation. If this continues, record the app version '
+            'and device model for Help.',
+        actionLabel: 'Restart',
+        actionKey: const Key('restart-presentation'),
+        onAction: onPresentationRestart,
       );
     }
   }
-}
-
-/// Code-only terminal recovery: no theme assets, shell, Calendar, or Student
-/// data are constructed on this path.
-final class _ThemeConstructionRecoveryApplication extends StatelessWidget {
-  const _ThemeConstructionRecoveryApplication({required this.onRestart});
-
-  final VoidCallback? onRestart;
-
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF0D1013),
-      colorScheme: const ColorScheme.dark(
-        primary: Color(0xFF37D6B4),
-        onPrimary: Color(0xFF06251E),
-        surface: Color(0xFF151A1F),
-        onSurface: Color(0xFFF4F6F7),
-      ),
-    ),
-    home: Scaffold(
-      key: const Key('theme-construction-recovery'),
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.restart_alt, size: 40),
-                const SizedBox(height: 16),
-                const Text(
-                  'Presentation could not start.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'No Calendar or Student data was displayed. Restart the '
-                  'presentation. If this continues, record the app version '
-                  'and device model for Help.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  key: const Key('restart-presentation'),
-                  onPressed: onRestart,
-                  child: const Text('Restart'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 /// Bridges Flutter host lifecycle/connectivity events into synchronization.

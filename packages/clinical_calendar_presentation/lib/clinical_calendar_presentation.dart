@@ -2,6 +2,7 @@
 library;
 
 export 'src/clinical_calendar_app.dart';
+export 'src/code_only_presentation_recovery.dart';
 export 'src/calendar/calendar_data_source.dart';
 export 'src/calendar/calendar_models.dart';
 export 'src/calendar/calendar_period_view.dart';

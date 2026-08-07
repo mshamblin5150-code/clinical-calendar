@@ -3,7 +3,6 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../responsive_shell.dart';
-import '../theme_contract.dart';
 import '../time_input.dart';
 import '../variant_f_theme.dart';
 
@@ -248,16 +247,7 @@ final class _SettingsTemplatesSurfaceState
                   ),
                   width: 280,
                 ),
-                if (_themeId == graphiteThemeId)
-                  _field(
-                    Semantics(
-                      key: const Key('graphite-theme-applied'),
-                      label: 'Graphite, Applied',
-                      child: const Text('Graphite — Applied'),
-                    ),
-                    width: 280,
-                  )
-                else if (_themeId != StudentSettings.variantFThemeId)
+                if (_themeId != StudentSettings.variantFThemeId)
                   _field(
                     Semantics(
                       key: const Key('theme-fallback-in-use'),

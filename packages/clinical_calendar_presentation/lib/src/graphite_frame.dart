@@ -3,6 +3,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 const graphiteFrameAsset = 'assets/graphite_raster/panel-nine-slice-v1.png';
+const graphiteCalendarSafeInsets = EdgeInsets.fromLTRB(38, 46, 38, 46);
+const graphitePlacementsSafeInsets = EdgeInsets.fromLTRB(30, 44, 30, 44);
+const graphitePlanningSafeInsets = EdgeInsets.fromLTRB(34, 46, 34, 42);
+const graphiteStatusSafeInsets = EdgeInsets.fromLTRB(30, 44, 34, 44);
 
 final class GraphitePresentationRecoveryScope extends InheritedWidget {
   const GraphitePresentationRecoveryScope({

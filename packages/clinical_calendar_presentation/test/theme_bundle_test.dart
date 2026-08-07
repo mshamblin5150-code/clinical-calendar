@@ -57,6 +57,28 @@ void main() {
     expect(graphite.gallery.swatches, hasLength(5));
     expect(graphite.marks.marks, hasLength(5));
     expect(graphite.helpGuide.calendarStates, hasLength(5));
+    expect(graphite.frame.safeInsets, const {
+      ThemeFrameRegion.calendar: graphiteCalendarSafeInsets,
+      ThemeFrameRegion.placements: graphitePlacementsSafeInsets,
+      ThemeFrameRegion.planning: graphitePlanningSafeInsets,
+      ThemeFrameRegion.status: graphiteStatusSafeInsets,
+    });
+    expect(
+      graphite.marks.marks.map((mark) => mark.icon),
+      everyElement(isA<IconData>()),
+    );
+    expect(
+      graphite.helpGuide.calendarStates,
+      everyElement(
+        isA<CalendarStateGuide>()
+            .having((state) => state.nonColorCue, 'non-color cue', isNotEmpty)
+            .having(
+              (state) => state.enhancedBehavior,
+              'Enhanced behavior',
+              isNotEmpty,
+            ),
+      ),
+    );
   });
 
   test('unknown applied ID falls back without changing the stored ID', () {
@@ -68,14 +90,54 @@ void main() {
     expect(resolved.isFallback, isTrue);
   });
 
-  test('valid applied Graphite is not described as fallback', () {
+  test('Graphite remains fallback until the complete catalog activates', () {
     final resolved = ClinicalCalendarThemeBundleRegistry.standard
         .resolveApplied(graphiteThemeId);
 
     expect(resolved.storedId, graphiteThemeId);
     expect(resolved.bundle, isA<GraphiteThemeBundle>());
-    expect(resolved.isFallback, isFalse);
+    expect(resolved.isFallback, isTrue);
   });
+
+  test(
+    'candidate preflight failure preserves the valid applied bundle',
+    () async {
+      final registry = ClinicalCalendarThemeBundleRegistry.standard;
+      final applied = registry.resolveApplied(variantFThemeId);
+
+      final failed = await registry.preflightCandidate(
+        applied: applied,
+        candidateId: graphiteThemeId,
+        preflight: (_) async => throw StateError('asset decode failed'),
+      );
+
+      expect(failed.previewUnavailable, isTrue);
+      expect(failed.applied, same(applied));
+      expect(failed.candidate, isNull);
+      expect(failed.effectiveBundle, same(applied.bundle));
+    },
+  );
+
+  test(
+    'successful candidate preflight returns the complete candidate',
+    () async {
+      final registry = ClinicalCalendarThemeBundleRegistry.standard;
+      final applied = registry.resolveApplied(variantFThemeId);
+
+      final result = await registry.preflightCandidate(
+        applied: applied,
+        candidateId: graphiteThemeId,
+        preflight: (candidate) async {
+          ClinicalCalendarThemeBundleValidator.validate([candidate]);
+        },
+      );
+
+      expect(result.previewUnavailable, isFalse);
+      expect(result.applied, same(applied));
+      expect(result.candidate, isA<GraphiteThemeBundle>());
+      expect(result.effectiveBundle, same(result.candidate));
+    },
+  );
 
   test('partial catalog is not selectable or visible', () {
     final registry = ClinicalCalendarThemeBundleRegistry.standard;

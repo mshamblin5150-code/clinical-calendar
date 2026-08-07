@@ -426,6 +426,8 @@ void main() {
       identityGateway: gateway,
       connectivitySource: _ConnectivitySource(initial: false),
       repositoryBootstrap: (_, _, _) async => _Repositories(),
+      authoritativeThemeLoader: (_, _, _, _) async => 'future-theme',
+      graphiteAssetPreflight: () async {},
       currentDevice: DeviceDescriptor(
         name: 'Test device',
         platform: DevicePlatform.windows,
@@ -458,12 +460,17 @@ void main() {
 
     expect(find.byKey(const Key('identity-email')), findsNothing);
     expect(find.text('Clinical Calendar could not start.'), findsNothing);
+    expect(
+      find.byKey(const Key('graphite-presentation-unavailable')),
+      findsNothing,
+    );
     final application = tester.widget<ClinicalCalendarApp>(
       find.byType(ClinicalCalendarApp),
     );
     expect(application.identity, isNotNull);
     expect(application.identityEmail, 'student@example.com');
-    expect(application.themeId, graphiteThemeId);
+    expect(application.themeId, 'future-theme');
+    expect(find.byType(GraphiteApplicationShell), findsOneWidget);
     expect(application.onLocalCopyRemoved, isNotNull);
     expect(storage.values[StableStudentOwner.storageKey], _identityStudentId);
     expect(
@@ -471,6 +478,87 @@ void main() {
       contains(PasswordlessIdentityService.sessionStorageKey),
     );
   });
+
+  testWidgets('authenticated shell stays hidden when settings cannot load', (
+    tester,
+  ) async {
+    final root = await app.buildProductionRoot(
+      secureStorage: _MemorySecureStorage(),
+      identifiers: const _Identifiers(_deviceId),
+      clock: _FixedClock(),
+      environment: const AppEnvironment(
+        name: 'test',
+        supabaseUrl: 'https://project.supabase.co',
+        supabasePublishableKey: 'public-client-key',
+      ),
+      identityGateway: _IdentityGateway(),
+      connectivitySource: _ConnectivitySource(initial: false),
+      repositoryBootstrap: (_, _, _) async => _Repositories(),
+      currentDevice: DeviceDescriptor(
+        name: 'Test device',
+        platform: DevicePlatform.windows,
+      ),
+    );
+    await tester.pumpWidget(root);
+    await _completePasswordlessSignIn(tester);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('authoritative-settings-unavailable')),
+      findsOneWidget,
+    );
+    expect(find.byType(ClinicalCalendarApp), findsNothing);
+    expect(find.text('Retry settings'), findsOneWidget);
+    expect(find.textContaining(_identityStudentId), findsNothing);
+  });
+
+  testWidgets('Graphite decode failure reaches code-only recovery', (
+    tester,
+  ) async {
+    final root = await app.buildProductionRoot(
+      secureStorage: _MemorySecureStorage(),
+      identifiers: const _Identifiers(_deviceId),
+      clock: _FixedClock(),
+      environment: const AppEnvironment(
+        name: 'test',
+        supabaseUrl: 'https://project.supabase.co',
+        supabasePublishableKey: 'public-client-key',
+      ),
+      identityGateway: _IdentityGateway(),
+      connectivitySource: _ConnectivitySource(initial: false),
+      repositoryBootstrap: (_, _, _) async => _Repositories(),
+      authoritativeThemeLoader: (_, _, _, _) async => 'future-theme',
+      graphiteAssetPreflight: () async => throw StateError('bad PNG'),
+      currentDevice: DeviceDescriptor(
+        name: 'Test device',
+        platform: DevicePlatform.windows,
+      ),
+    );
+    await tester.pumpWidget(root);
+    await _completePasswordlessSignIn(tester);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('graphite-presentation-unavailable')),
+      findsOneWidget,
+    );
+    expect(find.byType(ClinicalCalendarApp), findsNothing);
+    expect(find.text('Restart'), findsOneWidget);
+    expect(find.textContaining('bad PNG'), findsNothing);
+    expect(find.textContaining(_identityStudentId), findsNothing);
+  });
+}
+
+Future<void> _completePasswordlessSignIn(WidgetTester tester) async {
+  await tester.enterText(
+    find.byKey(const Key('identity-email')),
+    'student@example.com',
+  );
+  await tester.tap(find.byKey(const Key('send-identity-code')));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byKey(const Key('identity-otp')), '123456');
+  await tester.tap(find.byKey(const Key('verify-identity-code')));
+  await tester.pump();
 }
 
 final class _MemorySecureStorage implements SecureStorage {

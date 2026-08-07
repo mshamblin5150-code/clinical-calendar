@@ -55,7 +55,10 @@ final class GraphiteApplicationShell extends StatelessWidget {
                   SizedBox(
                     key: const Key('placement-dock'),
                     width: 216,
-                    child: _panel(slots.placementDock),
+                    child: _panel(
+                      slots.placementDock,
+                      graphitePlacementsSafeInsets,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -66,12 +69,18 @@ final class GraphiteApplicationShell extends StatelessWidget {
                         children: [
                           KeyedSubtree(
                             key: const Key('central-content'),
-                            child: _panel(slots.centralContent),
+                            child: _panel(
+                              slots.centralContent,
+                              graphiteCalendarSafeInsets,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           KeyedSubtree(
                             key: const Key('planning-region'),
-                            child: _panel(slots.planningRegion),
+                            child: _panel(
+                              slots.planningRegion,
+                              graphitePlanningSafeInsets,
+                            ),
                           ),
                         ],
                       ),
@@ -81,7 +90,7 @@ final class GraphiteApplicationShell extends StatelessWidget {
                   SizedBox(
                     key: const Key('insight-rail'),
                     width: 232,
-                    child: _panel(slots.insightRail),
+                    child: _panel(slots.insightRail, graphiteStatusSafeInsets),
                   ),
                 ],
               ),
@@ -121,22 +130,25 @@ final class GraphiteApplicationShell extends StatelessWidget {
           children: [
             KeyedSubtree(
               key: const Key('central-content'),
-              child: _panel(slots.centralContent),
+              child: _panel(slots.centralContent, graphiteCalendarSafeInsets),
             ),
             const SizedBox(height: 12),
             KeyedSubtree(
               key: const Key('mobile-placement-summary'),
-              child: _panel(slots.mobilePlacementSummary),
+              child: _panel(
+                slots.mobilePlacementSummary,
+                graphitePlacementsSafeInsets,
+              ),
             ),
             const SizedBox(height: 12),
             KeyedSubtree(
               key: const Key('mobile-attention'),
-              child: _panel(slots.mobileAttention),
+              child: _panel(slots.mobileAttention, graphiteStatusSafeInsets),
             ),
             const SizedBox(height: 12),
             KeyedSubtree(
               key: const Key('planning-region'),
-              child: _panel(slots.planningRegion),
+              child: _panel(slots.planningRegion, graphitePlanningSafeInsets),
             ),
           ],
         ),
@@ -184,8 +196,8 @@ final class GraphiteApplicationShell extends StatelessWidget {
     ),
   );
 
-  Widget _panel(Widget child) => GraphiteNineSliceFrame(
-    chromeInsets: const EdgeInsets.fromLTRB(18, 20, 18, 22),
+  Widget _panel(Widget child, EdgeInsets safeInsets) => GraphiteNineSliceFrame(
+    chromeInsets: safeInsets,
     contentPadding: const EdgeInsets.all(8),
     child: ClinicalCalendarPanelInterior(child: child),
   );
