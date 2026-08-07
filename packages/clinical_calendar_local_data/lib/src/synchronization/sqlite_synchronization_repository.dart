@@ -579,7 +579,15 @@ final class SqliteSynchronizationRepository
       case 'settings':
         _upsert('settings', {
           ...common,
-          for (final key in _settingsColumns) key: value[key],
+          for (final key in _settingsColumns)
+            key: switch (key) {
+              'theme' =>
+                value[key] == 'borg_tactical'
+                    ? StudentSettings.variantFThemeId
+                    : value[key],
+              'enhanced_accessibility' => value[key] ?? false,
+              _ => value[key],
+            },
         });
       case 'reminder_state':
         _upsert('reminder_state', {
@@ -1176,6 +1184,7 @@ const _settingsColumns = <String>[
   'week_start',
   'time_display',
   'theme',
+  'enhanced_accessibility',
   'synchronization_mode',
   'notification_preferences_json',
   'active_placement_id',

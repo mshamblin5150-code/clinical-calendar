@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 12;
+  static const latestVersion = 13;
 
   final MigrationTestHook? _testHook;
 
@@ -236,7 +236,7 @@ final Map<int, List<String>> _statements = {
       $_syncColumns,
       week_start INTEGER NOT NULL DEFAULT 7 CHECK (week_start BETWEEN 1 AND 7),
       time_display TEXT NOT NULL DEFAULT 'military' CHECK (time_display IN ('military', 'twelve_hour')),
-      theme TEXT NOT NULL DEFAULT 'borg_tactical',
+      theme TEXT NOT NULL DEFAULT 'variant-f',
       synchronization_mode TEXT NOT NULL DEFAULT 'enabled' CHECK (synchronization_mode IN ('enabled', 'paused')),
       notification_preferences_json TEXT NOT NULL DEFAULT '{}',
       active_placement_id TEXT,
@@ -627,6 +627,30 @@ final Map<int, List<String>> _statements = {
           AND retry.base_revision = rejected.base_revision
           AND retry.payload_json = rejected.payload_json
           AND retry.terminal_rejected_at_utc IS NULL
-      )''',
+    )''',
+  ],
+  13: [
+    '''ALTER TABLE settings
+      ADD COLUMN enhanced_accessibility INTEGER NOT NULL DEFAULT 0
+      CHECK (enhanced_accessibility IN (0, 1))''',
+    '''UPDATE settings SET theme = 'variant-f'
+      WHERE theme = 'borg_tactical' OR length(trim(theme)) = 0''',
+    '''UPDATE outbox_operations
+      SET payload_json = json_set(
+        payload_json, '\$.value.theme', 'variant-f'
+      )
+      WHERE entity_type = 'settings'
+        AND operation_type = 'upsert'
+        AND json_valid(payload_json)
+        AND json_extract(payload_json, '\$.value.theme') = 'borg_tactical' ''',
+    '''UPDATE outbox_operations
+      SET payload_json = json_set(
+        payload_json, '\$.value.enhanced_accessibility', json('false')
+      )
+      WHERE entity_type = 'settings'
+        AND operation_type = 'upsert'
+        AND json_valid(payload_json)
+        AND json_type(payload_json, '\$.value') = 'object'
+        AND json_type(payload_json, '\$.value.enhanced_accessibility') IS NULL''',
   ],
 };

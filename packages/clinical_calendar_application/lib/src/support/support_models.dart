@@ -177,6 +177,7 @@ final class StudentSettings {
     this.weekStart = DateTime.sunday,
     this.timeDisplay = TimeDisplayPreference.military,
     String themeId = variantFThemeId,
+    this.enhancedAccessibility = false,
     this.synchronization = SynchronizationPreference.enabled,
     this.notifications = const NotificationPreferences(),
   }) : themeId = _requiredText(themeId, 'Theme', 80) {
@@ -190,6 +191,7 @@ final class StudentSettings {
   final int weekStart;
   final TimeDisplayPreference timeDisplay;
   final String themeId;
+  final bool enhancedAccessibility;
   final SynchronizationPreference synchronization;
   final NotificationPreferences notifications;
 }

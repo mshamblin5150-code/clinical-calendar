@@ -769,6 +769,101 @@ void main() {
   });
 
   test(
+    'Student settings preserve an unknown theme and Enhanced accessibility independently',
+    () async {
+      await registry.initialize();
+
+      final saved = await registry.mutate(
+        (repositories) =>
+            (repositories as SupportLocalWriteRepositories).studentSettings.put(
+              studentId: _studentId,
+              settings: StudentSettings(
+                themeId: 'future-theme',
+                enhancedAccessibility: true,
+              ),
+              expectedRevision: 0,
+              mutation: _mutation(100),
+            ),
+      );
+
+      expect(saved.record.value.themeId, 'future-theme');
+      expect(saved.record.value.enhancedAccessibility, isTrue);
+
+      await database.close();
+      databaseIsOpen = false;
+      database = await ClinicalCalendarDatabase.open(
+        path: databasePath,
+        secureStorage: MemorySecureStorage(_key),
+      );
+      databaseIsOpen = true;
+      registry = _registry(database, identifiers);
+      await registry.initialize();
+
+      await registry.read((repositories) {
+        final support = repositories as SupportLocalReadRepositories;
+        final restored = support.studentSettings.find(studentId: _studentId);
+        expect(restored!.value.themeId, 'future-theme');
+        expect(restored.value.enhancedAccessibility, isTrue);
+
+        final operation = repositories.outbox
+            .pending(
+              studentId: _studentId,
+              asOfUtc: _baseTime.add(const Duration(days: 1)),
+            )
+            .single;
+        expect(operation.payloadJson, contains('"theme":"future-theme"'));
+        expect(
+          operation.payloadJson,
+          contains('"enhanced_accessibility":true'),
+        );
+        expect(operation.payloadJson, isNot(contains('preview')));
+        expect(operation.payloadJson, isNot(contains('asset')));
+      });
+    },
+  );
+
+  test(
+    'settings-inclusive export preserves theme and Enhanced accessibility only',
+    () async {
+      await registry.initialize();
+      await registry.mutate(
+        (repositories) =>
+            (repositories as SupportLocalWriteRepositories).studentSettings.put(
+              studentId: _studentId,
+              settings: StudentSettings(
+                themeId: 'future-theme',
+                enhancedAccessibility: true,
+              ),
+              expectedRevision: 0,
+              mutation: _mutation(101),
+            ),
+      );
+      const clock = _FixedClock();
+      final placementService = PlacementApplicationService(
+        repositories: registry,
+        clock: clock,
+        identifiers: identifiers,
+        studentId: _studentId,
+      );
+      final export = await ExportDataService(
+        registry,
+        placementService,
+        clock,
+        _studentId,
+      ).completePortableData();
+
+      final records = export.document['records']! as Map<String, Object?>;
+      final settingsRecord =
+          records['student_settings']! as Map<String, Object?>;
+      final settings = settingsRecord['value']! as Map<String, Object?>;
+      expect(settings['theme_id'], 'future-theme');
+      expect(settings['enhanced_accessibility'], isTrue);
+      expect(settings.keys, isNot(contains('preview_theme_id')));
+      expect(settings.keys, isNot(contains('theme_assets')));
+    },
+  );
+
+  test(
     'repository works after opening and migrating a real v2 fixture',
     () async {
       await database.close();
@@ -1159,6 +1254,13 @@ final class _DomainFixture {
   late final ProtectedDay protectedDay;
   late final ScheduleTemplate scheduleTemplate;
   late final HistoricalHoursEntry historicalHoursEntry;
+}
+
+final class _FixedClock implements Clock {
+  const _FixedClock();
+
+  @override
+  DateTime nowUtc() => _baseTime;
 }
 
 final class DeterministicIdentifierGenerator implements IdentifierGenerator {

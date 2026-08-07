@@ -123,9 +123,12 @@ void main() {
       ),
       throwsArgumentError,
     );
-    await service.saveSettings(
+    final authoritative = await service.saveSettings(
       expectedRevision: 0,
-      settings: StudentSettings(),
+      settings: StudentSettings(
+        themeId: 'future-theme',
+        enhancedAccessibility: true,
+      ),
     );
     await expectLater(
       service.saveSettings(
@@ -133,13 +136,23 @@ void main() {
         settings: StudentSettings(weekStart: DateTime.monday),
       ),
       throwsA(
-        isA<RepositoryException>().having(
-          (error) => error.kind,
-          'kind',
-          RepositoryFailureKind.concurrentModification,
-        ),
+        isA<RepositoryException>()
+            .having(
+              (error) => error.kind,
+              'kind',
+              RepositoryFailureKind.concurrentModification,
+            )
+            .having(
+              (error) => error.message,
+              'actionable message',
+              contains('changed'),
+            ),
       ),
     );
+    final afterFailure = (await service.load()).settings;
+    expect(afterFailure.revision, authoritative.revision);
+    expect(afterFailure.value.themeId, 'future-theme');
+    expect(afterFailure.value.enhancedAccessibility, isTrue);
   });
 }
 

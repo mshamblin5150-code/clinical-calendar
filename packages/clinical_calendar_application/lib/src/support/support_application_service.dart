@@ -98,20 +98,29 @@ final class SupportApplicationService {
   Future<StoredSupportRecord<StudentSettings>> saveSettings({
     required int expectedRevision,
     required StudentSettings settings,
-  }) {
+  }) async {
     final occurredAtUtc = _now();
-    return _repositories.mutate((repositories) {
-      final receipt = _writeSupport(repositories).studentSettings.put(
-        studentId: _studentId,
-        settings: settings,
-        expectedRevision: expectedRevision,
-        mutation: _mutation(occurredAtUtc),
+    try {
+      return await _repositories.mutate((repositories) {
+        final receipt = _writeSupport(repositories).studentSettings.put(
+          studentId: _studentId,
+          settings: settings,
+          expectedRevision: expectedRevision,
+          mutation: _mutation(occurredAtUtc),
+        );
+        return StoredSupportRecord(
+          value: receipt.record.value,
+          revision: receipt.record.revision,
+        );
+      });
+    } on RepositoryException catch (error) {
+      if (error.kind != RepositoryFailureKind.concurrentModification) rethrow;
+      throw RepositoryException(
+        error.kind,
+        'Student Settings changed before they could be saved. Reload and try again.',
+        cause: error,
       );
-      return StoredSupportRecord(
-        value: receipt.record.value,
-        revision: receipt.record.revision,
-      );
-    });
+    }
   }
 
   Future<StoredSupportRecord<ScheduleTemplate>> addScheduleTemplate({
