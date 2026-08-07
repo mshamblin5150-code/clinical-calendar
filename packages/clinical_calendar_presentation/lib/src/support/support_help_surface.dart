@@ -163,7 +163,16 @@ final class SupportHelpSurface extends StatelessWidget {
                           ),
                   ),
                   title: Text(state.label),
-                  subtitle: Text(state.description),
+                  subtitle: themeGuide.themeId == graphiteThemeId
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(state.description),
+                            Text(state.nonColorCue),
+                            Text(state.enhancedBehavior),
+                          ],
+                        )
+                      : Text(state.description),
                 ),
               ),
           ],
