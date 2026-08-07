@@ -2,6 +2,77 @@ import 'package:flutter/material.dart';
 
 import 'graphite_frame.dart';
 import 'responsive_shell.dart';
+import 'variant_f_raster_assets.dart';
+import 'variant_f_theme.dart';
+
+const graphiteCompactDestinationInsets = EdgeInsets.fromLTRB(18, 20, 18, 22);
+
+/// Uses the frozen renderer's existing no-nested-frame protocol. This marker
+/// paints no Variant F pixels and contributes no theme-owned presentation.
+final class GraphitePanelInterior extends StatelessWidget {
+  const GraphitePanelInterior({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      VariantFRasterPanelInterior(child: child);
+}
+
+final class GraphiteDestinationSurface extends StatelessWidget {
+  const GraphiteDestinationSurface({
+    required this.destination,
+    required this.entry,
+    required this.onExit,
+    required this.child,
+    super.key,
+  });
+
+  final ClinicalCalendarDestination destination;
+  final DestinationEntry entry;
+  final VoidCallback onExit;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      backgroundColor: context.clinicalColors.structure,
+      leadingWidth: entry == DestinationEntry.applicationMenu ? 88 : 96,
+      leading: TextButton.icon(
+        key: Key(
+          entry == DestinationEntry.applicationMenu
+              ? 'back-action'
+              : 'close-action',
+        ),
+        onPressed: onExit,
+        icon: Icon(
+          entry == DestinationEntry.applicationMenu
+              ? Icons.arrow_back
+              : Icons.close,
+          size: 18,
+        ),
+        label: Text(
+          entry == DestinationEntry.applicationMenu ? 'Back' : 'Close',
+        ),
+      ),
+      title: Text(destination.label),
+    ),
+    body: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: LayoutBuilder(
+          builder: (context, constraints) => GraphiteNineSliceFrame(
+            chromeInsets: constraints.maxWidth < 600
+                ? graphiteCompactDestinationInsets
+                : graphiteStatusSafeInsets,
+            contentPadding: const EdgeInsets.all(8),
+            child: GraphitePanelInterior(child: child),
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
 /// Shared workflow slots rendered through Graphite-owned chrome and assets.
 final class GraphiteApplicationShell extends StatelessWidget {
@@ -199,7 +270,7 @@ final class GraphiteApplicationShell extends StatelessWidget {
   Widget _panel(Widget child, EdgeInsets safeInsets) => GraphiteNineSliceFrame(
     chromeInsets: safeInsets,
     contentPadding: const EdgeInsets.all(8),
-    child: ClinicalCalendarPanelInterior(child: child),
+    child: GraphitePanelInterior(child: child),
   );
 }
 

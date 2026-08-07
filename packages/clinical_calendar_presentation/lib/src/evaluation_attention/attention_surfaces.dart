@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:flutter/material.dart';
 
 import '../responsive_shell.dart';
+import '../theme_contract.dart';
 import '../variant_f_theme.dart';
 import 'evaluation_attention_controller.dart';
 
@@ -252,11 +253,21 @@ final class _AttentionRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              _kindIcon(item),
-              color: _urgencyColor(context, item.urgency),
-              size: 20,
-            ),
+            if (ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
+                graphiteThemeId)
+              ThemeSemanticMarkIcon(
+                role: item.urgency == AttentionUrgency.approaching
+                    ? ThemeSemanticRole.scheduledProgress
+                    : ThemeSemanticRole.todayOrUrgent,
+                color: _urgencyColor(context, item.urgency),
+                size: 20,
+              )
+            else
+              Icon(
+                _kindIcon(item),
+                color: _urgencyColor(context, item.urgency),
+                size: 20,
+              ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(

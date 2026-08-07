@@ -101,35 +101,38 @@ final class ClinicalCalendarApp extends StatelessWidget {
           .resolveApplied(themeId);
       final themeBundle = resolution.bundle;
       final theme = themeBundle.standardPresentation.createThemeData();
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Clinical Calendar',
-        theme: theme,
-        home: ClinicalCalendarLifecycleHost(
-          onLaunchOrResume: onLaunchOrResume,
-          connectivityChanges: connectivityChanges,
-          onConnectivityChanged: onConnectivityChanged,
-          child: GraphitePresentationRecoveryScope(
-            onRestart: onPresentationRestart,
-            child: _ApplicationHost(
-              dependencies: dependencies,
-              environmentName: environmentName,
-              studentId: studentId,
-              chooseAvatar: chooseAvatar,
-              themeBundle: themeBundle,
-              identity: identity,
-              identityEmail: identityEmail,
-              onLocalCopyRemoved: onLocalCopyRemoved,
-              createAccountBackup: createAccountBackup,
-              portableBackupWorkflows: portableBackupWorkflows,
-              exportWorkflowFactory: exportWorkflowFactory,
-              recoveryStore: recoveryStore,
-              recoveryService: recoveryService,
-              recoveryProofGate: recoveryProofGate,
-              notificationInteractions: notificationInteractions,
-              notificationDevicePolicyStore: notificationDevicePolicyStore,
-              notificationDeviceClass: notificationDeviceClass,
-              scheduleDateFactory: scheduleDateFactory,
+      return GraphitePresentationFailureBoundary(
+        onRestart: onPresentationRestart,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Clinical Calendar',
+          theme: theme,
+          home: ClinicalCalendarLifecycleHost(
+            onLaunchOrResume: onLaunchOrResume,
+            connectivityChanges: connectivityChanges,
+            onConnectivityChanged: onConnectivityChanged,
+            child: ClinicalCalendarSemanticMarkScope(
+              marks: themeBundle.marks,
+              child: _ApplicationHost(
+                dependencies: dependencies,
+                environmentName: environmentName,
+                studentId: studentId,
+                chooseAvatar: chooseAvatar,
+                themeBundle: themeBundle,
+                identity: identity,
+                identityEmail: identityEmail,
+                onLocalCopyRemoved: onLocalCopyRemoved,
+                createAccountBackup: createAccountBackup,
+                portableBackupWorkflows: portableBackupWorkflows,
+                exportWorkflowFactory: exportWorkflowFactory,
+                recoveryStore: recoveryStore,
+                recoveryService: recoveryService,
+                recoveryProofGate: recoveryProofGate,
+                notificationInteractions: notificationInteractions,
+                notificationDevicePolicyStore: notificationDevicePolicyStore,
+                notificationDeviceClass: notificationDeviceClass,
+                scheduleDateFactory: scheduleDateFactory,
+              ),
             ),
           ),
         ),
@@ -960,12 +963,10 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   Widget build(BuildContext context) {
     final destination = _destination;
     if (destination != null) {
-      return DestinationSurface(
+      return widget.themeBundle.shellRenderer.buildDestination(
         destination: destination,
         entry: _entry,
         onExit: _exitDestination,
-        frameBuilder: (child) =>
-            widget.themeBundle.shellRenderer.buildFrame(child: child),
         child: _destinationBody(destination),
       );
     }

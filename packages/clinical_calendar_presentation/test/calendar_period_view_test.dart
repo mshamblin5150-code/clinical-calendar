@@ -2,6 +2,8 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/src/calendar/calendar_data_source.dart';
 import 'package:clinical_calendar_presentation/src/calendar/calendar_models.dart';
 import 'package:clinical_calendar_presentation/src/calendar/calendar_period_view.dart';
+import 'package:clinical_calendar_presentation/src/graphite_theme.dart';
+import 'package:clinical_calendar_presentation/src/theme_contract.dart';
 import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +12,24 @@ const _studentId = '00000000-0000-4000-8000-000000000001';
 final _today = LocalDate(2026, 8, 3);
 
 void main() {
+  testWidgets('Graphite Calendar renders its bundle-owned marks', (
+    tester,
+  ) async {
+    await _pumpCalendar(
+      tester,
+      source: _MemoryCalendarDataSource(_snapshot()),
+      graphite: true,
+    );
+
+    for (final role in const [
+      ThemeSemanticRole.workShift,
+      ThemeSemanticRole.clinicalSession,
+      ThemeSemanticRole.protectedDay,
+    ]) {
+      expect(find.byKey(Key('theme-mark-${role.name}')), findsWidgets);
+    }
+  });
+
   testWidgets('Month, Week, and Agenda navigate their correct periods', (
     tester,
   ) async {
@@ -260,6 +280,7 @@ Future<void> _pumpCalendar(
   ValueChanged<Set<LocalDate>>? onSelectionChanged,
   ValueChanged<CalendarItemReference>? onOpenItem,
   bool bounded = false,
+  bool graphite = false,
 }) async {
   tester.view.physicalSize = surfaceSize;
   tester.view.devicePixelRatio = 1;
@@ -278,12 +299,17 @@ Future<void> _pumpCalendar(
     onOpenItem: onOpenItem,
   );
   await tester.pumpWidget(
-    MaterialApp(
-      theme: buildVariantFTheme(),
-      home: Scaffold(
-        body: bounded
-            ? SizedBox.expand(child: calendar)
-            : SingleChildScrollView(child: calendar),
+    ClinicalCalendarSemanticMarkScope(
+      marks: graphite
+          ? const GraphiteThemeBundle().marks
+          : const VariantFThemeBundle().marks,
+      child: MaterialApp(
+        theme: graphite ? buildGraphiteTheme() : buildVariantFTheme(),
+        home: Scaffold(
+          body: bounded
+              ? SizedBox.expand(child: calendar)
+              : SingleChildScrollView(child: calendar),
+        ),
       ),
     ),
   );

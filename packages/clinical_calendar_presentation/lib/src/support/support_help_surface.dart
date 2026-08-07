@@ -123,16 +123,44 @@ final class SupportHelpSurface extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: Semantics(
                     label: '${state.label} visual sample',
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: state.color,
-                        border: Border.all(
-                          color: context.clinicalColors.primaryText,
-                        ),
-                      ),
-                    ),
+                    child:
+                        ClinicalCalendarSemanticMarkScope.maybeOf(
+                              context,
+                            )?.themeId ==
+                            graphiteThemeId
+                        ? SizedBox.square(
+                            dimension: 32,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: state.color,
+                                    border: Border.all(
+                                      color: context.clinicalColors.primaryText,
+                                    ),
+                                  ),
+                                ),
+                                ThemeSemanticMarkIcon(
+                                  role: state.role,
+                                  size: 18,
+                                  color: context.clinicalColors.primaryText,
+                                ),
+                              ],
+                            ),
+                          )
+                        : Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: state.color,
+                              border: Border.all(
+                                color: context.clinicalColors.primaryText,
+                              ),
+                            ),
+                          ),
                   ),
                   title: Text(state.label),
                   subtitle: Text(state.description),

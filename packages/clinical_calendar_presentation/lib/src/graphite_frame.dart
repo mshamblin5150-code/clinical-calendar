@@ -1,6 +1,9 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'code_only_presentation_recovery.dart';
 
 const graphiteFrameAsset = 'assets/graphite_raster/panel-nine-slice-v1.png';
 const graphiteCalendarSafeInsets = EdgeInsets.fromLTRB(38, 46, 38, 46);
@@ -8,22 +11,63 @@ const graphitePlacementsSafeInsets = EdgeInsets.fromLTRB(30, 44, 30, 44);
 const graphitePlanningSafeInsets = EdgeInsets.fromLTRB(34, 46, 34, 42);
 const graphiteStatusSafeInsets = EdgeInsets.fromLTRB(30, 44, 34, 44);
 
-final class GraphitePresentationRecoveryScope extends InheritedWidget {
-  const GraphitePresentationRecoveryScope({
-    required this.onRestart,
-    required super.child,
+final class GraphitePresentationFailureBoundary extends StatefulWidget {
+  const GraphitePresentationFailureBoundary({
+    required this.child,
+    this.onRestart,
     super.key,
   });
 
+  final Widget child;
   final VoidCallback? onRestart;
 
-  static VoidCallback? restartOf(BuildContext context) => context
-      .dependOnInheritedWidgetOfExactType<GraphitePresentationRecoveryScope>()
-      ?.onRestart;
+  static void report(BuildContext context, Object error) => context
+      .dependOnInheritedWidgetOfExactType<_GraphiteFailureReporter>()
+      ?.onFailure(error);
 
   @override
-  bool updateShouldNotify(GraphitePresentationRecoveryScope oldWidget) =>
-      oldWidget.onRestart != onRestart;
+  State<GraphitePresentationFailureBoundary> createState() =>
+      _GraphitePresentationFailureBoundaryState();
+}
+
+final class _GraphitePresentationFailureBoundaryState
+    extends State<GraphitePresentationFailureBoundary> {
+  bool _failed = false;
+
+  void _report(Object _) {
+    if (mounted && !_failed) setState(() => _failed = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_failed) {
+      final restart = widget.onRestart;
+      return CodeOnlyPresentationRecoveryApplication(
+        surfaceKey: const Key('graphite-presentation-unavailable'),
+        icon: Icons.restart_alt,
+        title: 'Presentation could not start.',
+        guidance:
+            'No Calendar or Student data was displayed. Restart the '
+            'presentation. If this continues, record the app version and '
+            'device model for Help.',
+        actionLabel: restart == null ? 'Close app' : 'Restart',
+        onAction: restart ?? SystemNavigator.pop,
+      );
+    }
+    return _GraphiteFailureReporter(onFailure: _report, child: widget.child);
+  }
+}
+
+final class _GraphiteFailureReporter extends InheritedWidget {
+  const _GraphiteFailureReporter({
+    required this.onFailure,
+    required super.child,
+  });
+
+  final ValueChanged<Object> onFailure;
+
+  @override
+  bool updateShouldNotify(_GraphiteFailureReporter oldWidget) => false;
 }
 
 /// Original Graphite housing. Only the center and edge seams stretch.
@@ -46,13 +90,13 @@ final class GraphiteNineSliceFrame extends StatefulWidget {
 final class _GraphiteNineSliceFrameState extends State<GraphiteNineSliceFrame> {
   ImageStream? _stream;
   ImageInfo? _image;
-  bool _failed = false;
   late final ImageStreamListener _listener = ImageStreamListener(
     (image, _) {
       if (mounted) setState(() => _image = image);
     },
     onError: (Object error, StackTrace? stackTrace) {
-      if (mounted) setState(() => _failed = true);
+      if (!mounted) return;
+      GraphitePresentationFailureBoundary.report(context, error);
     },
   );
 
@@ -67,7 +111,6 @@ final class _GraphiteNineSliceFrameState extends State<GraphiteNineSliceFrame> {
     _stream?.removeListener(_listener);
     _image?.dispose();
     _image = null;
-    _failed = false;
     _stream = next..addListener(_listener);
   }
 
@@ -79,50 +122,18 @@ final class _GraphiteNineSliceFrameState extends State<GraphiteNineSliceFrame> {
   }
 
   @override
-  Widget build(BuildContext context) => _failed
-      ? ColoredBox(
-          key: const Key('graphite-asset-recovery'),
-          color: const Color(0xFF0D1013),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Presentation asset unavailable.',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'No Calendar or Student data is shown in this panel. '
-                    'Record the app version and device model for Help.',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: GraphitePresentationRecoveryScope.restartOf(
-                      context,
-                    ),
-                    child: const Text('Restart'),
-                  ),
-                ],
-              ),
-            ),
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _image == null
+        ? null
+        : _GraphiteNineSlicePainter(
+            image: _image!.image,
+            destinationInsets: widget.chromeInsets,
           ),
-        )
-      : CustomPaint(
-          painter: _image == null
-              ? null
-              : _GraphiteNineSlicePainter(
-                  image: _image!.image,
-                  destinationInsets: widget.chromeInsets,
-                ),
-          child: Padding(
-            padding: widget.chromeInsets.add(widget.contentPadding),
-            child: ClipRect(clipBehavior: Clip.hardEdge, child: widget.child),
-          ),
-        );
+    child: Padding(
+      padding: widget.chromeInsets.add(widget.contentPadding),
+      child: ClipRect(clipBehavior: Clip.hardEdge, child: widget.child),
+    ),
+  );
 }
 
 final class _GraphiteNineSlicePainter extends CustomPainter {

@@ -4,6 +4,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../date_input.dart';
+import '../theme_contract.dart';
 import '../variant_f_theme.dart';
 import 'calendar_data_source.dart';
 import 'calendar_models.dart';
@@ -547,24 +548,37 @@ final class _CompactMarkers extends StatelessWidget {
   final List<CalendarEntry> entries;
 
   @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 3,
-    runSpacing: 3,
-    children: [
-      for (final entry in entries.take(6))
-        Container(
-          key: Key('compact-${entry.kind.name}-${entry.id}'),
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(
-            color: _entryAccent(context, entry),
-            shape: entry.kind == CalendarEntryKind.protectedDay
-                ? BoxShape.rectangle
-                : BoxShape.circle,
-          ),
-        ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final graphite =
+        ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
+        graphiteThemeId;
+    return Wrap(
+      spacing: 3,
+      runSpacing: 3,
+      children: [
+        for (final entry in entries.take(6))
+          if (graphite)
+            ThemeSemanticMarkIcon(
+              key: Key('compact-${entry.kind.name}-${entry.id}'),
+              role: _entryRole(entry.kind),
+              size: 11,
+              color: _entryAccent(context, entry),
+            )
+          else
+            Container(
+              key: Key('compact-${entry.kind.name}-${entry.id}'),
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: _entryAccent(context, entry),
+                shape: entry.kind == CalendarEntryKind.protectedDay
+                    ? BoxShape.rectangle
+                    : BoxShape.circle,
+              ),
+            ),
+      ],
+    );
+  }
 }
 
 final class _MonthEventCard extends StatelessWidget {
@@ -602,11 +616,28 @@ final class _MonthEventCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 10),
             ),
-            Text(
-              entry.assignment ?? entry.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 10),
+            Row(
+              children: [
+                if (ClinicalCalendarSemanticMarkScope.maybeOf(
+                      context,
+                    )?.themeId ==
+                    graphiteThemeId) ...[
+                  ThemeSemanticMarkIcon(
+                    role: _entryRole(entry.kind),
+                    size: 11,
+                    color: _entryAccent(context, entry),
+                  ),
+                  const SizedBox(width: 3),
+                ],
+                Expanded(
+                  child: Text(
+                    entry.assignment ?? entry.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -929,8 +960,8 @@ final class _AgendaAssignment extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Icon(
-        _entryIcon(entry.kind),
+      ThemeSemanticMarkIcon(
+        role: _entryRole(entry.kind),
         size: 17,
         color: _entryAccent(context, entry),
       ),
@@ -977,7 +1008,25 @@ final class _PeriodEntryRow extends StatelessWidget {
                 : entry.timeLabel(twelveHour: twelveHourTime),
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          Text(entry.title, style: Theme.of(context).textTheme.labelLarge),
+          Row(
+            children: [
+              if (ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
+                  graphiteThemeId) ...[
+                ThemeSemanticMarkIcon(
+                  role: _entryRole(entry.kind),
+                  size: 16,
+                  color: _entryAccent(context, entry),
+                ),
+                const SizedBox(width: 5),
+              ],
+              Expanded(
+                child: Text(
+                  entry.title,
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+            ],
+          ),
           if (entry.assignment != null)
             Text(
               entry.assignment!,
@@ -1204,10 +1253,10 @@ Color _entryAccent(BuildContext context, CalendarEntry entry) =>
         context.clinicalColors.protectedDayAccent,
     };
 
-IconData _entryIcon(CalendarEntryKind kind) => switch (kind) {
-  CalendarEntryKind.workShift => Icons.work_outline,
-  CalendarEntryKind.clinicalSession => Icons.medical_services_outlined,
-  CalendarEntryKind.protectedDay => Icons.shield_outlined,
+ThemeSemanticRole _entryRole(CalendarEntryKind kind) => switch (kind) {
+  CalendarEntryKind.workShift => ThemeSemanticRole.workShift,
+  CalendarEntryKind.clinicalSession => ThemeSemanticRole.clinicalSession,
+  CalendarEntryKind.protectedDay => ThemeSemanticRole.protectedDay,
 };
 
 String _dateSemanticLabel(

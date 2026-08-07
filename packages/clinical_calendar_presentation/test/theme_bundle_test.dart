@@ -274,6 +274,79 @@ void main() {
     expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
     expect(find.byType(VariantFNineSliceFrame), findsNothing);
   });
+
+  testWidgets(
+    'Graphite destination keeps compact chrome and no Variant frame',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: graphite.standardPresentation.createThemeData(),
+          home: graphite.shellRenderer.buildDestination(
+            destination: ClinicalCalendarDestination.settings,
+            entry: DestinationEntry.direct,
+            onExit: _noop,
+            child: const ShellPanel(
+              label: 'Settings fixture',
+              child: Text('Fictional content'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VariantFNineSliceFrame), findsNothing);
+      expect(
+        tester
+            .widget<GraphiteNineSliceFrame>(find.byType(GraphiteNineSliceFrame))
+            .chromeInsets,
+        graphiteCompactDestinationInsets,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('late Graphite failure replaces the complete application', (
+    tester,
+  ) async {
+    var restarted = false;
+    await tester.pumpWidget(
+      GraphitePresentationFailureBoundary(
+        onRestart: () => restarted = true,
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Column(
+                children: [
+                  const Text('Fictional Student calendar data'),
+                  FilledButton(
+                    onPressed: () => GraphitePresentationFailureBoundary.report(
+                      context,
+                      StateError('late decode'),
+                    ),
+                    child: const Text('Fail frame'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Fail frame'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('graphite-presentation-unavailable')),
+      findsOneWidget,
+    );
+    expect(find.text('Fictional Student calendar data'), findsNothing);
+    await tester.tap(find.text('Restart'));
+    expect(restarted, isTrue);
+  });
 }
 
 Widget _shellHarness({

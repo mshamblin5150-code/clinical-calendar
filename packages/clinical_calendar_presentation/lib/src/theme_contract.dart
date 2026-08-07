@@ -92,6 +92,13 @@ abstract interface class ClinicalCalendarShellRenderer
   });
 
   Widget buildFrame({required Widget child});
+
+  Widget buildDestination({
+    required ClinicalCalendarDestination destination,
+    required DestinationEntry entry,
+    required VoidCallback onExit,
+    required Widget child,
+  });
 }
 
 final class VariantFShellRenderer implements ClinicalCalendarShellRenderer {
@@ -131,6 +138,19 @@ final class VariantFShellRenderer implements ClinicalCalendarShellRenderer {
     statusLight: true,
     child: child,
   );
+
+  @override
+  Widget buildDestination({
+    required ClinicalCalendarDestination destination,
+    required DestinationEntry entry,
+    required VoidCallback onExit,
+    required Widget child,
+  }) => DestinationSurface(
+    destination: destination,
+    entry: entry,
+    onExit: onExit,
+    child: child,
+  );
 }
 
 final class GraphiteShellRenderer implements ClinicalCalendarShellRenderer {
@@ -167,7 +187,20 @@ final class GraphiteShellRenderer implements ClinicalCalendarShellRenderer {
   Widget buildFrame({required Widget child}) => GraphiteNineSliceFrame(
     chromeInsets: graphiteStatusSafeInsets,
     contentPadding: const EdgeInsets.all(8),
-    child: ClinicalCalendarPanelInterior(child: child),
+    child: GraphitePanelInterior(child: child),
+  );
+
+  @override
+  Widget buildDestination({
+    required ClinicalCalendarDestination destination,
+    required DestinationEntry entry,
+    required VoidCallback onExit,
+    required Widget child,
+  }) => GraphiteDestinationSurface(
+    destination: destination,
+    entry: entry,
+    onExit: onExit,
+    child: child,
   );
 }
 
@@ -269,12 +302,69 @@ final class ClinicalCalendarSemanticMarks implements ThemeOwnedComponent {
   @override
   final String themeId;
   final List<ThemeSemanticMark> marks;
+
+  ThemeSemanticMark forRole(ThemeSemanticRole role) =>
+      marks.singleWhere((mark) => mark.role == role);
 }
+
+final class ClinicalCalendarSemanticMarkScope extends InheritedWidget {
+  const ClinicalCalendarSemanticMarkScope({
+    required this.marks,
+    required super.child,
+    super.key,
+  });
+
+  final ClinicalCalendarSemanticMarks marks;
+
+  static ClinicalCalendarSemanticMarks? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<ClinicalCalendarSemanticMarkScope>()
+      ?.marks;
+
+  @override
+  bool updateShouldNotify(ClinicalCalendarSemanticMarkScope oldWidget) =>
+      oldWidget.marks != marks;
+}
+
+final class ThemeSemanticMarkIcon extends StatelessWidget {
+  const ThemeSemanticMarkIcon({
+    required this.role,
+    this.size,
+    this.color,
+    super.key,
+  });
+
+  final ThemeSemanticRole role;
+  final double? size;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final mark = ClinicalCalendarSemanticMarkScope.maybeOf(
+      context,
+    )?.forRole(role);
+    return Icon(
+      mark?.icon ?? _defaultMarkIcon(role),
+      key: Key('theme-mark-${role.name}'),
+      size: size,
+      color: color,
+      semanticLabel: mark?.description,
+    );
+  }
+}
+
+IconData _defaultMarkIcon(ThemeSemanticRole role) => switch (role) {
+  ThemeSemanticRole.clinicalSession => Icons.medical_services_outlined,
+  ThemeSemanticRole.workShift => Icons.work_outline,
+  ThemeSemanticRole.protectedDay => Icons.shield_outlined,
+  ThemeSemanticRole.scheduledProgress => Icons.schedule_outlined,
+  ThemeSemanticRole.todayOrUrgent => Icons.today_outlined,
+};
 
 /// One theme-specific calendar-state explanation used by Help.
 @immutable
 final class CalendarStateGuide {
   const CalendarStateGuide({
+    required this.role,
     required this.label,
     required this.description,
     required this.color,
@@ -282,6 +372,7 @@ final class CalendarStateGuide {
     required this.enhancedBehavior,
   });
 
+  final ThemeSemanticRole role;
   final String label;
   final String description;
   final Color color;
@@ -307,6 +398,7 @@ final class VariantFHelpGuide implements ThemeHelpGuide {
   @override
   List<CalendarStateGuide> get calendarStates => const [
     CalendarStateGuide(
+      role: ThemeSemanticRole.clinicalSession,
       label: 'Clinical Session',
       description: 'Collective green identifies clinical activity.',
       color: VariantFColors.primary,
@@ -314,6 +406,7 @@ final class VariantFHelpGuide implements ThemeHelpGuide {
       enhancedBehavior: 'The icon and label receive stronger emphasis.',
     ),
     CalendarStateGuide(
+      role: ThemeSemanticRole.workShift,
       label: 'Work Shift',
       description: 'Gunmetal and green-steel identify work activity.',
       color: VariantFColors.workMachinery,
@@ -322,6 +415,7 @@ final class VariantFHelpGuide implements ThemeHelpGuide {
           'The icon, label, and outline receive stronger emphasis.',
     ),
     CalendarStateGuide(
+      role: ThemeSemanticRole.protectedDay,
       label: 'Protected Day',
       description: 'Dormant graphite and silver identify protected time.',
       color: VariantFColors.protectedDayAccent,
@@ -329,6 +423,7 @@ final class VariantFHelpGuide implements ThemeHelpGuide {
       enhancedBehavior: 'The shield and label receive stronger emphasis.',
     ),
     CalendarStateGuide(
+      role: ThemeSemanticRole.scheduledProgress,
       label: 'Scheduled progress',
       description: 'Industrial ochre identifies hours already scheduled.',
       color: VariantFColors.scheduled,
@@ -337,6 +432,7 @@ final class VariantFHelpGuide implements ThemeHelpGuide {
           'The label and progress boundary become more prominent.',
     ),
     CalendarStateGuide(
+      role: ThemeSemanticRole.todayOrUrgent,
       label: 'Today or urgent',
       description: 'Optic red is reserved for Today and urgent attention.',
       color: VariantFColors.urgent,
@@ -358,6 +454,7 @@ final class GraphiteHelpGuide implements ThemeHelpGuide {
   @override
   List<CalendarStateGuide> get calendarStates => const [
     CalendarStateGuide(
+      role: ThemeSemanticRole.clinicalSession,
       label: 'Clinical Session',
       description:
           'Cobalt and a medical-services mark identify clinical activity.',
@@ -366,6 +463,7 @@ final class GraphiteHelpGuide implements ThemeHelpGuide {
       enhancedBehavior: 'The icon, label, and boundary become more prominent.',
     ),
     CalendarStateGuide(
+      role: ThemeSemanticRole.workShift,
       label: 'Work Shift',
       description: 'Violet and a work mark identify employment activity.',
       color: GraphiteColors.workAccent,
@@ -374,6 +472,7 @@ final class GraphiteHelpGuide implements ThemeHelpGuide {
           'The briefcase, rail, and label receive stronger emphasis.',
     ),
     CalendarStateGuide(
+      role: ThemeSemanticRole.protectedDay,
       label: 'Protected Day',
       description: 'Brass and a shield mark identify protected time.',
       color: GraphiteColors.protectedDayAccent,
@@ -382,6 +481,7 @@ final class GraphiteHelpGuide implements ThemeHelpGuide {
           'The shield, rail, and label receive stronger emphasis.',
     ),
     CalendarStateGuide(
+      role: ThemeSemanticRole.scheduledProgress,
       label: 'Scheduled progress',
       description: 'Cobalt identifies hours already scheduled.',
       color: GraphiteColors.scheduled,
@@ -390,6 +490,7 @@ final class GraphiteHelpGuide implements ThemeHelpGuide {
           'The clock, hatch, and progress boundary become prominent.',
     ),
     CalendarStateGuide(
+      role: ThemeSemanticRole.todayOrUrgent,
       label: 'Today or urgent',
       description:
           'Teal identifies Today; coral with status text identifies urgent attention.',
