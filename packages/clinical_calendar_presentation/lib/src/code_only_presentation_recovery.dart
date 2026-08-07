@@ -19,7 +19,7 @@ final class CodeOnlyPresentationRecoveryApplication extends StatelessWidget {
   final String title;
   final String guidance;
   final String actionLabel;
-  final VoidCallback? onAction;
+  final VoidCallback onAction;
   final Key? actionKey;
 
   @override

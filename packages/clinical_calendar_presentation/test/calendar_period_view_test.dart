@@ -25,6 +25,7 @@ void main() {
       ThemeSemanticRole.workShift,
       ThemeSemanticRole.clinicalSession,
       ThemeSemanticRole.protectedDay,
+      ThemeSemanticRole.todayOrUrgent,
     ]) {
       expect(find.byKey(Key('theme-mark-${role.name}')), findsWidgets);
     }

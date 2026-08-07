@@ -4,6 +4,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'calendar/calendar_data_source.dart';
 import 'calendar/calendar_models.dart';
@@ -138,6 +139,7 @@ final class ClinicalCalendarApp extends StatelessWidget {
         ),
       );
     } on Object {
+      final restart = onPresentationRestart;
       return CodeOnlyPresentationRecoveryApplication(
         surfaceKey: const Key('theme-construction-recovery'),
         icon: Icons.restart_alt,
@@ -146,9 +148,9 @@ final class ClinicalCalendarApp extends StatelessWidget {
             'No Calendar or Student data was displayed. Restart the '
             'presentation. If this continues, record the app version '
             'and device model for Help.',
-        actionLabel: 'Restart',
+        actionLabel: restart == null ? 'Close app' : 'Restart',
         actionKey: const Key('restart-presentation'),
-        onAction: onPresentationRestart,
+        onAction: restart ?? SystemNavigator.pop,
       );
     }
   }
