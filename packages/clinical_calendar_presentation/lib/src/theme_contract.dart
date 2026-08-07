@@ -872,6 +872,11 @@ final class ClinicalCalendarThemeBundleRegistry {
 
   List<ClinicalCalendarThemeBundle> get selectableBundles => const [];
 
+  /// Complete bundles that may be inspected before catalog activation.
+  /// Inspection does not make a bundle selectable or applied.
+  List<ClinicalCalendarThemeBundle> get galleryBundles =>
+      List.unmodifiable(_bundles.values);
+
   ClinicalCalendarThemeBundle resolveRoot(String id) {
     final bundle = _bundles[id];
     if (bundle == null) {

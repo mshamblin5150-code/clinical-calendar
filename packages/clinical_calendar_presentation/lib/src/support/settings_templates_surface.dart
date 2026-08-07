@@ -3,6 +3,8 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../responsive_shell.dart';
+import '../theme_contract.dart';
+import '../theme_gallery.dart';
 import '../time_input.dart';
 import '../variant_f_theme.dart';
 
@@ -230,36 +232,6 @@ final class _SettingsTemplatesSurfaceState
                   ),
                 ),
                 _field(
-                  DropdownButtonFormField<String>(
-                    key: const Key('theme-setting'),
-                    isExpanded: true,
-                    initialValue: _themeId == StudentSettings.variantFThemeId
-                        ? _themeId
-                        : null,
-                    decoration: const InputDecoration(labelText: 'Theme'),
-                    items: const [
-                      DropdownMenuItem(
-                        value: StudentSettings.variantFThemeId,
-                        child: Text('Containment Drone 47-Alpha'),
-                      ),
-                    ],
-                    onChanged: (value) => setState(() => _themeId = value!),
-                  ),
-                  width: 280,
-                ),
-                if (_themeId != StudentSettings.variantFThemeId)
-                  _field(
-                    Semantics(
-                      key: const Key('theme-fallback-in-use'),
-                      label: 'Graphite, Fallback in use',
-                      child: const Text(
-                        'Saved theme unavailable in this app version.\n'
-                        'Graphite — Fallback in use',
-                      ),
-                    ),
-                    width: 280,
-                  ),
-                _field(
                   DropdownButtonFormField<SynchronizationPreference>(
                     key: const Key('synchronization-setting'),
                     isExpanded: true,
@@ -282,6 +254,19 @@ final class _SettingsTemplatesSurfaceState
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'THEME GALLERY',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            ThemeGallery(
+              appliedThemeId: _themeId,
+              selectedThemeId:
+                  _themeId == variantFThemeId || _themeId == graphiteThemeId
+                  ? _themeId
+                  : graphiteThemeId,
             ),
             const SizedBox(height: 12),
             Text(

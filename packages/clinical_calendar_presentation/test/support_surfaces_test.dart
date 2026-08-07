@@ -190,8 +190,6 @@ void main() {
         size: const Size(768, 1024),
       );
 
-      expect(find.textContaining('4 hours automatically'), findsOneWidget);
-      expect(find.text('Family Medicine / Jordan Lee'), findsOneWidget);
       final settingsScrollable = find.descendant(
         of: find.byKey(const Key('settings-templates-surface')),
         matching: find.byType(Scrollable),
@@ -202,6 +200,13 @@ void main() {
         settingsScrollable.first,
       );
       await tester.tap(find.byKey(const Key('weekly-summary-setting')));
+      await _bringIntoView(
+        tester,
+        find.textContaining('4 hours automatically'),
+        settingsScrollable.first,
+      );
+      expect(find.textContaining('4 hours automatically'), findsOneWidget);
+      expect(find.text('Family Medicine / Jordan Lee'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.byKey(const Key('add-template-action')),
         300,
@@ -286,11 +291,21 @@ void main() {
         matching: find.byType(Scrollable),
       );
 
+      await _bringIntoView(
+        tester,
+        find.byKey(const Key('work-shift-first-lead-setting')),
+        scrollable.first,
+      );
       await tester.tap(find.byKey(const Key('work-shift-first-lead-setting')));
       await tester.pumpAndSettle();
       expect(find.text('Never'), findsOneWidget);
       await tester.tap(find.text('12 hours before').last);
       await tester.pumpAndSettle();
+      await _bringIntoView(
+        tester,
+        find.byKey(const Key('work-shift-notifications-setting')),
+        scrollable.first,
+      );
       await tester.tap(
         find.byKey(const Key('work-shift-notifications-setting')),
       );
@@ -431,16 +446,18 @@ void main() {
       size: const Size(768, 1024),
     );
 
-    expect(find.byKey(const Key('theme-fallback-in-use')), findsOneWidget);
-    expect(find.textContaining('Fallback in use'), findsOneWidget);
-    expect(
-      tester
-          .widget<DropdownButtonFormField<String>>(
-            find.byKey(const Key('theme-setting')),
-          )
-          .initialValue,
-      isNull,
+    final scrollable = find.descendant(
+      of: find.byKey(const Key('settings-templates-surface')),
+      matching: find.byType(Scrollable),
     );
+    await _bringIntoView(
+      tester,
+      find.byKey(const Key('theme-gallery')),
+      scrollable.first,
+    );
+    expect(find.byKey(const Key('theme-gallery')), findsOneWidget);
+    expect(find.textContaining('Fallback in use'), findsOneWidget);
+    expect(find.text('Applied'), findsNothing);
   });
 
   testWidgets('Settings does not label pre-activation Graphite as Applied', (
@@ -459,9 +476,18 @@ void main() {
       size: const Size(768, 1024),
     );
 
-    expect(find.byKey(const Key('theme-fallback-in-use')), findsOneWidget);
+    final scrollable = find.descendant(
+      of: find.byKey(const Key('settings-templates-surface')),
+      matching: find.byType(Scrollable),
+    );
+    await _bringIntoView(
+      tester,
+      find.byKey(const Key('theme-gallery')),
+      scrollable.first,
+    );
+    expect(find.byKey(const Key('theme-gallery')), findsOneWidget);
     expect(find.textContaining('Fallback in use'), findsOneWidget);
-    expect(find.textContaining('Graphite — Applied'), findsNothing);
+    expect(find.text('Applied'), findsNothing);
   });
 
   testWidgets('Help keeps shared workflows separate from theme bundle', (
