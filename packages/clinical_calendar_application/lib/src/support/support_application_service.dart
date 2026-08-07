@@ -126,12 +126,6 @@ final class SupportApplicationService {
         'Student Settings changed before they could be saved. Reload and try again.',
         cause: error,
       );
-    } on Object catch (error) {
-      throw RepositoryException(
-        RepositoryFailureKind.persistenceFailure,
-        'Student Settings could not be saved. Try again.',
-        cause: error,
-      );
     }
   }
 

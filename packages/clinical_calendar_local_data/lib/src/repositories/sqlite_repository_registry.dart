@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 // ignore: implementation_imports
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../backup/portable_backup_crypto.dart';
 import '../backup/portable_backup_models.dart';
@@ -78,7 +79,15 @@ final class SqliteRepositoryRegistry
     _requireInitialized();
     final repositories = _Repositories(this, writable: true);
     try {
-      return _database.transaction(() => callback(repositories));
+      try {
+        return _database.transaction(() => callback(repositories));
+      } on SqliteException catch (error) {
+        throw RepositoryException(
+          RepositoryFailureKind.persistenceFailure,
+          'The local database write failed.',
+          cause: error,
+        );
+      }
     } finally {
       repositories.close();
     }

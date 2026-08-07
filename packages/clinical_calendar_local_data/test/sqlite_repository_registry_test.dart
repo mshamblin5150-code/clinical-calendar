@@ -403,7 +403,7 @@ void main() {
             mutation: _mutation(31),
           );
         }),
-        throwsA(isA<SqliteException>()),
+        throwsA(_repositoryFailure(RepositoryFailureKind.persistenceFailure)),
       );
 
       await registry.read((repositories) {

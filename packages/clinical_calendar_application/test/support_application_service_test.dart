@@ -300,7 +300,10 @@ final class _MemoryStudentSettingsRepository
   }) {
     if (failNextPut) {
       failNextPut = false;
-      throw StateError('simulated settings persistence failure');
+      throw const RepositoryException(
+        RepositoryFailureKind.persistenceFailure,
+        'Simulated settings persistence failure.',
+      );
     }
     _expected(expectedRevision, _record?.revision ?? 0);
     _record = StoredDomainRecord(
