@@ -769,12 +769,13 @@ void main() {
     },
   );
 
-  test('theme Help registry supplies a safe unknown-theme fallback', () {
-    final guide = ThemeHelpGuideRegistry.standard().resolve('future-theme');
-
-    expect(guide, isA<GenericThemeHelpGuide>());
-    expect(guide.themeId, 'future-theme');
-    expect(guide.calendarStates, isNotEmpty);
+  test('partial root registry rejects an unavailable theme', () {
+    expect(
+      () => ClinicalCalendarThemeBundleRegistry.standard.resolveRoot(
+        'future-theme',
+      ),
+      throwsA(isA<InvalidThemeBundle>()),
+    );
   });
 
   testWidgets('Variant F exposes semantic colors and shallow metrics', (

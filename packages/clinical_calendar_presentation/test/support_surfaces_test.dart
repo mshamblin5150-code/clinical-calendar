@@ -415,10 +415,10 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Help keeps shared workflows separate from theme fallback', (
+  testWidgets('Help keeps shared workflows separate from theme bundle', (
     tester,
   ) async {
-    final guide = ThemeHelpGuideRegistry.standard().resolve('future-theme');
+    final guide = const VariantFThemeBundle().helpGuide;
     await _pump(
       tester,
       SupportHelpSurface(themeGuide: guide),
@@ -428,15 +428,21 @@ void main() {
     for (final section in SupportHelpSurface.workflowSections) {
       expect(find.text(section.title), findsOneWidget);
     }
-    await tester.scrollUntilVisible(find.text('CALENDAR STATES'), 400);
-    expect(find.text('Calendar states'.toUpperCase()), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('CONTAINMENT DRONE 47-ALPHA CALENDAR STATES'),
+      400,
+    );
+    expect(
+      find.text('Containment Drone 47-Alpha calendar states'.toUpperCase()),
+      findsOneWidget,
+    );
     expect(find.textContaining('offline source of truth'), findsOneWidget);
     expect(
       find.textContaining('not Synced until a server acknowledges'),
       findsOneWidget,
     );
     expect(find.textContaining('delivery remains deferred'), findsOneWidget);
-    expect(find.text('Calendar state'), findsOneWidget);
+    expect(find.text('Clinical Session'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
