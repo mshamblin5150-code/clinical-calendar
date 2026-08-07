@@ -114,10 +114,22 @@ final class SupportApplicationService {
         );
       });
     } on RepositoryException catch (error) {
-      if (error.kind != RepositoryFailureKind.concurrentModification) rethrow;
+      if (error.kind != RepositoryFailureKind.concurrentModification) {
+        throw RepositoryException(
+          error.kind,
+          'Student Settings could not be saved. Try again.',
+          cause: error,
+        );
+      }
       throw RepositoryException(
         error.kind,
         'Student Settings changed before they could be saved. Reload and try again.',
+        cause: error,
+      );
+    } on Object catch (error) {
+      throw RepositoryException(
+        RepositoryFailureKind.persistenceFailure,
+        'Student Settings could not be saved. Try again.',
         cause: error,
       );
     }

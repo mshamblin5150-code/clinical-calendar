@@ -12,6 +12,7 @@ enum RepositoryFailureKind {
   concurrentModification,
   idempotencyConflict,
   corruptData,
+  persistenceFailure,
   closed,
   uninitialized,
 }
