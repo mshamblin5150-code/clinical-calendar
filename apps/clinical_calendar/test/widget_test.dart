@@ -8,6 +8,7 @@ import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_local_data/clinical_calendar_local_data.dart';
 import 'package:clinical_calendar_platform/clinical_calendar_platform.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_presentation/clinical_calendar_identity_presentation.dart';
 import 'package:clinical_calendar_sync/clinical_calendar_sync.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -433,6 +434,12 @@ void main() {
     await tester.pumpWidget(root);
 
     expect(
+      Theme.of(
+        tester.element(find.byType(PasswordlessSignInSurface)),
+      ).colorScheme.primary,
+      GraphiteColors.primary,
+    );
+    expect(
       find.textContaining('No password or Google account'),
       findsOneWidget,
     );
@@ -456,6 +463,7 @@ void main() {
     );
     expect(application.identity, isNotNull);
     expect(application.identityEmail, 'student@example.com');
+    expect(application.themeId, graphiteThemeId);
     expect(application.onLocalCopyRemoved, isNotNull);
     expect(storage.values[StableStudentOwner.storageKey], _identityStudentId);
     expect(

@@ -17,6 +17,7 @@ import 'evaluation_attention/attention_surfaces.dart';
 import 'evaluation_attention/evaluation_attention_controller.dart';
 import 'evaluation_attention/evaluation_plan_surface.dart';
 import 'exports/export_surface.dart';
+import 'graphite_frame.dart';
 import 'identity/identity_devices_surface.dart';
 import 'placements/placement_management_surface.dart';
 import 'placements/placement_progress_controller.dart';
@@ -61,6 +62,7 @@ final class ClinicalCalendarApp extends StatelessWidget {
     this.recoveryService,
     this.recoveryProofGate,
     this.scheduleDateFactory,
+    this.onPresentationRestart,
     super.key,
   });
 
@@ -89,42 +91,111 @@ final class ClinicalCalendarApp extends StatelessWidget {
   final RecoveryApplicationService? recoveryService;
   final OneShotRecoveryReauthenticationGate? recoveryProofGate;
   final ScheduleDateFactory? scheduleDateFactory;
+  final VoidCallback? onPresentationRestart;
 
   @override
   Widget build(BuildContext context) {
-    final themeBundle = ClinicalCalendarThemeBundleRegistry.standard
-        .resolveRoot(themeId);
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Clinical Calendar',
-      theme: themeBundle.standardPresentation.createThemeData(),
-      home: ClinicalCalendarLifecycleHost(
-        onLaunchOrResume: onLaunchOrResume,
-        connectivityChanges: connectivityChanges,
-        onConnectivityChanged: onConnectivityChanged,
-        child: _ApplicationHost(
-          dependencies: dependencies,
-          environmentName: environmentName,
-          studentId: studentId,
-          chooseAvatar: chooseAvatar,
-          themeBundle: themeBundle,
-          identity: identity,
-          identityEmail: identityEmail,
-          onLocalCopyRemoved: onLocalCopyRemoved,
-          createAccountBackup: createAccountBackup,
-          portableBackupWorkflows: portableBackupWorkflows,
-          exportWorkflowFactory: exportWorkflowFactory,
-          recoveryStore: recoveryStore,
-          recoveryService: recoveryService,
-          recoveryProofGate: recoveryProofGate,
-          notificationInteractions: notificationInteractions,
-          notificationDevicePolicyStore: notificationDevicePolicyStore,
-          notificationDeviceClass: notificationDeviceClass,
-          scheduleDateFactory: scheduleDateFactory,
+    try {
+      final resolution = ClinicalCalendarThemeBundleRegistry.standard
+          .resolveApplied(themeId);
+      final themeBundle = resolution.bundle;
+      final theme = themeBundle.standardPresentation.createThemeData();
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Clinical Calendar',
+        theme: theme,
+        home: ClinicalCalendarLifecycleHost(
+          onLaunchOrResume: onLaunchOrResume,
+          connectivityChanges: connectivityChanges,
+          onConnectivityChanged: onConnectivityChanged,
+          child: GraphitePresentationRecoveryScope(
+            onRestart: onPresentationRestart,
+            child: _ApplicationHost(
+              dependencies: dependencies,
+              environmentName: environmentName,
+              studentId: studentId,
+              chooseAvatar: chooseAvatar,
+              themeBundle: themeBundle,
+              identity: identity,
+              identityEmail: identityEmail,
+              onLocalCopyRemoved: onLocalCopyRemoved,
+              createAccountBackup: createAccountBackup,
+              portableBackupWorkflows: portableBackupWorkflows,
+              exportWorkflowFactory: exportWorkflowFactory,
+              recoveryStore: recoveryStore,
+              recoveryService: recoveryService,
+              recoveryProofGate: recoveryProofGate,
+              notificationInteractions: notificationInteractions,
+              notificationDevicePolicyStore: notificationDevicePolicyStore,
+              notificationDeviceClass: notificationDeviceClass,
+              scheduleDateFactory: scheduleDateFactory,
+            ),
+          ),
+        ),
+      );
+    } on Object {
+      return _ThemeConstructionRecoveryApplication(
+        onRestart: onPresentationRestart,
+      );
+    }
+  }
+}
+
+/// Code-only terminal recovery: no theme assets, shell, Calendar, or Student
+/// data are constructed on this path.
+final class _ThemeConstructionRecoveryApplication extends StatelessWidget {
+  const _ThemeConstructionRecoveryApplication({required this.onRestart});
+
+  final VoidCallback? onRestart;
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF0D1013),
+      colorScheme: const ColorScheme.dark(
+        primary: Color(0xFF37D6B4),
+        onPrimary: Color(0xFF06251E),
+        surface: Color(0xFF151A1F),
+        onSurface: Color(0xFFF4F6F7),
+      ),
+    ),
+    home: Scaffold(
+      key: const Key('theme-construction-recovery'),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.restart_alt, size: 40),
+                const SizedBox(height: 16),
+                const Text(
+                  'Presentation could not start.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'No Calendar or Student data was displayed. Restart the '
+                  'presentation. If this continues, record the app version '
+                  'and device model for Help.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  key: const Key('restart-presentation'),
+                  onPressed: onRestart,
+                  child: const Text('Restart'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 /// Bridges Flutter host lifecycle/connectivity events into synchronization.
@@ -940,6 +1011,8 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         destination: destination,
         entry: _entry,
         onExit: _exitDestination,
+        frameBuilder: (child) =>
+            widget.themeBundle.shellRenderer.buildFrame(child: child),
         child: _destinationBody(destination),
       );
     }

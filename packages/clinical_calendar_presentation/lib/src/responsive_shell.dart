@@ -41,6 +41,23 @@ const applicationMenuDestinations = <ClinicalCalendarDestination>[
 
 enum DestinationEntry { applicationMenu, direct }
 
+typedef ShellFrameBuilder = Widget Function(Widget child);
+
+/// Tells shared content that its owning theme already supplied panel chrome.
+final class ClinicalCalendarPanelInterior extends InheritedWidget {
+  const ClinicalCalendarPanelInterior({required super.child, super.key});
+
+  static bool isActive(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<
+            ClinicalCalendarPanelInterior
+          >() !=
+      null;
+
+  @override
+  bool updateShouldNotify(ClinicalCalendarPanelInterior oldWidget) => false;
+}
+
 @immutable
 final class ResponsiveShellSlots {
   const ResponsiveShellSlots({
@@ -473,6 +490,7 @@ final class DestinationSurface extends StatelessWidget {
     required this.entry,
     required this.onExit,
     required this.child,
+    required this.frameBuilder,
     super.key,
   });
 
@@ -480,6 +498,7 @@ final class DestinationSurface extends StatelessWidget {
   final DestinationEntry entry;
   final VoidCallback onExit;
   final Widget child;
+  final ShellFrameBuilder frameBuilder;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -508,12 +527,7 @@ final class DestinationSurface extends StatelessWidget {
     body: SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(10),
-        child: VariantFTacticalFrame(
-          padding: const EdgeInsets.all(8),
-          chamfer: 14,
-          statusLight: true,
-          child: child,
-        ),
+        child: frameBuilder(child),
       ),
     ),
   );
@@ -560,7 +574,8 @@ final class ShellPanel extends StatelessWidget {
         child,
       ],
     );
-    if (VariantFRasterPanelInterior.isActive(context)) {
+    if (VariantFRasterPanelInterior.isActive(context) ||
+        ClinicalCalendarPanelInterior.isActive(context)) {
       return Padding(padding: const EdgeInsets.all(8), child: content);
     }
     return VariantFTacticalFrame(

@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:flutter/material.dart';
 
 import '../date_input.dart';
+import '../graphite_theme.dart';
 
 import 'account_erasure_surface.dart';
 
@@ -112,46 +113,54 @@ final class _IdentityDevicesSurfaceState extends State<IdentityDevicesSurface> {
     var confirmed = false;
     final remove = await showDialog<bool>(
       context: context,
+      barrierColor: GraphiteColors.canvas,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text("Sign Out and Remove This Device's Copy"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                preview.hasPendingChanges
-                    ? '${preview.pendingChangeCount} pending change(s) have not reached the server and will be lost from this device.'
-                    : 'There are no pending local changes.',
-                key: const Key('pending-removal-report'),
+        builder: (context, setDialogState) => Theme(
+          data: buildGraphiteTheme(),
+          child: AlertDialog(
+            title: const Text("Sign Out and Remove This Device's Copy"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  preview.hasPendingChanges
+                      ? '${preview.pendingChangeCount} pending change(s) have not reached the server and will be lost from this device.'
+                      : 'There are no pending local changes.',
+                  key: const Key('pending-removal-report'),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Only this device copy is removed. Your account and other '
+                  'connected devices remain intact.',
+                ),
+                CheckboxListTile(
+                  key: const Key('confirm-local-removal'),
+                  value: confirmed,
+                  onChanged: (value) =>
+                      setDialogState(() => confirmed = value ?? false),
+                  title: const Text(
+                    'I understand this removes this device copy',
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Only this device copy is removed. Your account and other '
-                'connected devices remain intact.',
-              ),
-              CheckboxListTile(
-                key: const Key('confirm-local-removal'),
-                value: confirmed,
-                onChanged: (value) =>
-                    setDialogState(() => confirmed = value ?? false),
-                title: const Text('I understand this removes this device copy'),
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
+              FilledButton(
+                key: const Key('remove-local-copy'),
+                onPressed: confirmed
+                    ? () => Navigator.pop(context, true)
+                    : null,
+                child: const Text('Sign out and remove'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              key: const Key('remove-local-copy'),
-              onPressed: confirmed ? () => Navigator.pop(context, true) : null,
-              child: const Text('Sign out and remove'),
-            ),
-          ],
         ),
       ),
     );

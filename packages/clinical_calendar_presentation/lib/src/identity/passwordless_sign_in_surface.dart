@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:flutter/material.dart';
 
@@ -23,11 +25,14 @@ final class _PasswordlessSignInSurfaceState
   bool _codeSent = false;
   bool _busy = false;
   String? _error;
+  Timer? _resendCooldown;
+  bool _canResend = false;
 
   @override
   void dispose() {
     _email.dispose();
     _code.dispose();
+    _resendCooldown?.cancel();
     super.dispose();
   }
 
@@ -39,12 +44,25 @@ final class _PasswordlessSignInSurfaceState
     });
     try {
       await widget.identity.sendSignInCode(_email.text);
-      if (mounted) setState(() => _codeSent = true);
+      if (mounted) {
+        setState(() {
+          _codeSent = true;
+          _canResend = false;
+        });
+        _startResendCooldown();
+      }
     } on IdentityException catch (error) {
       if (mounted) setState(() => _error = _message(error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _startResendCooldown() {
+    _resendCooldown?.cancel();
+    _resendCooldown = Timer(const Duration(seconds: 30), () {
+      if (mounted) setState(() => _canResend = true);
+    });
   }
 
   Future<void> _verify() async {
@@ -147,16 +165,34 @@ final class _PasswordlessSignInSurfaceState
                       ),
                     ),
                     if (_codeSent)
-                      TextButton(
-                        key: const Key('change-identity-email'),
-                        onPressed: _busy
-                            ? null
-                            : () => setState(() {
-                                _codeSent = false;
-                                _code.clear();
-                                _error = null;
-                              }),
-                        child: const Text('Use a different email'),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        children: [
+                          TextButton(
+                            key: const Key('resend-identity-code'),
+                            onPressed: _busy || !_canResend ? null : _sendCode,
+                            child: Text(
+                              _canResend
+                                  ? 'Resend code'
+                                  : 'Resend available in 30 seconds',
+                            ),
+                          ),
+                          TextButton(
+                            key: const Key('change-identity-email'),
+                            onPressed: _busy
+                                ? null
+                                : () {
+                                    _resendCooldown?.cancel();
+                                    setState(() {
+                                      _codeSent = false;
+                                      _canResend = false;
+                                      _code.clear();
+                                      _error = null;
+                                    });
+                                  },
+                            child: const Text('Use a different email'),
+                          ),
+                        ],
                       ),
                   ],
                 ),

@@ -3,6 +3,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../responsive_shell.dart';
+import '../theme_contract.dart';
 import '../time_input.dart';
 import '../variant_f_theme.dart';
 
@@ -233,7 +234,9 @@ final class _SettingsTemplatesSurfaceState
                   DropdownButtonFormField<String>(
                     key: const Key('theme-setting'),
                     isExpanded: true,
-                    initialValue: _themeId,
+                    initialValue: _themeId == StudentSettings.variantFThemeId
+                        ? _themeId
+                        : null,
                     decoration: const InputDecoration(labelText: 'Theme'),
                     items: const [
                       DropdownMenuItem(
@@ -245,6 +248,27 @@ final class _SettingsTemplatesSurfaceState
                   ),
                   width: 280,
                 ),
+                if (_themeId == graphiteThemeId)
+                  _field(
+                    Semantics(
+                      key: const Key('graphite-theme-applied'),
+                      label: 'Graphite, Applied',
+                      child: const Text('Graphite — Applied'),
+                    ),
+                    width: 280,
+                  )
+                else if (_themeId != StudentSettings.variantFThemeId)
+                  _field(
+                    Semantics(
+                      key: const Key('theme-fallback-in-use'),
+                      label: 'Graphite, Fallback in use',
+                      child: const Text(
+                        'Saved theme unavailable in this app version.\n'
+                        'Graphite — Fallback in use',
+                      ),
+                    ),
+                    width: 280,
+                  ),
                 _field(
                   DropdownButtonFormField<SynchronizationPreference>(
                     key: const Key('synchronization-setting'),

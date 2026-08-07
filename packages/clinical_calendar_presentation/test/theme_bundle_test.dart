@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   const bundle = VariantFThemeBundle();
+  const graphite = GraphiteThemeBundle();
 
   test('Containment Drone is one complete internally owned bundle', () {
     ClinicalCalendarThemeBundleValidator.validate(const [bundle]);
@@ -38,6 +39,42 @@ void main() {
     expect(resolved.gallery.themeId, resolved.id);
     expect(resolved.marks.themeId, resolved.id);
     expect(resolved.helpGuide.themeId, resolved.id);
+  });
+
+  test('Graphite is a complete independently owned fallback bundle', () {
+    ClinicalCalendarThemeBundleValidator.validate(const [graphite]);
+
+    expect(graphite.id, graphiteThemeId);
+    expect(graphite.metadata.displayName, 'Graphite');
+    expect(graphite.standardPresentation, isA<GraphiteVisualTheme>());
+    expect(graphite.shellRenderer, isA<GraphiteShellRenderer>());
+    expect(graphite.frame.sourceSize, const Size(1536, 1024));
+    expect(
+      graphite.frame.sourceCuts,
+      const EdgeInsets.fromLTRB(120, 145, 120, 170),
+    );
+    expect(graphite.frame.assetPaths, hasLength(1));
+    expect(graphite.gallery.swatches, hasLength(5));
+    expect(graphite.marks.marks, hasLength(5));
+    expect(graphite.helpGuide.calendarStates, hasLength(5));
+  });
+
+  test('unknown applied ID falls back without changing the stored ID', () {
+    final resolved = ClinicalCalendarThemeBundleRegistry.standard
+        .resolveApplied('future-theme');
+
+    expect(resolved.storedId, 'future-theme');
+    expect(resolved.bundle, isA<GraphiteThemeBundle>());
+    expect(resolved.isFallback, isTrue);
+  });
+
+  test('valid applied Graphite is not described as fallback', () {
+    final resolved = ClinicalCalendarThemeBundleRegistry.standard
+        .resolveApplied(graphiteThemeId);
+
+    expect(resolved.storedId, graphiteThemeId);
+    expect(resolved.bundle, isA<GraphiteThemeBundle>());
+    expect(resolved.isFallback, isFalse);
   });
 
   test('partial catalog is not selectable or visible', () {
@@ -148,6 +185,32 @@ void main() {
       find.byKey(bundleKey),
       matchesReferenceImage(directImage),
     );
+  });
+
+  testWidgets('Graphite shell uses only Graphite-owned raster framing', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: graphite.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: graphite.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
+    expect(find.byType(VariantFNineSliceFrame), findsNothing);
   });
 }
 

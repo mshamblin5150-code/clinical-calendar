@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
@@ -12,6 +13,7 @@ import 'package:clinical_calendar_presentation/clinical_calendar_identity_presen
 import 'package:clinical_calendar_sync/clinical_calendar_sync.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'config/app_environment.dart';
 
@@ -80,6 +82,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   RecoveryReauthenticationGate? recoveryReauthentication,
   NativeByteFileSaver? accountBackupFileSaver,
   BackupByteFilePicker? portableBackupFilePicker,
+  bool resolveAuthoritativeTheme = false,
+  VoidCallback? onPresentationRestart,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
   final identifierGenerator = identifiers ?? ProcessIdentifierGenerator();
@@ -225,6 +229,29 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     secureStorage: storage,
     files: const DartIoFileService(),
   );
+  var appliedThemeId = variantFThemeId;
+  if (resolveAuthoritativeTheme) {
+    try {
+      final support = await SupportApplicationService(
+        repositories: applicationRepositories,
+        clock: applicationClock,
+        identifiers: identifierGenerator,
+        studentId: studentId,
+      ).load();
+      appliedThemeId = support.settings.value.themeId;
+    } on Object {
+      // No cached signed-in identity is disclosed when authoritative settings
+      // are unavailable. The in-app session continues in complete Graphite.
+      appliedThemeId = graphiteThemeId;
+    }
+  }
+  if (ClinicalCalendarThemeBundleRegistry.standard
+          .resolveApplied(appliedThemeId)
+          .bundle
+          .id ==
+      graphiteThemeId) {
+    await _preflightGraphiteFrame();
+  }
   final recoveryStore = baseRepositories is RecoveryStore
       ? baseRepositories as RecoveryStore
       : null;
@@ -388,6 +415,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     dependencies: dependencies,
     environmentName: configuredEnvironment.name,
     studentId: studentId,
+    themeId: appliedThemeId,
+    onPresentationRestart: onPresentationRestart,
     onLaunchOrResume: onLaunchOrResume,
     connectivityChanges: connectivityChanges,
     onConnectivityChanged: onConnectivityChanged,
@@ -423,6 +452,18 @@ Future<ClinicalCalendarApp> buildProductionApplication({
       ),
     ),
   );
+}
+
+Future<void> _preflightGraphiteFrame() async {
+  final bytes = await rootBundle.load(
+    'packages/clinical_calendar_presentation/$graphiteFrameAsset',
+  );
+  if (bytes.lengthInBytes < 33 ||
+      bytes.getUint32(16, Endian.big) != 1536 ||
+      bytes.getUint32(20, Endian.big) != 1024 ||
+      bytes.getUint8(25) != 6) {
+    throw StateError('The Graphite frame is not a 1536 by 1024 RGBA PNG.');
+  }
 }
 
 Future<String> _loadDeviceTimeZoneId() async {
@@ -550,6 +591,10 @@ final class _ProductionIdentityGateState
       identity: widget.identity,
       identityEmail: session.email,
       onLocalCopyRemoved: _onLocalCopyRemoved,
+      resolveAuthoritativeTheme: true,
+      onPresentationRestart: () {
+        if (mounted) setState(() => _open(session));
+      },
     );
   }
 
@@ -564,6 +609,7 @@ final class _ProductionIdentityGateState
     if (application == null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
+        theme: buildGraphiteTheme(),
         home: PasswordlessSignInSurface(
           identity: widget.identity,
           onSignedIn: (session) async => setState(() => _open(session)),
@@ -575,8 +621,17 @@ final class _ProductionIdentityGateState
       builder: (context, snapshot) {
         if (snapshot.hasError) return const _StartupFailureApplication();
         if (snapshot.data case final app?) return app;
-        return const MaterialApp(
-          home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: buildGraphiteTheme(),
+          home: Scaffold(
+            body: Center(
+              child: Semantics(
+                label: 'Loading authoritative Student settings',
+                child: const CircularProgressIndicator(),
+              ),
+            ),
+          ),
         );
       },
     );
@@ -704,6 +759,16 @@ final class _StartupFailureApplication extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
     title: 'Clinical Calendar',
+    theme: ThemeData(
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF0D1013),
+      colorScheme: const ColorScheme.dark(
+        primary: Color(0xFF37D6B4),
+        onPrimary: Color(0xFF06251E),
+        surface: Color(0xFF151A1F),
+        onSurface: Color(0xFFF4F6F7),
+      ),
+    ),
     home: Scaffold(
       body: SafeArea(
         child: Center(

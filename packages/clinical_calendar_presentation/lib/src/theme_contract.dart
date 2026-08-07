@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
+import 'graphite_frame.dart';
+import 'graphite_shell.dart';
+import 'graphite_theme.dart';
 import 'responsive_shell.dart';
+import 'tactical_frame.dart';
 import 'variant_f_theme.dart';
 
 const variantFThemeId = 'variant-f';
+const graphiteThemeId = 'graphite';
 
 enum ThemeBundleOrigin { compiled, runtime, remote }
 
@@ -55,6 +60,22 @@ final class VariantFVisualTheme implements ClinicalCalendarVisualTheme {
   ThemeData createThemeData() => buildVariantFTheme();
 }
 
+final class GraphiteVisualTheme implements ClinicalCalendarVisualTheme {
+  const GraphiteVisualTheme();
+
+  @override
+  String get id => graphiteThemeId;
+
+  @override
+  String get themeId => id;
+
+  @override
+  ClinicalCalendarColors get semanticColors => graphiteSemanticColors;
+
+  @override
+  ThemeData createThemeData() => buildGraphiteTheme();
+}
+
 abstract interface class ClinicalCalendarShellRenderer
     implements ThemeOwnedComponent {
   String get rendererId;
@@ -69,6 +90,8 @@ abstract interface class ClinicalCalendarShellRenderer
     int mobileIndex = 1,
     Key? key,
   });
+
+  Widget buildFrame({required Widget child});
 }
 
 final class VariantFShellRenderer implements ClinicalCalendarShellRenderer {
@@ -99,6 +122,52 @@ final class VariantFShellRenderer implements ClinicalCalendarShellRenderer {
     onOpenAttention: onOpenAttention,
     onAddSchedule: onAddSchedule,
     mobileIndex: mobileIndex,
+  );
+
+  @override
+  Widget buildFrame({required Widget child}) => VariantFTacticalFrame(
+    padding: const EdgeInsets.all(8),
+    chamfer: 14,
+    statusLight: true,
+    child: child,
+  );
+}
+
+final class GraphiteShellRenderer implements ClinicalCalendarShellRenderer {
+  const GraphiteShellRenderer();
+
+  @override
+  String get themeId => graphiteThemeId;
+
+  @override
+  String get rendererId => 'graphite-additive-responsive-shell-v1';
+
+  @override
+  Widget build({
+    required ResponsiveShellSlots slots,
+    required String environmentName,
+    required VoidCallback onOpenMenu,
+    required ValueChanged<ClinicalCalendarDestination> onOpenDestination,
+    required VoidCallback onOpenAttention,
+    required VoidCallback onAddSchedule,
+    int mobileIndex = 1,
+    Key? key,
+  }) => GraphiteApplicationShell(
+    key: key,
+    slots: slots,
+    environmentName: environmentName,
+    onOpenMenu: onOpenMenu,
+    onOpenDestination: onOpenDestination,
+    onOpenAttention: onOpenAttention,
+    onAddSchedule: onAddSchedule,
+    mobileIndex: mobileIndex,
+  );
+
+  @override
+  Widget buildFrame({required Widget child}) => GraphiteNineSliceFrame(
+    chromeInsets: const EdgeInsets.fromLTRB(18, 20, 18, 22),
+    contentPadding: const EdgeInsets.all(8),
+    child: ClinicalCalendarPanelInterior(child: child),
   );
 }
 
@@ -259,6 +328,47 @@ final class VariantFHelpGuide implements ThemeHelpGuide {
   ];
 }
 
+final class GraphiteHelpGuide implements ThemeHelpGuide {
+  const GraphiteHelpGuide();
+
+  @override
+  String get themeId => graphiteThemeId;
+
+  @override
+  String get title => 'Graphite calendar states';
+
+  @override
+  List<CalendarStateGuide> get calendarStates => const [
+    CalendarStateGuide(
+      label: 'Clinical Session',
+      description:
+          'Cobalt and a medical-services mark identify clinical activity.',
+      color: GraphiteColors.clinical,
+    ),
+    CalendarStateGuide(
+      label: 'Work Shift',
+      description: 'Violet and a work mark identify employment activity.',
+      color: GraphiteColors.workAccent,
+    ),
+    CalendarStateGuide(
+      label: 'Protected Day',
+      description: 'Brass and a shield mark identify protected time.',
+      color: GraphiteColors.protectedDayAccent,
+    ),
+    CalendarStateGuide(
+      label: 'Scheduled progress',
+      description: 'Cobalt identifies hours already scheduled.',
+      color: GraphiteColors.scheduled,
+    ),
+    CalendarStateGuide(
+      label: 'Today or urgent',
+      description:
+          'Teal identifies Today; coral with status text identifies urgent attention.',
+      color: GraphiteColors.primary,
+    ),
+  ];
+}
+
 abstract interface class ClinicalCalendarThemeBundle {
   String get id;
   ThemeBundleOrigin get origin;
@@ -394,6 +504,124 @@ final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
   ThemeHelpGuide get helpGuide => const VariantFHelpGuide();
 }
 
+final class GraphiteThemeBundle implements ClinicalCalendarThemeBundle {
+  const GraphiteThemeBundle();
+
+  @override
+  String get id => graphiteThemeId;
+
+  @override
+  ThemeBundleOrigin get origin => ThemeBundleOrigin.compiled;
+
+  @override
+  ThemeCatalogMetadata get metadata => const ThemeCatalogMetadata(
+    themeId: graphiteThemeId,
+    displayName: 'Graphite',
+    personality:
+        'Neutral precision slate with cool silver and restrained emerald signals.',
+  );
+
+  @override
+  ClinicalCalendarStandardPresentation get standardPresentation =>
+      const GraphiteVisualTheme();
+
+  @override
+  ClinicalCalendarShellRenderer get shellRenderer =>
+      const GraphiteShellRenderer();
+
+  @override
+  ThemeFrameDescriptor get frame => const ThemeFrameDescriptor(
+    themeId: graphiteThemeId,
+    assetPackage: 'clinical_calendar_presentation',
+    primaryAsset: 'assets/graphite_raster/panel-nine-slice-v1.png',
+    assetPaths: ['assets/graphite_raster/panel-nine-slice-v1.png'],
+    sourceSize: Size(1536, 1024),
+    sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
+    safeInsets: {
+      ThemeFrameRegion.calendar: EdgeInsets.fromLTRB(18, 20, 18, 22),
+      ThemeFrameRegion.placements: EdgeInsets.fromLTRB(18, 20, 18, 22),
+      ThemeFrameRegion.planning: EdgeInsets.fromLTRB(18, 20, 18, 22),
+      ThemeFrameRegion.status: EdgeInsets.fromLTRB(18, 20, 18, 22),
+    },
+  );
+
+  @override
+  ThemeGalleryData get gallery => const ThemeGalleryData(
+    themeId: graphiteThemeId,
+    rendererId: 'graphite-additive-responsive-shell-v1',
+    thumbnailFixtureId: 'graphite-pinned-calendar-v1',
+    thumbnailViewport: Size(1280, 800),
+    swatches: [
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.canvas,
+        label: 'Canvas',
+        colorName: 'near-black graphite',
+        color: GraphiteColors.canvas,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.structure,
+        label: 'Structure',
+        colorName: 'layered charcoal',
+        color: GraphiteColors.surfaceRaised,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.clinicalSession,
+        label: 'Clinical Session',
+        colorName: 'clear cobalt',
+        color: GraphiteColors.clinical,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.workShift,
+        label: 'Work Shift',
+        colorName: 'cool violet',
+        color: GraphiteColors.workAccent,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.urgent,
+        label: 'Urgent',
+        colorName: 'signal coral',
+        color: GraphiteColors.urgent,
+      ),
+    ],
+  );
+
+  @override
+  ClinicalCalendarSemanticMarks get marks =>
+      const ClinicalCalendarSemanticMarks(
+        themeId: graphiteThemeId,
+        marks: [
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.clinicalSession,
+            markId: 'medical-services-outline',
+            description: 'Medical cross and visible Clinical Session label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.workShift,
+            markId: 'briefcase-diagonal-rail',
+            description: 'Briefcase mark and diagonal rail',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.protectedDay,
+            markId: 'shield-dot-rail',
+            description: 'Shield mark and dotted rail',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.scheduledProgress,
+            markId: 'clock-forward-hatch',
+            description: 'Clock mark and forward diagonal hatch',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.todayOrUrgent,
+            markId: 'today-dot-status-outline',
+            description: 'Today dot or explicit urgent status outline',
+          ),
+        ],
+      );
+
+  @override
+  ThemeHelpGuide get helpGuide => const GraphiteHelpGuide();
+}
+
 final class InvalidThemeBundle implements Exception {
   const InvalidThemeBundle(this.message);
 
@@ -479,6 +707,7 @@ final class ClinicalCalendarThemeBundleRegistry {
 
   static final standard = ClinicalCalendarThemeBundleRegistry._({
     variantFThemeId: const VariantFThemeBundle(),
+    graphiteThemeId: const GraphiteThemeBundle(),
   });
 
   final Map<String, ClinicalCalendarThemeBundle> _bundles;
@@ -496,4 +725,33 @@ final class ClinicalCalendarThemeBundleRegistry {
     }
     return bundle;
   }
+
+  AppliedThemeResolution resolveApplied(String storedId) {
+    final bundle = _bundles[storedId];
+    if (bundle != null) {
+      return AppliedThemeResolution(
+        storedId: storedId,
+        bundle: bundle,
+        isFallback: false,
+      );
+    }
+    return AppliedThemeResolution(
+      storedId: storedId,
+      bundle: _bundles[graphiteThemeId]!,
+      isFallback: true,
+    );
+  }
+}
+
+@immutable
+final class AppliedThemeResolution {
+  const AppliedThemeResolution({
+    required this.storedId,
+    required this.bundle,
+    required this.isFallback,
+  });
+
+  final String storedId;
+  final ClinicalCalendarThemeBundle bundle;
+  final bool isFallback;
 }
