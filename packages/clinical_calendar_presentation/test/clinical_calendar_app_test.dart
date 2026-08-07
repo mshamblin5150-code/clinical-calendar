@@ -809,11 +809,21 @@ Future<void> _expectAppGolden(WidgetTester tester, String name) async {
   try {
     await expectLater(
       find.byType(ClinicalCalendarApp),
-      matchesGoldenFile('baselines/variant_f_renders/$name.png'),
+      matchesGoldenFile(
+        'baselines/variant_f_renders/${_goldenPlatformDirectory()}/$name.png',
+      ),
     );
   } finally {
     debugDefaultTargetPlatformOverride = null;
   }
+}
+
+String _goldenPlatformDirectory() {
+  if (Platform.isWindows) return 'windows';
+  if (Platform.isLinux) return 'linux';
+  throw UnsupportedError(
+    'Variant F golden renders are frozen only for Windows and Linux hosts.',
+  );
 }
 
 Future<void> _pumpAcceptedRenderAt(WidgetTester tester, Size size) async {
