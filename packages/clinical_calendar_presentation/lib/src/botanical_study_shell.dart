@@ -146,10 +146,21 @@ final class BotanicalStudyApplicationShell extends StatelessWidget {
                   key: const Key('botanical-study-planning-bay'),
                   accent: _BotanicalStudyBayAccent.eucalyptus,
                   shape: _BotanicalStudyBayShape.planning,
-                  child: VariantFPlanningBayMode(
-                    expandedByDefault: false,
-                    child: slots.planningRegion,
-                  ),
+                  child:
+                      slots.planningRegion.key ==
+                          const Key('live-planning-region')
+                      ? SingleChildScrollView(
+                          key: const Key('botanical-study-planning-scroll'),
+                          primary: false,
+                          child: VariantFPlanningBayMode(
+                            expandedByDefault: false,
+                            child: slots.planningRegion,
+                          ),
+                        )
+                      : VariantFPlanningBayMode(
+                          expandedByDefault: false,
+                          child: slots.planningRegion,
+                        ),
                 ),
               ),
               Positioned(

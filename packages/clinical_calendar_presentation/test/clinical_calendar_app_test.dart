@@ -1040,6 +1040,12 @@ void main() {
       );
       expect(tester.takeException(), isNull);
 
+      final planningAction = find.byKey(const Key('primary-planning-action'));
+      await tester.ensureVisible(planningAction);
+      await tester.tap(planningAction);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('batch-scheduling-tray')), findsOneWidget);
+
       await preview.preview(botanicalStudyThemeId, preflight: (_) async {});
       await tester.pumpAndSettle();
 
@@ -1049,6 +1055,7 @@ void main() {
       expect(find.byKey(const Key('primary-planning-action')), findsOneWidget);
       expect(find.byKey(const Key('placement-progress-rail')), findsOneWidget);
       expect(find.byKey(const Key('attention-rail')), findsOneWidget);
+      expect(find.byKey(const Key('batch-scheduling-tray')), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       await tester.tap(find.byKey(const Key('revert-theme-preview')));
