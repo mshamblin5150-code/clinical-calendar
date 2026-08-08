@@ -62,8 +62,8 @@ commit using the checked-in fictional fixtures and production assets:
   existing-renderer tests;
 - deterministic landscape, portrait, 200%-text, and real-renderer thumbnail
   goldens, independently;
-- the non-compensating acceptance harness, including Standard and Enhanced
-  runtime contrast, registry ownership, normalized asset geometry and SHA-256,
+- the Botanical-applicable non-compensating harness checks, including Standard
+  and Enhanced runtime contrast, normalized asset geometry and SHA-256,
   thumbnail provenance, Help, fallback, persistence, and every cross-theme
   Preview/Revert/Apply transition;
 - the full `clinical_calendar_presentation` suite; and
@@ -73,3 +73,5 @@ The partial registry intentionally remains fail-closed and non-selectable until
 all seven complete bundles exist, as required by the additive-theme contract.
 Botanical Study can be previewed and its setting persisted in this development
 slice; restart resolves Graphite fallback until the closed catalog activates.
+Accordingly, the catalog-wide registry-activation manifest remains `pending`;
+it is not represented as a passing Botanical gate.
