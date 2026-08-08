@@ -962,6 +962,101 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Coastal Light previews and persists behind the partial-catalog fallback',
+    (tester) async {
+      final repositories = _Repositories();
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: variantFThemeId,
+        initialRevision: 0,
+      );
+      addTearDown(preview.dispose);
+      await _pumpAt(
+        tester,
+        const Size(390, 844),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: preview,
+        candidateThemePreflight: (_) async {},
+      );
+
+      await preview.preview(coastalCalmThemeId, preflight: (_) async {});
+      await tester.pumpAndSettle();
+      expect(find.byType(CoastalLightNineSliceFrame), findsWidgets);
+      expect(find.text('Previewing Coastal Light'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('revert-theme-preview')));
+      await tester.pumpAndSettle();
+      expect(preview.effectiveBundle.id, variantFThemeId);
+      expect(find.byType(CoastalLightNineSliceFrame), findsNothing);
+
+      await preview.preview(coastalCalmThemeId, preflight: (_) async {});
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('apply-theme-preview')));
+      await tester.pumpAndSettle();
+
+      expect(preview.authoritativeThemeId, coastalCalmThemeId);
+      expect(repositories.settings.value?.value.themeId, coastalCalmThemeId);
+      expect(preview.effectiveBundle.id, graphiteThemeId);
+      expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
+
+      final restarted = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: coastalCalmThemeId,
+        initialRevision: preview.authoritativeRevision,
+      );
+      addTearDown(restarted.dispose);
+      await _pumpAt(
+        tester,
+        const Size(390, 844),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: restarted,
+        candidateThemePreflight: (_) async {},
+      );
+
+      expect(restarted.authoritativeThemeId, coastalCalmThemeId);
+      expect(restarted.effectiveBundle.id, graphiteThemeId);
+      expect(restarted.authoritativeResolution.isFallback, isTrue);
+      expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
+    },
+  );
+
+  testWidgets(
+    'Botanical Study preview composes the production live application slots',
+    (tester) async {
+      final repositories = _Repositories();
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: graphiteThemeId,
+        initialRevision: 0,
+      );
+      addTearDown(preview.dispose);
+      await _pumpAt(
+        tester,
+        const Size(1600, 1000),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: preview,
+        candidateThemePreflight: (_) async {},
+      );
+      expect(tester.takeException(), isNull);
+
+      await preview.preview(botanicalStudyThemeId, preflight: (_) async {});
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BotanicalStudyLandscapeChassis), findsOneWidget);
+      expect(find.byType(CalendarPeriodView), findsOneWidget);
+      expect(find.byKey(const Key('placement-dock-surface')), findsOneWidget);
+      expect(find.byKey(const Key('primary-planning-action')), findsOneWidget);
+      expect(find.byKey(const Key('placement-progress-rail')), findsOneWidget);
+      expect(find.byKey(const Key('attention-rail')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const Key('revert-theme-preview')));
+      await tester.pumpAndSettle();
+      expect(preview.effectiveBundle.id, variantFThemeId);
+    },
+  );
+
   testWidgets('failed Apply keeps Preview retryable and Revert available', (
     tester,
   ) async {

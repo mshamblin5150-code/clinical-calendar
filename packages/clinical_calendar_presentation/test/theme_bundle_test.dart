@@ -11,6 +11,7 @@ void main() {
   const graphite = GraphiteThemeBundle();
   const federationClassic = FederationClassicThemeBundle();
   const federation2399 = Federation2399ThemeBundle();
+  const coastalLight = CoastalLightThemeBundle();
 
   test('Containment Drone is one complete internally owned bundle', () {
     ClinicalCalendarThemeBundleValidator.validate(const [bundle]);
@@ -263,6 +264,7 @@ void main() {
         GraphiteThemeBundle(),
         FederationClassicThemeBundle(),
         Federation2399ThemeBundle(),
+        CoastalLightThemeBundle(),
       ]) {
         final standard = themedBundle.standardPresentation.createThemeData();
         final enhanced = themedBundle.standardPresentation.createThemeData(
@@ -1187,6 +1189,278 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Coastal Light shell uses only Coastal Light raster framing', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: coastalLight.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: coastalLight.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CoastalLightLandscapeChassis), findsOneWidget);
+    expect(find.byType(CoastalLightNineSliceFrame), findsNothing);
+    expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
+    expect(find.byType(GraphiteNineSliceFrame), findsNothing);
+    expect(find.byType(VariantFNineSliceFrame), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Coastal Light Enhanced suppresses atmospheric shell artwork', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final shell = coastalLight.shellRenderer.build(
+      slots: _slots,
+      environmentName: 'TEST',
+      onOpenMenu: _noop,
+      onOpenDestination: _ignoreDestination,
+      onOpenAttention: _noop,
+      onAddSchedule: _noop,
+    );
+    final theme = coastalLight.standardPresentation.createThemeData(
+      enhancedAccessibility: true,
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1586, 992));
+    await tester.pumpWidget(
+      _shellHarness(theme: theme, boundaryKey: GlobalKey(), shell: shell),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('coastal-light-enhanced-flat-chassis')),
+      findsOneWidget,
+    );
+    expect(find.byType(Image), findsNothing);
+
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
+    await tester.pumpWidget(
+      _shellHarness(theme: theme, boundaryKey: GlobalKey(), shell: shell),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('coastal-light-enhanced-flat-frame')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('coastal-light-enhanced-flat-crown')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('coastal-light-enhanced-flat-bay')),
+      findsNWidgets(4),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'Coastal Light landscape composes one integrated concept chassis',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1586, 992));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: coastalLight.standardPresentation.createThemeData(),
+          boundaryKey: GlobalKey(),
+          shell: coastalLight.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('coastal-calm-landscape-shell')),
+        findsOneWidget,
+      );
+      expect(find.byType(CoastalLightLandscapeChassis), findsOneWidget);
+      expect(find.byType(CoastalLightNineSliceFrame), findsNothing);
+      final crown = tester.getRect(
+        find.byKey(const Key('coastal-calm-command-crown')),
+      );
+      final placements = tester.getRect(
+        find.byKey(const Key('coastal-calm-placement-bay')),
+      );
+      final calendar = tester.getRect(
+        find.byKey(const Key('coastal-calm-calendar-bay')),
+      );
+      final planning = tester.getRect(
+        find.byKey(const Key('coastal-calm-planning-bay')),
+      );
+      final insight = tester.getRect(
+        find.byKey(const Key('coastal-calm-insight-bay')),
+      );
+      final navigation = tester.getRect(
+        find.byKey(const Key('coastal-calm-bottom-navigation')),
+      );
+      expect(crown.height / 992, closeTo(.064, .01));
+      expect(placements.width / 1586, closeTo(.18, .01));
+      expect(insight.width / 1586, closeTo(.192, .01));
+      expect(calendar.width / 1586, closeTo(.493, .01));
+      expect(placements.right, lessThan(calendar.left));
+      expect(calendar.right, lessThan(insight.left));
+      expect(planning.top, greaterThan(calendar.top));
+      expect(planning.left, calendar.left);
+      expect(planning.right, calendar.right);
+      expect(navigation.top, greaterThan(planning.bottom));
+      expect(navigation.height / 992, closeTo(.064, .01));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Coastal Light owned controls preserve shell callbacks', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1536, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var menuCount = 0;
+    var addCount = 0;
+    var attentionCount = 0;
+    final destinations = <ClinicalCalendarDestination>[];
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: coastalLight.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: coastalLight.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: () => menuCount++,
+          onOpenDestination: destinations.add,
+          onOpenAttention: () => attentionCount++,
+          onAddSchedule: () => addCount++,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open menu'));
+    await tester.tap(find.byTooltip('Add schedule'));
+    await tester.tap(find.byTooltip('Help'));
+    await tester.tap(find.byKey(const Key('coastal-calm-navigation-2')));
+    await tester.tap(find.byKey(const Key('coastal-calm-navigation-3')));
+    await tester.tap(find.byKey(const Key('coastal-calm-navigation-4')));
+
+    expect(menuCount, 1);
+    expect(addCount, 1);
+    expect(attentionCount, 1);
+    expect(destinations, [
+      ClinicalCalendarDestination.help,
+      ClinicalCalendarDestination.clinicalPlacements,
+      ClinicalCalendarDestination.settings,
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Coastal Light portrait has an intentional ordered console', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: coastalLight.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: coastalLight.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('coastal-calm-portrait-shell')),
+      findsOneWidget,
+    );
+    expect(find.byType(CoastalLightNineSliceFrame), findsOneWidget);
+    final calendar = tester.getRect(
+      find.byKey(const Key('coastal-calm-calendar-bay')),
+    );
+    final planning = tester.getRect(
+      find.byKey(const Key('coastal-calm-planning-bay')),
+    );
+    final placements = tester.getRect(
+      find.byKey(const Key('coastal-calm-placement-bay')),
+    );
+    final insight = tester.getRect(
+      find.byKey(const Key('coastal-calm-insight-bay')),
+    );
+    final navigation = tester.getRect(
+      find.byKey(const Key('coastal-calm-bottom-navigation')),
+    );
+    expect(calendar.top, lessThan(planning.top));
+    expect(planning.top, lessThan(placements.top));
+    expect(placements.top, insight.top);
+    expect(placements.right, lessThan(insight.left));
+    expect(navigation.top, greaterThan(calendar.top));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Coastal Light tablet console survives 200% text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: coastalLight.standardPresentation.createThemeData(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: coastalLight.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('coastal-calm-portrait-shell')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('coastal-calm-bottom-navigation')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   for (final size in const [Size(320, 568), Size(768, 1024), Size(1440, 900)]) {
     testWidgets(
       'Federation Classic shell fits ${size.width.toInt()}x${size.height.toInt()}',
@@ -1264,6 +1538,44 @@ void main() {
     );
   }
 
+  for (final size in const [Size(320, 568), Size(768, 1024), Size(1440, 900)]) {
+    testWidgets(
+      'Coastal Light shell fits ${size.width.toInt()}x${size.height.toInt()}',
+      (tester) async {
+        await tester.binding.setSurfaceSize(size);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          _shellHarness(
+            theme: coastalLight.standardPresentation.createThemeData(),
+            boundaryKey: GlobalKey(),
+            shell: coastalLight.shellRenderer.build(
+              slots: _slots,
+              environmentName: 'TEST',
+              onOpenMenu: _noop,
+              onOpenDestination: _ignoreDestination,
+              onOpenAttention: _noop,
+              onAddSchedule: _noop,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        if (size.width > size.height && size.width >= 960) {
+          expect(find.byType(CoastalLightLandscapeChassis), findsOneWidget);
+          expect(find.byType(CoastalLightNineSliceFrame), findsNothing);
+        } else {
+          expect(find.byType(CoastalLightNineSliceFrame), findsWidgets);
+          expect(find.byType(CoastalLightLandscapeChassis), findsNothing);
+        }
+        if (!(size.width > size.height && size.width >= 960)) {
+          expect(find.byType(ClipRect), findsWidgets);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('Federation 2399 destination keeps compact owned chrome', (
     tester,
   ) async {
@@ -1294,6 +1606,40 @@ void main() {
           )
           .chromeInsets,
       federation2399CompactDestinationInsets,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Coastal Light destination keeps compact owned chrome', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: coastalLight.standardPresentation.createThemeData(),
+        home: coastalLight.shellRenderer.buildDestination(
+          destination: ClinicalCalendarDestination.settings,
+          entry: DestinationEntry.direct,
+          onExit: _noop,
+          child: const ShellPanel(
+            label: 'Settings fixture',
+            child: Text('Fictional content'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(VariantFNineSliceFrame), findsNothing);
+    expect(
+      tester
+          .widget<CoastalLightNineSliceFrame>(
+            find.byType(CoastalLightNineSliceFrame),
+          )
+          .chromeInsets,
+      coastalLightCompactDestinationInsets,
     );
     expect(tester.takeException(), isNull);
   });

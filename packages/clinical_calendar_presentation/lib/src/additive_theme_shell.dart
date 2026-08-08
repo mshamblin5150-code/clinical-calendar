@@ -4,6 +4,40 @@ import 'responsive_shell.dart';
 import 'variant_f_raster_assets.dart';
 import 'variant_f_theme.dart';
 
+/// Stable behavior model for the five primary shell navigation actions.
+///
+/// Theme-owned shells may render these actions differently, but routing stays
+/// centralized here so a visual theme cannot fork application behavior.
+enum ClinicalCalendarPrimaryNavigation {
+  today('TODAY', Icons.today_outlined),
+  calendar('CALENDAR', Icons.calendar_month_outlined),
+  placements('PLACEMENTS', Icons.track_changes_outlined),
+  attention('ATTENTION', Icons.notifications_outlined),
+  settings('SETTINGS', Icons.settings_outlined);
+
+  const ClinicalCalendarPrimaryNavigation(this.label, this.icon);
+
+  final String label;
+  final IconData icon;
+
+  void activate({
+    required ValueChanged<ClinicalCalendarDestination> onOpenDestination,
+    required VoidCallback onOpenAttention,
+  }) {
+    switch (this) {
+      case ClinicalCalendarPrimaryNavigation.today:
+      case ClinicalCalendarPrimaryNavigation.calendar:
+        onOpenDestination(ClinicalCalendarDestination.calendar);
+      case ClinicalCalendarPrimaryNavigation.placements:
+        onOpenDestination(ClinicalCalendarDestination.clinicalPlacements);
+      case ClinicalCalendarPrimaryNavigation.attention:
+        onOpenAttention();
+      case ClinicalCalendarPrimaryNavigation.settings:
+        onOpenDestination(ClinicalCalendarDestination.settings);
+    }
+  }
+}
+
 typedef AdditiveThemeFrameBuilder =
     Widget Function(
       Widget child,
