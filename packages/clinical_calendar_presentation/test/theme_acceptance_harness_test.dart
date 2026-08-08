@@ -212,6 +212,8 @@ void main() {
         'signing_key',
         'client_secret',
         'secret',
+        'auth',
+        'authorization',
         'credential',
         'token',
         'signature',
