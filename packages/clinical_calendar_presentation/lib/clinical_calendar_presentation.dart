@@ -2,6 +2,7 @@
 library;
 
 export 'src/clinical_calendar_app.dart';
+export 'src/accessibility_tokens.dart';
 export 'src/code_only_presentation_recovery.dart';
 export 'src/calendar/calendar_data_source.dart';
 export 'src/calendar/calendar_models.dart';
@@ -12,6 +13,8 @@ export 'src/conflict_resolution/conflict_resolution_controller.dart';
 export 'src/conflict_resolution/conflict_resolution_surface.dart';
 export 'src/backup/backup_restore_surface.dart';
 export 'src/exports/export_surface.dart';
+export 'src/enhanced_accessibility_controller.dart';
+export 'src/enhanced_focus_perimeter.dart';
 export 'src/graphite_frame.dart';
 export 'src/graphite_shell.dart';
 export 'src/graphite_theme.dart';
@@ -33,6 +36,8 @@ export 'src/support/student_profile_surface.dart';
 export 'src/support/support_help_surface.dart';
 export 'src/theme_contract.dart';
 export 'src/theme_gallery.dart';
+export 'src/theme_preview_controller.dart';
+export 'src/theme_preview_control.dart';
 export 'src/tactical_frame.dart';
 export 'src/mechanical_pixel_tiles.dart';
 export 'src/time_input.dart';

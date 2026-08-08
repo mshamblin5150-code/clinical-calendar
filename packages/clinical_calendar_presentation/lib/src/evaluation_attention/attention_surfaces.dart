@@ -11,10 +11,12 @@ typedef AttentionAction = void Function(AttentionItem item);
 final class SynchronizationAttentionSurface extends StatefulWidget {
   const SynchronizationAttentionSurface({
     required this.synchronization,
+    this.onSynchronized,
     super.key,
   });
 
   final SynchronizationService synchronization;
+  final Future<void> Function()? onSynchronized;
 
   @override
   State<SynchronizationAttentionSurface> createState() =>
@@ -34,6 +36,7 @@ final class _SynchronizationAttentionSurfaceState
     });
     try {
       final result = await widget.synchronization.synchronize();
+      await widget.onSynchronized?.call();
       if (!mounted) return;
       setState(() {
         _status = switch (result.disposition) {
@@ -254,11 +257,12 @@ final class _AttentionRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
-                graphiteThemeId)
+                    graphiteThemeId ||
+                context.accessibilityTokens.enhanced)
               ThemeSemanticMarkIcon(
                 role: item.urgency == AttentionUrgency.approaching
                     ? ThemeSemanticRole.scheduledProgress
-                    : ThemeSemanticRole.todayOrUrgent,
+                    : ThemeSemanticRole.urgent,
                 color: _urgencyColor(context, item.urgency),
                 size: 20,
               )

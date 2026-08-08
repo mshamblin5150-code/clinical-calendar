@@ -38,12 +38,18 @@ void main() {
       isNull,
     );
     await tester.pump(const Duration(seconds: 30));
-    await tester.tap(find.byKey(const Key('resend-identity-code')));
+    final resend = find.byKey(const Key('resend-identity-code'));
+    await tester.ensureVisible(resend);
+    await tester.pump();
+    await tester.tap(resend);
     await tester.pump();
     expect(gateway.codeSends, 2);
 
     await tester.enterText(find.byKey(const Key('identity-otp')), '123456');
-    await tester.tap(find.byKey(const Key('verify-identity-code')));
+    final verify = find.byKey(const Key('verify-identity-code'));
+    await tester.ensureVisible(verify);
+    await tester.pump();
+    await tester.tap(verify);
     await tester.pumpAndSettle();
     expect(signedIn?.studentId, _studentId);
   });

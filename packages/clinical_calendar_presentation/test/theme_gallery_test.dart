@@ -5,6 +5,36 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('Preview is explicit and follows the inspected identity', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1024, 768));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    String? previewed;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const VariantFVisualTheme().createThemeData(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ThemeGallery(
+              appliedThemeId: variantFThemeId,
+              selectedThemeId: graphiteThemeId,
+              onPreview: (themeId) async => previewed = themeId,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('preview-selected-theme')), findsOneWidget);
+    expect(find.text('Apply'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('preview-selected-theme')));
+    await tester.pump();
+
+    expect(previewed, graphiteThemeId);
+  });
+
   testWidgets(
     'Student compares complete identities without changing the applied theme',
     (tester) async {

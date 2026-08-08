@@ -188,24 +188,61 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                 context.clinicalMetrics.cornerRadius,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _CalendarToolbar(
-                  period: _period,
-                  title: _periodTitle(_anchor, _period, widget.weekStartsOn),
-                  onPrevious: () => _navigate(-1),
-                  onNext: () => _navigate(1),
-                  onPeriod: _changePeriod,
-                ),
-                if ((_period == CalendarPeriod.week ||
-                        _period == CalendarPeriod.agenda) &&
-                    outerConstraints.hasBoundedHeight)
-                  Expanded(child: periodView)
-                else
-                  periodView,
-              ],
-            ),
+            child:
+                context.accessibilityTokens.persistentExpandedLegend &&
+                    outerConstraints.hasBoundedHeight &&
+                    outerConstraints.maxWidth < 600 &&
+                    MediaQuery.textScalerOf(context).scale(1) > 1
+                ? SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _CalendarToolbar(
+                          period: _period,
+                          title: _periodTitle(
+                            _anchor,
+                            _period,
+                            widget.weekStartsOn,
+                          ),
+                          onPrevious: () => _navigate(-1),
+                          onNext: () => _navigate(1),
+                          onPeriod: _changePeriod,
+                        ),
+                        const _EnhancedCalendarLegend(),
+                        SizedBox(
+                          height: math.max(
+                            outerConstraints.maxHeight * .7,
+                            420,
+                          ),
+                          child: periodView,
+                        ),
+                      ],
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _CalendarToolbar(
+                        period: _period,
+                        title: _periodTitle(
+                          _anchor,
+                          _period,
+                          widget.weekStartsOn,
+                        ),
+                        onPrevious: () => _navigate(-1),
+                        onNext: () => _navigate(1),
+                        onPeriod: _changePeriod,
+                      ),
+                      if (context.accessibilityTokens.persistentExpandedLegend)
+                        const _EnhancedCalendarLegend(),
+                      if ((_period == CalendarPeriod.week ||
+                              _period == CalendarPeriod.agenda) &&
+                          outerConstraints.hasBoundedHeight)
+                        Expanded(child: periodView)
+                      else
+                        periodView,
+                    ],
+                  ),
           );
         },
       );
@@ -444,6 +481,8 @@ final class _MonthDayCell extends StatelessWidget {
           today: today,
           selected: selected,
           outside: outside,
+          selectionWidth: context.accessibilityTokens.selectionWidth,
+          decorationOpacity: context.accessibilityTokens.decorationOpacity,
         ),
         child: InkWell(
           onTap: () => onActivate(date, entries),
@@ -504,13 +543,19 @@ final class _DayNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final graphite = _usesGraphiteMarks(context);
+    final usesThemeTodayMark =
+        _usesGraphiteMarks(context) || context.accessibilityTokens.enhanced;
     return Row(
       children: [
         DecoratedBox(
           decoration: BoxDecoration(
             color: today ? _todayBackground(context) : Colors.transparent,
-            border: today ? Border.all(color: _todayAccent(context)) : null,
+            border: today
+                ? Border.all(
+                    color: _todayAccent(context),
+                    width: context.accessibilityTokens.selectionWidth,
+                  )
+                : null,
             shape: today ? BoxShape.circle : BoxShape.rectangle,
           ),
           child: SizedBox(
@@ -530,9 +575,9 @@ final class _DayNumber extends StatelessWidget {
         Expanded(
           child: Align(
             alignment: Alignment.centerRight,
-            child: graphite && today
+            child: usesThemeTodayMark && today
                 ? ThemeSemanticMarkIcon(
-                    role: ThemeSemanticRole.todayOrUrgent,
+                    role: ThemeSemanticRole.today,
                     size: 15,
                     color: _todayAccent(context),
                   )
@@ -748,7 +793,11 @@ final class _WeekDay extends StatelessWidget {
               : selected
               ? context.clinicalColors.clinical
               : context.clinicalColors.insetBorder,
-          width: today ? 2 : 1,
+          width: today
+              ? math.max(2, context.accessibilityTokens.selectionWidth)
+              : selected
+              ? context.accessibilityTokens.selectionWidth
+              : 1,
         ),
       ),
       child: InkWell(
@@ -760,9 +809,11 @@ final class _WeekDay extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  if (today && _usesGraphiteMarks(context)) ...[
+                  if (today &&
+                      (_usesGraphiteMarks(context) ||
+                          context.accessibilityTokens.enhanced)) ...[
                     ThemeSemanticMarkIcon(
-                      role: ThemeSemanticRole.todayOrUrgent,
+                      role: ThemeSemanticRole.today,
                       size: 16,
                       color: _todayAccent(context),
                     ),
@@ -1003,7 +1054,7 @@ final class _AgendaAssignment extends StatelessWidget {
         ),
       ),
       const SizedBox(width: 6),
-      Text(entry.statusLabel, style: Theme.of(context).textTheme.bodySmall),
+      _CalendarStatusLabel(entry: entry),
     ],
   );
 }
@@ -1061,12 +1112,111 @@ final class _PeriodEntryRow extends StatelessWidget {
               entry.assignment!,
               style: Theme.of(context).textTheme.bodySmall,
             ),
-          Text(entry.statusLabel, style: Theme.of(context).textTheme.bodySmall),
+          _CalendarStatusLabel(entry: entry),
         ],
       ),
     ),
   );
 }
+
+final class _EnhancedCalendarLegend extends StatelessWidget {
+  const _EnhancedCalendarLegend();
+
+  static const _items = <_EnhancedLegendItem>[
+    _EnhancedLegendItem(ThemeSemanticRole.clinicalSession, 'Clinical Session'),
+    _EnhancedLegendItem(ThemeSemanticRole.workShift, 'Work Shift'),
+    _EnhancedLegendItem(ThemeSemanticRole.protectedDay, 'Protected Day'),
+    _EnhancedLegendItem(ThemeSemanticRole.today, 'Today'),
+    _EnhancedLegendItem(ThemeSemanticRole.urgent, 'Urgent'),
+    _EnhancedLegendItem(ThemeSemanticRole.scheduledProgress, 'Scheduled'),
+    _EnhancedLegendItem(ThemeSemanticRole.completedSession, 'Completed'),
+    _EnhancedLegendItem(ThemeSemanticRole.cancelledSession, 'Cancelled'),
+    _EnhancedLegendItem(ThemeSemanticRole.missedSession, 'Missed'),
+  ];
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    key: const Key('enhanced-calendar-legend'),
+    container: true,
+    label:
+        'Enhanced accessibility legend. ${_items.map((item) => item.label).join(', ')}.',
+    child: ExcludeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final itemWidth = constraints.maxWidth < 600
+                ? constraints.maxWidth
+                : 210.0;
+            return Wrap(
+              spacing: 14,
+              runSpacing: 6,
+              children: [
+                for (final item in _items)
+                  SizedBox(
+                    width: itemWidth,
+                    child: Row(
+                      children: [
+                        ThemeSemanticMarkIcon(role: item.role, size: 18),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            item.label,
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    ),
+  );
+}
+
+final class _EnhancedLegendItem {
+  const _EnhancedLegendItem(this.role, this.label);
+
+  final ThemeSemanticRole role;
+  final String label;
+}
+
+final class _CalendarStatusLabel extends StatelessWidget {
+  const _CalendarStatusLabel({required this.entry});
+
+  final CalendarEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final role = _statusRole(entry.statusLabel);
+    if (!context.accessibilityTokens.enhanced || role == null) {
+      return Text(
+        entry.statusLabel,
+        style: Theme.of(context).textTheme.bodySmall,
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ThemeSemanticMarkIcon(role: role, size: 15),
+        const SizedBox(width: 4),
+        Text(entry.statusLabel, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+ThemeSemanticRole? _statusRole(String statusLabel) => switch (statusLabel) {
+  'Scheduled' || 'Awaiting Confirmation' => ThemeSemanticRole.scheduledProgress,
+  'Completed' => ThemeSemanticRole.completedSession,
+  'Cancelled' => ThemeSemanticRole.cancelledSession,
+  'Missed' => ThemeSemanticRole.missedSession,
+  _ => null,
+};
 
 final class _CalendarLoadFailure extends StatelessWidget {
   const _CalendarLoadFailure({required this.onRetry});
@@ -1099,6 +1249,8 @@ final class _DayCellPainter extends CustomPainter {
     required this.today,
     required this.selected,
     required this.outside,
+    required this.selectionWidth,
+    required this.decorationOpacity,
   });
 
   final ClinicalCalendarColors colors;
@@ -1108,6 +1260,8 @@ final class _DayCellPainter extends CustomPainter {
   final bool today;
   final bool selected;
   final bool outside;
+  final double selectionWidth;
+  final double decorationOpacity;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1123,7 +1277,9 @@ final class _DayCellPainter extends CustomPainter {
     canvas.drawRect(rect, background);
     if (protected) {
       final stripe = Paint()
-        ..color = colors.protectedDayAccent.withValues(alpha: .16)
+        ..color = colors.protectedDayAccent.withValues(
+          alpha: .16 * decorationOpacity,
+        )
         ..strokeWidth = 2;
       for (double offset = -size.height; offset < size.width; offset += 10) {
         canvas.drawLine(
@@ -1143,13 +1299,13 @@ final class _DayCellPainter extends CustomPainter {
       rect.deflate(.5),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = today ? 2 : 1
+        ..strokeWidth = today ? math.max(2, selectionWidth) : 1
         ..color = today ? todayAccent : colors.insetBorder,
     );
     if (selected) {
       final paint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
+        ..strokeWidth = selectionWidth
         ..color = colors.clinical;
       final selectedRect = rect.deflate(3);
       const dash = 5.0;
@@ -1197,7 +1353,9 @@ final class _DayCellPainter extends CustomPainter {
       work != oldDelegate.work ||
       today != oldDelegate.today ||
       selected != oldDelegate.selected ||
-      outside != oldDelegate.outside;
+      outside != oldDelegate.outside ||
+      selectionWidth != oldDelegate.selectionWidth ||
+      decorationOpacity != oldDelegate.decorationOpacity;
 }
 
 final class _AgendaBackgroundPainter extends CustomPainter {
@@ -1301,9 +1459,14 @@ bool _usesGraphiteMarks(BuildContext context) =>
     ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
     graphiteThemeId;
 
-Color _todayAccent(BuildContext context) => _usesGraphiteMarks(context)
-    ? Theme.of(context).colorScheme.primary
-    : context.clinicalColors.urgent;
+Color _todayAccent(BuildContext context) {
+  if (context.accessibilityTokens.enhanced) {
+    return context.accessibilityTokens.focusOuterColor;
+  }
+  return _usesGraphiteMarks(context)
+      ? Theme.of(context).colorScheme.primary
+      : context.clinicalColors.urgent;
+}
 
 Color _todayBackground(BuildContext context) => _usesGraphiteMarks(context)
     ? Theme.of(context).colorScheme.primaryContainer

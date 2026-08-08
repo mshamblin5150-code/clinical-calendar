@@ -7,11 +7,15 @@ final class PasswordlessSignInSurface extends StatefulWidget {
   const PasswordlessSignInSurface({
     required this.identity,
     required this.onSignedIn,
+    this.enhancedAccessibility = false,
+    this.onEnhancedAccessibilityChanged,
     super.key,
   });
 
   final PasswordlessIdentityService identity;
   final Future<void> Function(IdentitySession session) onSignedIn;
+  final bool enhancedAccessibility;
+  final ValueChanged<bool>? onEnhancedAccessibilityChanged;
 
   @override
   State<PasswordlessSignInSurface> createState() =>
@@ -112,6 +116,18 @@ final class _PasswordlessSignInSurfaceState
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
+                    SwitchListTile(
+                      key: const Key('signed-out-enhanced-accessibility'),
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Enhanced accessibility'),
+                      subtitle: const Text(
+                        'Device-only for sign-in. Your Student setting loads '
+                        'after authentication.',
+                      ),
+                      value: widget.enhancedAccessibility,
+                      onChanged: widget.onEnhancedAccessibilityChanged,
+                    ),
+                    const SizedBox(height: 8),
                     TextField(
                       key: const Key('identity-email'),
                       controller: _email,

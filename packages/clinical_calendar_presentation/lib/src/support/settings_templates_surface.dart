@@ -73,6 +73,8 @@ final class SettingsTemplatesSurface extends StatefulWidget {
     this.clinicalDefaults = const [],
     this.deviceNotifications,
     this.onSaveDeviceNotifications,
+    this.authoritativeThemeId,
+    this.onPreviewTheme,
     super.key,
   }) : assert(
          (deviceNotifications == null) == (onSaveDeviceNotifications == null),
@@ -89,6 +91,8 @@ final class SettingsTemplatesSurface extends StatefulWidget {
   final List<ClinicalTemplateDefaultOption> clinicalDefaults;
   final DeviceNotificationPreferences? deviceNotifications;
   final SaveDeviceNotificationPreferences? onSaveDeviceNotifications;
+  final String? authoritativeThemeId;
+  final PreviewTheme? onPreviewTheme;
 
   @override
   State<SettingsTemplatesSurface> createState() =>
@@ -100,6 +104,8 @@ final class _SettingsTemplatesSurfaceState
   late int _weekStart;
   late TimeDisplayPreference _timeDisplay;
   late String _themeId;
+  late String _inspectedThemeId;
+  late bool _enhancedAccessibility;
   late SynchronizationPreference _synchronization;
   late NotificationPreferences _notifications;
   DeviceNotificationPreferences? _deviceNotifications;
@@ -114,6 +120,10 @@ final class _SettingsTemplatesSurfaceState
     _weekStart = settings.weekStart;
     _timeDisplay = settings.timeDisplay;
     _themeId = settings.themeId;
+    _inspectedThemeId = _availableThemeId(
+      widget.authoritativeThemeId ?? settings.themeId,
+    );
+    _enhancedAccessibility = settings.enhancedAccessibility;
     _synchronization = settings.synchronization;
     _notifications = settings.notifications;
     _deviceNotifications = widget.deviceNotifications;
@@ -122,7 +132,34 @@ final class _SettingsTemplatesSurfaceState
         .toList(growable: true);
   }
 
+  @override
+  void didUpdateWidget(SettingsTemplatesSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.settings.themeId != widget.settings.themeId) {
+      _themeId = widget.settings.themeId;
+    }
+    if (oldWidget.settings.enhancedAccessibility !=
+        widget.settings.enhancedAccessibility) {
+      _enhancedAccessibility = widget.settings.enhancedAccessibility;
+    }
+    final oldAuthority =
+        oldWidget.authoritativeThemeId ?? oldWidget.settings.themeId;
+    final newAuthority = widget.authoritativeThemeId ?? widget.settings.themeId;
+    if (oldAuthority != newAuthority &&
+        _inspectedThemeId == _availableThemeId(oldAuthority)) {
+      _inspectedThemeId = _availableThemeId(newAuthority);
+    }
+  }
+
   bool get _templatesValid => _templates.every((draft) => draft.isValid);
+
+  bool get _themeGalleryEnabled =>
+      ClinicalCalendarThemeBundleRegistry.standard.isSelectableCatalogComplete;
+
+  String _availableThemeId(String themeId) =>
+      themeId == variantFThemeId || themeId == graphiteThemeId
+      ? themeId
+      : graphiteThemeId;
 
   Future<void> _save() async {
     if (_saving || !_templatesValid) return;
@@ -133,6 +170,7 @@ final class _SettingsTemplatesSurfaceState
           weekStart: _weekStart,
           timeDisplay: _timeDisplay,
           themeId: _themeId,
+          enhancedAccessibility: _enhancedAccessibility,
           synchronization: _synchronization,
           notifications: _notifications,
         ),
@@ -231,9 +269,7 @@ final class _SettingsTemplatesSurfaceState
                     onChanged: (value) => setState(() => _timeDisplay = value!),
                   ),
                 ),
-                if (!ClinicalCalendarThemeBundleRegistry
-                    .standard
-                    .isSelectableCatalogComplete)
+                if (!_themeGalleryEnabled)
                   _field(
                     DropdownButtonFormField<String>(
                       key: const Key('theme-setting'),
@@ -252,9 +288,7 @@ final class _SettingsTemplatesSurfaceState
                     ),
                     width: 280,
                   ),
-                if (!ClinicalCalendarThemeBundleRegistry
-                        .standard
-                        .isSelectableCatalogComplete &&
+                if (!_themeGalleryEnabled &&
                     _themeId != StudentSettings.variantFThemeId)
                   _field(
                     Semantics(
@@ -292,20 +326,18 @@ final class _SettingsTemplatesSurfaceState
               ],
             ),
             const SizedBox(height: 12),
-            if (ClinicalCalendarThemeBundleRegistry
-                .standard
-                .isSelectableCatalogComplete) ...[
+            if (_themeGalleryEnabled) ...[
               Text(
                 'THEME GALLERY',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
               ThemeGallery(
-                appliedThemeId: _themeId,
-                selectedThemeId:
-                    _themeId == variantFThemeId || _themeId == graphiteThemeId
-                    ? _themeId
-                    : graphiteThemeId,
+                appliedThemeId: widget.authoritativeThemeId ?? _themeId,
+                selectedThemeId: _inspectedThemeId,
+                onSelected: (themeId) =>
+                    setState(() => _inspectedThemeId = themeId),
+                onPreview: widget.onPreviewTheme,
               ),
               const SizedBox(height: 12),
             ],

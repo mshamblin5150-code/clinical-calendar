@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'theme_contract.dart';
 import 'variant_f_theme.dart';
 
+typedef PreviewTheme = Future<void> Function(String themeId);
+
 /// The comparison-only Theme Gallery. Selection changes the inspected bundle
 /// and never changes the effective or persisted presentation.
 final class ThemeGallery extends StatefulWidget {
@@ -11,6 +13,7 @@ final class ThemeGallery extends StatefulWidget {
     required this.appliedThemeId,
     required this.selectedThemeId,
     this.onSelected,
+    this.onPreview,
     this.bundles,
     super.key,
   });
@@ -18,6 +21,7 @@ final class ThemeGallery extends StatefulWidget {
   final String appliedThemeId;
   final String selectedThemeId;
   final ValueChanged<String>? onSelected;
+  final PreviewTheme? onPreview;
   final List<ClinicalCalendarThemeBundle>? bundles;
 
   @override
@@ -118,6 +122,7 @@ final class _ThemeGalleryState extends State<ThemeGallery> {
           final detail = _ThemeDetail(
             bundle: selected,
             appliedThemeId: widget.appliedThemeId,
+            onPreview: widget.onPreview,
           );
           if (constraints.maxWidth >= 700) {
             return Row(
@@ -247,10 +252,15 @@ final class _ThemeMasterRow extends StatelessWidget {
 }
 
 final class _ThemeDetail extends StatelessWidget {
-  const _ThemeDetail({required this.bundle, required this.appliedThemeId});
+  const _ThemeDetail({
+    required this.bundle,
+    required this.appliedThemeId,
+    required this.onPreview,
+  });
 
   final ClinicalCalendarThemeBundle bundle;
   final String appliedThemeId;
+  final PreviewTheme? onPreview;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -274,6 +284,18 @@ final class _ThemeDetail extends StatelessWidget {
             _ThemeSwatch(swatch: swatch),
         ],
       ),
+      if (onPreview != null) ...[
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.icon(
+            key: const Key('preview-selected-theme'),
+            onPressed: () => onPreview!(bundle.id),
+            icon: const Icon(Icons.visibility_outlined),
+            label: Text('Preview ${bundle.metadata.displayName}'),
+          ),
+        ),
+      ],
     ],
   );
 }

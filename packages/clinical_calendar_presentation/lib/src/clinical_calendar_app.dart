@@ -19,6 +19,8 @@ import 'evaluation_attention/attention_surfaces.dart';
 import 'evaluation_attention/evaluation_attention_controller.dart';
 import 'evaluation_attention/evaluation_plan_surface.dart';
 import 'exports/export_surface.dart';
+import 'enhanced_accessibility_controller.dart';
+import 'enhanced_focus_perimeter.dart';
 import 'graphite_frame.dart';
 import 'identity/identity_devices_surface.dart';
 import 'placements/placement_management_surface.dart';
@@ -34,19 +36,27 @@ import 'support/student_profile_onboarding_dialog.dart';
 import 'support/student_profile_surface.dart';
 import 'support/support_help_surface.dart';
 import 'theme_contract.dart';
+import 'theme_preview_control.dart';
+import 'theme_preview_controller.dart';
 import 'variant_f_theme.dart';
 
 typedef ExportWorkflowFactory =
     ExportWorkflowService Function(ExportReauthenticationGate gate);
 typedef ScheduleDateFactory = ZonedScheduleDate Function(LocalDate date);
+typedef CandidateThemePreflight =
+    Future<void> Function(ClinicalCalendarThemeBundle candidate);
 
-final class ClinicalCalendarApp extends StatelessWidget {
+final class ClinicalCalendarApp extends StatefulWidget {
   const ClinicalCalendarApp({
     required this.dependencies,
     required this.environmentName,
     required this.studentId,
     this.chooseAvatar,
     this.themeId = variantFThemeId,
+    this.enhancedAccessibility = false,
+    this.enhancedAccessibilityController,
+    this.themePreviewController,
+    this.candidateThemePreflight,
     this.onLaunchOrResume,
     this.connectivityChanges,
     this.onConnectivityChanged,
@@ -73,6 +83,10 @@ final class ClinicalCalendarApp extends StatelessWidget {
   final String studentId;
   final AvatarChooser? chooseAvatar;
   final String themeId;
+  final bool enhancedAccessibility;
+  final EnhancedAccessibilityController? enhancedAccessibilityController;
+  final ThemePreviewController? themePreviewController;
+  final CandidateThemePreflight? candidateThemePreflight;
   final Future<void> Function()? onLaunchOrResume;
   final Stream<bool>? connectivityChanges;
   final Future<void> Function(bool connected)? onConnectivityChanged;
@@ -96,50 +110,258 @@ final class ClinicalCalendarApp extends StatelessWidget {
   final VoidCallback? onPresentationRestart;
 
   @override
+  State<ClinicalCalendarApp> createState() => _ClinicalCalendarAppState();
+}
+
+final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
+  final _applicationHostKey = GlobalKey<_ApplicationHostState>();
+  late ThemePreviewController _themePreview;
+  late bool _ownsThemePreview;
+  late EnhancedAccessibilityController _enhancedAccessibility;
+  late bool _ownsEnhancedAccessibility;
+  bool _useImmediateTheme = false;
+  int _themeChangeGeneration = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _adoptThemePreviewController();
+    _adoptEnhancedAccessibilityController();
+  }
+
+  @override
+  void didUpdateWidget(ClinicalCalendarApp oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.themePreviewController != widget.themePreviewController) {
+      _themePreview.removeListener(_presentationChanged);
+      if (_ownsThemePreview) _themePreview.dispose();
+      _adoptThemePreviewController();
+    }
+    if (oldWidget.enhancedAccessibilityController !=
+        widget.enhancedAccessibilityController) {
+      _enhancedAccessibility.removeListener(_presentationChanged);
+      if (_ownsEnhancedAccessibility) _enhancedAccessibility.dispose();
+      _adoptEnhancedAccessibilityController();
+    }
+  }
+
+  void _adoptThemePreviewController() {
+    _ownsThemePreview = widget.themePreviewController == null;
+    _themePreview =
+        widget.themePreviewController ??
+        ThemePreviewController(
+          registry: ClinicalCalendarThemeBundleRegistry.standard,
+          authoritativeThemeId: widget.themeId,
+          initialRevision: 0,
+        );
+    _themePreview.addListener(_presentationChanged);
+  }
+
+  void _adoptEnhancedAccessibilityController() {
+    _ownsEnhancedAccessibility = widget.enhancedAccessibilityController == null;
+    _enhancedAccessibility =
+        widget.enhancedAccessibilityController ??
+        EnhancedAccessibilityController(
+          initialValue: widget.enhancedAccessibility,
+        );
+    _enhancedAccessibility.addListener(_presentationChanged);
+  }
+
+  void _presentationChanged() {
+    if (!mounted) return;
+    final generation = ++_themeChangeGeneration;
+    setState(() => _useImmediateTheme = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || generation != _themeChangeGeneration) return;
+      setState(() => _useImmediateTheme = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _themePreview.removeListener(_presentationChanged);
+    if (_ownsThemePreview) _themePreview.dispose();
+    _enhancedAccessibility.removeListener(_presentationChanged);
+    if (_ownsEnhancedAccessibility) _enhancedAccessibility.dispose();
+    super.dispose();
+  }
+
+  Future<void> _previewTheme(String themeId) => _themePreview.preview(
+    themeId,
+    preflight: widget.candidateThemePreflight ?? _preflightCandidate,
+  );
+
+  Future<void> _preflightCandidate(
+    ClinicalCalendarThemeBundle candidate,
+  ) async {
+    final candidateTheme = candidate.standardPresentation.createThemeData(
+      enhancedAccessibility: _enhancedAccessibility.enabled,
+    );
+    for (final assetPath in candidate.frame.assetPaths) {
+      Object? decodeError;
+      StackTrace? decodeStack;
+      await precacheImage(
+        AssetImage(assetPath, package: candidate.frame.assetPackage),
+        context,
+        onError: (error, stackTrace) {
+          decodeError = error;
+          decodeStack = stackTrace;
+        },
+      );
+      if (decodeError != null) {
+        Error.throwWithStackTrace(
+          decodeError!,
+          decodeStack ?? StackTrace.current,
+        );
+      }
+    }
+
+    if (!mounted) {
+      throw StateError('The live application host is unavailable.');
+    }
+    final hostContext = _applicationHostKey.currentContext;
+    if (hostContext == null || !hostContext.mounted) {
+      throw StateError('The live application host is unavailable.');
+    }
+    final overlay = Overlay.of(hostContext, rootOverlay: true);
+    final mountedCandidateKey = GlobalKey();
+    final entry = OverlayEntry(
+      builder: (context) => Positioned.fill(
+        child: Offstage(
+          offstage: true,
+          child: Theme(
+            data: candidateTheme,
+            child: ClinicalCalendarSemanticMarkScope(
+              marks: candidate.marks,
+              child: KeyedSubtree(
+                key: mountedCandidateKey,
+                child: candidate.shellRenderer.build(
+                  environmentName: widget.environmentName,
+                  onOpenMenu: () {},
+                  onOpenDestination: (_) {},
+                  onOpenAttention: () {},
+                  onAddSchedule: () {},
+                  slots: const ResponsiveShellSlots(
+                    centralContent: SizedBox.expand(),
+                    planningRegion: SizedBox.expand(),
+                    placementDock: SizedBox.expand(),
+                    insightRail: SizedBox.expand(),
+                    mobilePlacementSummary: SizedBox.expand(),
+                    mobileAttention: SizedBox.expand(),
+                    profileAvatar: SizedBox.square(dimension: 44),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    overlay.insert(entry);
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      final renderObject = mountedCandidateKey.currentContext
+          ?.findRenderObject();
+      if (renderObject is! RenderBox ||
+          !renderObject.attached ||
+          !renderObject.hasSize) {
+        throw StateError('The candidate renderer did not complete layout.');
+      }
+    } finally {
+      entry.remove();
+    }
+  }
+
+  Future<void> _applyThemePreview() async {
+    final host = _applicationHostKey.currentState;
+    if (host == null) return;
+    await host.applyThemePreview();
+  }
+
+  Future<void> _launchOrResume() async {
+    await widget.onLaunchOrResume?.call();
+    await _applicationHostKey.currentState?.refreshAuthoritativeSettings();
+  }
+
+  Future<void> _connectivityChanged(bool connected) async {
+    await widget.onConnectivityChanged?.call(connected);
+    await _applicationHostKey.currentState?.refreshAuthoritativeSettings();
+  }
+
+  @override
   Widget build(BuildContext context) {
     try {
-      final resolution = ClinicalCalendarThemeBundleRegistry.standard
-          .resolveApplied(themeId);
-      final themeBundle = resolution.bundle;
-      final theme = themeBundle.standardPresentation.createThemeData();
+      final themeBundle = _themePreview.effectiveBundle;
+      final standardTheme = themeBundle.standardPresentation.createThemeData(
+        enhancedAccessibility: _enhancedAccessibility.enabled,
+      );
+      final theme = _useImmediateTheme
+          ? _withoutControlInterpolation(standardTheme)
+          : standardTheme;
       return GraphitePresentationFailureBoundary(
-        onRestart: onPresentationRestart,
+        onRestart: widget.onPresentationRestart,
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Clinical Calendar',
           theme: theme,
+          themeAnimationDuration: Duration.zero,
+          builder: (context, child) => EnhancedGlobalFocusOverlay(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                child ?? const SizedBox.shrink(),
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 960),
+                    child: ThemePreviewControl(
+                      controller: _themePreview,
+                      onApply: _applyThemePreview,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           home: ClinicalCalendarLifecycleHost(
-            onLaunchOrResume: onLaunchOrResume,
-            connectivityChanges: connectivityChanges,
-            onConnectivityChanged: onConnectivityChanged,
+            onLaunchOrResume: _launchOrResume,
+            connectivityChanges: widget.connectivityChanges,
+            onConnectivityChanged: widget.onConnectivityChanged == null
+                ? null
+                : _connectivityChanged,
             child: ClinicalCalendarSemanticMarkScope(
               marks: themeBundle.marks,
               child: _ApplicationHost(
-                dependencies: dependencies,
-                environmentName: environmentName,
-                studentId: studentId,
-                chooseAvatar: chooseAvatar,
+                key: _applicationHostKey,
+                dependencies: widget.dependencies,
+                environmentName: widget.environmentName,
+                studentId: widget.studentId,
+                chooseAvatar: widget.chooseAvatar,
                 themeBundle: themeBundle,
-                identity: identity,
-                identityEmail: identityEmail,
-                onLocalCopyRemoved: onLocalCopyRemoved,
-                createAccountBackup: createAccountBackup,
-                portableBackupWorkflows: portableBackupWorkflows,
-                exportWorkflowFactory: exportWorkflowFactory,
-                recoveryStore: recoveryStore,
-                recoveryService: recoveryService,
-                recoveryProofGate: recoveryProofGate,
-                notificationInteractions: notificationInteractions,
-                notificationDevicePolicyStore: notificationDevicePolicyStore,
-                notificationDeviceClass: notificationDeviceClass,
-                scheduleDateFactory: scheduleDateFactory,
+                themePreviewController: _themePreview,
+                enhancedAccessibilityController: _enhancedAccessibility,
+                onPreviewTheme: _previewTheme,
+                identity: widget.identity,
+                identityEmail: widget.identityEmail,
+                onLocalCopyRemoved: widget.onLocalCopyRemoved,
+                createAccountBackup: widget.createAccountBackup,
+                portableBackupWorkflows: widget.portableBackupWorkflows,
+                exportWorkflowFactory: widget.exportWorkflowFactory,
+                recoveryStore: widget.recoveryStore,
+                recoveryService: widget.recoveryService,
+                recoveryProofGate: widget.recoveryProofGate,
+                notificationInteractions: widget.notificationInteractions,
+                notificationDevicePolicyStore:
+                    widget.notificationDevicePolicyStore,
+                notificationDeviceClass: widget.notificationDeviceClass,
+                scheduleDateFactory: widget.scheduleDateFactory,
               ),
             ),
           ),
         ),
       );
     } on Object {
-      final restart = onPresentationRestart;
+      final restart = widget.onPresentationRestart;
       return CodeOnlyPresentationRecoveryApplication(
         surfaceKey: const Key('theme-construction-recovery'),
         icon: Icons.restart_alt,
@@ -154,6 +376,31 @@ final class ClinicalCalendarApp extends StatelessWidget {
       );
     }
   }
+}
+
+ThemeData _withoutControlInterpolation(ThemeData theme) {
+  ButtonStyle immediate(ButtonStyle? style) =>
+      (style ?? const ButtonStyle()).copyWith(animationDuration: Duration.zero);
+  return theme.copyWith(
+    textButtonTheme: TextButtonThemeData(
+      style: immediate(theme.textButtonTheme.style),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: immediate(theme.filledButtonTheme.style),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: immediate(theme.outlinedButtonTheme.style),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: immediate(theme.elevatedButtonTheme.style),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: immediate(theme.iconButtonTheme.style),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: immediate(theme.segmentedButtonTheme.style),
+    ),
+  );
 }
 
 /// Bridges Flutter host lifecycle/connectivity events into synchronization.
@@ -237,6 +484,9 @@ final class _ApplicationHost extends StatefulWidget {
     required this.studentId,
     required this.chooseAvatar,
     required this.themeBundle,
+    required this.themePreviewController,
+    required this.enhancedAccessibilityController,
+    required this.onPreviewTheme,
     required this.identity,
     required this.identityEmail,
     required this.onLocalCopyRemoved,
@@ -250,6 +500,7 @@ final class _ApplicationHost extends StatefulWidget {
     required this.notificationDevicePolicyStore,
     required this.notificationDeviceClass,
     required this.scheduleDateFactory,
+    super.key,
   });
 
   final ApplicationDependencies dependencies;
@@ -257,6 +508,9 @@ final class _ApplicationHost extends StatefulWidget {
   final String studentId;
   final AvatarChooser? chooseAvatar;
   final ClinicalCalendarThemeBundle themeBundle;
+  final ThemePreviewController themePreviewController;
+  final EnhancedAccessibilityController enhancedAccessibilityController;
+  final Future<void> Function(String themeId) onPreviewTheme;
   final PasswordlessIdentityService? identity;
   final String? identityEmail;
   final Future<void> Function()? onLocalCopyRemoved;
@@ -286,6 +540,12 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   late final ConflictResolutionController _conflictController;
   BatchSchedulingController? _batchController;
   final _planningRegionKey = GlobalKey<_PlanningRegionState>();
+  final _destinationContentKey = GlobalKey();
+  final _calendarContentKey = GlobalKey();
+  final _placementDockContentKey = GlobalKey();
+  final _insightRailContentKey = GlobalKey();
+  final _mobilePlacementContentKey = GlobalKey();
+  final _mobileAttentionContentKey = GlobalKey();
   late final SupportApplicationService _supportService;
   Set<LocalDate> _selectedDates = const {};
   int _calendarRevision = 0;
@@ -567,6 +827,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
                 )
               : SynchronizationAttentionSurface(
                   synchronization: widget.dependencies.synchronization,
+                  onSynchronized: refreshAuthoritativeSettings,
                 ),
         );
         await _reloadSchedulingSurfaces();
@@ -668,6 +929,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
                 )
               : SynchronizationAttentionSurface(
                   synchronization: widget.dependencies.synchronization,
+                  onSynchronized: refreshAuthoritativeSettings,
                 ),
         );
         await _reloadSchedulingSurfaces();
@@ -720,7 +982,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     try {
       final loaded = await _supportService.load();
       if (!mounted) return;
-      setState(() => _support = loaded);
+      _acceptSupportSnapshot(loaded);
     } on Object catch (error) {
       if (!mounted) return;
       setState(() => _supportError = error);
@@ -729,12 +991,34 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     }
   }
 
+  Future<void> refreshAuthoritativeSettings() async {
+    try {
+      final loaded = await _supportService.load();
+      if (!mounted) return;
+      _acceptSupportSnapshot(loaded);
+    } on Object {
+      // The current authoritative presentation stays intact when refresh
+      // cannot prove that a newer synchronized setting exists.
+    }
+  }
+
+  void _acceptSupportSnapshot(SupportSnapshot snapshot) {
+    widget.themePreviewController.updateAuthoritativeTheme(
+      themeId: snapshot.settings.value.themeId,
+      revision: snapshot.settings.revision,
+    );
+    widget.enhancedAccessibilityController.acceptAuthoritative(
+      snapshot.settings.value.enhancedAccessibility,
+    );
+    setState(() => _support = snapshot);
+  }
+
   Future<void> _refreshSupportAndOfferOnboarding() async {
     if (!mounted || _profileOnboardingOpen) return;
     try {
       final loaded = await _supportService.load();
       if (!mounted) return;
-      setState(() => _support = loaded);
+      _acceptSupportSnapshot(loaded);
       final email = widget.identityEmail;
       final profile = loaded.profile.value;
       if (email == null ||
@@ -818,8 +1102,8 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       settings: settings,
     );
     if (!mounted) return;
-    setState(
-      () => _support = SupportSnapshot(
+    _acceptSupportSnapshot(
+      SupportSnapshot(
         profile: snapshot.profile,
         settings: saved,
         scheduleTemplates: snapshot.scheduleTemplates,
@@ -827,6 +1111,79 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     );
     _replaceBatchController();
     await _reconcileNotifications();
+  }
+
+  Future<void> _persistEnhancedAccessibility(bool enabled) async {
+    final snapshot = _support;
+    if (snapshot == null) {
+      throw StateError('Student Settings are still loading.');
+    }
+    final current = snapshot.settings.value;
+    final saved = await _supportService.saveSettings(
+      expectedRevision: snapshot.settings.revision,
+      settings: StudentSettings(
+        weekStart: current.weekStart,
+        timeDisplay: current.timeDisplay,
+        themeId: current.themeId,
+        enhancedAccessibility: enabled,
+        synchronization: current.synchronization,
+        notifications: current.notifications,
+      ),
+    );
+    if (!mounted) return;
+    _acceptSupportSnapshot(
+      SupportSnapshot(
+        profile: snapshot.profile,
+        settings: saved,
+        scheduleTemplates: snapshot.scheduleTemplates,
+      ),
+    );
+  }
+
+  Future<void> applyThemePreview() async {
+    ThemeApplyRequest request;
+    try {
+      request = widget.themePreviewController.beginApply();
+    } on StateError {
+      return;
+    }
+    final snapshot = _support;
+    if (snapshot == null) {
+      widget.themePreviewController.failApply(
+        'Student Settings are still loading. Try again.',
+      );
+      return;
+    }
+    try {
+      final current = snapshot.settings.value;
+      final saved = await _supportService.saveSettings(
+        expectedRevision: request.expectedRevision,
+        settings: StudentSettings(
+          weekStart: current.weekStart,
+          timeDisplay: current.timeDisplay,
+          themeId: request.themeId,
+          enhancedAccessibility: current.enhancedAccessibility,
+          synchronization: current.synchronization,
+          notifications: current.notifications,
+        ),
+      );
+      if (!mounted) return;
+      setState(
+        () => _support = SupportSnapshot(
+          profile: snapshot.profile,
+          settings: saved,
+          scheduleTemplates: snapshot.scheduleTemplates,
+        ),
+      );
+      widget.themePreviewController.completeApply(revision: saved.revision);
+    } on Object catch (error) {
+      await refreshAuthoritativeSettings();
+      if (!mounted) return;
+      final message = error is RepositoryException
+          ? error.message
+          : 'Theme could not be applied. Try again.';
+      widget.themePreviewController.failApply(message);
+    }
   }
 
   Future<void> _saveTemplate(ScheduleTemplate template) async {
@@ -906,6 +1263,9 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       builder: (context) => SafeArea(
         child: ApplicationMenu(
           onSelected: (destination) => Navigator.pop(context, destination),
+          enhancedAccessibilityController:
+              widget.enhancedAccessibilityController,
+          onPersistEnhancedAccessibility: _persistEnhancedAccessibility,
         ),
       ),
     );
@@ -969,7 +1329,10 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         destination: destination,
         entry: _entry,
         onExit: _exitDestination,
-        child: _destinationBody(destination),
+        child: KeyedSubtree(
+          key: _destinationContentKey,
+          child: _destinationBody(destination),
+        ),
       );
     }
 
@@ -981,61 +1344,76 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       onOpenAttention: _openAttentionCenter,
       onAddSchedule: _openPlanning,
       slots: ResponsiveShellSlots(
-        placementDock: _PlacementLoadState(
-          controller: _placementController,
-          onRetry: _placementController.load,
-          child: PlacementDock(
+        placementDock: KeyedSubtree(
+          key: _placementDockContentKey,
+          child: _PlacementLoadState(
             controller: _placementController,
-            studentId: widget.studentId,
-            onManage: () =>
-                _openDirect(ClinicalCalendarDestination.clinicalPlacements),
+            onRetry: _placementController.load,
+            child: PlacementDock(
+              controller: _placementController,
+              studentId: widget.studentId,
+              onManage: () =>
+                  _openDirect(ClinicalCalendarDestination.clinicalPlacements),
+            ),
           ),
         ),
-        centralContent: CalendarPeriodView(
-          key: ValueKey('calendar-period-view-$_calendarRevision'),
-          dataSource: _calendarDataSource,
-          studentId: widget.studentId,
-          today: _today(widget.dependencies.clock),
-          weekStartsOn: settings.weekStart,
-          twelveHourTime:
-              settings.timeDisplay == TimeDisplayPreference.twelveHour,
-          initialSelectedDates: _selectedDates,
-          onSelectionChanged: _updateCalendarSelection,
-          onOpenItem: _openCommitment,
+        centralContent: KeyedSubtree(
+          key: _calendarContentKey,
+          child: CalendarPeriodView(
+            key: ValueKey('calendar-period-view-$_calendarRevision'),
+            dataSource: _calendarDataSource,
+            studentId: widget.studentId,
+            today: _today(widget.dependencies.clock),
+            weekStartsOn: settings.weekStart,
+            twelveHourTime:
+                settings.timeDisplay == TimeDisplayPreference.twelveHour,
+            initialSelectedDates: _selectedDates,
+            onSelectionChanged: _updateCalendarSelection,
+            onOpenItem: _openCommitment,
+          ),
         ),
-        insightRail: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _PlacementLoadState(
-                controller: _placementController,
-                onRetry: _placementController.load,
-                child: PlacementProgressRail(
+        insightRail: KeyedSubtree(
+          key: _insightRailContentKey,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _PlacementLoadState(
                   controller: _placementController,
-                  studentId: widget.studentId,
+                  onRetry: _placementController.load,
+                  child: PlacementProgressRail(
+                    controller: _placementController,
+                    studentId: widget.studentId,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              AttentionRail(
-                controller: _attentionController,
-                onOpenAction: _openAttentionItem,
-                onOpenAll: _openAttentionCenter,
-              ),
-            ],
+                const SizedBox(height: 10),
+                AttentionRail(
+                  controller: _attentionController,
+                  onOpenAction: _openAttentionItem,
+                  onOpenAll: _openAttentionCenter,
+                ),
+              ],
+            ),
           ),
         ),
-        mobilePlacementSummary: _PlacementLoadState(
-          controller: _placementController,
-          onRetry: _placementController.load,
-          child: PlacementMobileSummary(
+        mobilePlacementSummary: KeyedSubtree(
+          key: _mobilePlacementContentKey,
+          child: _PlacementLoadState(
             controller: _placementController,
-            studentId: widget.studentId,
+            onRetry: _placementController.load,
+            child: PlacementMobileSummary(
+              controller: _placementController,
+              studentId: widget.studentId,
+            ),
           ),
         ),
-        mobileAttention: AttentionRail(
-          controller: _attentionController,
-          onOpenAction: _openAttentionItem,
-          onOpenAll: _openAttentionCenter,
+        mobileAttention: KeyedSubtree(
+          key: _mobileAttentionContentKey,
+          child: AttentionRail(
+            controller: _attentionController,
+            onOpenAction: _openAttentionItem,
+            onOpenAll: _openAttentionCenter,
+          ),
         ),
         planningRegion: _PlanningRegion(
           key: _planningRegionKey,
@@ -1079,7 +1457,10 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         return IdentityDevicesSurface(
           identity: identity,
           email: email,
-          onLocalCopyRemoved: onLocalCopyRemoved,
+          onLocalCopyRemoved: () async {
+            widget.themePreviewController.revert();
+            await onLocalCopyRemoved();
+          },
           createAccountBackup: widget.createAccountBackup,
         );
       case ClinicalCalendarDestination.trashRecovery:
@@ -1133,12 +1514,16 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       case ClinicalCalendarDestination.synchronization:
         return SynchronizationAttentionSurface(
           synchronization: widget.dependencies.synchronization,
+          onSynchronized: refreshAuthoritativeSettings,
         );
       case ClinicalCalendarDestination.settings:
         final devicePolicy = _notificationDevicePolicy;
         return _supportBody(
           (snapshot) => SettingsTemplatesSurface(
             settings: snapshot.settings.value,
+            authoritativeThemeId:
+                widget.themePreviewController.authoritativeThemeId,
+            onPreviewTheme: widget.onPreviewTheme,
             scheduleTemplates: snapshot.scheduleTemplates
                 .map((record) => record.value)
                 .toList(growable: false),

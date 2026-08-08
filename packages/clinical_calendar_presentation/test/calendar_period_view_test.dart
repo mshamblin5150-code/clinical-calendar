@@ -12,6 +12,52 @@ const _studentId = '00000000-0000-4000-8000-000000000001';
 final _today = LocalDate(2026, 8, 3);
 
 void main() {
+  testWidgets('Enhanced adds the persistent redundant-cue Calendar legend', (
+    tester,
+  ) async {
+    final source = _MemoryCalendarDataSource(_snapshot());
+    await _pumpCalendar(tester, source: source);
+    expect(find.byKey(const Key('enhanced-calendar-legend')), findsNothing);
+
+    await _pumpCalendar(tester, source: source, enhancedAccessibility: true);
+
+    expect(find.byKey(const Key('enhanced-calendar-legend')), findsOneWidget);
+    for (final label in const [
+      'Clinical Session',
+      'Work Shift',
+      'Protected Day',
+      'Today',
+      'Urgent',
+      'Scheduled',
+      'Completed',
+      'Cancelled',
+      'Missed',
+    ]) {
+      expect(find.text(label), findsWidgets);
+    }
+  });
+
+  testWidgets('Enhanced legend reflows at 320 px and 200% text', (
+    tester,
+  ) async {
+    await _pumpCalendar(
+      tester,
+      source: _MemoryCalendarDataSource(_snapshot()),
+      surfaceSize: const Size(320, 700),
+      bounded: true,
+      enhancedAccessibility: true,
+      textScaler: const TextScaler.linear(2),
+    );
+
+    final legend = find.byKey(const Key('enhanced-calendar-legend'));
+    expect(legend, findsOneWidget);
+    expect(
+      find.descendant(of: legend, matching: find.byType(SingleChildScrollView)),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Graphite Calendar renders its bundle-owned marks', (
     tester,
   ) async {
@@ -25,7 +71,7 @@ void main() {
       ThemeSemanticRole.workShift,
       ThemeSemanticRole.clinicalSession,
       ThemeSemanticRole.protectedDay,
-      ThemeSemanticRole.todayOrUrgent,
+      ThemeSemanticRole.today,
     ]) {
       expect(find.byKey(Key('theme-mark-${role.name}')), findsWidgets);
     }
@@ -282,13 +328,17 @@ Future<void> _pumpCalendar(
   ValueChanged<CalendarItemReference>? onOpenItem,
   bool bounded = false,
   bool graphite = false,
+  bool enhancedAccessibility = false,
+  TextScaler textScaler = TextScaler.noScaling,
 }) async {
   tester.view.physicalSize = surfaceSize;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   final calendar = CalendarPeriodView(
-    key: ValueKey('$weekStartsOn-$initialAnchor-$initialPeriod'),
+    key: ValueKey(
+      '$weekStartsOn-$initialAnchor-$initialPeriod-$enhancedAccessibility',
+    ),
     dataSource: source,
     studentId: _studentId,
     today: _today,
@@ -305,7 +355,13 @@ Future<void> _pumpCalendar(
           ? const GraphiteThemeBundle().marks
           : const VariantFThemeBundle().marks,
       child: MaterialApp(
-        theme: graphite ? buildGraphiteTheme() : buildVariantFTheme(),
+        theme: graphite
+            ? buildGraphiteTheme(enhancedAccessibility: enhancedAccessibility)
+            : buildVariantFTheme(enhancedAccessibility: enhancedAccessibility),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          child: child!,
+        ),
         home: Scaffold(
           body: bounded
               ? SizedBox.expand(child: calendar)

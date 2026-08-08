@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'accessibility_tokens.dart';
+
 /// Stable semantic colors consumed by presentation widgets.
 ///
 /// Workflow widgets should depend on these meanings rather than on Variant F's
@@ -151,6 +153,16 @@ final class ClinicalCalendarMetrics
   static double lerpDouble(double a, double b, double t) => a + (b - a) * t;
 }
 
+const variantFStandardAccessibilityTokens = ClinicalCalendarAccessibilityTokens(
+  enhanced: false,
+  focusOuterColor: VariantFColors.primary,
+  focusInnerColor: Colors.black,
+  focusWidth: 1.5,
+  selectionWidth: 1,
+  persistentExpandedLegend: false,
+  decorationOpacity: 1,
+);
+
 abstract final class VariantFColors {
   static const background = Color(0xFF050B08);
   static const surface = Color(0xFF0B130F);
@@ -187,7 +199,7 @@ const variantFSemanticColors = ClinicalCalendarColors(
   urgent: VariantFColors.urgent,
 );
 
-ThemeData buildVariantFTheme() {
+ThemeData buildVariantFTheme({bool enhancedAccessibility = false}) {
   const metrics = ClinicalCalendarMetrics();
   const textTheme = TextTheme(
     headlineSmall: TextStyle(
@@ -233,7 +245,7 @@ ThemeData buildVariantFTheme() {
     ),
   );
 
-  return ThemeData(
+  final standard = ThemeData(
     brightness: Brightness.dark,
     useMaterial3: true,
     scaffoldBackgroundColor: VariantFColors.background,
@@ -249,7 +261,11 @@ ThemeData buildVariantFTheme() {
     dividerColor: VariantFColors.border,
     disabledColor: VariantFColors.muted.withValues(alpha: .45),
     splashFactory: NoSplash.splashFactory,
-    extensions: const [variantFSemanticColors, metrics],
+    extensions: const [
+      variantFSemanticColors,
+      metrics,
+      variantFStandardAccessibilityTokens,
+    ],
     visualDensity: VisualDensity.standard,
     cardTheme: CardThemeData(
       color: VariantFColors.surface,
@@ -411,6 +427,112 @@ ThemeData buildVariantFTheme() {
       ),
     ),
   );
+  if (!enhancedAccessibility) return standard;
+  return _applyVariantFEnhancedAccessibility(standard);
+}
+
+ThemeData _applyVariantFEnhancedAccessibility(ThemeData standard) {
+  const enhancedBoundary = Color(0xFFFFFF8A);
+  const enhancedColors = ClinicalCalendarColors(
+    canvas: VariantFColors.background,
+    structure: VariantFColors.surface,
+    structureRaised: VariantFColors.raisedSurface,
+    insetBorder: Color(0xFF87988D),
+    primaryText: Color(0xFFFFFFFF),
+    secondaryText: Color(0xFFD5DDD7),
+    clinical: Color(0xFFB8F28E),
+    work: VariantFColors.work,
+    workMachinery: Color(0xFFA8D5C2),
+    protectedDay: VariantFColors.protectedDay,
+    protectedDayAccent: Color(0xFFE1E6E2),
+    scheduled: Color(0xFFFFD470),
+    urgent: Color(0xFFFF9189),
+  );
+  final scheme = standard.colorScheme.copyWith(
+    primary: enhancedColors.clinical,
+    secondary: enhancedColors.scheduled,
+    error: enhancedColors.urgent,
+    onSurface: enhancedColors.primaryText,
+    outline: enhancedColors.insetBorder,
+  );
+  return standard.copyWith(
+    colorScheme: scheme,
+    focusColor: enhancedAccessibilityTokens.focusOuterColor,
+    dividerColor: enhancedColors.insetBorder,
+    textTheme: standard.textTheme.apply(
+      bodyColor: enhancedColors.primaryText,
+      displayColor: enhancedColors.primaryText,
+    ),
+    cardTheme: standard.cardTheme.copyWith(
+      shape: BeveledRectangleBorder(
+        side: const BorderSide(color: enhancedBoundary, width: 1.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+    ),
+    appBarTheme: standard.appBarTheme.copyWith(
+      shape: const Border(
+        bottom: BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+    ),
+    dialogTheme: standard.dialogTheme.copyWith(
+      shape: BeveledRectangleBorder(
+        side: const BorderSide(color: enhancedBoundary, width: 1.5),
+        borderRadius: BorderRadius.circular(10),
+      ),
+    ),
+    bottomSheetTheme: standard.bottomSheetTheme.copyWith(
+      shape: const Border(top: BorderSide(color: enhancedBoundary, width: 1.5)),
+    ),
+    inputDecorationTheme: standard.inputDecorationTheme.copyWith(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(
+          standard.extension<ClinicalCalendarMetrics>()!.cornerRadius,
+        ),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(
+          standard.extension<ClinicalCalendarMetrics>()!.cornerRadius,
+        ),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(
+          standard.extension<ClinicalCalendarMetrics>()!.cornerRadius,
+        ),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 3),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: standard.filledButtonTheme.style?.copyWith(
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: enhancedBoundary, width: 1.5),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: standard.outlinedButtonTheme.style?.copyWith(
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: enhancedBoundary, width: 1.5),
+        ),
+      ),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: standard.segmentedButtonTheme.style?.copyWith(
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: enhancedBoundary, width: 1.5),
+        ),
+      ),
+    ),
+    chipTheme: standard.chipTheme.copyWith(
+      side: const BorderSide(color: enhancedBoundary, width: 1.5),
+    ),
+    extensions: const [
+      enhancedColors,
+      ClinicalCalendarMetrics(),
+      enhancedAccessibilityTokens,
+    ],
+  );
 }
 
 extension ClinicalCalendarThemeContext on BuildContext {
@@ -421,4 +543,8 @@ extension ClinicalCalendarThemeContext on BuildContext {
   ClinicalCalendarMetrics get clinicalMetrics =>
       Theme.of(this).extension<ClinicalCalendarMetrics>() ??
       const ClinicalCalendarMetrics();
+
+  ClinicalCalendarAccessibilityTokens get accessibilityTokens =>
+      Theme.of(this).extension<ClinicalCalendarAccessibilityTokens>() ??
+      variantFStandardAccessibilityTokens;
 }

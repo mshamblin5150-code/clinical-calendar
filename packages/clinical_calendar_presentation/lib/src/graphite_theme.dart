@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'accessibility_tokens.dart';
 import 'variant_f_theme.dart';
 
 abstract final class GraphiteColors {
@@ -43,7 +44,17 @@ const graphiteSemanticColors = ClinicalCalendarColors(
   urgent: GraphiteColors.urgent,
 );
 
-ThemeData buildGraphiteTheme() {
+const graphiteStandardAccessibilityTokens = ClinicalCalendarAccessibilityTokens(
+  enhanced: false,
+  focusOuterColor: GraphiteColors.focus,
+  focusInnerColor: Colors.black,
+  focusWidth: 3,
+  selectionWidth: 1,
+  persistentExpandedLegend: false,
+  decorationOpacity: 1,
+);
+
+ThemeData buildGraphiteTheme({bool enhancedAccessibility = false}) {
   const metrics = ClinicalCalendarMetrics(
     cornerRadius: 8,
     compactSpacing: 8,
@@ -86,14 +97,18 @@ ThemeData buildGraphiteTheme() {
     canvasColor: GraphiteColors.canvas,
     dividerColor: GraphiteColors.outlineVariant,
     disabledColor: GraphiteColors.muted,
-    extensions: const [graphiteSemanticColors, metrics],
+    extensions: const [
+      graphiteSemanticColors,
+      metrics,
+      graphiteStandardAccessibilityTokens,
+    ],
     visualDensity: VisualDensity.standard,
   );
   final rounded = RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(8),
     side: const BorderSide(color: GraphiteColors.outline),
   );
-  return base.copyWith(
+  final standard = base.copyWith(
     textTheme: base.textTheme.apply(
       bodyColor: GraphiteColors.text,
       displayColor: GraphiteColors.text,
@@ -156,5 +171,96 @@ ThemeData buildGraphiteTheme() {
       indicatorColor: GraphiteColors.primaryContainer,
       elevation: 0,
     ),
+  );
+  if (!enhancedAccessibility) return standard;
+  return _applyGraphiteEnhancedAccessibility(standard);
+}
+
+ThemeData _applyGraphiteEnhancedAccessibility(ThemeData standard) {
+  const enhancedBoundary = Color(0xFFFFFF8A);
+  const enhancedColors = ClinicalCalendarColors(
+    canvas: GraphiteColors.canvas,
+    structure: GraphiteColors.surface,
+    structureRaised: GraphiteColors.surfaceRaised,
+    insetBorder: Color(0xFFAAB6BE),
+    primaryText: Colors.white,
+    secondaryText: Color(0xFFE1E7EA),
+    clinical: Color(0xFF9DD4FF),
+    work: GraphiteColors.work,
+    workMachinery: Color(0xFFE1BDFF),
+    protectedDay: GraphiteColors.protectedDay,
+    protectedDayAccent: Color(0xFFFFE09A),
+    scheduled: Color(0xFF9DCEFF),
+    urgent: Color(0xFFFFAAA5),
+  );
+  return standard.copyWith(
+    colorScheme: standard.colorScheme.copyWith(
+      primary: const Color(0xFF67F5D2),
+      secondary: enhancedColors.scheduled,
+      error: enhancedColors.urgent,
+      onSurface: enhancedColors.primaryText,
+      onSurfaceVariant: enhancedColors.secondaryText,
+      outline: enhancedColors.insetBorder,
+    ),
+    focusColor: enhancedAccessibilityTokens.focusOuterColor,
+    dividerColor: enhancedColors.insetBorder,
+    textTheme: standard.textTheme.apply(
+      bodyColor: enhancedColors.primaryText,
+      displayColor: enhancedColors.primaryText,
+    ),
+    cardTheme: standard.cardTheme.copyWith(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+    ),
+    appBarTheme: standard.appBarTheme.copyWith(
+      shape: const Border(
+        bottom: BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+    ),
+    dialogTheme: standard.dialogTheme.copyWith(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+    ),
+    inputDecorationTheme: standard.inputDecorationTheme.copyWith(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 3),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: standard.filledButtonTheme.style?.copyWith(
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: enhancedBoundary, width: 1.5),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: standard.outlinedButtonTheme.style?.copyWith(
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: enhancedBoundary, width: 1.5),
+        ),
+      ),
+    ),
+    extensions: const [
+      enhancedColors,
+      ClinicalCalendarMetrics(
+        cornerRadius: 8,
+        compactSpacing: 8,
+        standardSpacing: 16,
+      ),
+      enhancedAccessibilityTokens,
+    ],
   );
 }

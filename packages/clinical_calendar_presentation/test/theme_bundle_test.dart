@@ -23,7 +23,7 @@ void main() {
     );
     expect(bundle.frame.assetPaths, hasLength(4));
     expect(bundle.gallery.swatches, hasLength(5));
-    expect(bundle.marks.marks, hasLength(5));
+    expect(bundle.marks.marks, hasLength(9));
     expect(bundle.helpGuide.calendarStates, hasLength(5));
   });
 
@@ -55,7 +55,7 @@ void main() {
     );
     expect(graphite.frame.assetPaths, hasLength(1));
     expect(graphite.gallery.swatches, hasLength(5));
-    expect(graphite.marks.marks, hasLength(5));
+    expect(graphite.marks.marks, hasLength(9));
     expect(graphite.helpGuide.calendarStates, hasLength(5));
     expect(graphite.frame.safeInsets, const {
       ThemeFrameRegion.calendar: graphiteCalendarSafeInsets,
@@ -80,6 +80,46 @@ void main() {
       ),
     );
   });
+
+  test(
+    'Enhanced is an overlay and Standard round trips exactly for both bundles',
+    () {
+      for (final themedBundle in const <ClinicalCalendarThemeBundle>[
+        VariantFThemeBundle(),
+        GraphiteThemeBundle(),
+      ]) {
+        final standard = themedBundle.standardPresentation.createThemeData();
+        final enhanced = themedBundle.standardPresentation.createThemeData(
+          enhancedAccessibility: true,
+        );
+        final restored = themedBundle.standardPresentation.createThemeData();
+
+        expect(enhanced, isNot(standard));
+        expect(
+          enhanced.extension<ClinicalCalendarAccessibilityTokens>()?.enhanced,
+          isTrue,
+        );
+        expect(restored.colorScheme, standard.colorScheme);
+        expect(restored.textTheme, standard.textTheme);
+        expect(restored.cardTheme, standard.cardTheme);
+        expect(
+          restored.extension<ClinicalCalendarColors>(),
+          standard.extension<ClinicalCalendarColors>(),
+        );
+        expect(
+          restored.extension<ClinicalCalendarAccessibilityTokens>(),
+          standard.extension<ClinicalCalendarAccessibilityTokens>(),
+        );
+        expect(themedBundle.standardPresentation.themeId, themedBundle.id);
+        expect(themedBundle.frame.assetPaths, isNotEmpty);
+        expect(themedBundle.frame.sourceSize, const Size(1536, 1024));
+        expect(
+          themedBundle.frame.sourceCuts,
+          const EdgeInsets.fromLTRB(120, 145, 120, 170),
+        );
+      }
+    },
+  );
 
   test('unknown applied ID falls back without changing the stored ID', () {
     final resolved = ClinicalCalendarThemeBundleRegistry.standard
@@ -248,6 +288,74 @@ void main() {
       matchesReferenceImage(directImage),
     );
   });
+
+  testWidgets(
+    'Containment Drone rendered Standard survives an Enhanced round trip exactly',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      const resolved = VariantFThemeBundle();
+
+      final standardKey = GlobalKey();
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: resolved.standardPresentation.createThemeData(),
+          boundaryKey: standardKey,
+          shell: resolved.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final acceptedStandard = await _capture(standardKey);
+      addTearDown(acceptedStandard.dispose);
+
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: resolved.standardPresentation.createThemeData(
+            enhancedAccessibility: true,
+          ),
+          boundaryKey: GlobalKey(),
+          shell: resolved.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final restoredKey = GlobalKey();
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: resolved.standardPresentation.createThemeData(),
+          boundaryKey: restoredKey,
+          shell: resolved.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await expectLater(
+        find.byKey(restoredKey),
+        matchesReferenceImage(acceptedStandard),
+      );
+    },
+  );
 
   testWidgets('Graphite shell uses only Graphite-owned raster framing', (
     tester,
