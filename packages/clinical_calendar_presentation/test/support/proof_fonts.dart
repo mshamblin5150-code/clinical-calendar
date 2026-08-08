@@ -138,9 +138,11 @@ final class _ProofGoldenComparator implements GoldenFileComparator {
 
   @override
   Future<bool> compare(Uint8List imageBytes, Uri golden) async {
-    final expectedBytes = await File.fromUri(
-      getTestUri(golden, null),
-    ).readAsBytes();
+    final expectedUri = resolveProofGolden(delegate, golden);
+    if (expectedUri == null) {
+      return delegate.compare(imageBytes, golden);
+    }
+    final expectedBytes = await File.fromUri(expectedUri).readAsBytes();
     final expected = img.decodePng(expectedBytes);
     final actual = img.decodePng(imageBytes);
     if (expected == null || actual == null) {
@@ -155,6 +157,13 @@ final class _ProofGoldenComparator implements GoldenFileComparator {
   @override
   Future<void> update(Uri golden, Uint8List imageBytes) =>
       delegate.update(golden, imageBytes);
+}
+
+Uri? resolveProofGolden(GoldenFileComparator comparator, Uri golden) {
+  if (comparator case final LocalFileComparator localComparator) {
+    return localComparator.basedir.resolveUri(golden);
+  }
+  return null;
 }
 
 bool proofImagesMatch(img.Image expected, img.Image actual) {

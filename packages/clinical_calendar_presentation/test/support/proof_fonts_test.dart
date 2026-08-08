@@ -1,9 +1,25 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
 import 'proof_fonts.dart';
 
 void main() {
+  test('proof golden paths retain Flutter test-file-relative resolution', () {
+    final testFile = Uri.file(
+      '${Directory.systemTemp.path}${Platform.pathSeparator}'
+      'proof_suite${Platform.pathSeparator}sample_test.dart',
+    );
+    final comparator = LocalFileComparator(testFile);
+    final golden = Uri.parse('goldens/sample.png');
+
+    expect(
+      resolveProofGolden(comparator, golden),
+      comparator.basedir.resolveUri(golden),
+    );
+  });
+
   test(
     'proof comparison accepts distributed low-delta rasterization noise',
     () {
