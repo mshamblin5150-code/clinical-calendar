@@ -93,3 +93,26 @@ The asset is newly generated for Federation 2399. It does not import, recolor,
 trace, or modify Containment Drone 47-Alpha or Federation Classic artwork. It
 contains no operational content, protected production screen geometry,
 insignia, labels, or meaningful controls.
+
+## Concept-fidelity landscape chassis
+
+Issue #134 candidate v3 adds the secondary concept-composition asset
+`packages/clinical_calendar_presentation/assets/federation_2399_raster/dashboard-chassis-landscape-v1.png`.
+It is a 1536 x 1024 opaque, non-semantic housing for the declared landscape
+golden exemplar. SHA-256:
+`3fd166d137f73eb9c5f9e4136b02cabd6003bb92b484f11f72d599df93de9794`.
+
+The built-in image-generation workflow edited the approved issue #114 concept
+as the normative geometry and material reference. The pass preserved its
+outer silhouette, crown sweep, layered lips, understructure, light channels,
+major bay proportions, and bottom-navigation housing while removing every
+label, number, icon, grid, event, progress indicator, control, selection,
+status mark, and other semantic element. Each content region is an opaque
+charcoal bay populated only by live Flutter widgets at runtime.
+
+This fixed chassis is used only by Federation 2399's exact landscape tablet
+composition; it is not the bundle's primary normalized frame and is never
+nine-slice scaled. `panel-nine-slice-v1.png` remains the transparent-corner,
+120/145/120/170-cut primary frame required by the additive contract, and owns
+portrait, compact, and destination framing. Neither asset imports, recolors,
+traces, or modifies Containment Drone artwork.

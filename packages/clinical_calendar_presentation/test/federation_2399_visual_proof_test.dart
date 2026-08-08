@@ -37,14 +37,55 @@ void main() {
       ),
     );
   });
+
+  testWidgets('Federation 2399 remains legible at 200 percent text scale', (
+    tester,
+  ) async {
+    await _pumpProof(
+      tester,
+      const Size(900, 1440),
+      textScaler: const TextScaler.linear(2),
+    );
+    final navigation = tester.getRect(
+      find.byKey(const Key('federation-2399-bottom-navigation')),
+    );
+    expect(navigation.top, greaterThan(1300));
+    expect(navigation.bottom, lessThanOrEqualTo(1440));
+    expect(
+      find.byKey(const Key('federation-2399-portrait-scroll')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('federation-2399-calendar-horizontal-scroll')),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Open menu'), findsOneWidget);
+    expect(find.byTooltip('Add schedule'), findsOneWidget);
+
+    await expectLater(
+      find.byKey(const Key('federation-2399-proof')),
+      matchesGoldenFile(
+        'goldens/federation_2399/'
+        'federation_2399_portrait_200_percent_900x1440.png',
+      ),
+    );
+  });
 }
 
-Future<void> _pumpProof(WidgetTester tester, Size size) async {
+Future<void> _pumpProof(
+  WidgetTester tester,
+  Size size, {
+  TextScaler textScaler = TextScaler.noScaling,
+}) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
   final proofAssets = _ProofAssetBundle(
     frameFile: _findWorkspaceFile(
       'packages/clinical_calendar_presentation/$federation2399FrameAsset',
+    ),
+    chassisFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/'
+      '$federation2399LandscapeChassisAsset',
     ),
   );
   final preloadKey = GlobalKey();
@@ -54,15 +95,22 @@ Future<void> _pumpProof(WidgetTester tester, Size size) async {
       child: MaterialApp(home: SizedBox(key: preloadKey)),
     ),
   );
-  await tester.runAsync(
-    () => precacheImage(
+  await tester.runAsync(() async {
+    await precacheImage(
       const AssetImage(
         federation2399FrameAsset,
         package: 'clinical_calendar_presentation',
       ),
       preloadKey.currentContext!,
-    ),
-  );
+    );
+    await precacheImage(
+      const AssetImage(
+        federation2399LandscapeChassisAsset,
+        package: 'clinical_calendar_presentation',
+      ),
+      preloadKey.currentContext!,
+    );
+  });
   await tester.pump();
   expect(tester.takeException(), isNull);
   const themeBundle = Federation2399ThemeBundle();
@@ -97,6 +145,10 @@ Future<void> _pumpProof(WidgetTester tester, Size size) async {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: proofTheme,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          child: child!,
+        ),
         home: RepaintBoundary(
           key: const Key('federation-2399-proof'),
           child: themeBundle.shellRenderer.build(
@@ -113,6 +165,19 @@ Future<void> _pumpProof(WidgetTester tester, Size size) async {
   );
   await tester.pump();
   await tester.pump(const Duration(seconds: 1));
+  for (final ownerKey in const [
+    Key('federation-2399-portrait-scroll'),
+    Key('federation-2399-calendar-horizontal-scroll'),
+  ]) {
+    final scrollable = find.descendant(
+      of: find.byKey(ownerKey),
+      matching: find.byType(Scrollable),
+    );
+    if (scrollable.evaluate().isNotEmpty) {
+      tester.state<ScrollableState>(scrollable.first).position.jumpTo(0);
+    }
+  }
+  await tester.pump();
   expect(tester.takeException(), isNull);
 }
 
@@ -128,9 +193,10 @@ File _findWorkspaceFile(String relativePath) {
 }
 
 final class _ProofAssetBundle extends CachingAssetBundle {
-  _ProofAssetBundle({required this.frameFile});
+  _ProofAssetBundle({required this.frameFile, required this.chassisFile});
 
   final File frameFile;
+  final File chassisFile;
 
   @override
   Future<ByteData> load(String key) async {
@@ -138,6 +204,13 @@ final class _ProofAssetBundle extends CachingAssetBundle {
         'packages/clinical_calendar_presentation/$federation2399FrameAsset') {
       return ByteData.sublistView(
         Uint8List.fromList(await frameFile.readAsBytes()),
+      );
+    }
+    if (key ==
+        'packages/clinical_calendar_presentation/'
+            '$federation2399LandscapeChassisAsset') {
+      return ByteData.sublistView(
+        Uint8List.fromList(await chassisFile.readAsBytes()),
       );
     }
     return rootBundle.load(key);

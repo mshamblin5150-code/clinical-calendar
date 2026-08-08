@@ -312,7 +312,7 @@ final class Federation2399ShellRenderer
   String get themeId => federation2399ThemeId;
 
   @override
-  String get rendererId => 'federation-2399-owned-responsive-console-v2';
+  String get rendererId => 'federation-2399-owned-responsive-console-v3';
 
   @override
   Widget build({
@@ -1275,7 +1275,7 @@ final class Federation2399ThemeBundle implements ClinicalCalendarThemeBundle {
     themeId: federation2399ThemeId,
     assetPackage: 'clinical_calendar_presentation',
     primaryAsset: federation2399FrameAsset,
-    assetPaths: [federation2399FrameAsset],
+    assetPaths: [federation2399FrameAsset, federation2399LandscapeChassisAsset],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
     safeInsets: {
@@ -1289,7 +1289,7 @@ final class Federation2399ThemeBundle implements ClinicalCalendarThemeBundle {
   @override
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: federation2399ThemeId,
-    rendererId: 'federation-2399-owned-responsive-console-v2',
+    rendererId: 'federation-2399-owned-responsive-console-v3',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [

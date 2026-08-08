@@ -6,10 +6,46 @@ import 'graphite_frame.dart';
 
 const federation2399FrameAsset =
     'assets/federation_2399_raster/panel-nine-slice-v1.png';
+const federation2399LandscapeChassisAsset =
+    'assets/federation_2399_raster/dashboard-chassis-landscape-v1.png';
 const federation2399CalendarSafeInsets = EdgeInsets.fromLTRB(38, 46, 38, 46);
 const federation2399PlacementsSafeInsets = EdgeInsets.fromLTRB(30, 44, 30, 44);
 const federation2399PlanningSafeInsets = EdgeInsets.fromLTRB(34, 46, 34, 42);
 const federation2399StatusSafeInsets = EdgeInsets.fromLTRB(30, 44, 34, 44);
+
+/// Fixed golden-exemplar chassis derived from the approved issue #114
+/// composition. The raster contains decoration only; [child] owns all live
+/// content, semantics, focus, and callbacks.
+final class Federation2399LandscapeChassis extends StatelessWidget {
+  const Federation2399LandscapeChassis({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      ExcludeSemantics(
+        child: Image.asset(
+          federation2399LandscapeChassisAsset,
+          package: 'clinical_calendar_presentation',
+          fit: BoxFit.fill,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (context, error, stackTrace) {
+            GraphitePresentationFailureBoundary.report(
+              context,
+              error,
+              themeId: 'federation-2399',
+              isGraphite: false,
+            );
+            return const ColoredBox(color: Color(0xFF07080D));
+          },
+        ),
+      ),
+      child,
+    ],
+  );
+}
 
 /// Original Federation 2399 housing. Only center and edge seams stretch.
 final class Federation2399NineSliceFrame extends StatefulWidget {

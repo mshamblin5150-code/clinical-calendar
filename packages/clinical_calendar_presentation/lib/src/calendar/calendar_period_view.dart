@@ -15,11 +15,13 @@ import 'calendar_models.dart';
 final class CalendarPeriodViewportPolicy extends InheritedWidget {
   const CalendarPeriodViewportPolicy({
     required this.useBoundedMonthGrid,
+    this.scaleDayNumberWithText = false,
     required super.child,
     super.key,
   });
 
   final bool useBoundedMonthGrid;
+  final bool scaleDayNumberWithText;
 
   static bool usesBoundedMonthGrid(BuildContext context) =>
       context
@@ -27,9 +29,16 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
           ?.useBoundedMonthGrid ??
       false;
 
+  static bool scalesDayNumberWithText(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.scaleDayNumberWithText ??
+      false;
+
   @override
   bool updateShouldNotify(CalendarPeriodViewportPolicy oldWidget) =>
-      useBoundedMonthGrid != oldWidget.useBoundedMonthGrid;
+      useBoundedMonthGrid != oldWidget.useBoundedMonthGrid ||
+      scaleDayNumberWithText != oldWidget.scaleDayNumberWithText;
 }
 
 final class CalendarPeriodView extends StatefulWidget {
@@ -672,6 +681,15 @@ final class _DayNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final scalesDayNumber =
+        CalendarPeriodViewportPolicy.scalesDayNumberWithText(context);
+    final dayNumberWidth = scalesDayNumber
+        ? 23.0 * textScale.clamp(1.0, 2.0)
+        : 23.0;
+    final dayNumberHeight = scalesDayNumber
+        ? 23.0 + 8.0 * (textScale - 1).clamp(0.0, 1.0)
+        : 23.0;
     final usesThemeTodayMark =
         _usesAdditiveMarks(context) || context.accessibilityTokens.enhanced;
     return Row(
@@ -685,11 +703,16 @@ final class _DayNumber extends StatelessWidget {
                     width: context.accessibilityTokens.selectionWidth,
                   )
                 : null,
-            shape: today ? BoxShape.circle : BoxShape.rectangle,
+            shape: today && !scalesDayNumber
+                ? BoxShape.circle
+                : BoxShape.rectangle,
+            borderRadius: today && scalesDayNumber
+                ? BorderRadius.circular(dayNumberHeight / 2)
+                : null,
           ),
           child: SizedBox(
-            width: 23,
-            height: 23,
+            width: dayNumberWidth,
+            height: dayNumberHeight,
             child: Center(
               child: Text(
                 '${date.day}',

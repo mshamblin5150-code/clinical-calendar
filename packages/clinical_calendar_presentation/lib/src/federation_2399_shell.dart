@@ -88,91 +88,107 @@ final class Federation2399ApplicationShell extends StatelessWidget {
 
   Widget _landscape() => Scaffold(
     key: const Key('federation-2399-landscape-shell'),
-    body: SafeArea(
-      child: Federation2399NineSliceFrame(
-        chromeInsets: const EdgeInsets.fromLTRB(28, 30, 28, 32),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
-          child: Column(
+    backgroundColor: const Color(0xFF07080D),
+    body: Federation2399LandscapeChassis(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+          return Stack(
             children: [
-              _Federation2399CommandCrown(
-                environmentName: environmentName,
-                onOpenMenu: onOpenMenu,
-                onAddSchedule: onAddSchedule,
-                onOpenDestination: onOpenDestination,
-                profileAvatar: slots.profileAvatar,
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      width: 276,
-                      child: _Federation2399ConsoleBay(
-                        key: const Key('federation-2399-placement-bay'),
-                        accent: _Federation2399BayAccent.cyan,
-                        child: slots.placementDock,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            flex: 7,
-                            child: _Federation2399ConsoleBay(
-                              key: const Key('federation-2399-calendar-bay'),
-                              accent: _Federation2399BayAccent.plum,
-                              child: CalendarPeriodViewportPolicy(
-                                useBoundedMonthGrid: true,
-                                child: slots.centralContent,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Expanded(
-                            flex: 4,
-                            child: _Federation2399ConsoleBay(
-                              key: const Key('federation-2399-planning-bay'),
-                              accent: _Federation2399BayAccent.plum,
-                              child: VariantFPlanningBayMode(
-                                expandedByDefault: true,
-                                child: slots.planningRegion,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      width: 304,
-                      child: _Federation2399ConsoleBay(
-                        key: const Key('federation-2399-insight-bay'),
-                        accent: _Federation2399BayAccent.cyan,
-                        child: slots.insightRail,
-                      ),
-                    ),
-                  ],
+              Positioned(
+                left: width * .026,
+                top: height * .044,
+                width: width * .68,
+                height: height * .074,
+                child: _Federation2399CommandCrown(
+                  environmentName: environmentName,
+                  onOpenMenu: onOpenMenu,
+                  onAddSchedule: onAddSchedule,
+                  onOpenDestination: onOpenDestination,
+                  profileAvatar: slots.profileAvatar,
+                  integrated: true,
                 ),
               ),
-              const SizedBox(height: 8),
-              _Federation2399NavigationDeck(
-                selectedIndex: mobileIndex,
-                onOpenDestination: onOpenDestination,
-                onOpenAttention: onOpenAttention,
+              Positioned(
+                left: width * .035,
+                top: height * .128,
+                width: width * .17,
+                height: height * .73,
+                child: _Federation2399ConsoleBay(
+                  key: const Key('federation-2399-placement-bay'),
+                  accent: _Federation2399BayAccent.cyan,
+                  shape: _Federation2399BayShape.placement,
+                  integrated: true,
+                  child: slots.placementDock,
+                ),
+              ),
+              Positioned(
+                left: width * .235,
+                top: height * .13,
+                width: width * .478,
+                height: height * .447,
+                child: _Federation2399ConsoleBay(
+                  key: const Key('federation-2399-calendar-bay'),
+                  accent: _Federation2399BayAccent.plum,
+                  shape: _Federation2399BayShape.calendar,
+                  integrated: true,
+                  child: _Federation2399CalendarViewport(
+                    child: slots.centralContent,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: width * .235,
+                top: height * .61,
+                width: width * .478,
+                height: height * .245,
+                child: _Federation2399ConsoleBay(
+                  key: const Key('federation-2399-planning-bay'),
+                  accent: _Federation2399BayAccent.plum,
+                  shape: _Federation2399BayShape.planning,
+                  integrated: true,
+                  child: VariantFPlanningBayMode(
+                    expandedByDefault: true,
+                    child: slots.planningRegion,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: width * .754,
+                top: height * .10,
+                width: width * .225,
+                height: height * .755,
+                child: _Federation2399ConsoleBay(
+                  key: const Key('federation-2399-insight-bay'),
+                  accent: _Federation2399BayAccent.cyan,
+                  shape: _Federation2399BayShape.insight,
+                  integrated: true,
+                  child: slots.insightRail,
+                ),
+              ),
+              Positioned(
+                left: width * .056,
+                top: height * .895,
+                width: width * .888,
+                height: height * .068,
+                child: _Federation2399NavigationDeck(
+                  selectedIndex: mobileIndex,
+                  onOpenDestination: onOpenDestination,
+                  onOpenAttention: onOpenAttention,
+                  integrated: true,
+                ),
               ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     ),
   );
 
   Widget _portrait() => Scaffold(
     key: const Key('federation-2399-portrait-shell'),
+    backgroundColor: const Color(0xFF07080D),
     body: SafeArea(
       child: Federation2399NineSliceFrame(
         chromeInsets: const EdgeInsets.fromLTRB(24, 28, 24, 30),
@@ -190,57 +206,79 @@ final class Federation2399ApplicationShell extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      flex: 6,
-                      child: _Federation2399ConsoleBay(
-                        key: const Key('federation-2399-calendar-bay'),
-                        accent: _Federation2399BayAccent.plum,
-                        child: CalendarPeriodViewportPolicy(
-                          useBoundedMonthGrid: true,
-                          child: slots.centralContent,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final enlargedText =
+                        MediaQuery.textScalerOf(context).scale(1) > 1.3;
+                    return SingleChildScrollView(
+                      key: const Key('federation-2399-portrait-scroll'),
+                      primary: true,
+                      child: SizedBox(
+                        height: enlargedText
+                            ? constraints.maxHeight * 1.38
+                            : constraints.maxHeight,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              flex: 6,
+                              child: _Federation2399ConsoleBay(
+                                key: const Key('federation-2399-calendar-bay'),
+                                accent: _Federation2399BayAccent.plum,
+                                shape: _Federation2399BayShape.calendar,
+                                child: _Federation2399CalendarViewport(
+                                  child: slots.centralContent,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              flex: 3,
+                              child: _Federation2399ConsoleBay(
+                                key: const Key('federation-2399-planning-bay'),
+                                accent: _Federation2399BayAccent.plum,
+                                shape: _Federation2399BayShape.planning,
+                                child: VariantFPlanningBayMode(
+                                  expandedByDefault: false,
+                                  child: slots.planningRegion,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              flex: 3,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: _Federation2399ConsoleBay(
+                                      key: const Key(
+                                        'federation-2399-placement-bay',
+                                      ),
+                                      accent: _Federation2399BayAccent.cyan,
+                                      shape: _Federation2399BayShape.placement,
+                                      child: slots.mobilePlacementSummary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _Federation2399ConsoleBay(
+                                      key: const Key(
+                                        'federation-2399-insight-bay',
+                                      ),
+                                      accent: _Federation2399BayAccent.cyan,
+                                      shape: _Federation2399BayShape.insight,
+                                      child: slots.mobileAttention,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      flex: 3,
-                      child: _Federation2399ConsoleBay(
-                        key: const Key('federation-2399-planning-bay'),
-                        accent: _Federation2399BayAccent.plum,
-                        child: VariantFPlanningBayMode(
-                          expandedByDefault: false,
-                          child: slots.planningRegion,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      flex: 3,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: _Federation2399ConsoleBay(
-                              key: const Key('federation-2399-placement-bay'),
-                              accent: _Federation2399BayAccent.cyan,
-                              child: slots.mobilePlacementSummary,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _Federation2399ConsoleBay(
-                              key: const Key('federation-2399-insight-bay'),
-                              accent: _Federation2399BayAccent.cyan,
-                              child: slots.mobileAttention,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 8),
@@ -276,15 +314,48 @@ final class Federation2399ApplicationShell extends StatelessWidget {
 
 enum _Federation2399BayAccent { plum, cyan }
 
+enum _Federation2399BayShape { placement, calendar, planning, insight }
+
+final class _Federation2399CalendarViewport extends StatelessWidget {
+  const _Federation2399CalendarViewport({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final calendar = CalendarPeriodViewportPolicy(
+        useBoundedMonthGrid: true,
+        scaleDayNumberWithText: true,
+        child: child,
+      );
+      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
+      return SingleChildScrollView(
+        key: const Key('federation-2399-calendar-horizontal-scroll'),
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: constraints.maxWidth * 3.5,
+          height: constraints.maxHeight,
+          child: calendar,
+        ),
+      );
+    },
+  );
+}
+
 final class _Federation2399ConsoleBay extends StatelessWidget {
   const _Federation2399ConsoleBay({
     required this.accent,
+    required this.shape,
     required this.child,
+    this.integrated = false,
     super.key,
   });
 
   final _Federation2399BayAccent accent;
+  final _Federation2399BayShape shape;
   final Widget child;
+  final bool integrated;
 
   @override
   Widget build(BuildContext context) {
@@ -293,17 +364,28 @@ final class _Federation2399ConsoleBay extends StatelessWidget {
       _Federation2399BayAccent.plum => colors.clinical,
       _Federation2399BayAccent.cyan => colors.workMachinery,
     };
+    final content = ClipPath(
+      clipper: integrated ? null : _Federation2399BayClipper(shape),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          shape == _Federation2399BayShape.placement ? 14 : 12,
+          integrated ? 10 : 20,
+          shape == _Federation2399BayShape.insight ? 14 : 12,
+          integrated ? 10 : 18,
+        ),
+        child: child,
+      ),
+    );
+    if (integrated) return content;
     return CustomPaint(
       painter: _Federation2399ConsoleBayPainter(
         surface: colors.structure,
         raised: colors.structureRaised,
         border: colors.insetBorder,
         accent: accentColor,
+        shape: shape,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(26),
-        child: Padding(padding: const EdgeInsets.all(18), child: child),
-      ),
+      child: content,
     );
   }
 }
@@ -314,37 +396,47 @@ final class _Federation2399ConsoleBayPainter extends CustomPainter {
     required this.raised,
     required this.border,
     required this.accent,
+    required this.shape,
   });
 
   final Color surface;
   final Color raised;
   final Color border;
   final Color accent;
+  final _Federation2399BayShape shape;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
-    final outer = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      const Radius.circular(28),
-    );
-    final middle = outer.deflate(3);
-    final inner = outer.deflate(8);
-    canvas.drawRRect(outer, Paint()..color = raised);
-    canvas.drawRRect(
-      middle,
+    final outer = _federation2399BayPath(size, shape);
+    canvas.drawPath(
+      outer,
       Paint()
-        ..color = border.withValues(alpha: .72)
+        ..color = Color.lerp(raised, accent, .10)!
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawPath(
+      outer,
+      Paint()
+        ..color = accent.withValues(alpha: .30)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 9,
+    );
+    canvas.drawPath(
+      outer,
+      Paint()
+        ..color = border.withValues(alpha: .54)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );
-    canvas.drawRRect(inner, Paint()..color = surface);
-    canvas.drawRRect(
+    final inner = _federation2399BayPath(size, shape, inset: 10);
+    canvas.drawPath(inner, Paint()..color = surface);
+    canvas.drawPath(
       inner,
       Paint()
-        ..color = accent.withValues(alpha: .58)
+        ..color = const Color(0xFFC9CCD3).withValues(alpha: .28)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4,
+        ..strokeWidth = 1.2,
     );
     final rail = Paint()
       ..color = accent
@@ -363,7 +455,58 @@ final class _Federation2399ConsoleBayPainter extends CustomPainter {
       oldDelegate.surface != surface ||
       oldDelegate.raised != raised ||
       oldDelegate.border != border ||
-      oldDelegate.accent != accent;
+      oldDelegate.accent != accent ||
+      oldDelegate.shape != shape;
+}
+
+Path _federation2399BayPath(
+  Size size,
+  _Federation2399BayShape shape, {
+  double inset = 0,
+}) {
+  final left = inset;
+  final top = inset;
+  final right = size.width - inset;
+  final bottom = size.height - inset;
+  final shoulder = switch (shape) {
+    _Federation2399BayShape.placement => 32.0,
+    _Federation2399BayShape.calendar => 44.0,
+    _Federation2399BayShape.planning => 38.0,
+    _Federation2399BayShape.insight => 30.0,
+  };
+  final path = Path()
+    ..moveTo(left + shoulder, top)
+    ..lineTo(right - shoulder * .7, top)
+    ..quadraticBezierTo(right, top, right, top + shoulder)
+    ..lineTo(right, bottom - shoulder);
+  if (shape == _Federation2399BayShape.insight) {
+    path
+      ..quadraticBezierTo(right - 5, bottom - 5, right - shoulder, bottom)
+      ..lineTo(left + shoulder * .6, bottom);
+  } else {
+    path
+      ..quadraticBezierTo(right, bottom, right - shoulder, bottom)
+      ..lineTo(left + shoulder, bottom);
+  }
+  path
+    ..quadraticBezierTo(left, bottom, left, bottom - shoulder)
+    ..lineTo(left, top + shoulder)
+    ..quadraticBezierTo(left, top, left + shoulder, top)
+    ..close();
+  return path;
+}
+
+final class _Federation2399BayClipper extends CustomClipper<Path> {
+  const _Federation2399BayClipper(this.shape);
+
+  final _Federation2399BayShape shape;
+
+  @override
+  Path getClip(Size size) => _federation2399BayPath(size, shape, inset: 10);
+
+  @override
+  bool shouldReclip(covariant _Federation2399BayClipper oldClipper) =>
+      oldClipper.shape != shape;
 }
 
 final class _Federation2399CommandCrown extends StatelessWidget {
@@ -374,6 +517,7 @@ final class _Federation2399CommandCrown extends StatelessWidget {
     required this.onOpenDestination,
     required this.profileAvatar,
     this.compact = false,
+    this.integrated = false,
   });
 
   final String environmentName;
@@ -382,17 +526,14 @@ final class _Federation2399CommandCrown extends StatelessWidget {
   final ValueChanged<ClinicalCalendarDestination> onOpenDestination;
   final Widget profileAvatar;
   final bool compact;
+  final bool integrated;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: _Federation2399CrownPainter(
-      structure: context.clinicalColors.structureRaised,
-      border: context.clinicalColors.insetBorder,
-      cyan: context.clinicalColors.workMachinery,
-      plum: context.clinicalColors.clinical,
-    ),
-    child: SizedBox(
-      height: compact ? 58 : 66,
+  Widget build(BuildContext context) {
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    final content = SizedBox(
+      key: const Key('federation-2399-command-crown'),
+      height: compact ? 72 : 92,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18),
         child: Row(
@@ -403,36 +544,41 @@ final class _Federation2399CommandCrown extends StatelessWidget {
               onPressed: onOpenMenu,
               icon: const Icon(Icons.grid_view_outlined),
             ),
-            const SizedBox(width: 8),
-            const Icon(Icons.calendar_month_outlined),
-            const SizedBox(width: 10),
+            if (!enlargedText) ...[
+              const SizedBox(width: 8),
+              const Icon(Icons.calendar_month_outlined),
+              const SizedBox(width: 10),
+            ],
             Expanded(
-              child: Row(
-                children: [
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        compact
-                            ? 'CLINICAL CALENDAR'
-                            : 'C L I N I C A L   C A L E N D A R',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          letterSpacing: compact ? 1.2 : 2.1,
-                          color: context.clinicalColors.clinical,
+              child: enlargedText
+                  ? const SizedBox.shrink()
+                  : Row(
+                      children: [
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              compact
+                                  ? 'CLINICAL CALENDAR'
+                                  : 'C L I N I C A L   C A L E N D A R',
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(
+                                    letterSpacing: compact ? 1.2 : 2.1,
+                                    color: context.clinicalColors.clinical,
+                                  ),
+                            ),
+                          ),
                         ),
-                      ),
+                        if (!compact && environmentName.trim().isNotEmpty) ...[
+                          const SizedBox(width: 12),
+                          Text(
+                            environmentName,
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                  if (!compact && environmentName.trim().isNotEmpty) ...[
-                    const SizedBox(width: 12),
-                    Text(
-                      environmentName,
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ],
-                ],
-              ),
             ),
             IconButton(
               tooltip: 'Add schedule',
@@ -450,8 +596,18 @@ final class _Federation2399CommandCrown extends StatelessWidget {
           ],
         ),
       ),
-    ),
-  );
+    );
+    if (integrated) return content;
+    return CustomPaint(
+      painter: _Federation2399CrownPainter(
+        structure: context.clinicalColors.structureRaised,
+        border: context.clinicalColors.insetBorder,
+        cyan: context.clinicalColors.workMachinery,
+        plum: context.clinicalColors.clinical,
+      ),
+      child: content,
+    );
+  }
 }
 
 final class _Federation2399CrownPainter extends CustomPainter {
@@ -519,12 +675,14 @@ final class _Federation2399NavigationDeck extends StatelessWidget {
     required this.onOpenDestination,
     required this.onOpenAttention,
     this.compact = false,
+    this.integrated = false,
   });
 
   final int selectedIndex;
   final ValueChanged<ClinicalCalendarDestination> onOpenDestination;
   final VoidCallback onOpenAttention;
   final bool compact;
+  final bool integrated;
 
   @override
   Widget build(BuildContext context) {
@@ -539,17 +697,25 @@ final class _Federation2399NavigationDeck extends StatelessWidget {
         compact || MediaQuery.textScalerOf(context).scale(1) > 1.3;
     return Container(
       key: const Key('federation-2399-bottom-navigation'),
-      height: compact ? 64 : 72,
+      height: compact ? 68 : 82,
       decoration: BoxDecoration(
-        color: context.clinicalColors.structureRaised,
-        border: Border.all(color: context.clinicalColors.insetBorder),
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: context.clinicalColors.workMachinery.withValues(alpha: .14),
-            blurRadius: 10,
-          ),
-        ],
+        color: integrated
+            ? Colors.transparent
+            : context.clinicalColors.structureRaised,
+        border: integrated
+            ? null
+            : Border.all(color: context.clinicalColors.insetBorder),
+        borderRadius: BorderRadius.circular(38),
+        boxShadow: integrated
+            ? null
+            : [
+                BoxShadow(
+                  color: context.clinicalColors.workMachinery.withValues(
+                    alpha: .14,
+                  ),
+                  blurRadius: 10,
+                ),
+              ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Row(

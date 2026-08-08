@@ -148,7 +148,13 @@ void main() {
       federation2399.frame.sourceCuts,
       const EdgeInsets.fromLTRB(120, 145, 120, 170),
     );
-    expect(federation2399.frame.assetPaths, hasLength(1));
+    expect(
+      federation2399.frame.assetPaths,
+      containsAll([
+        federation2399FrameAsset,
+        federation2399LandscapeChassisAsset,
+      ]),
+    );
     expect(federation2399.gallery.swatches, hasLength(5));
     expect(federation2399.marks.marks, hasLength(9));
     expect(federation2399.helpGuide.calendarStates, hasLength(5));
@@ -557,7 +563,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(Federation2399NineSliceFrame), findsWidgets);
+      expect(find.byType(Federation2399LandscapeChassis), findsOneWidget);
+      expect(find.byType(Federation2399NineSliceFrame), findsNothing);
       expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
       expect(find.byType(GraphiteNineSliceFrame), findsNothing);
       expect(find.byType(VariantFNineSliceFrame), findsNothing);
@@ -591,7 +598,11 @@ void main() {
         find.byKey(const Key('federation-2399-landscape-shell')),
         findsOneWidget,
       );
-      expect(find.byType(Federation2399NineSliceFrame), findsOneWidget);
+      expect(find.byType(Federation2399LandscapeChassis), findsOneWidget);
+      expect(find.byType(Federation2399NineSliceFrame), findsNothing);
+      final crown = tester.getRect(
+        find.byKey(const Key('federation-2399-command-crown')),
+      );
       final placements = tester.getRect(
         find.byKey(const Key('federation-2399-placement-bay')),
       );
@@ -607,12 +618,17 @@ void main() {
       final navigation = tester.getRect(
         find.byKey(const Key('federation-2399-bottom-navigation')),
       );
+      expect(crown.height / 1024, closeTo(.074, .01));
+      expect(placements.width / 1536, closeTo(.17, .01));
+      expect(insight.width / 1536, closeTo(.225, .01));
+      expect(calendar.width / 1536, closeTo(.478, .01));
       expect(placements.right, lessThan(calendar.left));
       expect(calendar.right, lessThan(insight.left));
       expect(planning.top, greaterThan(calendar.top));
       expect(planning.left, calendar.left);
       expect(planning.right, calendar.right);
       expect(navigation.top, greaterThan(planning.bottom));
+      expect(navigation.height / 1024, closeTo(.068, .01));
       expect(tester.takeException(), isNull);
     },
   );
@@ -802,8 +818,16 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.byType(Federation2399NineSliceFrame), findsWidgets);
-        expect(find.byType(ClipRect), findsWidgets);
+        if (size.width > size.height && size.width >= 960) {
+          expect(find.byType(Federation2399LandscapeChassis), findsOneWidget);
+          expect(find.byType(Federation2399NineSliceFrame), findsNothing);
+        } else {
+          expect(find.byType(Federation2399NineSliceFrame), findsWidgets);
+          expect(find.byType(Federation2399LandscapeChassis), findsNothing);
+        }
+        if (!(size.width > size.height && size.width >= 960)) {
+          expect(find.byType(ClipRect), findsWidgets);
+        }
         expect(tester.takeException(), isNull);
       },
     );
