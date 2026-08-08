@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/theme_acceptance_harness.dart';
+
 void main() {
   test(
     'writes reviewable Pending evidence for every implemented bundle',
@@ -61,31 +63,59 @@ void main() {
             creationRecordUri: bundle.id == variantFThemeId
                 ? 'docs/performance/containment-drone-pre-catalog-baseline.md'
                 : 'docs/concepts/themes/graphite/README.md',
-            originalityApproved: true,
+            comparisonCaptureUri: '',
+            originalityReviewer: '',
+            originalityApprovedAtUtc: DateTime.utc(2026, 8, 8),
+            originalityApproved: false,
+            operationalContentAbsent: false,
           ),
         );
         File(
           '${themeDirectory.path}/primary-frame.json',
         ).writeAsStringSync(_pretty(asset.toJson()));
 
-        const baseline = ThemePerformanceMeasurement(
-          frameIntervalMs: 8.333,
-          uiThreadFrameTimeMsP95: 3.403,
-          rasterThreadFrameTimeMsP95: 5.627,
-          retainedMemoryBytes: 219508000,
-          releaseSizeBytes: 0,
+        File(
+          '${themeDirectory.path}/thumbnail-capture-required.json',
+        ).writeAsStringSync(
+          _pretty({
+            'status': 'runtime-capture-required',
+            'rendererVersion': bundle.shellRenderer.rendererId,
+            'fixture': bundle.gallery.thumbnailFixtureId,
+            'width': bundle.gallery.thumbnailViewport.width.round(),
+            'height': bundle.gallery.thumbnailViewport.height.round(),
+            'sha256': null,
+            'capture': null,
+            'swatches': [
+              for (final swatch in bundle.gallery.swatches)
+                {
+                  'role': swatch.role.name,
+                  'label': swatch.label,
+                  'argb': swatch.color.toARGB32(),
+                },
+            ],
+          }),
         );
-        const pendingPerformance = ThemePerformanceEvidence(
-          baseline: baseline,
-          candidate: baseline,
-          swapLatencyMs: 0,
-          retainedMemoryAfterCyclesBytes: 219508000,
-          monotonicRetainedMemoryGrowth: false,
-          attributedReleaseGrowthBytes: 0,
-        );
+
         File(
           '${themeDirectory.path}/performance-schema-example.json',
-        ).writeAsStringSync(_pretty(pendingPerformance.toJson()));
+        ).writeAsStringSync(
+          _pretty({
+            'status': 'measurement-required',
+            'baselineReport':
+                'docs/performance/evidence/containment-drone-profile.json',
+            'candidate': {
+              'frameIntervalMs': null,
+              'uiThreadFrameTimeMsP95': null,
+              'rasterThreadFrameTimeMsP95': null,
+              'retainedMemoryBytes': null,
+              'releaseSizeBytes': null,
+              'swapLatencyMs': null,
+              'retainedMemoryAfter25CyclesBytes': null,
+              'monotonicRetainedMemoryGrowth': null,
+              'attributedReleaseGrowthBytes': null,
+            },
+          }),
+        );
 
         final tokenFailures = [
           for (final report in tokenReports)
@@ -118,9 +148,14 @@ void main() {
             'runtime-tokens-standard.json',
             'runtime-tokens-enhanced.json',
             'primary-frame.json',
+            'thumbnail-capture-required.json',
             'performance-schema-example.json',
           ],
           captureUris: const [],
+          ciRunUri: '',
+          manualChecklistUris: const [],
+          accessibilityScannerReportUri: '',
+          approvedSignerSha256: '',
           contrastExceptions: const [],
           gates: [
             ThemeAcceptanceGateResult(
@@ -130,7 +165,6 @@ void main() {
             ),
             registryGate,
             asset.gate,
-            pendingPerformance.evaluate(),
           ],
           maintainerDecision: ThemeMaintainerDecision.pending,
         );

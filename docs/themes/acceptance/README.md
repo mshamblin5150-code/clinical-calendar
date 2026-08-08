@@ -7,10 +7,11 @@ required gate fails, is missing, or lacks the maintainer's physical
 Android-tablet approval. Automated evidence supports that approval; it never
 replaces it.
 
-The executable harness lives at the public presentation boundary in
-`theme_acceptance_harness.dart`. It currently proves the repeatable contract
-against Containment Drone 47-Alpha and Graphite while the closed seven-theme
-registry remains intentionally incomplete.
+The executable harness lives at the presentation test boundary in
+`test/support/theme_acceptance_harness.dart`; it is not shipped in the app. It
+currently proves the repeatable contract against Containment Drone 47-Alpha
+and Graphite while the closed seven-theme registry remains intentionally
+incomplete.
 
 ## Automated command
 
@@ -31,15 +32,16 @@ The report runner writes one directory per implemented bundle containing:
   `ThemeData` and semantic extensions;
 - primary-frame SHA-256, decoded geometry, transparent-corner, safe-inset,
   center-bay, creation-record, and originality results;
-- the performance comparison shape for frame p95, swap latency, 25-cycle
-  retained memory, and attributable release-size growth; and
+- explicit Pending records for the still-required runtime thumbnail capture
+  and physical performance measurements; and
 - a versioned manifest whose state remains Pending until every required report,
   original-resolution capture, and maintainer decision is present.
 
-The full presentation suite also executes registry ownership, renderer-bound
-thumbnail provenance, exact Containment Drone equality, both directed theme
-swaps, working-state preservation, revision-aware persistence, fallback,
-theme Help, signed-out privacy, and Standard/Enhanced accessibility checks.
+The full presentation suite also executes registry ownership, decoded
+thumbnail dimensions/hash/runtime-swatch provenance, exact Containment Drone
+equality, both directed theme swaps, live working-state preservation,
+revision-aware persistence, fallback, theme Help, signed-out privacy, and
+Standard/Enhanced accessibility checks.
 
 ## Physical performance evidence
 
@@ -59,8 +61,13 @@ retained-memory capture contract, then record candidate values in
   assets.
 
 Do not invent zero measurements for acceptance. The automated report's
-performance example only demonstrates the machine-readable schema and does
-not constitute physical candidate evidence.
+performance record stays `measurement-required` and does not create a passing
+gate until real candidate values are supplied.
+
+Acceptance additionally requires the physical Android visual gate, exact CI
+run, approved signer-certificate SHA-256, Accessibility Scanner adjudication,
+manual checklists, and original-resolution captures. Missing any one keeps the
+manifest Pending even when every automated gate passes.
 
 ## Evidence safety
 

@@ -5,9 +5,9 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'accessibility_tokens.dart';
-import 'theme_contract.dart';
-import 'variant_f_theme.dart';
+import 'package:clinical_calendar_presentation/src/accessibility_tokens.dart';
+import 'package:clinical_calendar_presentation/src/theme_contract.dart';
+import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
 
 abstract final class ThemeAcceptanceGateId {
   static const runtimeTokens = 'runtime-tokens';
@@ -21,6 +21,7 @@ abstract final class ThemeAcceptanceGateId {
   static const help = 'help';
   static const accessibility = 'accessibility';
   static const performance = 'performance';
+  static const physicalAndroidVisual = 'physical-android-visual';
 }
 
 const themeAcceptanceGateIds = <String>[
@@ -35,6 +36,7 @@ const themeAcceptanceGateIds = <String>[
   ThemeAcceptanceGateId.help,
   ThemeAcceptanceGateId.accessibility,
   ThemeAcceptanceGateId.performance,
+  ThemeAcceptanceGateId.physicalAndroidVisual,
 ];
 
 enum ThemeAcceptanceState { pending, accepted }
@@ -52,6 +54,277 @@ enum ThemeTokenState {
   warning,
   error,
   inverse,
+}
+
+List<ThemeTokenPairing> _runtimePermittedPairings({
+  required ThemeData theme,
+  required ClinicalCalendarColors colors,
+  required ClinicalCalendarAccessibilityTokens? accessibility,
+}) {
+  final scheme = theme.colorScheme;
+  final pairings = <ThemeTokenPairing>[];
+  const stateSpecs = <(String, ThemeTokenState, Set<WidgetState>)>[
+    ('default', ThemeTokenState.defaultState, {}),
+    ('selected', ThemeTokenState.selected, {WidgetState.selected}),
+    ('focused', ThemeTokenState.focused, {WidgetState.focused}),
+    ('pressed', ThemeTokenState.pressed, {WidgetState.pressed}),
+    ('disabled', ThemeTokenState.disabled, {WidgetState.disabled}),
+    (
+      'selected-focused',
+      ThemeTokenState.focused,
+      {WidgetState.selected, WidgetState.focused},
+    ),
+    (
+      'pressed-focused',
+      ThemeTokenState.pressed,
+      {WidgetState.pressed, WidgetState.focused},
+    ),
+    (
+      'disabled-selected',
+      ThemeTokenState.disabled,
+      {WidgetState.disabled, WidgetState.selected},
+    ),
+  ];
+  final componentStyles = <(String, ButtonStyle?, Color, Color)>[
+    ('filled', theme.filledButtonTheme.style, scheme.onPrimary, scheme.primary),
+    (
+      'outlined',
+      theme.outlinedButtonTheme.style,
+      scheme.onSurface,
+      Colors.transparent,
+    ),
+    ('text', theme.textButtonTheme.style, scheme.primary, Colors.transparent),
+    ('icon', theme.iconButtonTheme.style, scheme.onSurface, Colors.transparent),
+    (
+      'segmented',
+      theme.segmentedButtonTheme.style,
+      scheme.onSurface,
+      Colors.transparent,
+    ),
+  ];
+  for (final component in componentStyles) {
+    for (final state in stateSpecs) {
+      final foreground =
+          component.$2?.foregroundColor?.resolve(state.$3) ??
+          (state.$3.contains(WidgetState.disabled)
+              ? theme.disabledColor
+              : component.$3);
+      final layer =
+          component.$2?.backgroundColor?.resolve(state.$3) ?? component.$4;
+      pairings.add(
+        ThemeTokenPairing(
+          pairingId: '${component.$1}-${state.$1}',
+          state: state.$2,
+          contentKind: ThemeContrastContentKind.normalText,
+          foreground: foreground,
+          background: ThemePaintStack(
+            base: scheme.surface,
+            layers: layer.a == 0 ? const [] : [layer],
+          ),
+        ),
+      );
+    }
+  }
+
+  final schemePairs = <(String, Color, Color, ThemeTokenState)>[
+    ('primary', scheme.onPrimary, scheme.primary, ThemeTokenState.defaultState),
+    (
+      'primary-container',
+      scheme.onPrimaryContainer,
+      scheme.primaryContainer,
+      ThemeTokenState.selected,
+    ),
+    (
+      'secondary',
+      scheme.onSecondary,
+      scheme.secondary,
+      ThemeTokenState.defaultState,
+    ),
+    (
+      'secondary-container',
+      scheme.onSecondaryContainer,
+      scheme.secondaryContainer,
+      ThemeTokenState.selected,
+    ),
+    (
+      'tertiary',
+      scheme.onTertiary,
+      scheme.tertiary,
+      ThemeTokenState.defaultState,
+    ),
+    (
+      'tertiary-container',
+      scheme.onTertiaryContainer,
+      scheme.tertiaryContainer,
+      ThemeTokenState.selected,
+    ),
+    ('surface', scheme.onSurface, scheme.surface, ThemeTokenState.defaultState),
+    ('error', scheme.onError, scheme.error, ThemeTokenState.error),
+    (
+      'error-container',
+      scheme.onErrorContainer,
+      scheme.errorContainer,
+      ThemeTokenState.error,
+    ),
+    (
+      'inverse',
+      scheme.onInverseSurface,
+      scheme.inverseSurface,
+      ThemeTokenState.inverse,
+    ),
+  ];
+  for (final pairing in schemePairs) {
+    pairings.add(
+      ThemeTokenPairing(
+        pairingId: 'scheme-${pairing.$1}',
+        state: pairing.$4,
+        contentKind: ThemeContrastContentKind.normalText,
+        foreground: pairing.$2,
+        background: ThemePaintStack(base: pairing.$3),
+      ),
+    );
+  }
+
+  final textStyles = <(String, TextStyle?, ThemeContrastContentKind)>[
+    (
+      'display-large',
+      theme.textTheme.displayLarge,
+      ThemeContrastContentKind.largeText,
+    ),
+    (
+      'display-medium',
+      theme.textTheme.displayMedium,
+      ThemeContrastContentKind.largeText,
+    ),
+    (
+      'display-small',
+      theme.textTheme.displaySmall,
+      ThemeContrastContentKind.largeText,
+    ),
+    (
+      'headline-large',
+      theme.textTheme.headlineLarge,
+      ThemeContrastContentKind.largeText,
+    ),
+    (
+      'headline-medium',
+      theme.textTheme.headlineMedium,
+      ThemeContrastContentKind.largeText,
+    ),
+    (
+      'headline-small',
+      theme.textTheme.headlineSmall,
+      ThemeContrastContentKind.largeText,
+    ),
+    (
+      'title-large',
+      theme.textTheme.titleLarge,
+      ThemeContrastContentKind.largeText,
+    ),
+    (
+      'title-medium',
+      theme.textTheme.titleMedium,
+      ThemeContrastContentKind.normalText,
+    ),
+    (
+      'title-small',
+      theme.textTheme.titleSmall,
+      ThemeContrastContentKind.normalText,
+    ),
+    (
+      'body-large',
+      theme.textTheme.bodyLarge,
+      ThemeContrastContentKind.normalText,
+    ),
+    (
+      'body-medium',
+      theme.textTheme.bodyMedium,
+      ThemeContrastContentKind.normalText,
+    ),
+    (
+      'body-small',
+      theme.textTheme.bodySmall,
+      ThemeContrastContentKind.normalText,
+    ),
+    (
+      'label-large',
+      theme.textTheme.labelLarge,
+      ThemeContrastContentKind.normalText,
+    ),
+    (
+      'label-medium',
+      theme.textTheme.labelMedium,
+      ThemeContrastContentKind.normalText,
+    ),
+    (
+      'label-small',
+      theme.textTheme.labelSmall,
+      ThemeContrastContentKind.normalText,
+    ),
+  ];
+  for (final style in textStyles) {
+    pairings.add(
+      ThemeTokenPairing(
+        pairingId: 'text-${style.$1}',
+        state: ThemeTokenState.defaultState,
+        contentKind: style.$3,
+        foreground: style.$2?.color ?? scheme.onSurface,
+        background: ThemePaintStack(base: scheme.surface),
+      ),
+    );
+  }
+
+  pairings.addAll([
+    ThemeTokenPairing(
+      pairingId: 'focus-outer-on-surface',
+      state: ThemeTokenState.focused,
+      contentKind: ThemeContrastContentKind.graphic,
+      foreground: accessibility?.focusOuterColor ?? scheme.primary,
+      background: ThemePaintStack(base: scheme.surface),
+    ),
+    ThemeTokenPairing(
+      pairingId: 'clinical-on-tinted-surface',
+      state: ThemeTokenState.defaultState,
+      contentKind: ThemeContrastContentKind.graphic,
+      foreground: colors.clinical,
+      background: ThemePaintStack(
+        base: scheme.surface,
+        layers: [colors.clinical.withValues(alpha: .22)],
+      ),
+    ),
+    ThemeTokenPairing(
+      pairingId: 'work-on-tinted-surface',
+      state: ThemeTokenState.defaultState,
+      contentKind: ThemeContrastContentKind.graphic,
+      foreground: colors.workMachinery,
+      background: ThemePaintStack(
+        base: scheme.surface,
+        layers: [colors.work.withValues(alpha: .22)],
+      ),
+    ),
+    ThemeTokenPairing(
+      pairingId: 'protected-day-accent',
+      state: ThemeTokenState.defaultState,
+      contentKind: ThemeContrastContentKind.graphic,
+      foreground: colors.protectedDayAccent,
+      background: ThemePaintStack(base: colors.protectedDay),
+    ),
+    ThemeTokenPairing(
+      pairingId: 'scheduled-warning',
+      state: ThemeTokenState.warning,
+      contentKind: ThemeContrastContentKind.graphic,
+      foreground: colors.scheduled,
+      background: ThemePaintStack(base: scheme.surface),
+    ),
+    ThemeTokenPairing(
+      pairingId: 'urgent-on-surface',
+      state: ThemeTokenState.error,
+      contentKind: ThemeContrastContentKind.graphic,
+      foreground: colors.urgent,
+      background: ThemePaintStack(base: scheme.surface),
+    ),
+  ]);
+  return pairings;
 }
 
 @immutable
@@ -222,6 +495,10 @@ final class ThemeEvidenceManifest {
     required this.assetHashes,
     required this.reportUris,
     required this.captureUris,
+    required this.ciRunUri,
+    required this.manualChecklistUris,
+    required this.accessibilityScannerReportUri,
+    required this.approvedSignerSha256,
     required this.contrastExceptions,
     required this.gates,
     required this.maintainerDecision,
@@ -237,6 +514,10 @@ final class ThemeEvidenceManifest {
   final Map<String, String> assetHashes;
   final List<String> reportUris;
   final List<String> captureUris;
+  final String ciRunUri;
+  final List<String> manualChecklistUris;
+  final String accessibilityScannerReportUri;
+  final String approvedSignerSha256;
   final List<ThemeContrastException> contrastExceptions;
   final List<ThemeAcceptanceGateResult> gates;
   final ThemeMaintainerDecision maintainerDecision;
@@ -285,11 +566,30 @@ final class ThemeEvidenceManifest {
         'Asset evidence requires complete lowercase SHA-256 values.',
       );
     }
-    if (reportUris.isEmpty || captureUris.isEmpty) {
-      failures.add('Reports and original captures must remain retrievable.');
+    if (reportUris.isEmpty ||
+        captureUris.isEmpty ||
+        manualChecklistUris.isEmpty ||
+        ciRunUri.trim().isEmpty ||
+        accessibilityScannerReportUri.trim().isEmpty) {
+      failures.add(
+        'Reports, CI, captures, scanner results, and manual checklists must remain retrievable.',
+      );
     }
-    if ([...reportUris, ...captureUris].any(_isUnsafeEvidenceUri)) {
-      failures.add('Evidence links cannot contain credentials or user info.');
+    if ([
+      ...reportUris,
+      ...captureUris,
+      ...manualChecklistUris,
+      ciRunUri,
+      accessibilityScannerReportUri,
+    ].any(_isUnsafeEvidenceUri)) {
+      failures.add(
+        'Evidence links cannot contain credentials or identifying information.',
+      );
+    }
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(approvedSignerSha256)) {
+      failures.add(
+        'The approved signer certificate requires a SHA-256 identity.',
+      );
     }
     if (contrastExceptions.any(
       (exception) =>
@@ -315,6 +615,10 @@ final class ThemeEvidenceManifest {
     'assetHashes': assetHashes,
     'reports': reportUris,
     'captures': captureUris,
+    'ciRun': ciRunUri,
+    'manualChecklists': manualChecklistUris,
+    'accessibilityScannerReport': accessibilityScannerReportUri,
+    'approvedSignerSha256': approvedSignerSha256,
     'contrastExceptions': [
       for (final exception in contrastExceptions) exception.toJson(),
     ],
@@ -369,6 +673,20 @@ final class ThemePerformanceEvidence {
 
   ThemeAcceptanceGateResult evaluate() {
     final failures = <String>[];
+    if (baseline.frameIntervalMs <= 0 ||
+        baseline.uiThreadFrameTimeMsP95 <= 0 ||
+        baseline.rasterThreadFrameTimeMsP95 <= 0 ||
+        baseline.retainedMemoryBytes <= 0 ||
+        baseline.releaseSizeBytes <= 0 ||
+        candidate.frameIntervalMs <= 0 ||
+        candidate.uiThreadFrameTimeMsP95 <= 0 ||
+        candidate.rasterThreadFrameTimeMsP95 <= 0 ||
+        candidate.retainedMemoryBytes <= 0 ||
+        candidate.releaseSizeBytes <= 0 ||
+        swapLatencyMs <= 0 ||
+        retainedMemoryAfterCyclesBytes <= 0) {
+      failures.add('Performance evidence requires measured positive values.');
+    }
     final uiLimit = math.min(
       candidate.frameIntervalMs,
       baseline.uiThreadFrameTimeMsP95 * 1.1,
@@ -466,13 +784,21 @@ final class ThemeAssetEvidence {
     required this.assetPath,
     required this.expectedSha256,
     required this.creationRecordUri,
+    required this.comparisonCaptureUri,
+    required this.originalityReviewer,
+    required this.originalityApprovedAtUtc,
     required this.originalityApproved,
+    required this.operationalContentAbsent,
   });
 
   final String assetPath;
   final String expectedSha256;
   final String creationRecordUri;
+  final String comparisonCaptureUri;
+  final String originalityReviewer;
+  final DateTime originalityApprovedAtUtc;
   final bool originalityApproved;
+  final bool operationalContentAbsent;
 }
 
 @immutable
@@ -516,10 +842,15 @@ abstract final class ThemeAssetAcceptanceAuditor {
       failures.add('Primary frame SHA-256 does not match its evidence.');
     }
     if (evidence.creationRecordUri.trim().isEmpty ||
+        evidence.comparisonCaptureUri.trim().isEmpty ||
         _isUnsafeEvidenceUri(evidence.creationRecordUri) ||
-        !evidence.originalityApproved) {
+        _isUnsafeEvidenceUri(evidence.comparisonCaptureUri) ||
+        evidence.originalityReviewer.trim().isEmpty ||
+        !evidence.originalityApprovedAtUtc.isUtc ||
+        !evidence.originalityApproved ||
+        !evidence.operationalContentAbsent) {
       failures.add(
-        'Originality requires a retrievable creation record and approval.',
+        'Originality requires creation and comparison records, an approved UTC attestation, and no operational content.',
       );
     }
 
@@ -546,22 +877,25 @@ abstract final class ThemeAssetAcceptanceAuditor {
         const EdgeInsets.fromLTRB(120, 145, 120, 170)) {
       failures.add('Nine-slice cuts must remain 120/145/120/170.');
     }
-    const requiredInsets = {
+    const minimumInsets = {
       ThemeFrameRegion.calendar: EdgeInsets.fromLTRB(38, 46, 38, 46),
       ThemeFrameRegion.placements: EdgeInsets.fromLTRB(30, 44, 30, 44),
       ThemeFrameRegion.planning: EdgeInsets.fromLTRB(34, 46, 34, 42),
       ThemeFrameRegion.status: EdgeInsets.fromLTRB(30, 44, 34, 44),
     };
-    if (!mapEquals(descriptor.safeInsets, requiredInsets)) {
-      failures.add(
-        'Primary frame safe insets do not match the shared geometry.',
-      );
+    if (!_containsMinimumInsets(descriptor.safeInsets, minimumInsets)) {
+      failures.add('Primary frame safe insets reduce the shared minima.');
     }
     if (transparentCorners.any((transparent) => !transparent)) {
       failures.add('Every exterior primary-frame corner must be transparent.');
     }
     if (pixels == null ||
-        _alphaAt(pixels, width, width ~/ 2, height ~/ 2) != 255) {
+        !_hasOpaqueContentBay(
+          pixels,
+          width: width,
+          height: height,
+          cuts: descriptor.sourceCuts,
+        )) {
       failures.add('Primary frame must provide one opaque center content bay.');
     }
 
@@ -582,36 +916,51 @@ abstract final class ThemeAssetAcceptanceAuditor {
 }
 
 @immutable
+final class ThemeThumbnailSwatchEvidence {
+  const ThemeThumbnailSwatchEvidence({
+    required this.role,
+    required this.label,
+    required this.color,
+  });
+
+  final ThemeGallerySwatchRole role;
+  final String label;
+  final Color color;
+}
+
+@immutable
 final class ThemeThumbnailEvidence {
   const ThemeThumbnailEvidence({
     required this.themeId,
-    required this.rendererId,
+    required this.rendererVersion,
     required this.fixtureId,
     required this.viewport,
     required this.sha256,
     required this.captureUri,
     required this.fictionalFixture,
+    required this.swatches,
   });
 
   final String themeId;
-  final String rendererId;
+  final String rendererVersion;
   final String fixtureId;
   final Size viewport;
   final String sha256;
   final String captureUri;
   final bool fictionalFixture;
+  final List<ThemeThumbnailSwatchEvidence> swatches;
 }
 
 abstract final class ThemeThumbnailAcceptanceAuditor {
-  static ThemeAcceptanceGateResult audit({
+  static Future<ThemeAcceptanceGateResult> audit({
     required ClinicalCalendarThemeBundle bundle,
     required List<int> bytes,
     required ThemeThumbnailEvidence evidence,
-  }) {
+  }) async {
     final failures = <String>[];
     if (evidence.themeId != bundle.id ||
-        evidence.rendererId != bundle.shellRenderer.rendererId ||
-        evidence.rendererId != bundle.gallery.rendererId ||
+        evidence.rendererVersion != bundle.shellRenderer.rendererId ||
+        evidence.rendererVersion != bundle.gallery.rendererId ||
         evidence.fixtureId != bundle.gallery.thumbnailFixtureId ||
         evidence.viewport != bundle.gallery.thumbnailViewport) {
       failures.add('Thumbnail provenance does not match the runtime bundle.');
@@ -626,6 +975,41 @@ abstract final class ThemeThumbnailAcceptanceAuditor {
       failures.add(
         'Thumbnail capture must remain retrievable and credential-free.',
       );
+    }
+    try {
+      final codec = await ui.instantiateImageCodec(Uint8List.fromList(bytes));
+      final frame = await codec.getNextFrame();
+      if (frame.image.width != evidence.viewport.width.round() ||
+          frame.image.height != evidence.viewport.height.round()) {
+        failures.add('Thumbnail dimensions do not match the pinned viewport.');
+      }
+      frame.image.dispose();
+      codec.dispose();
+    } on Object {
+      failures.add('Thumbnail evidence is not a decodable runtime image.');
+    }
+    final runtimeColors = bundle.standardPresentation.semanticColors;
+    final bundleSwatches = bundle.gallery.swatches;
+    if (evidence.swatches.length != ThemeGallerySwatchRole.values.length ||
+        evidence.swatches.length != bundleSwatches.length) {
+      failures.add('Thumbnail evidence does not contain all five swatches.');
+    } else {
+      for (var index = 0; index < bundleSwatches.length; index++) {
+        final recorded = evidence.swatches[index];
+        final runtime = bundleSwatches[index];
+        final permittedRuntimeColors = _runtimeColorsForSwatch(
+          runtime.role,
+          runtimeColors,
+        );
+        if (recorded.role != runtime.role ||
+            recorded.label != runtime.label ||
+            recorded.color != runtime.color ||
+            !permittedRuntimeColors.contains(recorded.color)) {
+          failures.add(
+            'Swatch ${runtime.role.name} is not the ordered runtime semantic token.',
+          );
+        }
+      }
     }
     return ThemeAcceptanceGateResult(
       gateId: ThemeAcceptanceGateId.thumbnailProvenance,
@@ -678,120 +1062,21 @@ abstract final class ThemeRuntimeTokenAuditor {
     final colors = theme.extension<ClinicalCalendarColors>()!;
     final accessibility = theme
         .extension<ClinicalCalendarAccessibilityTokens>();
-    final scheme = theme.colorScheme;
-    final filled = theme.filledButtonTheme.style;
-    final segmented = theme.segmentedButtonTheme.style;
-    final surface = ThemePaintStack(base: scheme.surface);
-
-    Color resolve(
-      WidgetStateProperty<Color?>? property,
-      Set<WidgetState> states,
-      Color fallback,
-    ) => property?.resolve(states) ?? fallback;
-
-    final componentPairs = <(Color, Color)>{
-      (scheme.onSurface, scheme.surface),
-      (scheme.error, scheme.surface),
-      (scheme.onError, scheme.error),
-      (scheme.onInverseSurface, scheme.inverseSurface),
-      (colors.scheduled, scheme.surface),
-      (colors.urgent, scheme.surface),
-      for (final states in const <Set<WidgetState>>[
-        {},
-        {WidgetState.selected},
-        {WidgetState.focused},
-        {WidgetState.pressed},
-        {WidgetState.disabled},
-      ]) ...[
-        (
-          resolve(filled?.foregroundColor, states, scheme.onPrimary),
-          resolve(filled?.backgroundColor, states, scheme.primary),
-        ),
-        (
-          resolve(segmented?.foregroundColor, states, scheme.onSurface),
-          resolve(segmented?.backgroundColor, states, scheme.surface),
-        ),
-      ],
+    final permitted = _runtimePermittedPairings(
+      theme: theme,
+      colors: colors,
+      accessibility: accessibility,
+    );
+    final componentPairs = {
+      for (final pairing in permitted)
+        (pairing.foreground, pairing.background.composite()),
     };
 
     return auditPairings(
       themeId: bundle.id,
       mode: mode,
       pairings: [
-        ThemeTokenPairing(
-          pairingId: 'body-on-surface',
-          state: ThemeTokenState.defaultState,
-          contentKind: ThemeContrastContentKind.normalText,
-          foreground: scheme.onSurface,
-          background: surface,
-        ),
-        ThemeTokenPairing(
-          pairingId: 'selected-control',
-          state: ThemeTokenState.selected,
-          contentKind: ThemeContrastContentKind.normalText,
-          foreground: resolve(segmented?.foregroundColor, const {
-            WidgetState.selected,
-          }, scheme.onPrimary),
-          background: ThemePaintStack(
-            base: resolve(segmented?.backgroundColor, const {
-              WidgetState.selected,
-            }, scheme.primary),
-          ),
-        ),
-        ThemeTokenPairing(
-          pairingId: 'focus-boundary',
-          state: ThemeTokenState.focused,
-          contentKind: ThemeContrastContentKind.graphic,
-          foreground: accessibility?.focusOuterColor ?? scheme.primary,
-          background: surface,
-        ),
-        ThemeTokenPairing(
-          pairingId: 'pressed-control',
-          state: ThemeTokenState.pressed,
-          contentKind: ThemeContrastContentKind.normalText,
-          foreground: resolve(filled?.foregroundColor, const {
-            WidgetState.pressed,
-          }, scheme.onPrimary),
-          background: ThemePaintStack(
-            base: resolve(filled?.backgroundColor, const {
-              WidgetState.pressed,
-            }, scheme.primary),
-          ),
-        ),
-        ThemeTokenPairing(
-          pairingId: 'disabled-control',
-          state: ThemeTokenState.disabled,
-          contentKind: ThemeContrastContentKind.normalText,
-          foreground: resolve(filled?.foregroundColor, const {
-            WidgetState.disabled,
-          }, theme.disabledColor),
-          background: ThemePaintStack(
-            base: resolve(filled?.backgroundColor, const {
-              WidgetState.disabled,
-            }, scheme.surface),
-          ),
-        ),
-        ThemeTokenPairing(
-          pairingId: 'scheduled-warning',
-          state: ThemeTokenState.warning,
-          contentKind: ThemeContrastContentKind.graphic,
-          foreground: colors.scheduled,
-          background: surface,
-        ),
-        ThemeTokenPairing(
-          pairingId: 'error-on-surface',
-          state: ThemeTokenState.error,
-          contentKind: ThemeContrastContentKind.normalText,
-          foreground: scheme.error,
-          background: surface,
-        ),
-        ThemeTokenPairing(
-          pairingId: 'inverse-label',
-          state: ThemeTokenState.inverse,
-          contentKind: ThemeContrastContentKind.normalText,
-          foreground: scheme.onInverseSurface,
-          background: ThemePaintStack(base: scheme.inverseSurface),
-        ),
+        ...permitted,
         ThemeTokenPairing(
           pairingId: 'prohibited-urgent-on-clinical',
           state: ThemeTokenState.error,
@@ -801,7 +1086,7 @@ abstract final class ThemeRuntimeTokenAuditor {
           permitted: false,
           selectedByRuntime: componentPairs.contains((
             colors.urgent,
-            colors.clinical,
+            ThemePaintStack(base: colors.clinical).composite(),
           )),
         ),
         ThemeTokenPairing(
@@ -813,7 +1098,7 @@ abstract final class ThemeRuntimeTokenAuditor {
           permitted: false,
           selectedByRuntime: componentPairs.contains((
             colors.workMachinery,
-            colors.scheduled,
+            ThemePaintStack(base: colors.scheduled).composite(),
           )),
         ),
       ],
@@ -961,6 +1246,33 @@ bool _isUnsafeEvidenceUri(String value) {
 int _alphaAt(ByteData pixels, int width, int x, int y) =>
     pixels.getUint8((y * width + x) * 4 + 3);
 
+bool _containsMinimumInsets(
+  Map<ThemeFrameRegion, EdgeInsets> actual,
+  Map<ThemeFrameRegion, EdgeInsets> minimum,
+) => minimum.entries.every((entry) {
+  final value = actual[entry.key];
+  final required = entry.value;
+  return value != null &&
+      value.left >= required.left &&
+      value.top >= required.top &&
+      value.right >= required.right &&
+      value.bottom >= required.bottom;
+});
+
+bool _hasOpaqueContentBay(
+  ByteData pixels, {
+  required int width,
+  required int height,
+  required EdgeInsets cuts,
+}) {
+  for (var y = cuts.top.ceil(); y < height - cuts.bottom.ceil(); y++) {
+    for (var x = cuts.left.ceil(); x < width - cuts.right.ceil(); x++) {
+      if (_alphaAt(pixels, width, x, y) != 255) return false;
+    }
+  }
+  return true;
+}
+
 bool _equalBytes(List<int> left, List<int> right) {
   if (left.length != right.length) return false;
   for (var index = 0; index < left.length; index++) {
@@ -968,3 +1280,17 @@ bool _equalBytes(List<int> left, List<int> right) {
   }
   return true;
 }
+
+Set<Color> _runtimeColorsForSwatch(
+  ThemeGallerySwatchRole role,
+  ClinicalCalendarColors colors,
+) => switch (role) {
+  ThemeGallerySwatchRole.canvas => {colors.canvas},
+  ThemeGallerySwatchRole.structure => {
+    colors.structure,
+    colors.structureRaised,
+  },
+  ThemeGallerySwatchRole.clinicalSession => {colors.clinical},
+  ThemeGallerySwatchRole.workShift => {colors.workMachinery},
+  ThemeGallerySwatchRole.urgent => {colors.urgent},
+};
