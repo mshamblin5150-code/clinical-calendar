@@ -6,11 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/proof_fonts.dart';
+
 const _studentId = '00000000-0000-4000-8000-000000000128';
 final _today = LocalDate(2026, 8, 6);
 
 void main() {
-  setUpAll(_loadProofFonts);
+  setUpAll(loadProofFonts);
 
   testWidgets('Graphite landscape is the approved precision instrument', (
     tester,
@@ -541,38 +543,6 @@ final class _ProofAssetBundle extends CachingAssetBundle {
     }
     return rootBundle.load(key);
   }
-}
-
-Future<void> _loadProofFonts() async {
-  var root = Directory.current.absolute;
-  while (root.parent.path != root.path) {
-    final directory = Directory(
-      '${root.path}${Platform.pathSeparator}.tooling${Platform.pathSeparator}'
-      'flutter${Platform.pathSeparator}bin${Platform.pathSeparator}cache'
-      '${Platform.pathSeparator}artifacts${Platform.pathSeparator}'
-      'material_fonts',
-    );
-    final roboto = File(
-      '${directory.path}${Platform.pathSeparator}roboto-regular.ttf',
-    );
-    final icons = File(
-      '${directory.path}${Platform.pathSeparator}materialicons-regular.otf',
-    );
-    if (roboto.existsSync() && icons.existsSync()) {
-      await _loadFont('ProofRoboto', roboto);
-      await _loadFont('MaterialIcons', icons);
-      return;
-    }
-    root = root.parent;
-  }
-  throw StateError('Bundled Flutter proof fonts were not found.');
-}
-
-Future<void> _loadFont(String family, File file) async {
-  final bytes = await file.readAsBytes();
-  await (FontLoader(
-    family,
-  )..addFont(Future.value(ByteData.sublistView(bytes)))).load();
 }
 
 void _noop() {}
