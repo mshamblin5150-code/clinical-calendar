@@ -10,6 +10,7 @@ void main() {
   const bundle = VariantFThemeBundle();
   const graphite = GraphiteThemeBundle();
   const federationClassic = FederationClassicThemeBundle();
+  const federation2399 = Federation2399ThemeBundle();
 
   test('Containment Drone is one complete internally owned bundle', () {
     ClinicalCalendarThemeBundleValidator.validate(const [bundle]);
@@ -132,13 +133,83 @@ void main() {
     );
   });
 
+  test('Federation 2399 is a complete independently owned bundle', () {
+    ClinicalCalendarThemeBundleValidator.validate(const [federation2399]);
+
+    expect(federation2399.id, federation2399ThemeId);
+    expect(federation2399.metadata.displayName, 'Federation 2399');
+    expect(
+      federation2399.standardPresentation,
+      isA<Federation2399VisualTheme>(),
+    );
+    expect(federation2399.shellRenderer, isA<Federation2399ShellRenderer>());
+    expect(federation2399.frame.sourceSize, const Size(1536, 1024));
+    expect(
+      federation2399.frame.sourceCuts,
+      const EdgeInsets.fromLTRB(120, 145, 120, 170),
+    );
+    expect(federation2399.frame.assetPaths, hasLength(1));
+    expect(federation2399.gallery.swatches, hasLength(5));
+    expect(federation2399.marks.marks, hasLength(9));
+    expect(federation2399.helpGuide.calendarStates, hasLength(5));
+    expect(
+      federation2399.helpGuide.calendarStates,
+      everyElement(
+        isA<CalendarStateGuide>()
+            .having((state) => state.nonColorCue, 'non-color cue', isNotEmpty)
+            .having(
+              (state) => state.enhancedBehavior,
+              'Enhanced behavior',
+              isNotEmpty,
+            ),
+      ),
+    );
+    final additiveColors = federation2399.standardPresentation
+        .createThemeData()
+        .extension<ClinicalCalendarAdditiveColors>()!;
+    expect(additiveColors.completed, Federation2399Colors.completed);
+    expect(additiveColors.unscheduled, Federation2399Colors.unscheduled);
+    expect(additiveColors.overTarget, Federation2399Colors.overTarget);
+    expect(additiveColors.today, Federation2399Colors.today);
+    final enhanced = federation2399.standardPresentation.createThemeData(
+      enhancedAccessibility: true,
+    );
+    expect(
+      enhanced.inputDecorationTheme.enabledBorder,
+      isA<OutlineInputBorder>().having(
+        (border) => border.borderSide.color,
+        'Enhanced control border',
+        const Color(0xFFD6C5D1),
+      ),
+    );
+    expect(
+      enhanced.inputDecorationTheme.focusedBorder,
+      isA<OutlineInputBorder>().having(
+        (border) => border.borderSide.color,
+        'Enhanced focus border',
+        const Color(0xFFFFE28E),
+      ),
+    );
+    expect(
+      enhanced.outlinedButtonTheme.style?.side?.resolve(const {}),
+      const BorderSide(color: Color(0xFFD6C5D1), width: 1.5),
+    );
+    expect(
+      ClinicalCalendarThemeBundleRegistry.standard.resolveRoot(
+        federation2399ThemeId,
+      ),
+      same(federation2399),
+    );
+  });
+
   test(
-    'Enhanced is an overlay and Standard round trips exactly for both bundles',
+    'Enhanced is an overlay and Standard round trips exactly for registered bundles',
     () {
       for (final themedBundle in const <ClinicalCalendarThemeBundle>[
         VariantFThemeBundle(),
         GraphiteThemeBundle(),
         FederationClassicThemeBundle(),
+        Federation2399ThemeBundle(),
       ]) {
         final standard = themedBundle.standardPresentation.createThemeData();
         final enhanced = themedBundle.standardPresentation.createThemeData(
@@ -464,6 +535,36 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Federation 2399 shell uses only Federation 2399 raster framing',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: federation2399.standardPresentation.createThemeData(),
+          boundaryKey: GlobalKey(),
+          shell: federation2399.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Federation2399NineSliceFrame), findsWidgets);
+      expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
+      expect(find.byType(GraphiteNineSliceFrame), findsNothing);
+      expect(find.byType(VariantFNineSliceFrame), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final size in const [Size(320, 568), Size(768, 1024), Size(1440, 900)]) {
     testWidgets(
       'Federation Classic shell fits ${size.width.toInt()}x${size.height.toInt()}',
@@ -493,6 +594,70 @@ void main() {
       },
     );
   }
+
+  for (final size in const [Size(320, 568), Size(768, 1024), Size(1440, 900)]) {
+    testWidgets(
+      'Federation 2399 shell fits ${size.width.toInt()}x${size.height.toInt()}',
+      (tester) async {
+        await tester.binding.setSurfaceSize(size);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          _shellHarness(
+            theme: federation2399.standardPresentation.createThemeData(),
+            boundaryKey: GlobalKey(),
+            shell: federation2399.shellRenderer.build(
+              slots: _slots,
+              environmentName: 'TEST',
+              onOpenMenu: _noop,
+              onOpenDestination: _ignoreDestination,
+              onOpenAttention: _noop,
+              onAddSchedule: _noop,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(Federation2399NineSliceFrame), findsWidgets);
+        expect(find.byType(ClipRect), findsWidgets);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('Federation 2399 destination keeps compact owned chrome', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: federation2399.standardPresentation.createThemeData(),
+        home: federation2399.shellRenderer.buildDestination(
+          destination: ClinicalCalendarDestination.settings,
+          entry: DestinationEntry.direct,
+          onExit: _noop,
+          child: const ShellPanel(
+            label: 'Settings fixture',
+            child: Text('Fictional content'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(VariantFNineSliceFrame), findsNothing);
+    expect(
+      tester
+          .widget<Federation2399NineSliceFrame>(
+            find.byType(Federation2399NineSliceFrame),
+          )
+          .chromeInsets,
+      federation2399CompactDestinationInsets,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'Graphite destination keeps compact chrome and no Variant frame',

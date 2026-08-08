@@ -903,6 +903,65 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Federation 2399 previews and persists behind the partial-catalog fallback',
+    (tester) async {
+      final repositories = _Repositories();
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: variantFThemeId,
+        initialRevision: 0,
+      );
+      addTearDown(preview.dispose);
+      await _pumpAt(
+        tester,
+        const Size(390, 844),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: preview,
+        candidateThemePreflight: (_) async {},
+      );
+
+      await preview.preview(federation2399ThemeId, preflight: (_) async {});
+      await tester.pumpAndSettle();
+      expect(find.byType(Federation2399NineSliceFrame), findsWidgets);
+      expect(find.text('Previewing Federation 2399'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('revert-theme-preview')));
+      await tester.pumpAndSettle();
+      expect(preview.effectiveBundle.id, variantFThemeId);
+      expect(find.byType(Federation2399NineSliceFrame), findsNothing);
+
+      await preview.preview(federation2399ThemeId, preflight: (_) async {});
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('apply-theme-preview')));
+      await tester.pumpAndSettle();
+
+      expect(preview.authoritativeThemeId, federation2399ThemeId);
+      expect(repositories.settings.value?.value.themeId, federation2399ThemeId);
+      expect(preview.effectiveBundle.id, graphiteThemeId);
+      expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
+
+      final restarted = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: federation2399ThemeId,
+        initialRevision: preview.authoritativeRevision,
+      );
+      addTearDown(restarted.dispose);
+      await _pumpAt(
+        tester,
+        const Size(390, 844),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: restarted,
+        candidateThemePreflight: (_) async {},
+      );
+
+      expect(restarted.authoritativeThemeId, federation2399ThemeId);
+      expect(restarted.effectiveBundle.id, graphiteThemeId);
+      expect(restarted.authoritativeResolution.isFallback, isTrue);
+      expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
+    },
+  );
+
   testWidgets('failed Apply keeps Preview retryable and Revert available', (
     tester,
   ) async {

@@ -44,3 +44,52 @@ final class ClinicalCalendarAdditiveColors
     );
   }
 }
+
+/// Optional theme-owned Calendar entry treatment. Its absence preserves the
+/// accepted Variant F rendering exactly.
+@immutable
+final class ClinicalCalendarEntryVisuals
+    extends ThemeExtension<ClinicalCalendarEntryVisuals> {
+  const ClinicalCalendarEntryVisuals({
+    required this.clinicalFill,
+    required this.leadingRailWidth,
+    required this.segmentWorkRail,
+    required this.protectedDotGridCorner,
+  });
+
+  final Color clinicalFill;
+  final double leadingRailWidth;
+  final bool segmentWorkRail;
+  final bool protectedDotGridCorner;
+
+  @override
+  ClinicalCalendarEntryVisuals copyWith({
+    Color? clinicalFill,
+    double? leadingRailWidth,
+    bool? segmentWorkRail,
+    bool? protectedDotGridCorner,
+  }) => ClinicalCalendarEntryVisuals(
+    clinicalFill: clinicalFill ?? this.clinicalFill,
+    leadingRailWidth: leadingRailWidth ?? this.leadingRailWidth,
+    segmentWorkRail: segmentWorkRail ?? this.segmentWorkRail,
+    protectedDotGridCorner:
+        protectedDotGridCorner ?? this.protectedDotGridCorner,
+  );
+
+  @override
+  ClinicalCalendarEntryVisuals lerp(
+    covariant ClinicalCalendarEntryVisuals? other,
+    double t,
+  ) {
+    if (other == null) return this;
+    return ClinicalCalendarEntryVisuals(
+      clinicalFill: Color.lerp(clinicalFill, other.clinicalFill, t)!,
+      leadingRailWidth:
+          leadingRailWidth + (other.leadingRailWidth - leadingRailWidth) * t,
+      segmentWorkRail: t < .5 ? segmentWorkRail : other.segmentWorkRail,
+      protectedDotGridCorner: t < .5
+          ? protectedDotGridCorner
+          : other.protectedDotGridCorner,
+    );
+  }
+}

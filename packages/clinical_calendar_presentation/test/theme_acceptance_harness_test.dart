@@ -104,7 +104,8 @@ void main() {
           );
           expect(report.entries.any((entry) => entry.permitted), isTrue);
           expect(report.entries.any((entry) => !entry.permitted), isTrue);
-          if (bundle.id == federationClassicThemeId) {
+          if (bundle.id == federationClassicThemeId ||
+              bundle.id == federation2399ThemeId) {
             expect(
               report.passed,
               isTrue,
@@ -581,6 +582,74 @@ void main() {
       final bytes = await File(
         '${packageRoot.path}/test/goldens/'
         'federation_classic_runtime_thumbnail.png',
+      ).readAsBytes();
+      final evidence = ThemeThumbnailEvidence(
+        themeId: bundle.id,
+        rendererVersion: bundle.shellRenderer.rendererId,
+        fixtureId: bundle.gallery.thumbnailFixtureId,
+        viewport: bundle.gallery.thumbnailViewport,
+        sha256: sha256.convert(bytes).toString(),
+        captureUri: 'captures/${bundle.id}-runtime-thumbnail.png',
+        fictionalFixture: true,
+        swatches: [
+          for (final swatch in bundle.gallery.swatches)
+            ThemeThumbnailSwatchEvidence(
+              role: swatch.role,
+              label: swatch.label,
+              color: swatch.color,
+            ),
+        ],
+      );
+
+      final result = await ThemeThumbnailAcceptanceAuditor.audit(
+        bundle: bundle,
+        bytes: bytes,
+        evidence: evidence,
+      );
+      expect(result.passed, isTrue, reason: result.failures.join('\n'));
+    });
+
+    testWidgets(
+      'Federation 2399 thumbnail evidence comes from its real renderer',
+      (tester) async {
+        final bundle = bundles.singleWhere(
+          (item) => item.id == federation2399ThemeId,
+        );
+        await tester.binding.setSurfaceSize(bundle.gallery.thumbnailViewport);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SizedBox.fromSize(
+              size: bundle.gallery.thumbnailViewport,
+              child: ThemeRuntimeThumbnail(bundle: bundle),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        final thumbnail = find.byKey(
+          Key('theme-gallery-thumbnail-${bundle.id}'),
+        );
+        expect(tester.getSize(thumbnail), bundle.gallery.thumbnailViewport);
+        await expectLater(
+          thumbnail,
+          matchesGoldenFile('goldens/federation_2399_runtime_thumbnail.png'),
+        );
+        expect(find.byType(Federation2399NineSliceFrame), findsOneWidget);
+        expect(find.byType(GraphiteNineSliceFrame), findsNothing);
+        expect(find.byType(VariantFNineSliceFrame), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    test('Federation 2399 captured runtime thumbnail is audited', () async {
+      final bundle = bundles.singleWhere(
+        (item) => item.id == federation2399ThemeId,
+      );
+      final bytes = await File(
+        '${packageRoot.path}/test/goldens/'
+        'federation_2399_runtime_thumbnail.png',
       ).readAsBytes();
       final evidence = ThemeThumbnailEvidence(
         themeId: bundle.id,

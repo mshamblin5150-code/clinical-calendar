@@ -56,6 +56,20 @@ void main() {
   );
 
   test(
+    'late Federation 2399 Preview failure returns to the applied bundle',
+    () async {
+      await controller.preview(federation2399ThemeId, preflight: (_) async {});
+
+      controller.handleRuntimeBundleFailure(federation2399ThemeId);
+
+      expect(controller.isPreviewing, isFalse);
+      expect(controller.effectiveBundle.id, variantFThemeId);
+      expect(controller.authoritativeThemeId, variantFThemeId);
+      expect(controller.previewUnavailable, isTrue);
+    },
+  );
+
+  test(
     'Revert follows an authoritative change received during Preview',
     () async {
       await controller.preview(graphiteThemeId, preflight: (_) async {});

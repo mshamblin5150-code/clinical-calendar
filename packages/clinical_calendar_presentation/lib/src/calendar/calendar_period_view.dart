@@ -941,6 +941,7 @@ final class _AgendaRow extends StatelessWidget {
       child: CustomPaint(
         painter: _AgendaBackgroundPainter(
           colors: context.clinicalColors,
+          visuals: Theme.of(context).extension<ClinicalCalendarEntryVisuals>(),
           kind: entry.kind,
         ),
         child: Container(
@@ -1354,9 +1355,14 @@ final class _DayCellPainter extends CustomPainter {
 }
 
 final class _AgendaBackgroundPainter extends CustomPainter {
-  const _AgendaBackgroundPainter({required this.colors, required this.kind});
+  const _AgendaBackgroundPainter({
+    required this.colors,
+    required this.visuals,
+    required this.kind,
+  });
 
   final ClinicalCalendarColors colors;
+  final ClinicalCalendarEntryVisuals? visuals;
   final CalendarEntryKind kind;
 
   @override
@@ -1364,7 +1370,8 @@ final class _AgendaBackgroundPainter extends CustomPainter {
     final rect = Offset.zero & size;
     final background = switch (kind) {
       CalendarEntryKind.workShift => colors.work,
-      CalendarEntryKind.clinicalSession => colors.structure,
+      CalendarEntryKind.clinicalSession =>
+        visuals?.clinicalFill ?? colors.structure,
       CalendarEntryKind.protectedDay => colors.protectedDay,
     };
     canvas.drawRect(rect, Paint()..color = background);
@@ -1373,11 +1380,55 @@ final class _AgendaBackgroundPainter extends CustomPainter {
       CalendarEntryKind.clinicalSession => colors.clinical,
       CalendarEntryKind.protectedDay => colors.protectedDayAccent,
     };
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, 3, size.height),
-      Paint()..color = accent,
-    );
-    if (kind == CalendarEntryKind.protectedDay) {
+    final entryVisuals = visuals;
+    if (entryVisuals == null) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, 3, size.height),
+        Paint()..color = accent,
+      );
+    } else if (kind == CalendarEntryKind.workShift &&
+        entryVisuals.segmentWorkRail) {
+      final segmentHeight = (size.height - 12) / 2;
+      final railPaint = Paint()..color = accent;
+      canvas.drawRect(
+        Rect.fromLTWH(0, 4, entryVisuals.leadingRailWidth, segmentHeight),
+        railPaint,
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(
+          0,
+          8 + segmentHeight,
+          entryVisuals.leadingRailWidth,
+          segmentHeight,
+        ),
+        railPaint,
+      );
+    } else if (kind == CalendarEntryKind.protectedDay &&
+        entryVisuals.protectedDotGridCorner) {
+      canvas.drawRect(
+        rect.deflate(1),
+        Paint()
+          ..color = accent
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      final dotPaint = Paint()..color = accent;
+      for (var row = 0; row < 3; row++) {
+        for (var column = 0; column < 3; column++) {
+          canvas.drawCircle(
+            Offset(size.width - 14 + column * 4, 6 + row * 4),
+            1,
+            dotPaint,
+          );
+        }
+      }
+    } else {
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, entryVisuals.leadingRailWidth, size.height),
+        Paint()..color = accent,
+      );
+    }
+    if (entryVisuals == null && kind == CalendarEntryKind.protectedDay) {
       final stripe = Paint()
         ..color = colors.protectedDayAccent.withValues(alpha: .12)
         ..strokeWidth = 2;
@@ -1393,7 +1444,9 @@ final class _AgendaBackgroundPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_AgendaBackgroundPainter oldDelegate) =>
-      colors != oldDelegate.colors || kind != oldDelegate.kind;
+      colors != oldDelegate.colors ||
+      visuals != oldDelegate.visuals ||
+      kind != oldDelegate.kind;
 }
 
 BoxDecoration _entryDecoration(BuildContext context, CalendarEntry entry) =>
@@ -1403,7 +1456,10 @@ BoxDecoration _entryDecoration(BuildContext context, CalendarEntry entry) =>
         CalendarEntryKind.clinicalSession =>
           entry.statusLabel == 'Completed'
               ? context.clinicalColors.clinical.withValues(alpha: .18)
-              : context.clinicalColors.structureRaised,
+              : Theme.of(
+                      context,
+                    ).extension<ClinicalCalendarEntryVisuals>()?.clinicalFill ??
+                    context.clinicalColors.structureRaised,
         CalendarEntryKind.protectedDay => context.clinicalColors.protectedDay,
       },
       border: Border.all(color: _entryAccent(context, entry)),
@@ -1416,7 +1472,9 @@ BoxDecoration _agendaDecoration(
   required bool selected,
 }) => BoxDecoration(
   border: Border(
-    left: BorderSide(color: _entryAccent(context, entry), width: 3),
+    left: Theme.of(context).extension<ClinicalCalendarEntryVisuals>() == null
+        ? BorderSide(color: _entryAccent(context, entry), width: 3)
+        : BorderSide.none,
     bottom: BorderSide(color: context.clinicalColors.insetBorder),
     top: selected
         ? BorderSide(color: context.clinicalColors.clinical)

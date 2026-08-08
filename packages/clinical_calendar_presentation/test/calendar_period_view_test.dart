@@ -1,8 +1,10 @@
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
+import 'package:clinical_calendar_presentation/src/additive_semantic_colors.dart';
 import 'package:clinical_calendar_presentation/src/calendar/calendar_data_source.dart';
 import 'package:clinical_calendar_presentation/src/calendar/calendar_models.dart';
 import 'package:clinical_calendar_presentation/src/calendar/calendar_period_view.dart';
 import 'package:clinical_calendar_presentation/src/federation_classic_theme.dart';
+import 'package:clinical_calendar_presentation/src/federation_2399_theme.dart';
 import 'package:clinical_calendar_presentation/src/graphite_theme.dart';
 import 'package:clinical_calendar_presentation/src/theme_contract.dart';
 import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
@@ -243,6 +245,34 @@ void main() {
     },
   );
 
+  testWidgets('Federation 2399 installs its owned Agenda cue strategy', (
+    tester,
+  ) async {
+    await _pumpCalendar(
+      tester,
+      source: _MemoryCalendarDataSource(_snapshot()),
+      initialPeriod: CalendarPeriod.agenda,
+      federation2399: true,
+    );
+
+    final work = find.byKey(
+      const Key('agenda-row-workShift-work-03-2026-08-03'),
+    );
+    final visuals = Theme.of(
+      tester.element(work),
+    ).extension<ClinicalCalendarEntryVisuals>()!;
+    expect(visuals.clinicalFill, Federation2399Colors.clinicalFill);
+    expect(visuals.leadingRailWidth, 4);
+    expect(visuals.segmentWorkRail, isTrue);
+    expect(visuals.protectedDotGridCorner, isTrue);
+    final workContainer = tester.widget<Container>(work);
+    final workBorder =
+        (workContainer.decoration! as BoxDecoration).border! as Border;
+    expect(workBorder.left, BorderSide.none);
+    expect(find.text('Work Shift'), findsWidgets);
+    expect(find.text('Protected Day'), findsWidgets);
+  });
+
   testWidgets('Agenda scrolls within a bounded compact calendar bay', (
     tester,
   ) async {
@@ -355,6 +385,7 @@ Future<void> _pumpCalendar(
   bool bounded = false,
   bool graphite = false,
   bool federationClassic = false,
+  bool federation2399 = false,
   bool enhancedAccessibility = false,
   TextScaler textScaler = TextScaler.noScaling,
 }) async {
@@ -380,12 +411,18 @@ Future<void> _pumpCalendar(
     ClinicalCalendarSemanticMarkScope(
       marks: federationClassic
           ? const FederationClassicThemeBundle().marks
+          : federation2399
+          ? const Federation2399ThemeBundle().marks
           : graphite
           ? const GraphiteThemeBundle().marks
           : const VariantFThemeBundle().marks,
       child: MaterialApp(
         theme: federationClassic
             ? buildFederationClassicTheme(
+                enhancedAccessibility: enhancedAccessibility,
+              )
+            : federation2399
+            ? buildFederation2399Theme(
                 enhancedAccessibility: enhancedAccessibility,
               )
             : graphite
