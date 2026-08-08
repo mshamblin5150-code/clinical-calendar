@@ -102,7 +102,13 @@ void main() {
       federationClassic.frame.sourceCuts,
       const EdgeInsets.fromLTRB(120, 145, 120, 170),
     );
-    expect(federationClassic.frame.assetPaths, hasLength(1));
+    expect(
+      federationClassic.frame.assetPaths,
+      containsAll([
+        federationClassicFrameAsset,
+        federationClassicLandscapeChassisAsset,
+      ]),
+    );
     expect(federationClassic.gallery.swatches, hasLength(5));
     expect(federationClassic.marks.marks, hasLength(9));
     expect(federationClassic.helpGuide.calendarStates, hasLength(5));
@@ -513,7 +519,7 @@ void main() {
   });
 
   testWidgets(
-    'Federation Classic shell uses only Federation Classic raster framing',
+    'Federation Classic shell uses only Federation Classic-owned chassis',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(1000, 700));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -534,7 +540,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(FederationClassicNineSliceFrame), findsWidgets);
+      expect(find.byType(FederationClassicLandscapeChassis), findsOneWidget);
+      expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
       expect(find.byType(GraphiteNineSliceFrame), findsNothing);
       expect(find.byType(VariantFNineSliceFrame), findsNothing);
       expect(tester.takeException(), isNull);
@@ -571,6 +578,202 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'Federation Classic landscape composes one integrated concept chassis',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1586, 992));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: federationClassic.standardPresentation.createThemeData(),
+          boundaryKey: GlobalKey(),
+          shell: federationClassic.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('federation-classic-landscape-shell')),
+        findsOneWidget,
+      );
+      expect(find.byType(FederationClassicLandscapeChassis), findsOneWidget);
+      expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
+      final placements = tester.getRect(
+        find.byKey(const Key('federation-classic-placement-bay')),
+      );
+      final calendar = tester.getRect(
+        find.byKey(const Key('federation-classic-calendar-bay')),
+      );
+      final planning = tester.getRect(
+        find.byKey(const Key('federation-classic-planning-bay')),
+      );
+      final insight = tester.getRect(
+        find.byKey(const Key('federation-classic-insight-bay')),
+      );
+      final navigation = tester.getRect(
+        find.byKey(const Key('federation-classic-bottom-navigation')),
+      );
+      expect(placements.width / 1586, closeTo(.19, .015));
+      expect(calendar.width / 1586, closeTo(.47, .015));
+      expect(insight.width / 1586, closeTo(.225, .015));
+      expect(placements.right, lessThan(calendar.left));
+      expect(calendar.right, lessThan(insight.left));
+      expect(planning.top, greaterThan(calendar.top));
+      expect(planning.left, calendar.left);
+      expect(planning.right, calendar.right);
+      expect(navigation.top, greaterThan(planning.bottom));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Federation Classic owned controls preserve shell callbacks', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1536, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var menuCount = 0;
+    var addCount = 0;
+    var attentionCount = 0;
+    final destinations = <ClinicalCalendarDestination>[];
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: federationClassic.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: federationClassic.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: () => menuCount++,
+          onOpenDestination: destinations.add,
+          onOpenAttention: () => attentionCount++,
+          onAddSchedule: () => addCount++,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open menu'));
+    await tester.tap(find.byTooltip('Add schedule'));
+    await tester.tap(find.byTooltip('Help'));
+    await tester.tap(find.byKey(const Key('federation-classic-navigation-2')));
+    await tester.tap(find.byKey(const Key('federation-classic-navigation-3')));
+    await tester.tap(find.byKey(const Key('federation-classic-navigation-4')));
+
+    expect(menuCount, 1);
+    expect(addCount, 1);
+    expect(attentionCount, 1);
+    expect(destinations, [
+      ClinicalCalendarDestination.help,
+      ClinicalCalendarDestination.clinicalPlacements,
+      ClinicalCalendarDestination.settings,
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Federation Classic portrait has an intentional reading order', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: federationClassic.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: federationClassic.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('federation-classic-portrait-shell')),
+      findsOneWidget,
+    );
+    expect(find.byType(FederationClassicNineSliceFrame), findsOneWidget);
+    final calendar = tester.getRect(
+      find.byKey(const Key('federation-classic-calendar-bay')),
+    );
+    final planning = tester.getRect(
+      find.byKey(const Key('federation-classic-planning-bay')),
+    );
+    final placements = tester.getRect(
+      find.byKey(const Key('federation-classic-placement-bay')),
+    );
+    final insight = tester.getRect(
+      find.byKey(const Key('federation-classic-insight-bay')),
+    );
+    final navigation = tester.getRect(
+      find.byKey(const Key('federation-classic-bottom-navigation')),
+    );
+    expect(calendar.top, lessThan(planning.top));
+    expect(planning.top, lessThan(placements.top));
+    expect(placements.top, insight.top);
+    expect(placements.right, lessThan(insight.left));
+    expect(navigation.top, greaterThan(calendar.top));
+    expect(
+      find.byKey(const Key('federation-classic-portrait-scroll')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Federation Classic tablet console survives 200% text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: federationClassic.standardPresentation.createThemeData(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: federationClassic.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('federation-classic-portrait-shell')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('federation-classic-bottom-navigation')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('federation-classic-calendar-horizontal-scroll')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'Federation 2399 landscape composes one integrated concept chassis',
@@ -788,8 +991,17 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.byType(FederationClassicNineSliceFrame), findsWidgets);
-        expect(find.byType(ClipRect), findsWidgets);
+        if (size.width > size.height && size.width >= 960) {
+          expect(
+            find.byType(FederationClassicLandscapeChassis),
+            findsOneWidget,
+          );
+          expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
+        } else {
+          expect(find.byType(FederationClassicNineSliceFrame), findsWidgets);
+          expect(find.byType(FederationClassicLandscapeChassis), findsNothing);
+          expect(find.byType(ClipRect), findsWidgets);
+        }
         expect(tester.takeException(), isNull);
       },
     );
