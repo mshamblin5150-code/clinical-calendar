@@ -208,6 +208,34 @@ void main() {
     );
   });
 
+  test('Field Archive is a complete independently owned bundle', () {
+    const fieldArchive = HeritageFieldNotesThemeBundle();
+
+    ClinicalCalendarThemeBundleValidator.validate(const [fieldArchive]);
+    expect(fieldArchive.id, heritageFieldNotesThemeId);
+    expect(fieldArchive.metadata.displayName, 'Field Archive');
+    expect(
+      fieldArchive.standardPresentation,
+      isA<HeritageFieldNotesVisualTheme>(),
+    );
+    expect(fieldArchive.shellRenderer, isA<HeritageFieldNotesShellRenderer>());
+    expect(fieldArchive.frame.sourceSize, const Size(1536, 1024));
+    expect(
+      fieldArchive.frame.sourceCuts,
+      const EdgeInsets.fromLTRB(120, 145, 120, 170),
+    );
+    expect(fieldArchive.frame.assetPaths, const [heritageFieldNotesFrameAsset]);
+    expect(fieldArchive.gallery.swatches, hasLength(5));
+    expect(fieldArchive.marks.marks, hasLength(9));
+    expect(fieldArchive.helpGuide.calendarStates, hasLength(5));
+    expect(
+      ClinicalCalendarThemeBundleRegistry.standard.resolveRoot(
+        heritageFieldNotesThemeId,
+      ),
+      same(fieldArchive),
+    );
+  });
+
   test(
     'Enhanced is an overlay and Standard round trips exactly for registered bundles',
     () {
@@ -760,6 +788,165 @@ void main() {
     );
     expect(
       find.byKey(const Key('federation-2399-bottom-navigation')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Field Archive landscape matches its approved record layout', (
+    tester,
+  ) async {
+    const fieldArchive = HeritageFieldNotesThemeBundle();
+    await tester.binding.setSurfaceSize(const Size(1536, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: fieldArchive.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: fieldArchive.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'CC-2026-08',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HeritageFieldNotesNineSliceFrame), findsOneWidget);
+    expect(find.byType(Federation2399NineSliceFrame), findsNothing);
+    expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
+    expect(find.byType(GraphiteNineSliceFrame), findsNothing);
+    expect(find.byType(VariantFNineSliceFrame), findsNothing);
+    final crown = tester.getRect(
+      find.byKey(const Key('heritage-field-notes-command-crown')),
+    );
+    final placements = tester.getRect(
+      find.byKey(const Key('heritage-field-notes-placement-bay')),
+    );
+    final calendar = tester.getRect(
+      find.byKey(const Key('heritage-field-notes-calendar-bay')),
+    );
+    final planning = tester.getRect(
+      find.byKey(const Key('heritage-field-notes-planning-bay')),
+    );
+    final insight = tester.getRect(
+      find.byKey(const Key('heritage-field-notes-insight-bay')),
+    );
+    final navigation = tester.getRect(
+      find.byKey(const Key('heritage-field-notes-bottom-navigation')),
+    );
+    expect(crown.width / 1536, closeTo(.923, .01));
+    expect(placements.width / 1536, closeTo(.17, .02));
+    expect(calendar.width / 1536, closeTo(.525, .01));
+    expect(insight.width / 1536, closeTo(.19, .02));
+    expect(placements.right, lessThan(calendar.left));
+    expect(calendar.right, lessThan(insight.left));
+    expect(planning.left, calendar.left);
+    expect(planning.right, calendar.right);
+    expect(navigation.top, greaterThan(planning.bottom));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Field Archive owned controls preserve shared callbacks', (
+    tester,
+  ) async {
+    const fieldArchive = HeritageFieldNotesThemeBundle();
+    await tester.binding.setSurfaceSize(const Size(1536, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var menuCount = 0;
+    var addCount = 0;
+    var attentionCount = 0;
+    final destinations = <ClinicalCalendarDestination>[];
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: fieldArchive.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: fieldArchive.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: () => menuCount++,
+          onOpenDestination: destinations.add,
+          onOpenAttention: () => attentionCount++,
+          onAddSchedule: () => addCount++,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open menu'));
+    await tester.tap(find.byTooltip('Add schedule'));
+    await tester.tap(find.byTooltip('Help'));
+    await tester.tap(
+      find.byKey(const Key('heritage-field-notes-navigation-2')),
+    );
+    await tester.tap(
+      find.byKey(const Key('heritage-field-notes-navigation-3')),
+    );
+    await tester.tap(
+      find.byKey(const Key('heritage-field-notes-navigation-4')),
+    );
+
+    expect(menuCount, 1);
+    expect(addCount, 1);
+    expect(attentionCount, 1);
+    expect(destinations, [
+      ClinicalCalendarDestination.help,
+      ClinicalCalendarDestination.clinicalPlacements,
+      ClinicalCalendarDestination.settings,
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Field Archive portrait owns ordered scrolling at 200% text', (
+    tester,
+  ) async {
+    const fieldArchive = HeritageFieldNotesThemeBundle();
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: fieldArchive.standardPresentation.createThemeData(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: fieldArchive.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final calendar = tester.getRect(
+      find.byKey(const Key('heritage-field-notes-calendar-bay')),
+    );
+    final planning = tester.getRect(
+      find.byKey(const Key('heritage-field-notes-planning-bay')),
+    );
+    final placements = tester.getRect(
+      find.byKey(const Key('heritage-field-notes-placement-bay')),
+    );
+    expect(calendar.top, lessThan(planning.top));
+    expect(planning.top, lessThan(placements.top));
+    expect(
+      find.byKey(const Key('heritage-field-notes-portrait-scroll')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('heritage-field-notes-bottom-navigation')),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);

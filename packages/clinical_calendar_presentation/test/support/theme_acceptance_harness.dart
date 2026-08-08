@@ -864,6 +864,12 @@ ThemeRasterAcceptanceFixture themeRasterAcceptanceFixture(String themeId) =>
             '1a11f86edb76286e6bf35c58188b23fee0a4414c0d173c8bd28f602732ec49aa',
         creationRecordUri: 'docs/concepts/themes/federation-2399/README.md',
       ),
+      heritageFieldNotesThemeId => const ThemeRasterAcceptanceFixture(
+        expectedSha256:
+            '5bdc8587d9e35595868e5ee6e983c2cfb35d06bc110bd5cbf5885345c1f2645b',
+        creationRecordUri:
+            'docs/themes/acceptance/proofs/heritage-field-notes/README.md',
+      ),
       _ => throw StateError('No primary-frame fixture for $themeId.'),
     };
 
