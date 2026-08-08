@@ -80,6 +80,17 @@ const heritageFieldNotesStandardAccessibilityTokens =
       decorationOpacity: 1,
     );
 
+const heritageFieldNotesEnhancedAccessibilityTokens =
+    ClinicalCalendarAccessibilityTokens(
+      enhanced: true,
+      focusOuterColor: Color(0xFF064727),
+      focusInnerColor: Colors.white,
+      focusWidth: 3,
+      selectionWidth: 3,
+      persistentExpandedLegend: true,
+      decorationOpacity: .55,
+    );
+
 ThemeData buildHeritageFieldNotesTheme({bool enhancedAccessibility = false}) {
   const metrics = ClinicalCalendarMetrics(
     cornerRadius: 10,
@@ -109,7 +120,7 @@ ThemeData buildHeritageFieldNotesTheme({bool enhancedAccessibility = false}) {
     outline: HeritageFieldNotesColors.insetBorder,
     outlineVariant: HeritageFieldNotesColors.controlActive,
     inverseSurface: HeritageFieldNotesColors.primaryText,
-    onInverseSurface: HeritageFieldNotesColors.canvas,
+    onInverseSurface: HeritageFieldNotesColors.surfaceRaised,
     inversePrimary: HeritageFieldNotesColors.controlActive,
     shadow: Colors.black,
     scrim: Colors.black,
@@ -308,7 +319,7 @@ ThemeData _applyHeritageFieldNotesEnhancedAccessibility(ThemeData standard) {
         compactSpacing: 8,
         standardSpacing: 16,
       ),
-      enhancedAccessibilityTokens,
+      heritageFieldNotesEnhancedAccessibilityTokens,
     ],
   );
 }

@@ -669,15 +669,16 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
     required LocalDate firstDate,
     required LocalDate lastDate,
   }) async => CalendarSnapshot([
-    CalendarEntry(
-      id: 'protected-19',
-      kind: CalendarEntryKind.protectedDay,
-      startDate: LocalDate(2026, 8, 19),
-      endDate: LocalDate(2026, 8, 19),
-      title: 'Protected Day',
-      statusLabel: 'Protected',
-    ),
-    for (final day in [6, 17, 27])
+    for (final day in [1, 5, 8, 12, 15, 19, 22, 26, 29])
+      CalendarEntry(
+        id: 'protected-$day',
+        kind: CalendarEntryKind.protectedDay,
+        startDate: LocalDate(2026, 8, day),
+        endDate: LocalDate(2026, 8, day),
+        title: 'Protected Day',
+        statusLabel: 'Protected',
+      ),
+    for (final day in [4, 7, 11, 14, 17, 21, 25, 28])
       CalendarEntry(
         id: 'work-$day',
         kind: CalendarEntryKind.workShift,
@@ -688,7 +689,7 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
         title: 'Work Shift',
         statusLabel: 'Scheduled',
       ),
-    for (final day in [5, 13, 24])
+    for (final day in [3, 6, 10, 13, 20, 24, 27])
       CalendarEntry(
         id: 'clinical-$day',
         kind: CalendarEntryKind.clinicalSession,
@@ -698,7 +699,7 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
         endTime: LocalTime(16, 0),
         title: 'Clinical Session',
         assignment: 'Internal Medicine - Jordan Lee',
-        statusLabel: day == 5 ? 'Awaiting Confirmation' : 'Scheduled',
+        statusLabel: day == 3 ? 'Awaiting Confirmation' : 'Scheduled',
       ),
   ]);
 }

@@ -90,95 +90,107 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
   Widget _landscape() => Scaffold(
     key: const Key('heritage-field-notes-landscape-shell'),
     backgroundColor: HeritageFieldNotesColors.canvas,
-    body: HeritageFieldNotesNineSliceFrame(
-      chromeInsets: const EdgeInsets.fromLTRB(42, 44, 42, 52),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final height = constraints.maxHeight;
-          return Stack(
-            children: [
-              Positioned(
-                left: width * .012,
-                top: height * .006,
-                width: width * .976,
-                height: height * .082,
-                child: _HeritageFieldNotesCommandCrown(
-                  environmentName: environmentName,
-                  onOpenMenu: onOpenMenu,
-                  onAddSchedule: onAddSchedule,
-                  onOpenDestination: onOpenDestination,
-                  profileAvatar: slots.profileAvatar,
-                ),
-              ),
-              Positioned(
-                left: width * .012,
-                top: height * .06,
-                width: width * .19,
-                height: height * .84,
-                child: _HeritageFieldNotesConsoleBay(
-                  key: const Key('heritage-field-notes-placement-bay'),
-                  accent: _HeritageFieldNotesBayAccent.brass,
-                  shape: _HeritageFieldNotesBayShape.placement,
-                  child: slots.placementDock,
-                ),
-              ),
-              Positioned(
-                left: width * .21,
-                top: height * .06,
-                width: width * .555,
-                height: height * .585,
-                child: _HeritageFieldNotesConsoleBay(
-                  key: const Key('heritage-field-notes-calendar-bay'),
-                  accent: _HeritageFieldNotesBayAccent.forest,
-                  shape: _HeritageFieldNotesBayShape.calendar,
-                  child: _HeritageFieldNotesCalendarViewport(
-                    child: slots.centralContent,
+    body: Stack(
+      fit: StackFit.expand,
+      children: [
+        HeritageFieldNotesNineSliceFrame(
+          chromeInsets: const EdgeInsets.fromLTRB(60, 28, 60, 46),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final height = constraints.maxHeight;
+              return Stack(
+                children: [
+                  Positioned(
+                    left: width * .005,
+                    top: height * .006,
+                    width: width * .99,
+                    height: height * .082,
+                    child: _HeritageFieldNotesCommandCrown(
+                      environmentName: environmentName,
+                      onOpenMenu: onOpenMenu,
+                      onAddSchedule: onAddSchedule,
+                      onOpenDestination: onOpenDestination,
+                      profileAvatar: slots.profileAvatar,
+                    ),
                   ),
-                ),
-              ),
-              Positioned(
-                left: width * .21,
-                top: height * .655,
-                width: width * .555,
-                height: height * .245,
-                child: _HeritageFieldNotesConsoleBay(
-                  key: const Key('heritage-field-notes-planning-bay'),
-                  accent: _HeritageFieldNotesBayAccent.forest,
-                  shape: _HeritageFieldNotesBayShape.planning,
-                  child: VariantFPlanningBayMode(
-                    expandedByDefault: true,
-                    child: slots.planningRegion,
+                  Positioned(
+                    left: 0,
+                    top: height * .06,
+                    width: width * .19,
+                    height: height * .84,
+                    child: _HeritageFieldNotesConsoleBay(
+                      key: const Key('heritage-field-notes-placement-bay'),
+                      accent: _HeritageFieldNotesBayAccent.brass,
+                      shape: _HeritageFieldNotesBayShape.placement,
+                      child: slots.placementDock,
+                    ),
                   ),
-                ),
-              ),
-              Positioned(
-                left: width * .773,
-                top: height * .06,
-                width: width * .215,
-                height: height * .84,
-                child: _HeritageFieldNotesConsoleBay(
-                  key: const Key('heritage-field-notes-insight-bay'),
-                  accent: _HeritageFieldNotesBayAccent.brass,
-                  shape: _HeritageFieldNotesBayShape.insight,
-                  child: slots.insightRail,
-                ),
-              ),
-              Positioned(
-                left: width * .012,
-                top: height * .904,
-                width: width * .976,
-                height: height * .084,
-                child: _HeritageFieldNotesNavigationDeck(
-                  selectedIndex: mobileIndex,
-                  onOpenDestination: onOpenDestination,
-                  onOpenAttention: onOpenAttention,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+                  Positioned(
+                    left: width * .21,
+                    top: height * .06,
+                    width: width * .555,
+                    height: height * .585,
+                    child: _HeritageFieldNotesConsoleBay(
+                      key: const Key('heritage-field-notes-calendar-bay'),
+                      accent: _HeritageFieldNotesBayAccent.forest,
+                      shape: _HeritageFieldNotesBayShape.calendar,
+                      child: _HeritageFieldNotesCalendarViewport(
+                        child: slots.centralContent,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: width * .21,
+                    top: height * .655,
+                    width: width * .555,
+                    height: height * .245,
+                    child: _HeritageFieldNotesConsoleBay(
+                      key: const Key('heritage-field-notes-planning-bay'),
+                      accent: _HeritageFieldNotesBayAccent.forest,
+                      shape: _HeritageFieldNotesBayShape.planning,
+                      child: VariantFPlanningBayMode(
+                        expandedByDefault: true,
+                        child: slots.planningRegion,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: width * .775,
+                    top: height * .06,
+                    width: width * .225,
+                    height: height * .84,
+                    child: _HeritageFieldNotesConsoleBay(
+                      key: const Key('heritage-field-notes-insight-bay'),
+                      accent: _HeritageFieldNotesBayAccent.brass,
+                      shape: _HeritageFieldNotesBayShape.insight,
+                      child: slots.insightRail,
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    top: height * .904,
+                    width: width,
+                    height: height * .084,
+                    child: _HeritageFieldNotesNavigationDeck(
+                      selectedIndex: mobileIndex,
+                      onOpenDestination: onOpenDestination,
+                      onOpenAttention: onOpenAttention,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        const Positioned(
+          right: 5,
+          top: 126,
+          bottom: 126,
+          width: 30,
+          child: _HeritageFieldNotesIndexTabs(),
+        ),
+      ],
     ),
   );
 
@@ -739,4 +751,34 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
       ),
     );
   }
+}
+
+final class _HeritageFieldNotesIndexTabs extends StatelessWidget {
+  const _HeritageFieldNotesIndexTabs();
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: IgnorePointer(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (var index = 0; index < 7; index++)
+            Container(
+              width: index.isEven ? 30 : 24,
+              height: index == 3 ? 92 : 68,
+              decoration: BoxDecoration(
+                color: index.isEven
+                    ? HeritageFieldNotesColors.protectedDayAccent
+                    : const Color(0xFF5A3A28),
+                border: Border.all(color: const Color(0xFFD2A74B), width: 1.5),
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(6),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 }

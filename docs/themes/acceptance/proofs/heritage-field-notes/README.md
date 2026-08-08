@@ -50,10 +50,10 @@ corners, uses source cuts 120/145/120/170, and has SHA-256
 
 ```text
 bf131014c71df2adc4b34b70c99e3e5ed94e54f0e1753d3979d0b6e85da66c75  approved-concept-landscape.png
-45eb05290cf9a8ae87260b68e5ce5f30b7c99156a2c3e45bcf639f3207ded32b  landscape-concept-vs-runtime.png
-5eed40fe15551dc396f2d9c71237dbd13108cd61dafcda536bdc31996edabd32  runtime-landscape-1536x1024.png
-0b762d3ad6991d1904f007a04669eadca91ec011b0f8f16b603186083f259285  runtime-portrait-900x1440.png
-77b95eb5199a4691540bb04b67d49840d663e81c1a0740aa996caed7879ba79b  runtime-portrait-200-percent-900x1440.png
+89e9da5aa75dbd1be5978a7e2f5999685a0c17cbd48ab5ad5bc81b1f9586abef  landscape-concept-vs-runtime.png
+f933ce80dcce7bb0ae7eaf24ae9337a6dd69cd9cb92e0fd6d76d561392eabf2a  runtime-landscape-1536x1024.png
+d8902ef4722ee0979e0dfff448d7b38e5707e0feff4e111c5ad196bfc333da8c  runtime-portrait-900x1440.png
+6b48ea16f81c45057f18c3ca9f678dd1591c5d3da1920c406d4e82b5264abaf2  runtime-portrait-200-percent-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance

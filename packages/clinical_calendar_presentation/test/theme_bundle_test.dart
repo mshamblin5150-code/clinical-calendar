@@ -244,6 +244,7 @@ void main() {
         GraphiteThemeBundle(),
         FederationClassicThemeBundle(),
         Federation2399ThemeBundle(),
+        HeritageFieldNotesThemeBundle(),
       ]) {
         final standard = themedBundle.standardPresentation.createThemeData();
         final enhanced = themedBundle.standardPresentation.createThemeData(
@@ -275,6 +276,46 @@ void main() {
           const EdgeInsets.fromLTRB(120, 145, 120, 170),
         );
       }
+    },
+  );
+
+  test(
+    'Field Archive registration preserves every established renderer path',
+    () {
+      final registry = ClinicalCalendarThemeBundleRegistry.standard;
+
+      expect(
+        registry.resolveRoot(variantFThemeId).shellRenderer,
+        isA<VariantFShellRenderer>().having(
+          (renderer) => renderer.rendererId,
+          'renderer ID',
+          'variant-f-existing-responsive-shell',
+        ),
+      );
+      expect(
+        registry.resolveRoot(graphiteThemeId).shellRenderer,
+        isA<GraphiteShellRenderer>().having(
+          (renderer) => renderer.rendererId,
+          'renderer ID',
+          'graphite-additive-responsive-shell-v1',
+        ),
+      );
+      expect(
+        registry.resolveRoot(federationClassicThemeId).shellRenderer,
+        isA<FederationClassicShellRenderer>().having(
+          (renderer) => renderer.rendererId,
+          'renderer ID',
+          'federation-classic-additive-responsive-shell-v1',
+        ),
+      );
+      expect(
+        registry.resolveRoot(federation2399ThemeId).shellRenderer,
+        isA<Federation2399ShellRenderer>().having(
+          (renderer) => renderer.rendererId,
+          'renderer ID',
+          'federation-2399-owned-responsive-console-v3',
+        ),
+      );
     },
   );
 
@@ -839,9 +880,9 @@ void main() {
     final navigation = tester.getRect(
       find.byKey(const Key('heritage-field-notes-bottom-navigation')),
     );
-    expect(crown.width / 1536, closeTo(.923, .01));
+    expect(crown.width / 1536, closeTo(.913, .01));
     expect(placements.width / 1536, closeTo(.17, .02));
-    expect(calendar.width / 1536, closeTo(.525, .01));
+    expect(calendar.width / 1536, closeTo(.512, .01));
     expect(insight.width / 1536, closeTo(.19, .02));
     expect(placements.right, lessThan(calendar.left));
     expect(calendar.right, lessThan(insight.left));
@@ -951,6 +992,40 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  for (final size in const [Size(320, 568), Size(768, 1024), Size(1440, 900)]) {
+    testWidgets(
+      'Field Archive shell fits ${size.width.toInt()}x${size.height.toInt()}',
+      (tester) async {
+        const fieldArchive = HeritageFieldNotesThemeBundle();
+        await tester.binding.setSurfaceSize(size);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          _shellHarness(
+            theme: fieldArchive.standardPresentation.createThemeData(),
+            boundaryKey: GlobalKey(),
+            shell: fieldArchive.shellRenderer.build(
+              slots: _slots,
+              environmentName: 'TEST',
+              onOpenMenu: _noop,
+              onOpenDestination: _ignoreDestination,
+              onOpenAttention: _noop,
+              onAddSchedule: _noop,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(HeritageFieldNotesNineSliceFrame), findsWidgets);
+        expect(find.byType(Federation2399NineSliceFrame), findsNothing);
+        expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
+        expect(find.byType(GraphiteNineSliceFrame), findsNothing);
+        expect(find.byType(VariantFNineSliceFrame), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   for (final size in const [Size(320, 568), Size(768, 1024), Size(1440, 900)]) {
     testWidgets(
