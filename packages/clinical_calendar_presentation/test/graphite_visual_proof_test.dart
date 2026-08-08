@@ -12,7 +12,7 @@ const _studentId = '00000000-0000-4000-8000-000000000128';
 final _today = LocalDate(2026, 8, 6);
 
 void main() {
-  setUpAll(loadProofFonts);
+  setUpAll(prepareProofEnvironment);
 
   testWidgets('Graphite landscape is the approved precision instrument', (
     tester,

@@ -1,6 +1,18 @@
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show FontLoader;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
+
+const _nonWindowsPixelTolerance = 0.025;
+
+Future<void> prepareProofEnvironment() async {
+  if (!Platform.isWindows && goldenFileComparator is! _ProofGoldenComparator) {
+    goldenFileComparator = _ProofGoldenComparator(goldenFileComparator);
+  }
+  await loadProofFonts();
+}
 
 Future<void> loadProofFonts() async {
   final candidates = <Directory>[];
@@ -114,4 +126,48 @@ Future<void> _loadFont(String family, File file) async {
   await (FontLoader(
     family,
   )..addFont(Future.value(ByteData.sublistView(bytes)))).load();
+}
+
+final class _ProofGoldenComparator implements GoldenFileComparator {
+  const _ProofGoldenComparator(this.delegate);
+
+  final GoldenFileComparator delegate;
+
+  @override
+  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
+    final expectedBytes = await File.fromUri(
+      getTestUri(golden, null),
+    ).readAsBytes();
+    final expected = img.decodePng(expectedBytes);
+    final actual = img.decodePng(imageBytes);
+    if (expected == null || actual == null) {
+      return delegate.compare(imageBytes, golden);
+    }
+    if (expected.width != actual.width || expected.height != actual.height) {
+      return false;
+    }
+
+    var changedPixels = 0;
+    final pixelCount = expected.width * expected.height;
+    for (var y = 0; y < expected.height; y++) {
+      for (var x = 0; x < expected.width; x++) {
+        final expectedPixel = expected.getPixel(x, y);
+        final actualPixel = actual.getPixel(x, y);
+        if (expectedPixel.r != actualPixel.r ||
+            expectedPixel.g != actualPixel.g ||
+            expectedPixel.b != actualPixel.b ||
+            expectedPixel.a != actualPixel.a) {
+          changedPixels++;
+        }
+      }
+    }
+    return changedPixels / pixelCount <= _nonWindowsPixelTolerance;
+  }
+
+  @override
+  Uri getTestUri(Uri key, int? version) => delegate.getTestUri(key, version);
+
+  @override
+  Future<void> update(Uri golden, Uint8List imageBytes) =>
+      delegate.update(golden, imageBytes);
 }

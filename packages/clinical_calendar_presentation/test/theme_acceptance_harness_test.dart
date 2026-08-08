@@ -11,7 +11,7 @@ import 'support/theme_acceptance_harness.dart';
 import 'support/proof_fonts.dart';
 
 void main() {
-  setUpAll(loadProofFonts);
+  setUpAll(prepareProofEnvironment);
 
   group('non-compensating theme acceptance', () {
     test('a missing or failed gate leaves the theme Pending', () {

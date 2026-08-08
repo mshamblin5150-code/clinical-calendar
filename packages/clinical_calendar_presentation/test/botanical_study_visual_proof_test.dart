@@ -12,7 +12,7 @@ const _studentId = '00000000-0000-4000-8000-000000000239';
 final _today = LocalDate(2026, 8, 5);
 
 void main() {
-  setUpAll(loadProofFonts);
+  setUpAll(prepareProofEnvironment);
 
   testWidgets('Botanical Study landscape matches its approved composition', (
     tester,
