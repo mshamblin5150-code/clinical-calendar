@@ -215,6 +215,47 @@ void main() {
   });
 
   test(
+    'Federation Classic rebuild leaves every other renderer path unchanged',
+    () {
+      final cases = <(ClinicalCalendarThemeBundle, String, Type)>[
+        (
+          bundle,
+          'variant-f-existing-responsive-shell',
+          ResponsiveApplicationShell,
+        ),
+        (
+          graphite,
+          'graphite-additive-responsive-shell-v1',
+          GraphiteApplicationShell,
+        ),
+        (
+          federation2399,
+          'federation-2399-owned-responsive-console-v3',
+          Federation2399ApplicationShell,
+        ),
+      ];
+
+      for (final (bundle, rendererId, shellType) in cases) {
+        expect(bundle.shellRenderer.rendererId, rendererId);
+        expect(
+          bundle.shellRenderer
+              .build(
+                slots: _slots,
+                environmentName: 'TEST',
+                onOpenMenu: _noop,
+                onOpenDestination: _ignoreDestination,
+                onOpenAttention: _noop,
+                onAddSchedule: _noop,
+              )
+              .runtimeType,
+          shellType,
+          reason: '${bundle.id} must retain its production renderer path',
+        );
+      }
+    },
+  );
+
+  test(
     'Enhanced is an overlay and Standard round trips exactly for registered bundles',
     () {
       for (final themedBundle in const <ClinicalCalendarThemeBundle>[
@@ -664,6 +705,8 @@ void main() {
     await tester.tap(find.byTooltip('Open menu'));
     await tester.tap(find.byTooltip('Add schedule'));
     await tester.tap(find.byTooltip('Help'));
+    await tester.tap(find.byKey(const Key('federation-classic-navigation-0')));
+    await tester.tap(find.byKey(const Key('federation-classic-navigation-1')));
     await tester.tap(find.byKey(const Key('federation-classic-navigation-2')));
     await tester.tap(find.byKey(const Key('federation-classic-navigation-3')));
     await tester.tap(find.byKey(const Key('federation-classic-navigation-4')));
@@ -673,6 +716,8 @@ void main() {
     expect(attentionCount, 1);
     expect(destinations, [
       ClinicalCalendarDestination.help,
+      ClinicalCalendarDestination.calendar,
+      ClinicalCalendarDestination.calendar,
       ClinicalCalendarDestination.clinicalPlacements,
       ClinicalCalendarDestination.settings,
     ]);
@@ -721,10 +766,11 @@ void main() {
     final navigation = tester.getRect(
       find.byKey(const Key('federation-classic-bottom-navigation')),
     );
-    expect(calendar.top, lessThan(planning.top));
-    expect(planning.top, lessThan(placements.top));
+    expect(calendar.top, lessThan(placements.top));
     expect(placements.top, insight.top);
     expect(placements.right, lessThan(insight.left));
+    expect(placements.top, lessThan(planning.top));
+    expect(navigation.bottom, lessThanOrEqualTo(1440));
     expect(navigation.top, greaterThan(calendar.top));
     expect(
       find.byKey(const Key('federation-classic-portrait-scroll')),

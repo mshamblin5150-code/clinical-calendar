@@ -41,8 +41,8 @@ is theme-local.
 9d7de52026ffe05e7bca073693a65be502afc74c7d805a28005e56d2c1877a14  approved-concept-landscape.png
 91dd3ecdafa725de0843c65a043b42142f237a490445ab04ea1ccf440d4ea132  landscape-concept-vs-runtime.png
 6257914284bf2dfc37a318830b3bd278db65b9752c8acc04a29b2e0b9c27506b  runtime-landscape-1586x992.png
-c4bd5eee4a5c330e53451ab2b1fe706a027513f48c13b020414d7f1cc2c28561  runtime-portrait-200-percent-900x1440.png
-dba16c57918902953870c48453f5a60e6ba889c40ec441aa38e3d6bdf6d3de69  runtime-portrait-900x1440.png
+9ca6b1fc2132d0a4c468ef2218774fc4ccb42c06d24e8b2abe3641dae97693ec  runtime-portrait-200-percent-900x1440.png
+e98cfdf5147a490613fbea268be169f0b4c08c0465df34f4049f0fcd2bf49b86  runtime-portrait-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance

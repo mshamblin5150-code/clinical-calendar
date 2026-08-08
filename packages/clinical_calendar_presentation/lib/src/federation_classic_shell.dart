@@ -191,9 +191,9 @@ final class FederationClassicApplicationShell extends StatelessWidget {
     backgroundColor: const Color(0xFF09070C),
     body: SafeArea(
       child: FederationClassicNineSliceFrame(
-        chromeInsets: const EdgeInsets.fromLTRB(24, 28, 24, 30),
+        chromeInsets: const EdgeInsets.fromLTRB(30, 24, 30, 34),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: Column(
             children: [
               _FederationClassicCommandCrown(
@@ -204,7 +204,7 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                 profileAvatar: slots.profileAvatar,
                 compact: true,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -215,13 +215,13 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                       primary: true,
                       child: SizedBox(
                         height: enlargedText
-                            ? constraints.maxHeight * 1.38
-                            : constraints.maxHeight,
+                            ? constraints.maxHeight * 1.62
+                            : constraints.maxHeight * 1.08,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Expanded(
-                              flex: 6,
+                              flex: 7,
                               child: _FederationClassicConsoleBay(
                                 key: const Key(
                                   'federation-classic-calendar-bay',
@@ -233,24 +233,9 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 10),
                             Expanded(
-                              flex: 3,
-                              child: _FederationClassicConsoleBay(
-                                key: const Key(
-                                  'federation-classic-planning-bay',
-                                ),
-                                accent: _FederationClassicBayAccent.salmon,
-                                shape: _FederationClassicBayShape.planning,
-                                child: VariantFPlanningBayMode(
-                                  expandedByDefault: false,
-                                  child: slots.planningRegion,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Expanded(
-                              flex: 3,
+                              flex: 4,
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
@@ -265,7 +250,7 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                                       child: slots.mobilePlacementSummary,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: _FederationClassicConsoleBay(
                                       key: const Key(
@@ -279,6 +264,21 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                                 ],
                               ),
                             ),
+                            const SizedBox(height: 10),
+                            Expanded(
+                              flex: 3,
+                              child: _FederationClassicConsoleBay(
+                                key: const Key(
+                                  'federation-classic-planning-bay',
+                                ),
+                                accent: _FederationClassicBayAccent.salmon,
+                                shape: _FederationClassicBayShape.planning,
+                                child: VariantFPlanningBayMode(
+                                  expandedByDefault: false,
+                                  child: slots.planningRegion,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -286,7 +286,7 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                   },
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               _FederationClassicNavigationDeck(
                 selectedIndex: mobileIndex,
                 onOpenDestination: onOpenDestination,
