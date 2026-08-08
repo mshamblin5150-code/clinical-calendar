@@ -27,6 +27,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/botanical_study_raster/
     - assets/federation_2399_raster/panel-nine-slice-v1.png
     - assets/federation_2399_raster/dashboard-chassis-landscape-v1.png
     - assets/federation_classic_raster/

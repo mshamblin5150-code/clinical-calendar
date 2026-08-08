@@ -1,8 +1,9 @@
 # Botanical Study Android concept
 
-Status: dashboard direction and Botanical Study display name approved by the
-maintainer; matching Theme Gallery surface awaiting review in GitHub issue
-#115.
+Status: dashboard direction, Botanical Study display name, and matching Theme
+Gallery surface approved by the maintainer in GitHub issue #115. The production
+renderer declares the concept's native **1600 x 1000** landscape viewport as
+its golden exemplar.
 
 This concept is grounded in direct inspection of digitized Smithsonian
 herbarium sheets, public-domain botanical plates in the Biodiversity Heritage
@@ -62,6 +63,6 @@ The exact token values and semantic assignments remain authoritative in
 miniature details are illustrative and must not be treated as implementation
 copy or color measurements.
 
-Production Flutter, final nine-slice artwork, implementation goldens, Theme
-gallery concept, and physical Android acceptance remain outside this approval
-step.
+Production Flutter, final nine-slice artwork, and deterministic implementation
+evidence are owned by issue #135. Physical Android acceptance remains pending
+in catalog device-acceptance issue #139.
