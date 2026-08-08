@@ -188,26 +188,61 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                 context.clinicalMetrics.cornerRadius,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _CalendarToolbar(
-                  period: _period,
-                  title: _periodTitle(_anchor, _period, widget.weekStartsOn),
-                  onPrevious: () => _navigate(-1),
-                  onNext: () => _navigate(1),
-                  onPeriod: _changePeriod,
-                ),
-                if (context.accessibilityTokens.persistentExpandedLegend)
-                  const _EnhancedCalendarLegend(),
-                if ((_period == CalendarPeriod.week ||
-                        _period == CalendarPeriod.agenda) &&
-                    outerConstraints.hasBoundedHeight)
-                  Expanded(child: periodView)
-                else
-                  periodView,
-              ],
-            ),
+            child:
+                context.accessibilityTokens.persistentExpandedLegend &&
+                    outerConstraints.hasBoundedHeight &&
+                    outerConstraints.maxWidth < 600 &&
+                    MediaQuery.textScalerOf(context).scale(1) > 1
+                ? SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _CalendarToolbar(
+                          period: _period,
+                          title: _periodTitle(
+                            _anchor,
+                            _period,
+                            widget.weekStartsOn,
+                          ),
+                          onPrevious: () => _navigate(-1),
+                          onNext: () => _navigate(1),
+                          onPeriod: _changePeriod,
+                        ),
+                        const _EnhancedCalendarLegend(),
+                        SizedBox(
+                          height: math.max(
+                            outerConstraints.maxHeight * .7,
+                            420,
+                          ),
+                          child: periodView,
+                        ),
+                      ],
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _CalendarToolbar(
+                        period: _period,
+                        title: _periodTitle(
+                          _anchor,
+                          _period,
+                          widget.weekStartsOn,
+                        ),
+                        onPrevious: () => _navigate(-1),
+                        onNext: () => _navigate(1),
+                        onPeriod: _changePeriod,
+                      ),
+                      if (context.accessibilityTokens.persistentExpandedLegend)
+                        const _EnhancedCalendarLegend(),
+                      if ((_period == CalendarPeriod.week ||
+                              _period == CalendarPeriod.agenda) &&
+                          outerConstraints.hasBoundedHeight)
+                        Expanded(child: periodView)
+                      else
+                        periodView,
+                    ],
+                  ),
           );
         },
       );
@@ -508,7 +543,8 @@ final class _DayNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final graphite = _usesGraphiteMarks(context);
+    final usesThemeTodayMark =
+        _usesGraphiteMarks(context) || context.accessibilityTokens.enhanced;
     return Row(
       children: [
         DecoratedBox(
@@ -539,7 +575,7 @@ final class _DayNumber extends StatelessWidget {
         Expanded(
           child: Align(
             alignment: Alignment.centerRight,
-            child: graphite && today
+            child: usesThemeTodayMark && today
                 ? ThemeSemanticMarkIcon(
                     role: ThemeSemanticRole.today,
                     size: 15,
@@ -773,7 +809,9 @@ final class _WeekDay extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  if (today && _usesGraphiteMarks(context)) ...[
+                  if (today &&
+                      (_usesGraphiteMarks(context) ||
+                          context.accessibilityTokens.enhanced)) ...[
                     ThemeSemanticMarkIcon(
                       role: ThemeSemanticRole.today,
                       size: 16,
@@ -1103,23 +1141,37 @@ final class _EnhancedCalendarLegend extends StatelessWidget {
     label:
         'Enhanced accessibility legend. ${_items.map((item) => item.label).join(', ')}.',
     child: ExcludeSemantics(
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
+      child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
-        child: Row(
-          children: [
-            for (final item in _items) ...[
-              ThemeSemanticMarkIcon(role: item.role, size: 18),
-              const SizedBox(width: 4),
-              Text(
-                item.label,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(width: 14),
-            ],
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final itemWidth = constraints.maxWidth < 600
+                ? constraints.maxWidth
+                : 210.0;
+            return Wrap(
+              spacing: 14,
+              runSpacing: 6,
+              children: [
+                for (final item in _items)
+                  SizedBox(
+                    width: itemWidth,
+                    child: Row(
+                      children: [
+                        ThemeSemanticMarkIcon(role: item.role, size: 18),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            item.label,
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     ),

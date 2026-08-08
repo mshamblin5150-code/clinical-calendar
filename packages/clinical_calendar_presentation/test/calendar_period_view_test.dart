@@ -37,6 +37,27 @@ void main() {
     }
   });
 
+  testWidgets('Enhanced legend reflows at 320 px and 200% text', (
+    tester,
+  ) async {
+    await _pumpCalendar(
+      tester,
+      source: _MemoryCalendarDataSource(_snapshot()),
+      surfaceSize: const Size(320, 700),
+      bounded: true,
+      enhancedAccessibility: true,
+      textScaler: const TextScaler.linear(2),
+    );
+
+    final legend = find.byKey(const Key('enhanced-calendar-legend'));
+    expect(legend, findsOneWidget);
+    expect(
+      find.descendant(of: legend, matching: find.byType(SingleChildScrollView)),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Graphite Calendar renders its bundle-owned marks', (
     tester,
   ) async {
@@ -308,6 +329,7 @@ Future<void> _pumpCalendar(
   bool bounded = false,
   bool graphite = false,
   bool enhancedAccessibility = false,
+  TextScaler textScaler = TextScaler.noScaling,
 }) async {
   tester.view.physicalSize = surfaceSize;
   tester.view.devicePixelRatio = 1;
@@ -336,6 +358,10 @@ Future<void> _pumpCalendar(
         theme: graphite
             ? buildGraphiteTheme(enhancedAccessibility: enhancedAccessibility)
             : buildVariantFTheme(enhancedAccessibility: enhancedAccessibility),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          child: child!,
+        ),
         home: Scaffold(
           body: bounded
               ? SizedBox.expand(child: calendar)
