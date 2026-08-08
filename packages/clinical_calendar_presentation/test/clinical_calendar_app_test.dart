@@ -790,7 +790,7 @@ void main() {
       addTearDown(preview.dispose);
       await _pumpAt(
         tester,
-        const Size(768, 1024),
+        const Size(390, 844),
         dependencies: _dependencies(repositories: repositories),
         themePreviewController: preview,
         candidateThemePreflight: (_) async {},
@@ -875,6 +875,70 @@ void main() {
     expect(preview.isPreviewing, isFalse);
     expect(preview.authoritativeThemeId, graphiteThemeId);
   });
+
+  testWidgets(
+    'signed-in Enhanced persists immediately, survives Revert, and rolls back failure',
+    (tester) async {
+      final repositories = _Repositories();
+      final accessibility = EnhancedAccessibilityController(
+        initialValue: false,
+      );
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: variantFThemeId,
+        initialRevision: 0,
+      );
+      addTearDown(accessibility.dispose);
+      addTearDown(preview.dispose);
+      await _pumpAt(
+        tester,
+        const Size(768, 1024),
+        dependencies: _dependencies(repositories: repositories),
+        enhancedAccessibilityController: accessibility,
+        themePreviewController: preview,
+        candidateThemePreflight: (_) async {},
+      );
+
+      await tester.tap(find.byKey(const Key('mobile-menu-action')));
+      await tester.pumpAndSettle();
+      final toggle = find
+          .byKey(const Key('enhanced-accessibility-setting'))
+          .first;
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+
+      expect(accessibility.enabled, isTrue);
+      expect(repositories.settings.value?.value.enhancedAccessibility, isTrue);
+      expect(
+        Theme.of(
+          tester.element(toggle),
+        ).extension<ClinicalCalendarAccessibilityTokens>()?.enhanced,
+        isTrue,
+      );
+      Navigator.of(tester.element(toggle)).pop();
+      await tester.pumpAndSettle();
+
+      await preview.preview(graphiteThemeId, preflight: (_) async {});
+      await tester.pumpAndSettle();
+      preview.revert();
+      await tester.pumpAndSettle();
+      expect(accessibility.enabled, isTrue);
+
+      repositories.settings.failNextPut = true;
+      await tester.tap(find.byKey(const Key('mobile-menu-action')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('enhanced-accessibility-setting')).first,
+      );
+      await tester.pumpAndSettle();
+      expect(accessibility.enabled, isTrue);
+      expect(repositories.settings.value?.value.enhancedAccessibility, isTrue);
+      expect(
+        find.text('Enhanced accessibility could not be saved. Try again.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('sign out and local removal discards an active Preview', (
     tester,
@@ -995,6 +1059,7 @@ Future<void> _pumpAt(
   PortableBackupWorkflows? portableBackupWorkflows,
   ExportWorkflowFactory? exportWorkflowFactory,
   ThemePreviewController? themePreviewController,
+  EnhancedAccessibilityController? enhancedAccessibilityController,
   CandidateThemePreflight? candidateThemePreflight,
 }) async {
   await tester.binding.setSurfaceSize(size);
@@ -1014,6 +1079,7 @@ Future<void> _pumpAt(
       portableBackupWorkflows: portableBackupWorkflows,
       exportWorkflowFactory: exportWorkflowFactory,
       themePreviewController: themePreviewController,
+      enhancedAccessibilityController: enhancedAccessibilityController,
       candidateThemePreflight: candidateThemePreflight,
     ),
   );

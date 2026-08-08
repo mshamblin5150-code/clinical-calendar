@@ -43,7 +43,27 @@ const graphiteSemanticColors = ClinicalCalendarColors(
   urgent: GraphiteColors.urgent,
 );
 
-ThemeData buildGraphiteTheme() {
+const graphiteStandardAccessibilityTokens = ClinicalCalendarAccessibilityTokens(
+  enhanced: false,
+  focusOuterColor: GraphiteColors.focus,
+  focusInnerColor: Colors.black,
+  focusWidth: 3,
+  selectionWidth: 1,
+  persistentExpandedLegend: false,
+  decorationOpacity: 1,
+);
+
+const graphiteEnhancedAccessibilityTokens = ClinicalCalendarAccessibilityTokens(
+  enhanced: true,
+  focusOuterColor: Color(0xFFFFFF8A),
+  focusInnerColor: Colors.black,
+  focusWidth: 3,
+  selectionWidth: 3,
+  persistentExpandedLegend: true,
+  decorationOpacity: .55,
+);
+
+ThemeData buildGraphiteTheme({bool enhancedAccessibility = false}) {
   const metrics = ClinicalCalendarMetrics(
     cornerRadius: 8,
     compactSpacing: 8,
@@ -86,14 +106,18 @@ ThemeData buildGraphiteTheme() {
     canvasColor: GraphiteColors.canvas,
     dividerColor: GraphiteColors.outlineVariant,
     disabledColor: GraphiteColors.muted,
-    extensions: const [graphiteSemanticColors, metrics],
+    extensions: const [
+      graphiteSemanticColors,
+      metrics,
+      graphiteStandardAccessibilityTokens,
+    ],
     visualDensity: VisualDensity.standard,
   );
   final rounded = RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(8),
     side: const BorderSide(color: GraphiteColors.outline),
   );
-  return base.copyWith(
+  final standard = base.copyWith(
     textTheme: base.textTheme.apply(
       bodyColor: GraphiteColors.text,
       displayColor: GraphiteColors.text,
@@ -156,5 +180,50 @@ ThemeData buildGraphiteTheme() {
       indicatorColor: GraphiteColors.primaryContainer,
       elevation: 0,
     ),
+  );
+  if (!enhancedAccessibility) return standard;
+  return _applyGraphiteEnhancedAccessibility(standard);
+}
+
+ThemeData _applyGraphiteEnhancedAccessibility(ThemeData standard) {
+  const enhancedColors = ClinicalCalendarColors(
+    canvas: GraphiteColors.canvas,
+    structure: GraphiteColors.surface,
+    structureRaised: GraphiteColors.surfaceRaised,
+    insetBorder: Color(0xFFAAB6BE),
+    primaryText: Colors.white,
+    secondaryText: Color(0xFFE1E7EA),
+    clinical: Color(0xFF9DD4FF),
+    work: GraphiteColors.work,
+    workMachinery: Color(0xFFE1BDFF),
+    protectedDay: GraphiteColors.protectedDay,
+    protectedDayAccent: Color(0xFFFFE09A),
+    scheduled: Color(0xFF9DCEFF),
+    urgent: Color(0xFFFFAAA5),
+  );
+  return standard.copyWith(
+    colorScheme: standard.colorScheme.copyWith(
+      primary: const Color(0xFF67F5D2),
+      secondary: enhancedColors.scheduled,
+      error: enhancedColors.urgent,
+      onSurface: enhancedColors.primaryText,
+      onSurfaceVariant: enhancedColors.secondaryText,
+      outline: enhancedColors.insetBorder,
+    ),
+    focusColor: graphiteEnhancedAccessibilityTokens.focusOuterColor,
+    dividerColor: enhancedColors.insetBorder,
+    textTheme: standard.textTheme.apply(
+      bodyColor: enhancedColors.primaryText,
+      displayColor: enhancedColors.primaryText,
+    ),
+    extensions: const [
+      enhancedColors,
+      ClinicalCalendarMetrics(
+        cornerRadius: 8,
+        compactSpacing: 8,
+        standardSpacing: 16,
+      ),
+      graphiteEnhancedAccessibilityTokens,
+    ],
   );
 }

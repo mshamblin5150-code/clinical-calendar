@@ -19,6 +19,7 @@ import 'evaluation_attention/attention_surfaces.dart';
 import 'evaluation_attention/evaluation_attention_controller.dart';
 import 'evaluation_attention/evaluation_plan_surface.dart';
 import 'exports/export_surface.dart';
+import 'enhanced_accessibility_controller.dart';
 import 'graphite_frame.dart';
 import 'identity/identity_devices_surface.dart';
 import 'placements/placement_management_surface.dart';
@@ -51,6 +52,8 @@ final class ClinicalCalendarApp extends StatefulWidget {
     required this.studentId,
     this.chooseAvatar,
     this.themeId = variantFThemeId,
+    this.enhancedAccessibility = false,
+    this.enhancedAccessibilityController,
     this.themePreviewController,
     this.candidateThemePreflight,
     this.onLaunchOrResume,
@@ -79,6 +82,8 @@ final class ClinicalCalendarApp extends StatefulWidget {
   final String studentId;
   final AvatarChooser? chooseAvatar;
   final String themeId;
+  final bool enhancedAccessibility;
+  final EnhancedAccessibilityController? enhancedAccessibilityController;
   final ThemePreviewController? themePreviewController;
   final CandidateThemePreflight? candidateThemePreflight;
   final Future<void> Function()? onLaunchOrResume;
@@ -111,6 +116,8 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
   final _applicationHostKey = GlobalKey<_ApplicationHostState>();
   late ThemePreviewController _themePreview;
   late bool _ownsThemePreview;
+  late EnhancedAccessibilityController _enhancedAccessibility;
+  late bool _ownsEnhancedAccessibility;
   bool _useImmediateTheme = false;
   int _themeChangeGeneration = 0;
 
@@ -118,15 +125,22 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
   void initState() {
     super.initState();
     _adoptThemePreviewController();
+    _adoptEnhancedAccessibilityController();
   }
 
   @override
   void didUpdateWidget(ClinicalCalendarApp oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.themePreviewController != widget.themePreviewController) {
-      _themePreview.removeListener(_themePreviewChanged);
+      _themePreview.removeListener(_presentationChanged);
       if (_ownsThemePreview) _themePreview.dispose();
       _adoptThemePreviewController();
+    }
+    if (oldWidget.enhancedAccessibilityController !=
+        widget.enhancedAccessibilityController) {
+      _enhancedAccessibility.removeListener(_presentationChanged);
+      if (_ownsEnhancedAccessibility) _enhancedAccessibility.dispose();
+      _adoptEnhancedAccessibilityController();
     }
   }
 
@@ -139,10 +153,20 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
           authoritativeThemeId: widget.themeId,
           initialRevision: 0,
         );
-    _themePreview.addListener(_themePreviewChanged);
+    _themePreview.addListener(_presentationChanged);
   }
 
-  void _themePreviewChanged() {
+  void _adoptEnhancedAccessibilityController() {
+    _ownsEnhancedAccessibility = widget.enhancedAccessibilityController == null;
+    _enhancedAccessibility =
+        widget.enhancedAccessibilityController ??
+        EnhancedAccessibilityController(
+          initialValue: widget.enhancedAccessibility,
+        );
+    _enhancedAccessibility.addListener(_presentationChanged);
+  }
+
+  void _presentationChanged() {
     if (!mounted) return;
     final generation = ++_themeChangeGeneration;
     setState(() => _useImmediateTheme = true);
@@ -154,8 +178,10 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
 
   @override
   void dispose() {
-    _themePreview.removeListener(_themePreviewChanged);
+    _themePreview.removeListener(_presentationChanged);
     if (_ownsThemePreview) _themePreview.dispose();
+    _enhancedAccessibility.removeListener(_presentationChanged);
+    if (_ownsEnhancedAccessibility) _enhancedAccessibility.dispose();
     super.dispose();
   }
 
@@ -167,7 +193,9 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
   Future<void> _preflightCandidate(
     ClinicalCalendarThemeBundle candidate,
   ) async {
-    final candidateTheme = candidate.standardPresentation.createThemeData();
+    final candidateTheme = candidate.standardPresentation.createThemeData(
+      enhancedAccessibility: _enhancedAccessibility.enabled,
+    );
     for (final assetPath in candidate.frame.assetPaths) {
       Object? decodeError;
       StackTrace? decodeStack;
@@ -263,7 +291,9 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
   Widget build(BuildContext context) {
     try {
       final themeBundle = _themePreview.effectiveBundle;
-      final standardTheme = themeBundle.standardPresentation.createThemeData();
+      final standardTheme = themeBundle.standardPresentation.createThemeData(
+        enhancedAccessibility: _enhancedAccessibility.enabled,
+      );
       final theme = _useImmediateTheme
           ? _withoutControlInterpolation(standardTheme)
           : standardTheme;
@@ -306,6 +336,7 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
                 chooseAvatar: widget.chooseAvatar,
                 themeBundle: themeBundle,
                 themePreviewController: _themePreview,
+                enhancedAccessibilityController: _enhancedAccessibility,
                 onPreviewTheme: _previewTheme,
                 identity: widget.identity,
                 identityEmail: widget.identityEmail,
@@ -451,6 +482,7 @@ final class _ApplicationHost extends StatefulWidget {
     required this.chooseAvatar,
     required this.themeBundle,
     required this.themePreviewController,
+    required this.enhancedAccessibilityController,
     required this.onPreviewTheme,
     required this.identity,
     required this.identityEmail,
@@ -474,6 +506,7 @@ final class _ApplicationHost extends StatefulWidget {
   final AvatarChooser? chooseAvatar;
   final ClinicalCalendarThemeBundle themeBundle;
   final ThemePreviewController themePreviewController;
+  final EnhancedAccessibilityController enhancedAccessibilityController;
   final Future<void> Function(String themeId) onPreviewTheme;
   final PasswordlessIdentityService? identity;
   final String? identityEmail;
@@ -971,6 +1004,9 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       themeId: snapshot.settings.value.themeId,
       revision: snapshot.settings.revision,
     );
+    widget.enhancedAccessibilityController.acceptAuthoritative(
+      snapshot.settings.value.enhancedAccessibility,
+    );
     setState(() => _support = snapshot);
   }
 
@@ -1072,6 +1108,33 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     );
     _replaceBatchController();
     await _reconcileNotifications();
+  }
+
+  Future<void> _persistEnhancedAccessibility(bool enabled) async {
+    final snapshot = _support;
+    if (snapshot == null) {
+      throw StateError('Student Settings are still loading.');
+    }
+    final current = snapshot.settings.value;
+    final saved = await _supportService.saveSettings(
+      expectedRevision: snapshot.settings.revision,
+      settings: StudentSettings(
+        weekStart: current.weekStart,
+        timeDisplay: current.timeDisplay,
+        themeId: current.themeId,
+        enhancedAccessibility: enabled,
+        synchronization: current.synchronization,
+        notifications: current.notifications,
+      ),
+    );
+    if (!mounted) return;
+    _acceptSupportSnapshot(
+      SupportSnapshot(
+        profile: snapshot.profile,
+        settings: saved,
+        scheduleTemplates: snapshot.scheduleTemplates,
+      ),
+    );
   }
 
   Future<void> applyThemePreview() async {
@@ -1197,6 +1260,9 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       builder: (context) => SafeArea(
         child: ApplicationMenu(
           onSelected: (destination) => Navigator.pop(context, destination),
+          enhancedAccessibilityController:
+              widget.enhancedAccessibilityController,
+          onPersistEnhancedAccessibility: _persistEnhancedAccessibility,
         ),
       ),
     );

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../date_input.dart';
 import '../theme_contract.dart';
 import '../variant_f_theme.dart';
+import '../enhanced_focus_perimeter.dart';
 import 'calendar_data_source.dart';
 import 'calendar_models.dart';
 
@@ -198,6 +199,8 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                   onNext: () => _navigate(1),
                   onPeriod: _changePeriod,
                 ),
+                if (context.accessibilityTokens.persistentExpandedLegend)
+                  const _EnhancedCalendarLegend(),
                 if ((_period == CalendarPeriod.week ||
                         _period == CalendarPeriod.agenda) &&
                     outerConstraints.hasBoundedHeight)
@@ -444,45 +447,49 @@ final class _MonthDayCell extends StatelessWidget {
           today: today,
           selected: selected,
           outside: outside,
+          selectionWidth: context.accessibilityTokens.selectionWidth,
+          decorationOpacity: context.accessibilityTokens.decorationOpacity,
         ),
-        child: InkWell(
-          onTap: () => onActivate(date, entries),
-          child: Padding(
-            padding: const EdgeInsets.all(5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _DayNumber(date: date, today: today, selected: selected),
-                const SizedBox(height: 3),
-                if (compact)
-                  _CompactMarkers(entries: entries)
-                else
-                  Expanded(
-                    child: ClipRect(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (final entry in entries.take(1))
-                            _MonthEventCard(
-                              entry: entry,
-                              date: date,
-                              twelveHourTime: twelveHourTime,
-                              onTap: () => onActivate(
-                                date,
-                                entries,
-                                preferredEntry: entry,
+        child: EnhancedFocusPerimeter(
+          child: InkWell(
+            onTap: () => onActivate(date, entries),
+            child: Padding(
+              padding: const EdgeInsets.all(5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _DayNumber(date: date, today: today, selected: selected),
+                  const SizedBox(height: 3),
+                  if (compact)
+                    _CompactMarkers(entries: entries)
+                  else
+                    Expanded(
+                      child: ClipRect(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final entry in entries.take(1))
+                              _MonthEventCard(
+                                entry: entry,
+                                date: date,
+                                twelveHourTime: twelveHourTime,
+                                onTap: () => onActivate(
+                                  date,
+                                  entries,
+                                  preferredEntry: entry,
+                                ),
                               ),
-                            ),
-                          if (entries.length > 1)
-                            Text(
-                              '+${entries.length - 1} more',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                        ],
+                            if (entries.length > 1)
+                              Text(
+                                '+${entries.length - 1} more',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -510,7 +517,12 @@ final class _DayNumber extends StatelessWidget {
         DecoratedBox(
           decoration: BoxDecoration(
             color: today ? _todayBackground(context) : Colors.transparent,
-            border: today ? Border.all(color: _todayAccent(context)) : null,
+            border: today
+                ? Border.all(
+                    color: _todayAccent(context),
+                    width: context.accessibilityTokens.selectionWidth,
+                  )
+                : null,
             shape: today ? BoxShape.circle : BoxShape.rectangle,
           ),
           child: SizedBox(
@@ -748,48 +760,58 @@ final class _WeekDay extends StatelessWidget {
               : selected
               ? context.clinicalColors.clinical
               : context.clinicalColors.insetBorder,
-          width: today ? 2 : 1,
+          width: today
+              ? math.max(2, context.accessibilityTokens.selectionWidth)
+              : selected
+              ? context.accessibilityTokens.selectionWidth
+              : 1,
         ),
       ),
-      child: InkWell(
-        onTap: () => onActivate(date, entries),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  if (today && _usesGraphiteMarks(context)) ...[
-                    ThemeSemanticMarkIcon(
-                      role: ThemeSemanticRole.todayOrUrgent,
-                      size: 16,
-                      color: _todayAccent(context),
-                    ),
-                    const SizedBox(width: 5),
-                  ],
-                  Expanded(
-                    child: Text(
-                      '${_weekdayName(date.asUtcCalendarDate.weekday)}, '
-                      '${_monthAbbreviation(date.month)} ${date.day}',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: today ? _todayAccent(context) : null,
+      child: EnhancedFocusPerimeter(
+        child: InkWell(
+          onTap: () => onActivate(date, entries),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    if (today && _usesGraphiteMarks(context)) ...[
+                      ThemeSemanticMarkIcon(
+                        role: ThemeSemanticRole.todayOrUrgent,
+                        size: 16,
+                        color: _todayAccent(context),
+                      ),
+                      const SizedBox(width: 5),
+                    ],
+                    Expanded(
+                      child: Text(
+                        '${_weekdayName(date.asUtcCalendarDate.weekday)}, '
+                        '${_monthAbbreviation(date.month)} ${date.day}',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: today ? _todayAccent(context) : null,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              if (entries.isEmpty)
-                Text('Open day', style: Theme.of(context).textTheme.bodySmall),
-              for (final entry in entries)
-                _PeriodEntryRow(
-                  entry: entry,
-                  date: date,
-                  twelveHourTime: twelveHourTime,
-                  onTap: () => onActivate(date, entries, preferredEntry: entry),
+                  ],
                 ),
-            ],
+                const SizedBox(height: 6),
+                if (entries.isEmpty)
+                  Text(
+                    'Open day',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                for (final entry in entries)
+                  _PeriodEntryRow(
+                    entry: entry,
+                    date: date,
+                    twelveHourTime: twelveHourTime,
+                    onTap: () =>
+                        onActivate(date, entries, preferredEntry: entry),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1068,6 +1090,48 @@ final class _PeriodEntryRow extends StatelessWidget {
   );
 }
 
+final class _EnhancedCalendarLegend extends StatelessWidget {
+  const _EnhancedCalendarLegend();
+
+  static const _items = <(IconData, String)>[
+    (Icons.medical_services_outlined, 'Clinical Session'),
+    (Icons.work_outline, 'Work Shift'),
+    (Icons.shield_outlined, 'Protected Day'),
+    (Icons.today_outlined, 'Today or urgent'),
+    (Icons.schedule_outlined, 'Scheduled Hours'),
+  ];
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    key: const Key('enhanced-calendar-legend'),
+    container: true,
+    label:
+        'Enhanced accessibility legend. Clinical Session, Work Shift, '
+        'Protected Day, Today or urgent, and Scheduled Hours.',
+    child: ExcludeSemantics(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
+        child: Row(
+          children: [
+            for (final item in _items) ...[
+              Icon(item.$1, size: 18),
+              const SizedBox(width: 4),
+              Text(
+                item.$2,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(width: 14),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 final class _CalendarLoadFailure extends StatelessWidget {
   const _CalendarLoadFailure({required this.onRetry});
 
@@ -1099,6 +1163,8 @@ final class _DayCellPainter extends CustomPainter {
     required this.today,
     required this.selected,
     required this.outside,
+    required this.selectionWidth,
+    required this.decorationOpacity,
   });
 
   final ClinicalCalendarColors colors;
@@ -1108,6 +1174,8 @@ final class _DayCellPainter extends CustomPainter {
   final bool today;
   final bool selected;
   final bool outside;
+  final double selectionWidth;
+  final double decorationOpacity;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1123,7 +1191,9 @@ final class _DayCellPainter extends CustomPainter {
     canvas.drawRect(rect, background);
     if (protected) {
       final stripe = Paint()
-        ..color = colors.protectedDayAccent.withValues(alpha: .16)
+        ..color = colors.protectedDayAccent.withValues(
+          alpha: .16 * decorationOpacity,
+        )
         ..strokeWidth = 2;
       for (double offset = -size.height; offset < size.width; offset += 10) {
         canvas.drawLine(
@@ -1143,13 +1213,13 @@ final class _DayCellPainter extends CustomPainter {
       rect.deflate(.5),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = today ? 2 : 1
+        ..strokeWidth = today ? math.max(2, selectionWidth) : 1
         ..color = today ? todayAccent : colors.insetBorder,
     );
     if (selected) {
       final paint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
+        ..strokeWidth = selectionWidth
         ..color = colors.clinical;
       final selectedRect = rect.deflate(3);
       const dash = 5.0;
@@ -1197,7 +1267,9 @@ final class _DayCellPainter extends CustomPainter {
       work != oldDelegate.work ||
       today != oldDelegate.today ||
       selected != oldDelegate.selected ||
-      outside != oldDelegate.outside;
+      outside != oldDelegate.outside ||
+      selectionWidth != oldDelegate.selectionWidth ||
+      decorationOpacity != oldDelegate.decorationOpacity;
 }
 
 final class _AgendaBackgroundPainter extends CustomPainter {

@@ -105,6 +105,7 @@ final class _SettingsTemplatesSurfaceState
   late TimeDisplayPreference _timeDisplay;
   late String _themeId;
   late String _inspectedThemeId;
+  late bool _enhancedAccessibility;
   late SynchronizationPreference _synchronization;
   late NotificationPreferences _notifications;
   DeviceNotificationPreferences? _deviceNotifications;
@@ -122,6 +123,7 @@ final class _SettingsTemplatesSurfaceState
     _inspectedThemeId = _availableThemeId(
       widget.authoritativeThemeId ?? settings.themeId,
     );
+    _enhancedAccessibility = settings.enhancedAccessibility;
     _synchronization = settings.synchronization;
     _notifications = settings.notifications;
     _deviceNotifications = widget.deviceNotifications;
@@ -135,6 +137,10 @@ final class _SettingsTemplatesSurfaceState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.settings.themeId != widget.settings.themeId) {
       _themeId = widget.settings.themeId;
+    }
+    if (oldWidget.settings.enhancedAccessibility !=
+        widget.settings.enhancedAccessibility) {
+      _enhancedAccessibility = widget.settings.enhancedAccessibility;
     }
     final oldAuthority =
         oldWidget.authoritativeThemeId ?? oldWidget.settings.themeId;
@@ -164,6 +170,7 @@ final class _SettingsTemplatesSurfaceState
           weekStart: _weekStart,
           timeDisplay: _timeDisplay,
           themeId: _themeId,
+          enhancedAccessibility: _enhancedAccessibility,
           synchronization: _synchronization,
           notifications: _notifications,
         ),

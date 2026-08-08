@@ -37,7 +37,7 @@ abstract interface class ClinicalCalendarStandardPresentation
     implements ThemeOwnedComponent {
   ClinicalCalendarColors get semanticColors;
 
-  ThemeData createThemeData();
+  ThemeData createThemeData({bool enhancedAccessibility = false});
 }
 
 /// Kept as the narrow public name used by existing presentation tests.
@@ -59,7 +59,8 @@ final class VariantFVisualTheme implements ClinicalCalendarVisualTheme {
   ClinicalCalendarColors get semanticColors => variantFSemanticColors;
 
   @override
-  ThemeData createThemeData() => buildVariantFTheme();
+  ThemeData createThemeData({bool enhancedAccessibility = false}) =>
+      buildVariantFTheme(enhancedAccessibility: enhancedAccessibility);
 }
 
 final class GraphiteVisualTheme implements ClinicalCalendarVisualTheme {
@@ -75,7 +76,8 @@ final class GraphiteVisualTheme implements ClinicalCalendarVisualTheme {
   ClinicalCalendarColors get semanticColors => graphiteSemanticColors;
 
   @override
-  ThemeData createThemeData() => buildGraphiteTheme();
+  ThemeData createThemeData({bool enhancedAccessibility = false}) =>
+      buildGraphiteTheme(enhancedAccessibility: enhancedAccessibility);
 }
 
 abstract interface class ClinicalCalendarShellRenderer

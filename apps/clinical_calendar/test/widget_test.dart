@@ -452,7 +452,10 @@ void main() {
     await tester.tap(find.byKey(const Key('send-identity-code')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('identity-otp')), '123456');
-    await tester.tap(find.byKey(const Key('verify-identity-code')));
+    final verify = find.byKey(const Key('verify-identity-code'));
+    await tester.ensureVisible(verify);
+    await tester.pump();
+    await tester.tap(verify);
     for (var attempt = 0; attempt < 50; attempt++) {
       await tester.pump(const Duration(milliseconds: 100));
       if (find.byType(ClinicalCalendarApp).evaluate().isNotEmpty) break;
@@ -478,6 +481,70 @@ void main() {
       contains(PasswordlessIdentityService.sessionStorageKey),
     );
   });
+
+  testWidgets(
+    'signed-out Enhanced is device-local and account preference takes authority',
+    (tester) async {
+      final storage = _MemorySecureStorage();
+      storage.values['clinical_calendar.device.enhanced_accessibility'] =
+          'true';
+      final root = await app.buildProductionRoot(
+        secureStorage: storage,
+        identifiers: const _Identifiers(_deviceId),
+        clock: _FixedClock(),
+        environment: const AppEnvironment(
+          name: 'test',
+          supabaseUrl: 'https://project.supabase.co',
+          supabasePublishableKey: 'public-client-key',
+        ),
+        identityGateway: _IdentityGateway(),
+        connectivitySource: _ConnectivitySource(initial: false),
+        repositoryBootstrap: (_, _, _) async => _Repositories(),
+        authoritativeThemeLoader: (_, _, _, _) async => variantFThemeId,
+        authoritativeAccessibilityLoader: (_, _, _, _) async => true,
+        graphiteAssetPreflight: () async {},
+        currentDevice: DeviceDescriptor(
+          name: 'Test device',
+          platform: DevicePlatform.windows,
+        ),
+      );
+      await tester.pumpWidget(root);
+      await tester.pumpAndSettle();
+
+      final signedOutToggle = find.byKey(
+        const Key('signed-out-enhanced-accessibility'),
+      );
+      expect(tester.widget<SwitchListTile>(signedOutToggle).value, isTrue);
+      expect(
+        Theme.of(
+          tester.element(signedOutToggle),
+        ).extension<ClinicalCalendarAccessibilityTokens>()?.enhanced,
+        isTrue,
+      );
+
+      await tester.tap(signedOutToggle);
+      await tester.pumpAndSettle();
+      expect(
+        storage.values['clinical_calendar.device.enhanced_accessibility'],
+        'false',
+      );
+
+      await _completePasswordlessSignIn(tester);
+      for (var attempt = 0; attempt < 50; attempt++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.byType(ClinicalCalendarApp).evaluate().isNotEmpty) break;
+      }
+
+      final application = tester.widget<ClinicalCalendarApp>(
+        find.byType(ClinicalCalendarApp),
+      );
+      expect(application.enhancedAccessibility, isTrue);
+      expect(
+        storage.values['clinical_calendar.device.enhanced_accessibility'],
+        'false',
+      );
+    },
+  );
 
   testWidgets('authenticated shell stays hidden when settings cannot load', (
     tester,
@@ -557,7 +624,10 @@ Future<void> _completePasswordlessSignIn(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('send-identity-code')));
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('identity-otp')), '123456');
-  await tester.tap(find.byKey(const Key('verify-identity-code')));
+  final verify = find.byKey(const Key('verify-identity-code'));
+  await tester.ensureVisible(verify);
+  await tester.pump();
+  await tester.tap(verify);
   await tester.pump();
 }
 

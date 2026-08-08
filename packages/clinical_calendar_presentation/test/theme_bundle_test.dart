@@ -81,6 +81,46 @@ void main() {
     );
   });
 
+  test(
+    'Enhanced is an overlay and Standard round trips exactly for both bundles',
+    () {
+      for (final themedBundle in const <ClinicalCalendarThemeBundle>[
+        VariantFThemeBundle(),
+        GraphiteThemeBundle(),
+      ]) {
+        final standard = themedBundle.standardPresentation.createThemeData();
+        final enhanced = themedBundle.standardPresentation.createThemeData(
+          enhancedAccessibility: true,
+        );
+        final restored = themedBundle.standardPresentation.createThemeData();
+
+        expect(enhanced, isNot(standard));
+        expect(
+          enhanced.extension<ClinicalCalendarAccessibilityTokens>()?.enhanced,
+          isTrue,
+        );
+        expect(restored.colorScheme, standard.colorScheme);
+        expect(restored.textTheme, standard.textTheme);
+        expect(restored.cardTheme, standard.cardTheme);
+        expect(
+          restored.extension<ClinicalCalendarColors>(),
+          standard.extension<ClinicalCalendarColors>(),
+        );
+        expect(
+          restored.extension<ClinicalCalendarAccessibilityTokens>(),
+          standard.extension<ClinicalCalendarAccessibilityTokens>(),
+        );
+        expect(themedBundle.standardPresentation.themeId, themedBundle.id);
+        expect(themedBundle.frame.assetPaths, isNotEmpty);
+        expect(themedBundle.frame.sourceSize, const Size(1536, 1024));
+        expect(
+          themedBundle.frame.sourceCuts,
+          const EdgeInsets.fromLTRB(120, 145, 120, 170),
+        );
+      }
+    },
+  );
+
   test('unknown applied ID falls back without changing the stored ID', () {
     final resolved = ClinicalCalendarThemeBundleRegistry.standard
         .resolveApplied('future-theme');

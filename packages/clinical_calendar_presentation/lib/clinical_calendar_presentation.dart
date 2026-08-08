@@ -12,6 +12,8 @@ export 'src/conflict_resolution/conflict_resolution_controller.dart';
 export 'src/conflict_resolution/conflict_resolution_surface.dart';
 export 'src/backup/backup_restore_surface.dart';
 export 'src/exports/export_surface.dart';
+export 'src/enhanced_accessibility_controller.dart';
+export 'src/enhanced_focus_perimeter.dart';
 export 'src/graphite_frame.dart';
 export 'src/graphite_shell.dart';
 export 'src/graphite_theme.dart';

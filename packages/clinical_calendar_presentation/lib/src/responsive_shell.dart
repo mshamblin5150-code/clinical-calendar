@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import 'tactical_frame.dart';
 import 'variant_f_theme.dart';
+import 'enhanced_accessibility_controller.dart';
+import 'enhanced_focus_perimeter.dart';
 import 'variant_f_raster_assets.dart';
 
 enum ClinicalCalendarDestination {
@@ -443,9 +445,19 @@ final class _RasterHorizontalBridge extends StatelessWidget {
 }
 
 final class ApplicationMenu extends StatelessWidget {
-  const ApplicationMenu({required this.onSelected, super.key});
+  const ApplicationMenu({
+    required this.onSelected,
+    this.enhancedAccessibilityController,
+    this.onPersistEnhancedAccessibility,
+    super.key,
+  }) : assert(
+         (enhancedAccessibilityController == null) ==
+             (onPersistEnhancedAccessibility == null),
+       );
 
   final ValueChanged<ClinicalCalendarDestination> onSelected;
+  final EnhancedAccessibilityController? enhancedAccessibilityController;
+  final PersistEnhancedAccessibility? onPersistEnhancedAccessibility;
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -455,6 +467,46 @@ final class ApplicationMenu extends StatelessWidget {
     children: [
       Text('APPLICATION MENU', style: Theme.of(context).textTheme.titleMedium),
       const SizedBox(height: 8),
+      if (enhancedAccessibilityController
+          case final EnhancedAccessibilityController controller)
+        ListenableBuilder(
+          listenable: controller,
+          builder: (context, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              EnhancedFocusPerimeter(
+                child: SwitchListTile(
+                  key: const Key('enhanced-accessibility-setting'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Enhanced accessibility'),
+                  subtitle: Text(
+                    controller.isSaving
+                        ? 'Saving…'
+                        : 'Stronger contrast, focus, cues, and legends.',
+                  ),
+                  value: controller.enabled,
+                  onChanged: controller.isSaving
+                      ? null
+                      : (value) => controller.setEnabled(
+                          value,
+                          persist: onPersistEnhancedAccessibility!,
+                        ),
+                ),
+              ),
+              if (controller.errorMessage case final message?)
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              const Divider(),
+            ],
+          ),
+        ),
       for (final destination in applicationMenuDestinations)
         ListTile(
           minTileHeight: context.clinicalMetrics.minimumTouchTarget,

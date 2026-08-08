@@ -33,6 +33,14 @@ typedef AuthoritativeThemeLoader =
       String studentId,
     );
 
+typedef AuthoritativeAccessibilityLoader =
+    Future<bool> Function(
+      RepositoryRegistry repositories,
+      Clock clock,
+      IdentifierGenerator identifiers,
+      String studentId,
+    );
+
 typedef GraphiteAssetPreflight = Future<void> Function();
 
 abstract interface class ConnectivityStatusSource {
@@ -96,6 +104,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   bool resolveAuthoritativeTheme = false,
   VoidCallback? onPresentationRestart,
   AuthoritativeThemeLoader? authoritativeThemeLoader,
+  AuthoritativeAccessibilityLoader? authoritativeAccessibilityLoader,
   GraphiteAssetPreflight? graphiteAssetPreflight,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
@@ -243,6 +252,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     files: const DartIoFileService(),
   );
   var appliedThemeId = variantFThemeId;
+  var enhancedAccessibility = false;
   if (resolveAuthoritativeTheme) {
     try {
       appliedThemeId =
@@ -252,6 +262,17 @@ Future<ClinicalCalendarApp> buildProductionApplication({
             identifierGenerator,
             studentId,
           );
+      if (authoritativeAccessibilityLoader != null ||
+          authoritativeThemeLoader == null) {
+        enhancedAccessibility =
+            await (authoritativeAccessibilityLoader ??
+                _loadAuthoritativeAccessibility)(
+              applicationRepositories,
+              applicationClock,
+              identifierGenerator,
+              studentId,
+            );
+      }
     } on Object catch (error) {
       throw _AuthoritativeSettingsUnavailable(error);
     }
@@ -431,6 +452,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     environmentName: configuredEnvironment.name,
     studentId: studentId,
     themeId: appliedThemeId,
+    enhancedAccessibility: enhancedAccessibility,
     onPresentationRestart: onPresentationRestart,
     onLaunchOrResume: onLaunchOrResume,
     connectivityChanges: connectivityChanges,
@@ -482,6 +504,21 @@ Future<String> _loadAuthoritativeTheme(
     studentId: studentId,
   ).load();
   return support.settings.value.themeId;
+}
+
+Future<bool> _loadAuthoritativeAccessibility(
+  RepositoryRegistry repositories,
+  Clock clock,
+  IdentifierGenerator identifiers,
+  String studentId,
+) async {
+  final support = await SupportApplicationService(
+    repositories: repositories,
+    clock: clock,
+    identifiers: identifiers,
+    studentId: studentId,
+  ).load();
+  return support.settings.value.enhancedAccessibility;
 }
 
 Future<void> _preflightGraphiteFrame() async {
@@ -543,6 +580,7 @@ Future<Widget> buildProductionRoot({
   ConnectivityStatusSource? connectivitySource,
   DeviceDescriptor? currentDevice,
   AuthoritativeThemeLoader? authoritativeThemeLoader,
+  AuthoritativeAccessibilityLoader? authoritativeAccessibilityLoader,
   GraphiteAssetPreflight? graphiteAssetPreflight,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
@@ -585,6 +623,7 @@ Future<Widget> buildProductionRoot({
     localCopy: localCopy,
     connectivitySource: connectivitySource,
     authoritativeThemeLoader: authoritativeThemeLoader,
+    authoritativeAccessibilityLoader: authoritativeAccessibilityLoader,
     graphiteAssetPreflight: graphiteAssetPreflight,
   );
 }
@@ -600,6 +639,7 @@ final class _ProductionIdentityGate extends StatefulWidget {
     required this.localCopy,
     required this.connectivitySource,
     required this.authoritativeThemeLoader,
+    required this.authoritativeAccessibilityLoader,
     required this.graphiteAssetPreflight,
     this.repositoryBootstrap,
   });
@@ -613,6 +653,7 @@ final class _ProductionIdentityGate extends StatefulWidget {
   final _DeferredLocalDeviceCopyController localCopy;
   final ConnectivityStatusSource? connectivitySource;
   final AuthoritativeThemeLoader? authoritativeThemeLoader;
+  final AuthoritativeAccessibilityLoader? authoritativeAccessibilityLoader;
   final GraphiteAssetPreflight? graphiteAssetPreflight;
   final ProductionRepositoryBootstrap? repositoryBootstrap;
 
@@ -625,11 +666,34 @@ final class _ProductionIdentityGateState
     extends State<_ProductionIdentityGate> {
   Future<ClinicalCalendarApp>? _application;
   IdentitySession? _activeSession;
+  bool _deviceEnhancedAccessibility = false;
 
   @override
   void initState() {
     super.initState();
+    unawaited(_loadDeviceEnhancedAccessibility());
     if (widget.initialSession case final session?) _open(session);
+  }
+
+  Future<void> _loadDeviceEnhancedAccessibility() async {
+    final stored = await widget.secureStorage.read(
+      _deviceEnhancedAccessibilityStorageKey,
+    );
+    if (!mounted) return;
+    setState(() => _deviceEnhancedAccessibility = stored == 'true');
+  }
+
+  Future<void> _setDeviceEnhancedAccessibility(bool value) async {
+    final previous = _deviceEnhancedAccessibility;
+    setState(() => _deviceEnhancedAccessibility = value);
+    try {
+      await widget.secureStorage.write(
+        _deviceEnhancedAccessibilityStorageKey,
+        value.toString(),
+      );
+    } on Object {
+      if (mounted) setState(() => _deviceEnhancedAccessibility = previous);
+    }
   }
 
   void _open(IdentitySession session) {
@@ -655,6 +719,7 @@ final class _ProductionIdentityGateState
         if (mounted) setState(() => _open(session));
       },
       authoritativeThemeLoader: widget.authoritativeThemeLoader,
+      authoritativeAccessibilityLoader: widget.authoritativeAccessibilityLoader,
       graphiteAssetPreflight: widget.graphiteAssetPreflight,
     );
   }
@@ -678,9 +743,13 @@ final class _ProductionIdentityGateState
     if (application == null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: buildGraphiteTheme(),
+        theme: buildGraphiteTheme(
+          enhancedAccessibility: _deviceEnhancedAccessibility,
+        ),
         home: PasswordlessSignInSurface(
           identity: widget.identity,
+          enhancedAccessibility: _deviceEnhancedAccessibility,
+          onEnhancedAccessibilityChanged: _setDeviceEnhancedAccessibility,
           onSignedIn: (session) async => setState(() => _open(session)),
         ),
       );
@@ -712,6 +781,9 @@ final class _ProductionIdentityGateState
     );
   }
 }
+
+const _deviceEnhancedAccessibilityStorageKey =
+    'clinical_calendar.device.enhanced_accessibility';
 
 final class _AuthoritativeSettingsUnavailable implements Exception {
   const _AuthoritativeSettingsUnavailable(this.cause);
