@@ -8,8 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
 import 'support/theme_acceptance_harness.dart';
+import 'support/proof_fonts.dart';
 
 void main() {
+  setUpAll(prepareProofEnvironment);
+
   group('non-compensating theme acceptance', () {
     test('a missing or failed gate leaves the theme Pending', () {
       final evaluation = ThemeAcceptanceEvaluation.evaluate(

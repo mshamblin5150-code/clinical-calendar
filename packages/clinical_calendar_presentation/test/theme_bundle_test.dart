@@ -226,7 +226,7 @@ void main() {
         ),
         (
           graphite,
-          'graphite-additive-responsive-shell-v1',
+          'graphite-owned-responsive-instrument-v2',
           GraphiteApplicationShell,
         ),
         (
@@ -559,6 +559,179 @@ void main() {
 
     expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
     expect(find.byType(VariantFNineSliceFrame), findsNothing);
+  });
+
+  testWidgets('Graphite landscape matches the approved instrument silhouette', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1536, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: graphite.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: graphite.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('graphite-landscape-shell')), findsOneWidget);
+    final crown = tester.getRect(
+      find.byKey(const Key('graphite-command-crown')),
+    );
+    final placements = tester.getRect(
+      find.byKey(const Key('graphite-placement-bay')),
+    );
+    final calendar = tester.getRect(
+      find.byKey(const Key('graphite-calendar-bay')),
+    );
+    final planning = tester.getRect(
+      find.byKey(const Key('graphite-planning-bay')),
+    );
+    final insight = tester.getRect(
+      find.byKey(const Key('graphite-insight-bay')),
+    );
+    final navigation = tester.getRect(
+      find.byKey(const Key('graphite-bottom-navigation')),
+    );
+    expect(crown.height / 1024, closeTo(.078, .012));
+    expect(placements.width / 1536, closeTo(.19, .012));
+    expect(calendar.width / 1536, closeTo(.55, .012));
+    expect(insight.width / 1536, closeTo(.24, .012));
+    expect(placements.right, lessThan(calendar.left));
+    expect(calendar.right, lessThan(insight.left));
+    expect(planning.left, calendar.left);
+    expect(planning.right, calendar.right);
+    expect(planning.top, greaterThan(calendar.bottom));
+    expect(navigation.top, greaterThan(planning.bottom));
+    expect(navigation.height / 1024, closeTo(.086, .012));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Graphite-owned commands preserve shared callbacks', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1536, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var menuCount = 0;
+    var addCount = 0;
+    var attentionCount = 0;
+    final destinations = <ClinicalCalendarDestination>[];
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: graphite.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: graphite.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: () => menuCount++,
+          onOpenDestination: destinations.add,
+          onOpenAttention: () => attentionCount++,
+          onAddSchedule: () => addCount++,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open menu'));
+    await tester.tap(find.byTooltip('Add schedule'));
+    await tester.tap(find.byTooltip('Help'));
+    await tester.tap(find.byKey(const Key('graphite-navigation-2')));
+    await tester.tap(find.byKey(const Key('graphite-navigation-3')));
+    await tester.tap(find.byKey(const Key('graphite-navigation-4')));
+
+    expect(menuCount, 1);
+    expect(addCount, 1);
+    expect(attentionCount, 1);
+    expect(destinations, [
+      ClinicalCalendarDestination.help,
+      ClinicalCalendarDestination.clinicalPlacements,
+      ClinicalCalendarDestination.settings,
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Graphite portrait owns one ordered vertical reading path', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: graphite.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: graphite.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('graphite-portrait-shell')), findsOneWidget);
+    expect(find.byKey(const Key('graphite-portrait-scroll')), findsOneWidget);
+    final calendar = tester.getRect(
+      find.byKey(const Key('graphite-calendar-bay')),
+    );
+    final planning = tester.getRect(
+      find.byKey(const Key('graphite-planning-bay')),
+    );
+    final placements = tester.getRect(
+      find.byKey(const Key('graphite-placement-bay')),
+    );
+    final insight = tester.getRect(
+      find.byKey(const Key('graphite-insight-bay')),
+    );
+    expect(calendar.top, lessThan(planning.top));
+    expect(planning.top, lessThan(placements.top));
+    expect(placements.right, lessThan(insight.left));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Graphite portrait remains operable at 200 percent text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: graphite.standardPresentation.createThemeData(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: graphite.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('graphite-portrait-shell')), findsOneWidget);
+    expect(find.byKey(const Key('graphite-bottom-navigation')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
@@ -1569,10 +1742,13 @@ void main() {
                       ),
                     ),
                   )
-                : MaterialApp(
-                    theme: graphite.standardPresentation.createThemeData(),
-                    home: graphite.shellRenderer.buildFrame(
-                      child: const Text('Fictional Calendar content'),
+                : DefaultAssetBundle(
+                    bundle: rootBundle,
+                    child: MaterialApp(
+                      theme: graphite.standardPresentation.createThemeData(),
+                      home: graphite.shellRenderer.buildFrame(
+                        child: const Text('Fictional Calendar content'),
+                      ),
                     ),
                   ),
           ),

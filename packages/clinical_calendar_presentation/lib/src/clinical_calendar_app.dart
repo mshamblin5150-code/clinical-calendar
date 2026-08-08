@@ -1416,12 +1416,16 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             onOpenAll: _openAttentionCenter,
           ),
         ),
-        planningRegion: _PlanningRegion(
-          key: _planningRegionKey,
-          controller: _batchController,
-          onAddSchedule: () => _resetPlanning(BatchSchedulingReset.addSchedule),
-          onPlanningIncomplete: () =>
-              _resetPlanning(BatchSchedulingReset.planningIncomplete),
+        planningRegion: KeyedSubtree(
+          key: const Key('live-planning-region'),
+          child: _PlanningRegion(
+            key: _planningRegionKey,
+            controller: _batchController,
+            onAddSchedule: () =>
+                _resetPlanning(BatchSchedulingReset.addSchedule),
+            onPlanningIncomplete: () =>
+                _resetPlanning(BatchSchedulingReset.planningIncomplete),
+          ),
         ),
         profileAvatar: ProfileAvatarButton(
           profile: _headerProfile,
@@ -1784,18 +1788,28 @@ final class _PlanningRegion extends StatefulWidget {
 
 final class _PlanningRegionState extends State<_PlanningRegion> {
   bool _expanded = false;
-  bool _seededResponsiveState = false;
+  bool? _responsiveExpandedByDefault;
+  bool _studentControlledExpansion = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_seededResponsiveState) return;
-    _expanded = VariantFPlanningBayMode.expandedByDefaultOf(context);
-    _seededResponsiveState = true;
+    final expandedByDefault = VariantFPlanningBayMode.expandedByDefaultOf(
+      context,
+    );
+    if (_responsiveExpandedByDefault == expandedByDefault) return;
+    if (!_studentControlledExpansion) _expanded = expandedByDefault;
+    _responsiveExpandedByDefault = expandedByDefault;
   }
 
   void expand() {
+    _studentControlledExpansion = true;
     if (!_expanded) setState(() => _expanded = true);
+  }
+
+  void toggleExpanded() {
+    _studentControlledExpansion = true;
+    setState(() => _expanded = !_expanded);
   }
 
   @override
@@ -1836,7 +1850,7 @@ final class _PlanningRegionState extends State<_PlanningRegion> {
             if (widget.controller != null)
               OutlinedButton.icon(
                 key: const Key('planning-tray-toggle'),
-                onPressed: () => setState(() => _expanded = !_expanded),
+                onPressed: toggleExpanded,
                 icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
                 label: Text(_expanded ? 'Collapse' : 'Expand'),
               ),

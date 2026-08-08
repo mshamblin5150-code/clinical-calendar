@@ -1,7 +1,8 @@
 # Graphite Android and verification concepts
 
-Status: dashboard and signed-out verification directions awaiting maintainer
-review in GitHub issue #117.
+Status: dashboard and signed-out verification directions approved by the
+maintainer in GitHub issue #117. The production landscape renderer declares a
+1536 by 1024 golden viewport under issue #128.
 
 These concepts are grounded first in the repository's launcher master and
 Graphite semantic palette, then in direct research on graphite material
