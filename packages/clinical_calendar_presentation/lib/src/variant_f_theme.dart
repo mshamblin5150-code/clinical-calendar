@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'accessibility_tokens.dart';
+
 /// Stable semantic colors consumed by presentation widgets.
 ///
 /// Workflow widgets should depend on these meanings rather than on Variant F's
@@ -151,83 +153,6 @@ final class ClinicalCalendarMetrics
   static double lerpDouble(double a, double b, double t) => a + (b - a) * t;
 }
 
-/// Presentation-only accessibility treatment layered over a complete theme.
-///
-/// This extension intentionally carries no theme identity or layout values.
-/// Platform accessibility values remain owned by [MediaQuery].
-@immutable
-final class ClinicalCalendarAccessibilityTokens
-    extends ThemeExtension<ClinicalCalendarAccessibilityTokens> {
-  const ClinicalCalendarAccessibilityTokens({
-    required this.enhanced,
-    required this.focusOuterColor,
-    required this.focusInnerColor,
-    required this.focusWidth,
-    required this.selectionWidth,
-    required this.persistentExpandedLegend,
-    required this.decorationOpacity,
-  });
-
-  final bool enhanced;
-  final Color focusOuterColor;
-  final Color focusInnerColor;
-  final double focusWidth;
-  final double selectionWidth;
-  final bool persistentExpandedLegend;
-  final double decorationOpacity;
-
-  @override
-  ClinicalCalendarAccessibilityTokens copyWith({
-    bool? enhanced,
-    Color? focusOuterColor,
-    Color? focusInnerColor,
-    double? focusWidth,
-    double? selectionWidth,
-    bool? persistentExpandedLegend,
-    double? decorationOpacity,
-  }) => ClinicalCalendarAccessibilityTokens(
-    enhanced: enhanced ?? this.enhanced,
-    focusOuterColor: focusOuterColor ?? this.focusOuterColor,
-    focusInnerColor: focusInnerColor ?? this.focusInnerColor,
-    focusWidth: focusWidth ?? this.focusWidth,
-    selectionWidth: selectionWidth ?? this.selectionWidth,
-    persistentExpandedLegend:
-        persistentExpandedLegend ?? this.persistentExpandedLegend,
-    decorationOpacity: decorationOpacity ?? this.decorationOpacity,
-  );
-
-  @override
-  ClinicalCalendarAccessibilityTokens lerp(
-    covariant ClinicalCalendarAccessibilityTokens? other,
-    double t,
-  ) {
-    if (other == null) return this;
-    return ClinicalCalendarAccessibilityTokens(
-      enhanced: t < .5 ? enhanced : other.enhanced,
-      focusOuterColor: Color.lerp(focusOuterColor, other.focusOuterColor, t)!,
-      focusInnerColor: Color.lerp(focusInnerColor, other.focusInnerColor, t)!,
-      focusWidth: ClinicalCalendarMetrics.lerpDouble(
-        focusWidth,
-        other.focusWidth,
-        t,
-      ),
-      selectionWidth: ClinicalCalendarMetrics.lerpDouble(
-        selectionWidth,
-        other.selectionWidth,
-        t,
-      ),
-      persistentExpandedLegend: t < .5
-          ? persistentExpandedLegend
-          : other.persistentExpandedLegend,
-      decorationOpacity: ClinicalCalendarMetrics.lerpDouble(
-        decorationOpacity,
-        other.decorationOpacity,
-        t,
-      ),
-    );
-  }
-}
-
 const variantFStandardAccessibilityTokens = ClinicalCalendarAccessibilityTokens(
   enhanced: false,
   focusOuterColor: VariantFColors.primary,
@@ -236,16 +161,6 @@ const variantFStandardAccessibilityTokens = ClinicalCalendarAccessibilityTokens(
   selectionWidth: 1,
   persistentExpandedLegend: false,
   decorationOpacity: 1,
-);
-
-const variantFEnhancedAccessibilityTokens = ClinicalCalendarAccessibilityTokens(
-  enhanced: true,
-  focusOuterColor: Color(0xFFFFFF8A),
-  focusInnerColor: Colors.black,
-  focusWidth: 3,
-  selectionWidth: 3,
-  persistentExpandedLegend: true,
-  decorationOpacity: .55,
 );
 
 abstract final class VariantFColors {
@@ -517,6 +432,7 @@ ThemeData buildVariantFTheme({bool enhancedAccessibility = false}) {
 }
 
 ThemeData _applyVariantFEnhancedAccessibility(ThemeData standard) {
+  const enhancedBoundary = Color(0xFFFFFF8A);
   const enhancedColors = ClinicalCalendarColors(
     canvas: VariantFColors.background,
     structure: VariantFColors.surface,
@@ -541,24 +457,80 @@ ThemeData _applyVariantFEnhancedAccessibility(ThemeData standard) {
   );
   return standard.copyWith(
     colorScheme: scheme,
-    focusColor: variantFEnhancedAccessibilityTokens.focusOuterColor,
+    focusColor: enhancedAccessibilityTokens.focusOuterColor,
     dividerColor: enhancedColors.insetBorder,
     textTheme: standard.textTheme.apply(
       bodyColor: enhancedColors.primaryText,
       displayColor: enhancedColors.primaryText,
     ),
+    cardTheme: standard.cardTheme.copyWith(
+      shape: BeveledRectangleBorder(
+        side: const BorderSide(color: enhancedBoundary, width: 1.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+    ),
+    appBarTheme: standard.appBarTheme.copyWith(
+      shape: const Border(
+        bottom: BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+    ),
+    dialogTheme: standard.dialogTheme.copyWith(
+      shape: BeveledRectangleBorder(
+        side: const BorderSide(color: enhancedBoundary, width: 1.5),
+        borderRadius: BorderRadius.circular(10),
+      ),
+    ),
+    bottomSheetTheme: standard.bottomSheetTheme.copyWith(
+      shape: const Border(top: BorderSide(color: enhancedBoundary, width: 1.5)),
+    ),
     inputDecorationTheme: standard.inputDecorationTheme.copyWith(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(
+          standard.extension<ClinicalCalendarMetrics>()!.cornerRadius,
+        ),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(
+          standard.extension<ClinicalCalendarMetrics>()!.cornerRadius,
+        ),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(
           standard.extension<ClinicalCalendarMetrics>()!.cornerRadius,
         ),
-        borderSide: const BorderSide(color: Color(0xFFFFFF8A), width: 3),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 3),
       ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: standard.filledButtonTheme.style?.copyWith(
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: enhancedBoundary, width: 1.5),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: standard.outlinedButtonTheme.style?.copyWith(
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: enhancedBoundary, width: 1.5),
+        ),
+      ),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: standard.segmentedButtonTheme.style?.copyWith(
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: enhancedBoundary, width: 1.5),
+        ),
+      ),
+    ),
+    chipTheme: standard.chipTheme.copyWith(
+      side: const BorderSide(color: enhancedBoundary, width: 1.5),
     ),
     extensions: const [
       enhancedColors,
       ClinicalCalendarMetrics(),
-      variantFEnhancedAccessibilityTokens,
+      enhancedAccessibilityTokens,
     ],
   );
 }

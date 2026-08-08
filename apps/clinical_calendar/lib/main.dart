@@ -25,16 +25,8 @@ typedef ProductionRepositoryBootstrap =
       IdentifierGenerator identifiers,
     );
 
-typedef AuthoritativeThemeLoader =
-    Future<String> Function(
-      RepositoryRegistry repositories,
-      Clock clock,
-      IdentifierGenerator identifiers,
-      String studentId,
-    );
-
-typedef AuthoritativeAccessibilityLoader =
-    Future<bool> Function(
+typedef AuthoritativePresentationSettingsLoader =
+    Future<({String themeId, bool enhancedAccessibility})> Function(
       RepositoryRegistry repositories,
       Clock clock,
       IdentifierGenerator identifiers,
@@ -103,8 +95,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   BackupByteFilePicker? portableBackupFilePicker,
   bool resolveAuthoritativeTheme = false,
   VoidCallback? onPresentationRestart,
-  AuthoritativeThemeLoader? authoritativeThemeLoader,
-  AuthoritativeAccessibilityLoader? authoritativeAccessibilityLoader,
+  AuthoritativePresentationSettingsLoader?
+  authoritativePresentationSettingsLoader,
   GraphiteAssetPreflight? graphiteAssetPreflight,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
@@ -255,24 +247,16 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   var enhancedAccessibility = false;
   if (resolveAuthoritativeTheme) {
     try {
-      appliedThemeId =
-          await (authoritativeThemeLoader ?? _loadAuthoritativeTheme)(
+      final settings =
+          await (authoritativePresentationSettingsLoader ??
+              _loadAuthoritativePresentationSettings)(
             applicationRepositories,
             applicationClock,
             identifierGenerator,
             studentId,
           );
-      if (authoritativeAccessibilityLoader != null ||
-          authoritativeThemeLoader == null) {
-        enhancedAccessibility =
-            await (authoritativeAccessibilityLoader ??
-                _loadAuthoritativeAccessibility)(
-              applicationRepositories,
-              applicationClock,
-              identifierGenerator,
-              studentId,
-            );
-      }
+      appliedThemeId = settings.themeId;
+      enhancedAccessibility = settings.enhancedAccessibility;
     } on Object catch (error) {
       throw _AuthoritativeSettingsUnavailable(error);
     }
@@ -491,7 +475,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   );
 }
 
-Future<String> _loadAuthoritativeTheme(
+Future<({String themeId, bool enhancedAccessibility})>
+_loadAuthoritativePresentationSettings(
   RepositoryRegistry repositories,
   Clock clock,
   IdentifierGenerator identifiers,
@@ -503,22 +488,10 @@ Future<String> _loadAuthoritativeTheme(
     identifiers: identifiers,
     studentId: studentId,
   ).load();
-  return support.settings.value.themeId;
-}
-
-Future<bool> _loadAuthoritativeAccessibility(
-  RepositoryRegistry repositories,
-  Clock clock,
-  IdentifierGenerator identifiers,
-  String studentId,
-) async {
-  final support = await SupportApplicationService(
-    repositories: repositories,
-    clock: clock,
-    identifiers: identifiers,
-    studentId: studentId,
-  ).load();
-  return support.settings.value.enhancedAccessibility;
+  return (
+    themeId: support.settings.value.themeId,
+    enhancedAccessibility: support.settings.value.enhancedAccessibility,
+  );
 }
 
 Future<void> _preflightGraphiteFrame() async {
@@ -579,8 +552,8 @@ Future<Widget> buildProductionRoot({
   PasswordlessIdentityGateway? identityGateway,
   ConnectivityStatusSource? connectivitySource,
   DeviceDescriptor? currentDevice,
-  AuthoritativeThemeLoader? authoritativeThemeLoader,
-  AuthoritativeAccessibilityLoader? authoritativeAccessibilityLoader,
+  AuthoritativePresentationSettingsLoader?
+  authoritativePresentationSettingsLoader,
   GraphiteAssetPreflight? graphiteAssetPreflight,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
@@ -622,8 +595,8 @@ Future<Widget> buildProductionRoot({
     initialSession: await identity.restoreForOfflineLaunch(),
     localCopy: localCopy,
     connectivitySource: connectivitySource,
-    authoritativeThemeLoader: authoritativeThemeLoader,
-    authoritativeAccessibilityLoader: authoritativeAccessibilityLoader,
+    authoritativePresentationSettingsLoader:
+        authoritativePresentationSettingsLoader,
     graphiteAssetPreflight: graphiteAssetPreflight,
   );
 }
@@ -638,8 +611,7 @@ final class _ProductionIdentityGate extends StatefulWidget {
     required this.initialSession,
     required this.localCopy,
     required this.connectivitySource,
-    required this.authoritativeThemeLoader,
-    required this.authoritativeAccessibilityLoader,
+    required this.authoritativePresentationSettingsLoader,
     required this.graphiteAssetPreflight,
     this.repositoryBootstrap,
   });
@@ -652,8 +624,8 @@ final class _ProductionIdentityGate extends StatefulWidget {
   final IdentitySession? initialSession;
   final _DeferredLocalDeviceCopyController localCopy;
   final ConnectivityStatusSource? connectivitySource;
-  final AuthoritativeThemeLoader? authoritativeThemeLoader;
-  final AuthoritativeAccessibilityLoader? authoritativeAccessibilityLoader;
+  final AuthoritativePresentationSettingsLoader?
+  authoritativePresentationSettingsLoader;
   final GraphiteAssetPreflight? graphiteAssetPreflight;
   final ProductionRepositoryBootstrap? repositoryBootstrap;
 
@@ -718,8 +690,8 @@ final class _ProductionIdentityGateState
       onPresentationRestart: () {
         if (mounted) setState(() => _open(session));
       },
-      authoritativeThemeLoader: widget.authoritativeThemeLoader,
-      authoritativeAccessibilityLoader: widget.authoritativeAccessibilityLoader,
+      authoritativePresentationSettingsLoader:
+          widget.authoritativePresentationSettingsLoader,
       graphiteAssetPreflight: widget.graphiteAssetPreflight,
     );
   }
@@ -746,6 +718,8 @@ final class _ProductionIdentityGateState
         theme: buildGraphiteTheme(
           enhancedAccessibility: _deviceEnhancedAccessibility,
         ),
+        builder: (context, child) =>
+            EnhancedGlobalFocusOverlay(child: child ?? const SizedBox.shrink()),
         home: PasswordlessSignInSurface(
           identity: widget.identity,
           enhancedAccessibility: _deviceEnhancedAccessibility,

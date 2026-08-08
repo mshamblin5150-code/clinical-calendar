@@ -426,7 +426,8 @@ void main() {
       identityGateway: gateway,
       connectivitySource: _ConnectivitySource(initial: false),
       repositoryBootstrap: (_, _, _) async => _Repositories(),
-      authoritativeThemeLoader: (_, _, _, _) async => 'future-theme',
+      authoritativePresentationSettingsLoader: (_, _, _, _) async =>
+          (themeId: 'future-theme', enhancedAccessibility: false),
       graphiteAssetPreflight: () async {},
       currentDevice: DeviceDescriptor(
         name: 'Test device',
@@ -500,8 +501,8 @@ void main() {
         identityGateway: _IdentityGateway(),
         connectivitySource: _ConnectivitySource(initial: false),
         repositoryBootstrap: (_, _, _) async => _Repositories(),
-        authoritativeThemeLoader: (_, _, _, _) async => variantFThemeId,
-        authoritativeAccessibilityLoader: (_, _, _, _) async => true,
+        authoritativePresentationSettingsLoader: (_, _, _, _) async =>
+            (themeId: variantFThemeId, enhancedAccessibility: true),
         graphiteAssetPreflight: () async {},
         currentDevice: DeviceDescriptor(
           name: 'Test device',
@@ -594,7 +595,8 @@ void main() {
       identityGateway: _IdentityGateway(),
       connectivitySource: _ConnectivitySource(initial: false),
       repositoryBootstrap: (_, _, _) async => _Repositories(),
-      authoritativeThemeLoader: (_, _, _, _) async => 'future-theme',
+      authoritativePresentationSettingsLoader: (_, _, _, _) async =>
+          (themeId: 'future-theme', enhancedAccessibility: false),
       graphiteAssetPreflight: () async => throw StateError('bad PNG'),
       currentDevice: DeviceDescriptor(
         name: 'Test device',

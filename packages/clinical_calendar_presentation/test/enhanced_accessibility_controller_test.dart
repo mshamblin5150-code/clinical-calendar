@@ -90,7 +90,7 @@ void main() {
     expect(observed?.accessibleNavigation, isTrue);
   });
 
-  testWidgets('Enhanced focus is an unobscured dual-tone perimeter', (
+  testWidgets('Enhanced focus globally follows arbitrary focusable controls', (
     tester,
   ) async {
     final focusNode = FocusNode();
@@ -98,23 +98,22 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildGraphiteTheme(enhancedAccessibility: true),
+        builder: (context, child) => EnhancedGlobalFocusOverlay(child: child!),
         home: Center(
-          child: EnhancedFocusPerimeter(
-            child: TextButton(
-              focusNode: focusNode,
-              onPressed: () {},
-              child: const Text('Continue'),
-            ),
+          child: TextButton(
+            focusNode: focusNode,
+            onPressed: () {},
+            child: const Text('Continue'),
           ),
         ),
       ),
     );
 
     focusNode.requestFocus();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(
-      find.byKey(const Key('enhanced-dual-tone-focus-perimeter')),
+      find.byKey(const Key('enhanced-global-focus-perimeter')),
       findsOneWidget,
     );
     expect(

@@ -26,8 +26,13 @@ void main() {
       'Clinical Session',
       'Work Shift',
       'Protected Day',
-      'Today or urgent',
+      'Today',
+      'Urgent',
       'Scheduled Hours',
+      'Completed Hours',
+      'Unscheduled Hours',
+      'Cancelled Session',
+      'Missed Session',
     ]) {
       expect(find.text(label), findsWidgets);
     }

@@ -289,6 +289,74 @@ void main() {
     );
   });
 
+  testWidgets(
+    'Containment Drone rendered Standard survives an Enhanced round trip exactly',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      const resolved = VariantFThemeBundle();
+
+      final standardKey = GlobalKey();
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: resolved.standardPresentation.createThemeData(),
+          boundaryKey: standardKey,
+          shell: resolved.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final acceptedStandard = await _capture(standardKey);
+      addTearDown(acceptedStandard.dispose);
+
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: resolved.standardPresentation.createThemeData(
+            enhancedAccessibility: true,
+          ),
+          boundaryKey: GlobalKey(),
+          shell: resolved.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final restoredKey = GlobalKey();
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: resolved.standardPresentation.createThemeData(),
+          boundaryKey: restoredKey,
+          shell: resolved.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await expectLater(
+        find.byKey(restoredKey),
+        matchesReferenceImage(acceptedStandard),
+      );
+    },
+  );
+
   testWidgets('Graphite shell uses only Graphite-owned raster framing', (
     tester,
   ) async {

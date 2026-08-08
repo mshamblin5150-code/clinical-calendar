@@ -1093,12 +1093,20 @@ final class _PeriodEntryRow extends StatelessWidget {
 final class _EnhancedCalendarLegend extends StatelessWidget {
   const _EnhancedCalendarLegend();
 
-  static const _items = <(IconData, String)>[
-    (Icons.medical_services_outlined, 'Clinical Session'),
-    (Icons.work_outline, 'Work Shift'),
-    (Icons.shield_outlined, 'Protected Day'),
-    (Icons.today_outlined, 'Today or urgent'),
-    (Icons.schedule_outlined, 'Scheduled Hours'),
+  static const _items = <_EnhancedLegendItem>[
+    _EnhancedLegendItem.theme(
+      ThemeSemanticRole.clinicalSession,
+      'Clinical Session',
+    ),
+    _EnhancedLegendItem.theme(ThemeSemanticRole.workShift, 'Work Shift'),
+    _EnhancedLegendItem.theme(ThemeSemanticRole.protectedDay, 'Protected Day'),
+    _EnhancedLegendItem.icon(Icons.today_outlined, 'Today'),
+    _EnhancedLegendItem.icon(Icons.warning_amber_outlined, 'Urgent'),
+    _EnhancedLegendItem.icon(Icons.schedule_outlined, 'Scheduled Hours'),
+    _EnhancedLegendItem.icon(Icons.check_circle_outline, 'Completed Hours'),
+    _EnhancedLegendItem.icon(Icons.event_busy_outlined, 'Unscheduled Hours'),
+    _EnhancedLegendItem.icon(Icons.block_outlined, 'Cancelled Session'),
+    _EnhancedLegendItem.icon(Icons.highlight_off_outlined, 'Missed Session'),
   ];
 
   @override
@@ -1106,8 +1114,7 @@ final class _EnhancedCalendarLegend extends StatelessWidget {
     key: const Key('enhanced-calendar-legend'),
     container: true,
     label:
-        'Enhanced accessibility legend. Clinical Session, Work Shift, '
-        'Protected Day, Today or urgent, and Scheduled Hours.',
+        'Enhanced accessibility legend. ${_items.map((item) => item.label).join(', ')}.',
     child: ExcludeSemantics(
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -1115,10 +1122,13 @@ final class _EnhancedCalendarLegend extends StatelessWidget {
         child: Row(
           children: [
             for (final item in _items) ...[
-              Icon(item.$1, size: 18),
+              if (item.role case final role?)
+                ThemeSemanticMarkIcon(role: role, size: 18)
+              else
+                Icon(item.icon, size: 18),
               const SizedBox(width: 4),
               Text(
-                item.$2,
+                item.label,
                 style: Theme.of(
                   context,
                 ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -1130,6 +1140,16 @@ final class _EnhancedCalendarLegend extends StatelessWidget {
       ),
     ),
   );
+}
+
+final class _EnhancedLegendItem {
+  const _EnhancedLegendItem.theme(this.role, this.label) : icon = null;
+
+  const _EnhancedLegendItem.icon(this.icon, this.label) : role = null;
+
+  final ThemeSemanticRole? role;
+  final IconData? icon;
+  final String label;
 }
 
 final class _CalendarLoadFailure extends StatelessWidget {
@@ -1373,9 +1393,14 @@ bool _usesGraphiteMarks(BuildContext context) =>
     ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
     graphiteThemeId;
 
-Color _todayAccent(BuildContext context) => _usesGraphiteMarks(context)
-    ? Theme.of(context).colorScheme.primary
-    : context.clinicalColors.urgent;
+Color _todayAccent(BuildContext context) {
+  if (context.accessibilityTokens.enhanced) {
+    return context.accessibilityTokens.focusOuterColor;
+  }
+  return _usesGraphiteMarks(context)
+      ? Theme.of(context).colorScheme.primary
+      : context.clinicalColors.urgent;
+}
 
 Color _todayBackground(BuildContext context) => _usesGraphiteMarks(context)
     ? Theme.of(context).colorScheme.primaryContainer

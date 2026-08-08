@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'accessibility_tokens.dart';
 import 'variant_f_theme.dart';
 
 abstract final class GraphiteColors {
@@ -51,16 +52,6 @@ const graphiteStandardAccessibilityTokens = ClinicalCalendarAccessibilityTokens(
   selectionWidth: 1,
   persistentExpandedLegend: false,
   decorationOpacity: 1,
-);
-
-const graphiteEnhancedAccessibilityTokens = ClinicalCalendarAccessibilityTokens(
-  enhanced: true,
-  focusOuterColor: Color(0xFFFFFF8A),
-  focusInnerColor: Colors.black,
-  focusWidth: 3,
-  selectionWidth: 3,
-  persistentExpandedLegend: true,
-  decorationOpacity: .55,
 );
 
 ThemeData buildGraphiteTheme({bool enhancedAccessibility = false}) {
@@ -186,6 +177,7 @@ ThemeData buildGraphiteTheme({bool enhancedAccessibility = false}) {
 }
 
 ThemeData _applyGraphiteEnhancedAccessibility(ThemeData standard) {
+  const enhancedBoundary = Color(0xFFFFFF8A);
   const enhancedColors = ClinicalCalendarColors(
     canvas: GraphiteColors.canvas,
     structure: GraphiteColors.surface,
@@ -210,11 +202,56 @@ ThemeData _applyGraphiteEnhancedAccessibility(ThemeData standard) {
       onSurfaceVariant: enhancedColors.secondaryText,
       outline: enhancedColors.insetBorder,
     ),
-    focusColor: graphiteEnhancedAccessibilityTokens.focusOuterColor,
+    focusColor: enhancedAccessibilityTokens.focusOuterColor,
     dividerColor: enhancedColors.insetBorder,
     textTheme: standard.textTheme.apply(
       bodyColor: enhancedColors.primaryText,
       displayColor: enhancedColors.primaryText,
+    ),
+    cardTheme: standard.cardTheme.copyWith(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+    ),
+    appBarTheme: standard.appBarTheme.copyWith(
+      shape: const Border(
+        bottom: BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+    ),
+    dialogTheme: standard.dialogTheme.copyWith(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+    ),
+    inputDecorationTheme: standard.inputDecorationTheme.copyWith(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: enhancedBoundary, width: 3),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: standard.filledButtonTheme.style?.copyWith(
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: enhancedBoundary, width: 1.5),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: standard.outlinedButtonTheme.style?.copyWith(
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: enhancedBoundary, width: 1.5),
+        ),
+      ),
     ),
     extensions: const [
       enhancedColors,
@@ -223,7 +260,7 @@ ThemeData _applyGraphiteEnhancedAccessibility(ThemeData standard) {
         compactSpacing: 8,
         standardSpacing: 16,
       ),
-      graphiteEnhancedAccessibilityTokens,
+      enhancedAccessibilityTokens,
     ],
   );
 }

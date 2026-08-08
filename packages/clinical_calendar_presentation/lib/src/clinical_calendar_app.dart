@@ -20,6 +20,7 @@ import 'evaluation_attention/evaluation_attention_controller.dart';
 import 'evaluation_attention/evaluation_plan_surface.dart';
 import 'exports/export_surface.dart';
 import 'enhanced_accessibility_controller.dart';
+import 'enhanced_focus_perimeter.dart';
 import 'graphite_frame.dart';
 import 'identity/identity_devices_surface.dart';
 import 'placements/placement_management_surface.dart';
@@ -304,21 +305,23 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
           title: 'Clinical Calendar',
           theme: theme,
           themeAnimationDuration: Duration.zero,
-          builder: (context, child) => Stack(
-            fit: StackFit.expand,
-            children: [
-              child ?? const SizedBox.shrink(),
-              Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 960),
-                  child: ThemePreviewControl(
-                    controller: _themePreview,
-                    onApply: _applyThemePreview,
+          builder: (context, child) => EnhancedGlobalFocusOverlay(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                child ?? const SizedBox.shrink(),
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 960),
+                    child: ThemePreviewControl(
+                      controller: _themePreview,
+                      onApply: _applyThemePreview,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           home: ClinicalCalendarLifecycleHost(
             onLaunchOrResume: _launchOrResume,
