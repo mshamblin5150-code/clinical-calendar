@@ -139,15 +139,15 @@ final class BotanicalStudyApplicationShell extends StatelessWidget {
               ),
               Positioned(
                 left: width * .235,
-                top: height * .61,
+                top: height * .60,
                 width: width * .478,
-                height: height * .245,
+                height: height * .28,
                 child: _BotanicalStudyConsoleBay(
                   key: const Key('botanical-study-planning-bay'),
                   accent: _BotanicalStudyBayAccent.eucalyptus,
                   shape: _BotanicalStudyBayShape.planning,
                   child: VariantFPlanningBayMode(
-                    expandedByDefault: true,
+                    expandedByDefault: false,
                     child: slots.planningRegion,
                   ),
                 ),
@@ -370,7 +370,7 @@ final class _BotanicalStudyConsoleBay extends StatelessWidget {
           shape == _BotanicalStudyBayShape.insight ? 14 : 12,
           shape == _BotanicalStudyBayShape.calendar ? 10 : 18,
         ),
-        child: child,
+        child: AdditiveThemePanelInterior(child: child),
       ),
     );
     return CustomPaint(

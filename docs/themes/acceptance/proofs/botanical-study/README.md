@@ -39,16 +39,37 @@ theme-local.
 
 ```text
 55a52746a1c8c0be62247d3e8840a3c4dd9cc0010b5f6aa8fb65abad91671329  approved-concept-landscape.png
-288132b2e6f8a65ba08b35218d6ffce956cf448ee19e8023e641ff849b9e4ce7  landscape-concept-vs-runtime.png
-2a24acbe1ac752a80c52e62fe64458adabec4025ef23c096ac834f1289f6c690  runtime-landscape-1600x1000.png
-33ab786472a7b6244596437b585060b33b685d190821b67ddcba12370618a5ca  runtime-portrait-900x1440.png
+4a7e571475dee8520268a6b80dd11d7f707043d352398d600d7398cb8b5b7e6b  landscape-concept-vs-runtime.png
+b0fe1f8adda4c9de9e169cc61a6deb3feb77159b1556e315549a65115c35ef71  runtime-landscape-1600x1000.png
+1f35f33d8bd2376add0b1e04672ff974811f9b71bda2ca6139414361be62c3e4  runtime-portrait-900x1440.png
 f1153a633fb7b77598655538cc5f08b95aabc7ed6ee01e34dbafe36425359720  runtime-portrait-200-percent-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance
 
-State: **not performed — pending in #139 after maintainer visual approval**.
+State: **not performed - pending in #139 after maintainer visual approval**.
 
 No file in this package is a physical-device capture. No physical build was
 installed, no signing material was accessed, and no acceptance decision is
 inferred. Fresh physical evidence must use fictional data.
+
+## Automated gate evidence
+
+The following repository-standard gates passed on Windows at the candidate
+commit using the checked-in fictional fixtures and production assets:
+
+- Botanical bundle, callback, portrait-order, Enhanced-token, and unchanged
+  existing-renderer tests;
+- deterministic landscape, portrait, 200%-text, and real-renderer thumbnail
+  goldens, independently;
+- the non-compensating acceptance harness, including Standard and Enhanced
+  runtime contrast, registry ownership, normalized asset geometry and SHA-256,
+  thumbnail provenance, Help, fallback, persistence, and every cross-theme
+  Preview/Revert/Apply transition;
+- the full `clinical_calendar_presentation` suite; and
+- `dart run tool/quality.dart` across every package and application.
+
+The partial registry intentionally remains fail-closed and non-selectable until
+all seven complete bundles exist, as required by the additive-theme contract.
+Botanical Study can be previewed and its setting persisted in this development
+slice; restart resolves Graphite fallback until the closed catalog activates.

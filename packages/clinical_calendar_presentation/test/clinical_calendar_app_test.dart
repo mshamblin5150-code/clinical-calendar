@@ -962,6 +962,42 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Botanical Study preview composes the production live application slots',
+    (tester) async {
+      final repositories = _Repositories();
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: graphiteThemeId,
+        initialRevision: 0,
+      );
+      addTearDown(preview.dispose);
+      await _pumpAt(
+        tester,
+        const Size(1600, 1000),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: preview,
+        candidateThemePreflight: (_) async {},
+      );
+      expect(tester.takeException(), isNull);
+
+      await preview.preview(botanicalStudyThemeId, preflight: (_) async {});
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BotanicalStudyLandscapeChassis), findsOneWidget);
+      expect(find.byType(CalendarPeriodView), findsOneWidget);
+      expect(find.byKey(const Key('placement-dock-surface')), findsOneWidget);
+      expect(find.byKey(const Key('primary-planning-action')), findsOneWidget);
+      expect(find.byKey(const Key('placement-progress-rail')), findsOneWidget);
+      expect(find.byKey(const Key('attention-rail')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const Key('revert-theme-preview')));
+      await tester.pumpAndSettle();
+      expect(preview.effectiveBundle.id, variantFThemeId);
+    },
+  );
+
   testWidgets('failed Apply keeps Preview retryable and Revert available', (
     tester,
   ) async {

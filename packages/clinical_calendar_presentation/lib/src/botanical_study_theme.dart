@@ -72,9 +72,20 @@ const botanicalStudyStandardAccessibilityTokens =
       focusOuterColor: BotanicalStudyColors.focus,
       focusInnerColor: Colors.black,
       focusWidth: 3,
-      selectionWidth: 1,
+      selectionWidth: 2,
       persistentExpandedLegend: false,
       decorationOpacity: 1,
+    );
+
+const botanicalStudyEnhancedAccessibilityTokens =
+    ClinicalCalendarAccessibilityTokens(
+      enhanced: true,
+      focusOuterColor: Color(0xFF4D1F55),
+      focusInnerColor: Colors.white,
+      focusWidth: 3,
+      selectionWidth: 3,
+      persistentExpandedLegend: true,
+      decorationOpacity: .55,
     );
 
 ThemeData buildBotanicalStudyTheme({bool enhancedAccessibility = false}) {
@@ -272,7 +283,7 @@ ThemeData _applyBotanicalStudyEnhancedAccessibility(ThemeData standard) {
       onSurfaceVariant: enhancedColors.secondaryText,
       outline: enhancedColors.insetBorder,
     ),
-    focusColor: enhancedAccessibilityTokens.focusOuterColor,
+    focusColor: botanicalStudyEnhancedAccessibilityTokens.focusOuterColor,
     dividerColor: enhancedColors.insetBorder,
     textTheme: standard.textTheme.apply(
       bodyColor: enhancedColors.primaryText,
@@ -331,7 +342,7 @@ ThemeData _applyBotanicalStudyEnhancedAccessibility(ThemeData standard) {
         compactSpacing: 8,
         standardSpacing: 16,
       ),
-      enhancedAccessibilityTokens,
+      botanicalStudyEnhancedAccessibilityTokens,
     ],
   );
 }

@@ -23,11 +23,47 @@ void main() {
     expect(botanical.gallery.swatches, hasLength(5));
     expect(botanical.marks.marks, hasLength(9));
     expect(botanical.helpGuide.calendarStates, hasLength(5));
+    final standardTokens = botanical.standardPresentation
+        .createThemeData()
+        .extension<ClinicalCalendarAccessibilityTokens>()!;
+    final enhancedTokens = botanical.standardPresentation
+        .createThemeData(enhancedAccessibility: true)
+        .extension<ClinicalCalendarAccessibilityTokens>()!;
+    expect(standardTokens.selectionWidth, 2);
+    expect(enhancedTokens.focusOuterColor, const Color(0xFF4D1F55));
+    expect(enhancedTokens.selectionWidth, 3);
     expect(
       ClinicalCalendarThemeBundleRegistry.standard.resolveRoot(
         botanicalStudyThemeId,
       ),
       same(botanical),
+    );
+  });
+
+  test('existing themes retain their default owned frame paths', () {
+    expect(
+      const VariantFThemeBundle().shellRenderer.buildFrame(
+        child: SizedBox.shrink(),
+      ),
+      isA<VariantFTacticalFrame>(),
+    );
+    expect(
+      const GraphiteThemeBundle().shellRenderer.buildFrame(
+        child: SizedBox.shrink(),
+      ),
+      isA<GraphiteNineSliceFrame>(),
+    );
+    expect(
+      const FederationClassicThemeBundle().shellRenderer.buildFrame(
+        child: SizedBox.shrink(),
+      ),
+      isA<FederationClassicNineSliceFrame>(),
+    );
+    expect(
+      const Federation2399ThemeBundle().shellRenderer.buildFrame(
+        child: SizedBox.shrink(),
+      ),
+      isA<Federation2399NineSliceFrame>(),
     );
   });
 

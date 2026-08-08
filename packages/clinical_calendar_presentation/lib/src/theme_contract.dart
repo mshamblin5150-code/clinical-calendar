@@ -905,7 +905,7 @@ final class BotanicalStudyHelpGuide implements ThemeHelpGuide {
     CalendarStateGuide(
       role: ThemeSemanticRole.today,
       label: 'Today or urgent',
-      description: 'Aubergine rules mark Today; red identifies urgency.',
+      description: 'A deep red inset rule marks Today and urgent attention.',
       color: BotanicalStudyColors.today,
       nonColorCue: 'TODAY label or warning icon with explicit status text.',
       enhancedBehavior:
@@ -1654,9 +1654,9 @@ final class BotanicalStudyThemeBundle implements ClinicalCalendarThemeBundle {
           ),
           ThemeSemanticMark(
             role: ThemeSemanticRole.today,
-            markId: 'today-aubergine-rule',
+            markId: 'today-red-inset-rule',
             icon: Icons.today_outlined,
-            description: 'Aubergine rule and visible TODAY label',
+            description: 'Deep red inset rule and visible TODAY label',
           ),
           ThemeSemanticMark(
             role: ThemeSemanticRole.urgent,
