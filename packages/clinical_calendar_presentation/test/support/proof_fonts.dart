@@ -6,6 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
 const _nonWindowsPixelTolerance = 0.025;
+const _nonWindowsMeanChannelErrorTolerance = 0.003;
+const _nonWindowsHighDeltaPixelTolerance = 0.0025;
+const _highDeltaThreshold = 128;
 
 Future<void> prepareProofEnvironment() async {
   if (!Platform.isWindows && goldenFileComparator is! _ProofGoldenComparator) {
@@ -143,25 +146,7 @@ final class _ProofGoldenComparator implements GoldenFileComparator {
     if (expected == null || actual == null) {
       return delegate.compare(imageBytes, golden);
     }
-    if (expected.width != actual.width || expected.height != actual.height) {
-      return false;
-    }
-
-    var changedPixels = 0;
-    final pixelCount = expected.width * expected.height;
-    for (var y = 0; y < expected.height; y++) {
-      for (var x = 0; x < expected.width; x++) {
-        final expectedPixel = expected.getPixel(x, y);
-        final actualPixel = actual.getPixel(x, y);
-        if (expectedPixel.r != actualPixel.r ||
-            expectedPixel.g != actualPixel.g ||
-            expectedPixel.b != actualPixel.b ||
-            expectedPixel.a != actualPixel.a) {
-          changedPixels++;
-        }
-      }
-    }
-    return changedPixels / pixelCount <= _nonWindowsPixelTolerance;
+    return proofImagesMatch(expected, actual);
   }
 
   @override
@@ -170,4 +155,43 @@ final class _ProofGoldenComparator implements GoldenFileComparator {
   @override
   Future<void> update(Uri golden, Uint8List imageBytes) =>
       delegate.update(golden, imageBytes);
+}
+
+bool proofImagesMatch(img.Image expected, img.Image actual) {
+  if (expected.width != actual.width || expected.height != actual.height) {
+    return false;
+  }
+
+  var changedPixels = 0;
+  var highDeltaPixels = 0;
+  var totalChannelError = 0;
+  final pixelCount = expected.width * expected.height;
+  for (var y = 0; y < expected.height; y++) {
+    for (var x = 0; x < expected.width; x++) {
+      final expectedPixel = expected.getPixel(x, y);
+      final actualPixel = actual.getPixel(x, y);
+      final channelErrors = <int>[
+        (expectedPixel.r - actualPixel.r).abs().toInt(),
+        (expectedPixel.g - actualPixel.g).abs().toInt(),
+        (expectedPixel.b - actualPixel.b).abs().toInt(),
+        (expectedPixel.a - actualPixel.a).abs().toInt(),
+      ];
+      final pixelError = channelErrors.reduce((left, right) => left + right);
+      if (pixelError == 0) {
+        continue;
+      }
+      changedPixels++;
+      totalChannelError += pixelError;
+      if (channelErrors.any((error) => error >= _highDeltaThreshold)) {
+        highDeltaPixels++;
+      }
+    }
+  }
+
+  final changedRatio = changedPixels / pixelCount;
+  final highDeltaRatio = highDeltaPixels / pixelCount;
+  final meanChannelError = totalChannelError / (pixelCount * 4 * 255);
+  return changedRatio <= _nonWindowsPixelTolerance &&
+      highDeltaRatio <= _nonWindowsHighDeltaPixelTolerance &&
+      meanChannelError <= _nonWindowsMeanChannelErrorTolerance;
 }
