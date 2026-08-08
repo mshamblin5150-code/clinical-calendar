@@ -144,9 +144,64 @@ void main() {
       expect(entry.contrastRatio, greaterThan(1));
       expect(entry.contrastRatio, lessThan(21));
     });
+
+    test('resolved pressed overlay participates in the runtime ratio', () {
+      final bundle = ClinicalCalendarThemeBundleRegistry.standard.galleryBundles
+          .singleWhere((item) => item.id == graphiteThemeId);
+      final base = bundle.standardPresentation.createThemeData();
+      final theme = base.copyWith(
+        filledButtonTheme: FilledButtonThemeData(
+          style: (base.filledButtonTheme.style ?? const ButtonStyle()).copyWith(
+            overlayColor: const WidgetStatePropertyAll(Colors.black),
+          ),
+        ),
+      );
+      final report = ThemeRuntimeTokenAuditor.auditThemeData(
+        themeId: bundle.id,
+        theme: theme,
+        colors: theme.extension<ClinicalCalendarColors>()!,
+        accessibility: theme.extension<ClinicalCalendarAccessibilityTokens>(),
+        mode: ThemeAccessibilityMode.standard,
+      );
+
+      final pressed = report.entries.singleWhere(
+        (entry) => entry.pairingId == 'filled-pressed',
+      );
+      expect(pressed.compositedBackground, Colors.black);
+      expect(pressed.passed, isFalse);
+    });
   });
 
   group('reviewable evidence', () {
+    test('contrast exceptions identify an exact Enhanced state', () {
+      const valid = ThemeContrastException(
+        pairingId: 'filled-pressed',
+        state: ThemeTokenState.pressed,
+        contentKind: ThemeContrastContentKind.normalText,
+        mode: ThemeAccessibilityMode.enhanced,
+        standardMeasuredRatio: 4.8,
+        measuredRatio: 6.5,
+        rationale: 'Fictional approved large state-layer exception.',
+        redundantCue: 'Persistent label and pressed border.',
+        maintainerApproved: true,
+      );
+      expect(valid.isValidEnhancedException, isTrue);
+      expect(
+        const ThemeContrastException(
+          pairingId: 'filled-pressed',
+          state: ThemeTokenState.pressed,
+          contentKind: ThemeContrastContentKind.normalText,
+          mode: ThemeAccessibilityMode.standard,
+          standardMeasuredRatio: 4.8,
+          measuredRatio: 4.6,
+          rationale: 'Wrong mode.',
+          redundantCue: 'Pressed border.',
+          maintainerApproved: true,
+        ).isValidEnhancedException,
+        isFalse,
+      );
+    });
+
     test('manifest identifies the candidate and rejects identifying fixtures', () {
       final manifest = ThemeEvidenceManifest(
         candidateCommit: '0123456789abcdef0123456789abcdef01234567',
@@ -174,6 +229,18 @@ void main() {
         accessibilityScannerReportUri: 'reports/accessibility-scanner.json',
         approvedSignerSha256:
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        retrievedEvidenceSha256: const {
+          'reports/runtime-tokens.json':
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          'captures/calendar.png':
+              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          'https://github.com/example/actions/runs/123':
+              'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+          'checklists/android-tablet.md':
+              'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+          'reports/accessibility-scanner.json':
+              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+        },
         contrastExceptions: const [],
         gates: const [],
         maintainerDecision: ThemeMaintainerDecision.pending,
@@ -198,11 +265,48 @@ void main() {
         manualChecklistUris: manifest.manualChecklistUris,
         accessibilityScannerReportUri: manifest.accessibilityScannerReportUri,
         approvedSignerSha256: manifest.approvedSignerSha256,
+        retrievedEvidenceSha256: manifest.retrievedEvidenceSha256,
         contrastExceptions: const [],
         gates: const [],
         maintainerDecision: ThemeMaintainerDecision.pending,
       );
       expect(unsafe.validationFailures, isNotEmpty);
+
+      final credentialLink = ThemeEvidenceManifest(
+        candidateCommit: manifest.candidateCommit,
+        buildNumber: manifest.buildNumber,
+        themeId: manifest.themeId,
+        displayName: manifest.displayName,
+        fixtureId: manifest.fixtureId,
+        capturedAtUtc: manifest.capturedAtUtc,
+        environment: manifest.environment,
+        assetHashes: manifest.assetHashes,
+        reportUris: const ['https://evidence.invalid/report?token=secret'],
+        captureUris: manifest.captureUris,
+        ciRunUri: manifest.ciRunUri,
+        manualChecklistUris: manifest.manualChecklistUris,
+        accessibilityScannerReportUri: manifest.accessibilityScannerReportUri,
+        approvedSignerSha256: manifest.approvedSignerSha256,
+        retrievedEvidenceSha256: const {
+          'https://evidence.invalid/report?token=secret':
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          'captures/calendar.png':
+              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          'https://github.com/example/actions/runs/123':
+              'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+          'checklists/android-tablet.md':
+              'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+          'reports/accessibility-scanner.json':
+              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+        },
+        contrastExceptions: const [],
+        gates: const [],
+        maintainerDecision: ThemeMaintainerDecision.pending,
+      );
+      expect(
+        credentialLink.validationFailures,
+        contains(contains('credentials')),
+      );
     });
 
     test('performance gate compares every measurement with the baseline', () {
@@ -227,7 +331,13 @@ void main() {
         swapLatencyMs: 180,
         retainedMemoryAfterCyclesBytes: 221000000,
         monotonicRetainedMemoryGrowth: false,
-        attributedReleaseGrowthBytes: 1000000,
+        releaseSizeAttributionByAssetSha256: const {
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa':
+              1000000,
+        },
+        approvedAssetSha256: const {
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        },
       ).evaluate();
       expect(passing.passed, isTrue);
 
@@ -237,10 +347,33 @@ void main() {
         swapLatencyMs: 251,
         retainedMemoryAfterCyclesBytes: 221000000,
         monotonicRetainedMemoryGrowth: false,
-        attributedReleaseGrowthBytes: 1000000,
+        releaseSizeAttributionByAssetSha256: const {
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa':
+              1000000,
+        },
+        approvedAssetSha256: const {
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        },
       ).evaluate();
       expect(failed.passed, isFalse);
       expect(failed.failures, contains(contains('250')));
+
+      final overAttributed = ThemePerformanceEvidence(
+        baseline: baseline,
+        candidate: passingCandidate,
+        swapLatencyMs: 180,
+        retainedMemoryAfterCyclesBytes: 221000000,
+        monotonicRetainedMemoryGrowth: false,
+        releaseSizeAttributionByAssetSha256: const {
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa':
+              1000001,
+        },
+        approvedAssetSha256: const {
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        },
+      ).evaluate();
+      expect(overAttributed.passed, isFalse);
+      expect(overAttributed.failures, contains(contains('exact attribution')));
 
       const invented = ThemePerformanceMeasurement(
         frameIntervalMs: 8.333,
@@ -256,7 +389,8 @@ void main() {
           swapLatencyMs: 0,
           retainedMemoryAfterCyclesBytes: 0,
           monotonicRetainedMemoryGrowth: false,
-          attributedReleaseGrowthBytes: 0,
+          releaseSizeAttributionByAssetSha256: {},
+          approvedAssetSha256: {},
         ).evaluate().passed,
         isFalse,
       );
@@ -286,13 +420,7 @@ void main() {
       test(
         '${bundle.id} primary frame geometry and originality are audited',
         () async {
-          final expectedHash = switch (bundle.id) {
-            variantFThemeId =>
-              '9ff3968a94d497dc6f76f2b14f370c5a24c3bb4969397ee220da005093c15ad7',
-            graphiteThemeId =>
-              '4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15',
-            _ => throw StateError('Unexpected fixture ${bundle.id}'),
-          };
+          final fixture = themeRasterAcceptanceFixture(bundle.id);
           final report = await ThemeAssetAcceptanceAuditor.auditPrimaryFrame(
             bundle: bundle,
             bytes: await File(
@@ -300,10 +428,8 @@ void main() {
             ).readAsBytes(),
             evidence: ThemeAssetEvidence(
               assetPath: bundle.frame.primaryAsset,
-              expectedSha256: expectedHash,
-              creationRecordUri: bundle.id == variantFThemeId
-                  ? 'docs/performance/containment-drone-pre-catalog-baseline.md'
-                  : 'docs/concepts/themes/graphite/README.md',
+              expectedSha256: fixture.expectedSha256,
+              creationRecordUri: fixture.creationRecordUri,
               comparisonCaptureUri:
                   'captures/${bundle.id}-originality-comparison.png',
               originalityReviewer: 'Maintainer',
@@ -439,6 +565,7 @@ void main() {
             await controller.preview(candidate.id, preflight: (_) async {});
             await tester.pump();
             expect(controller.effectiveBundle.id, candidate.id);
+            expect(controller.effectiveBundle.helpGuide.themeId, candidate.id);
             expect(controller.authoritativeThemeId, source.id);
             _expectWorkingStatePreserved(
               state,
@@ -448,6 +575,7 @@ void main() {
             controller.revert();
             await tester.pump();
             expect(controller.effectiveBundle.id, source.id);
+            expect(controller.effectiveBundle.helpGuide.themeId, source.id);
             _expectWorkingStatePreserved(
               state,
               workflowController: workflowController,
@@ -472,6 +600,15 @@ void main() {
               state,
               workflowController: workflowController,
             );
+
+            final restarted = ThemePreviewController(
+              registry: registry,
+              authoritativeThemeId: controller.authoritativeThemeId,
+              initialRevision: controller.authoritativeRevision,
+            );
+            addTearDown(restarted.dispose);
+            expect(restarted.effectiveBundle.id, candidate.id);
+            expect(restarted.authoritativeRevision, 9);
           },
         );
       }
@@ -482,24 +619,42 @@ void main() {
         '${bundle.id} resolves complete Help and both accessibility modes',
         () {
           expect(bundle.helpGuide.themeId, bundle.id);
+          expect(bundle.helpGuide.title.trim(), isNotEmpty);
           expect(
-            bundle.helpGuide.calendarStates.map((state) => state.role).toSet(),
-            const {
+            bundle.helpGuide.calendarStates.map((state) => state.role),
+            const [
               ThemeSemanticRole.clinicalSession,
               ThemeSemanticRole.workShift,
               ThemeSemanticRole.protectedDay,
               ThemeSemanticRole.scheduledProgress,
               ThemeSemanticRole.today,
-            },
+            ],
           );
+          for (final state in bundle.helpGuide.calendarStates) {
+            expect(state.label.trim(), isNotEmpty);
+            expect(state.description.trim(), isNotEmpty);
+            expect(state.nonColorCue.trim(), isNotEmpty);
+            expect(state.enhancedBehavior.trim(), isNotEmpty);
+            expect(
+              bundle.marks.forRole(state.role).description.trim(),
+              isNotEmpty,
+            );
+          }
           for (final enhanced in const [false, true]) {
             final theme = bundle.standardPresentation.createThemeData(
               enhancedAccessibility: enhanced,
             );
-            expect(
-              theme.extension<ClinicalCalendarAccessibilityTokens>()?.enhanced,
-              enhanced,
-            );
+            final tokens = theme
+                .extension<ClinicalCalendarAccessibilityTokens>()!;
+            expect(tokens.enhanced, enhanced);
+            expect(tokens.focusWidth, greaterThan(0));
+            expect(tokens.selectionWidth, greaterThan(0));
+            if (enhanced) {
+              expect(tokens.focusWidth, greaterThanOrEqualTo(3));
+              expect(tokens.selectionWidth, greaterThanOrEqualTo(3));
+            }
+            expect(tokens.persistentExpandedLegend, enhanced);
+            expect(tokens.decorationOpacity, inInclusiveRange(0, 1));
             expect(theme.extension<ClinicalCalendarColors>(), isNotNull);
           }
         },
@@ -512,6 +667,7 @@ void main() {
         final resolution = registry.resolveApplied('future-theme');
         expect(resolution.storedId, 'future-theme');
         expect(resolution.bundle.id, graphiteThemeId);
+        expect(resolution.bundle.helpGuide.themeId, graphiteThemeId);
         expect(resolution.isFallback, isTrue);
       },
     );

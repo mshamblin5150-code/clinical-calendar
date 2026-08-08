@@ -111,6 +111,7 @@ List<ThemeTokenPairing> _runtimePermittedPairings({
               : component.$3);
       final layer =
           component.$2?.backgroundColor?.resolve(state.$3) ?? component.$4;
+      final overlay = component.$2?.overlayColor?.resolve(state.$3);
       pairings.add(
         ThemeTokenPairing(
           pairingId: '${component.$1}-${state.$1}',
@@ -119,7 +120,10 @@ List<ThemeTokenPairing> _runtimePermittedPairings({
           foreground: foreground,
           background: ThemePaintStack(
             base: scheme.surface,
-            layers: layer.a == 0 ? const [] : [layer],
+            layers: [
+              if (layer.a != 0) layer,
+              if (overlay != null && overlay.a != 0) overlay,
+            ],
           ),
         ),
       );
@@ -461,6 +465,10 @@ final class ThemeAcceptanceEnvironment {
 final class ThemeContrastException {
   const ThemeContrastException({
     required this.pairingId,
+    required this.state,
+    required this.contentKind,
+    required this.mode,
+    required this.standardMeasuredRatio,
     required this.measuredRatio,
     required this.rationale,
     required this.redundantCue,
@@ -468,13 +476,31 @@ final class ThemeContrastException {
   });
 
   final String pairingId;
+  final ThemeTokenState state;
+  final ThemeContrastContentKind contentKind;
+  final ThemeAccessibilityMode mode;
+  final double standardMeasuredRatio;
   final double measuredRatio;
   final String rationale;
   final String redundantCue;
   final bool maintainerApproved;
 
+  bool get isValidEnhancedException =>
+      pairingId.trim().isNotEmpty &&
+      mode == ThemeAccessibilityMode.enhanced &&
+      standardMeasuredRatio >=
+          _requiredRatio(contentKind, ThemeAccessibilityMode.standard) &&
+      measuredRatio < _requiredRatio(contentKind, mode) &&
+      rationale.trim().isNotEmpty &&
+      redundantCue.trim().isNotEmpty &&
+      maintainerApproved;
+
   Map<String, Object> toJson() => {
     'pairingId': pairingId,
+    'state': state.name,
+    'contentKind': contentKind.name,
+    'mode': mode.name,
+    'standardMeasuredRatio': standardMeasuredRatio,
     'measuredRatio': measuredRatio,
     'rationale': rationale,
     'redundantCue': redundantCue,
@@ -499,6 +525,7 @@ final class ThemeEvidenceManifest {
     required this.manualChecklistUris,
     required this.accessibilityScannerReportUri,
     required this.approvedSignerSha256,
+    required this.retrievedEvidenceSha256,
     required this.contrastExceptions,
     required this.gates,
     required this.maintainerDecision,
@@ -518,6 +545,7 @@ final class ThemeEvidenceManifest {
   final List<String> manualChecklistUris;
   final String accessibilityScannerReportUri;
   final String approvedSignerSha256;
+  final Map<String, String> retrievedEvidenceSha256;
   final List<ThemeContrastException> contrastExceptions;
   final List<ThemeAcceptanceGateResult> gates;
   final ThemeMaintainerDecision maintainerDecision;
@@ -544,8 +572,11 @@ final class ThemeEvidenceManifest {
     if (!fixtureId.toLowerCase().contains('fictional')) {
       failures.add('Evidence fixture must be explicitly fictional.');
     }
-    if (_containsSensitiveIdentity(fixtureId)) {
-      failures.add('Evidence fixture contains identifying information.');
+    if (_containsSensitiveIdentity(fixtureId) ||
+        _containsCredentialAssignment(fixtureId)) {
+      failures.add(
+        'Evidence fixture contains identifying or credential information.',
+      );
     }
     if (!capturedAtUtc.isUtc) {
       failures.add('Evidence timestamp must be UTC.');
@@ -575,15 +606,24 @@ final class ThemeEvidenceManifest {
         'Reports, CI, captures, scanner results, and manual checklists must remain retrievable.',
       );
     }
-    if ([
+    final evidenceUris = <String>{
       ...reportUris,
       ...captureUris,
       ...manualChecklistUris,
       ciRunUri,
       accessibilityScannerReportUri,
-    ].any(_isUnsafeEvidenceUri)) {
+    };
+    if (evidenceUris.any(_isUnsafeEvidenceUri)) {
       failures.add(
         'Evidence links cannot contain credentials or identifying information.',
+      );
+    }
+    if (!setEquals(retrievedEvidenceSha256.keys.toSet(), evidenceUris) ||
+        retrievedEvidenceSha256.values.any(
+          (hash) => !RegExp(r'^[0-9a-f]{64}$').hasMatch(hash),
+        )) {
+      failures.add(
+        'Every evidence link requires an exact successful retrieval SHA-256 attestation.',
       );
     }
     if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(approvedSignerSha256)) {
@@ -592,11 +632,7 @@ final class ThemeEvidenceManifest {
       );
     }
     if (contrastExceptions.any(
-      (exception) =>
-          exception.pairingId.trim().isEmpty ||
-          exception.rationale.trim().isEmpty ||
-          exception.redundantCue.trim().isEmpty ||
-          !exception.maintainerApproved,
+      (exception) => !exception.isValidEnhancedException,
     )) {
       failures.add('Every Enhanced contrast exception requires full approval.');
     }
@@ -619,6 +655,7 @@ final class ThemeEvidenceManifest {
     'manualChecklists': manualChecklistUris,
     'accessibilityScannerReport': accessibilityScannerReportUri,
     'approvedSignerSha256': approvedSignerSha256,
+    'retrievedEvidenceSha256': retrievedEvidenceSha256,
     'contrastExceptions': [
       for (final exception in contrastExceptions) exception.toJson(),
     ],
@@ -661,7 +698,8 @@ final class ThemePerformanceEvidence {
     required this.swapLatencyMs,
     required this.retainedMemoryAfterCyclesBytes,
     required this.monotonicRetainedMemoryGrowth,
-    required this.attributedReleaseGrowthBytes,
+    required this.releaseSizeAttributionByAssetSha256,
+    required this.approvedAssetSha256,
   });
 
   final ThemePerformanceMeasurement baseline;
@@ -669,7 +707,8 @@ final class ThemePerformanceEvidence {
   final double swapLatencyMs;
   final int retainedMemoryAfterCyclesBytes;
   final bool monotonicRetainedMemoryGrowth;
-  final int attributedReleaseGrowthBytes;
+  final Map<String, int> releaseSizeAttributionByAssetSha256;
+  final Set<String> approvedAssetSha256;
 
   ThemeAcceptanceGateResult evaluate() {
     final failures = <String>[];
@@ -720,8 +759,20 @@ final class ThemePerformanceEvidence {
     }
     final releaseGrowth =
         candidate.releaseSizeBytes - baseline.releaseSizeBytes;
-    if (releaseGrowth > attributedReleaseGrowthBytes) {
-      failures.add('Release-size growth is not fully attributed.');
+    final attributedGrowth = releaseSizeAttributionByAssetSha256.values.fold(
+      0,
+      (total, bytes) => total + bytes,
+    );
+    if (releaseSizeAttributionByAssetSha256.entries.any(
+          (entry) =>
+              !RegExp(r'^[0-9a-f]{64}$').hasMatch(entry.key) ||
+              entry.value <= 0 ||
+              !approvedAssetSha256.contains(entry.key),
+        ) ||
+        attributedGrowth != math.max(0, releaseGrowth)) {
+      failures.add(
+        'Release-size growth requires exact attribution to approved manifest asset hashes.',
+      );
     }
     return ThemeAcceptanceGateResult(
       gateId: ThemeAcceptanceGateId.performance,
@@ -736,7 +787,8 @@ final class ThemePerformanceEvidence {
     'swapLatencyMs': swapLatencyMs,
     'retainedMemoryAfterCyclesBytes': retainedMemoryAfterCyclesBytes,
     'monotonicRetainedMemoryGrowth': monotonicRetainedMemoryGrowth,
-    'attributedReleaseGrowthBytes': attributedReleaseGrowthBytes,
+    'releaseSizeAttributionByAssetSha256': releaseSizeAttributionByAssetSha256,
+    'approvedAssetSha256': approvedAssetSha256.toList()..sort(),
     'gate': evaluate().toJson(),
   };
 }
@@ -777,6 +829,33 @@ abstract final class ThemeRegistryAcceptanceAuditor {
     );
   }
 }
+
+@immutable
+final class ThemeRasterAcceptanceFixture {
+  const ThemeRasterAcceptanceFixture({
+    required this.expectedSha256,
+    required this.creationRecordUri,
+  });
+
+  final String expectedSha256;
+  final String creationRecordUri;
+}
+
+ThemeRasterAcceptanceFixture themeRasterAcceptanceFixture(String themeId) =>
+    switch (themeId) {
+      variantFThemeId => const ThemeRasterAcceptanceFixture(
+        expectedSha256:
+            '9ff3968a94d497dc6f76f2b14f370c5a24c3bb4969397ee220da005093c15ad7',
+        creationRecordUri:
+            'docs/performance/containment-drone-pre-catalog-baseline.md',
+      ),
+      graphiteThemeId => const ThemeRasterAcceptanceFixture(
+        expectedSha256:
+            '4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15',
+        creationRecordUri: 'docs/concepts/themes/graphite/README.md',
+      ),
+      _ => throw StateError('No primary-frame fixture for $themeId.'),
+    };
 
 @immutable
 final class ThemeAssetEvidence {
@@ -1062,6 +1141,22 @@ abstract final class ThemeRuntimeTokenAuditor {
     final colors = theme.extension<ClinicalCalendarColors>()!;
     final accessibility = theme
         .extension<ClinicalCalendarAccessibilityTokens>();
+    return auditThemeData(
+      themeId: bundle.id,
+      theme: theme,
+      colors: colors,
+      accessibility: accessibility,
+      mode: mode,
+    );
+  }
+
+  static ThemeTokenAuditReport auditThemeData({
+    required String themeId,
+    required ThemeData theme,
+    required ClinicalCalendarColors colors,
+    required ClinicalCalendarAccessibilityTokens? accessibility,
+    required ThemeAccessibilityMode mode,
+  }) {
     final permitted = _runtimePermittedPairings(
       theme: theme,
       colors: colors,
@@ -1073,7 +1168,7 @@ abstract final class ThemeRuntimeTokenAuditor {
     };
 
     return auditPairings(
-      themeId: bundle.id,
+      themeId: themeId,
       mode: mode,
       pairings: [
         ...permitted,
@@ -1236,11 +1331,28 @@ bool _containsSensitiveIdentity(String value) => RegExp(
   caseSensitive: false,
 ).hasMatch(value);
 
+bool _containsCredentialAssignment(String value) => RegExp(
+  r'(?:api[_-]?key|access[_-]?token|token|password|passphrase|otp|signature|sig)\s*[:=]\s*[^&\s]+',
+  caseSensitive: false,
+).hasMatch(value);
+
 bool _isUnsafeEvidenceUri(String value) {
   final uri = Uri.tryParse(value);
+  final unsafeKey = RegExp(
+    r'^(?:api[_-]?key|access[_-]?token|token|password|passphrase|otp|signature|sig)$',
+    caseSensitive: false,
+  );
+  final fragmentParameters = uri == null
+      ? const <String, String>{}
+      : Uri.tryParse('?${uri.fragment}')?.queryParameters ??
+            const <String, String>{};
   return value.trim().isEmpty ||
       _containsSensitiveIdentity(value) ||
-      (uri != null && uri.userInfo.isNotEmpty);
+      _containsCredentialAssignment(value) ||
+      (uri != null &&
+          (uri.userInfo.isNotEmpty ||
+              uri.queryParameters.keys.any(unsafeKey.hasMatch) ||
+              fragmentParameters.keys.any(unsafeKey.hasMatch)));
 }
 
 int _alphaAt(ByteData pixels, int width, int x, int y) =>

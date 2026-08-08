@@ -43,6 +43,17 @@ equality, both directed theme swaps, live working-state preservation,
 revision-aware persistence, fallback, theme Help, signed-out privacy, and
 Standard/Enhanced accessibility checks.
 
+The behavior matrix exercises the production seams rather than a parallel
+theme store. `theme_acceptance_harness_test.dart` covers both directed swaps,
+Preview/Revert/failed Apply/successful Apply, controller reconstruction,
+effective Help, unknown-ID fallback, and both accessibility modes. The broader
+quality gate supplies the durable boundaries: `clinical_calendar_app_test.dart`
+proves transactional persistence and local removal, `support_surfaces_test.dart`
+proves synchronized rebasing, `durable_synchronization_service_test.dart`
+proves sync transport, `portable_backup_service_test.dart` proves backup and
+restore, and `export_encoder_test.dart` proves export while excluding preview
+state.
+
 ## Physical performance evidence
 
 Use the same approved Android tablet, profile build, display mode, refresh
@@ -68,6 +79,12 @@ Acceptance additionally requires the physical Android visual gate, exact CI
 run, approved signer-certificate SHA-256, Accessibility Scanner adjudication,
 manual checklists, and original-resolution captures. Missing any one keeps the
 manifest Pending even when every automated gate passes.
+
+Every evidence reference also carries the SHA-256 of a successful retrieval.
+Credential-like query or fragment keys, user-info, email-shaped identifiers,
+OTP values, passphrases, and signing secrets are rejected. Release-size growth
+must equal the sum of per-asset contributions whose SHA-256 values appear in
+the approved manifest; aggregate or over-attributed estimates do not pass.
 
 ## Evidence safety
 

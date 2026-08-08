@@ -45,13 +45,7 @@ void main() {
           ).writeAsStringSync(_pretty(report.toJson()));
         }
 
-        final expectedHash = switch (bundle.id) {
-          variantFThemeId =>
-            '9ff3968a94d497dc6f76f2b14f370c5a24c3bb4969397ee220da005093c15ad7',
-          graphiteThemeId =>
-            '4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15',
-          _ => throw StateError('No primary-frame fixture for ${bundle.id}.'),
-        };
+        final fixture = themeRasterAcceptanceFixture(bundle.id);
         final asset = await ThemeAssetAcceptanceAuditor.auditPrimaryFrame(
           bundle: bundle,
           bytes: await File(
@@ -59,10 +53,8 @@ void main() {
           ).readAsBytes(),
           evidence: ThemeAssetEvidence(
             assetPath: bundle.frame.primaryAsset,
-            expectedSha256: expectedHash,
-            creationRecordUri: bundle.id == variantFThemeId
-                ? 'docs/performance/containment-drone-pre-catalog-baseline.md'
-                : 'docs/concepts/themes/graphite/README.md',
+            expectedSha256: fixture.expectedSha256,
+            creationRecordUri: fixture.creationRecordUri,
             comparisonCaptureUri: '',
             originalityReviewer: '',
             originalityApprovedAtUtc: DateTime.utc(2026, 8, 8),
@@ -112,7 +104,8 @@ void main() {
               'swapLatencyMs': null,
               'retainedMemoryAfter25CyclesBytes': null,
               'monotonicRetainedMemoryGrowth': null,
-              'attributedReleaseGrowthBytes': null,
+              'releaseSizeAttributionByAssetSha256': null,
+              'approvedAssetSha256': null,
             },
           }),
         );
@@ -156,6 +149,7 @@ void main() {
           manualChecklistUris: const [],
           accessibilityScannerReportUri: '',
           approvedSignerSha256: '',
+          retrievedEvidenceSha256: const {},
           contrastExceptions: const [],
           gates: [
             ThemeAcceptanceGateResult(
