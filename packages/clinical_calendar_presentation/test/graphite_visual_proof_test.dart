@@ -483,7 +483,7 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
     required LocalDate firstDate,
     required LocalDate lastDate,
   }) async => CalendarSnapshot([
-    for (final day in [1, 5, 8, 12, 15, 19, 22, 26, 29])
+    for (final day in [1, 5, 12, 19, 26])
       CalendarEntry(
         id: 'protected-$day',
         kind: CalendarEntryKind.protectedDay,

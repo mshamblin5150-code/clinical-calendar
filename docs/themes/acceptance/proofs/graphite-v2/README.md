@@ -41,10 +41,10 @@ Containment Drone artwork is imported or rendered.
 
 ```text
 1d37e9c2c0f97a2428fbebfd0fc2b5d6e85e3281a634fa16ca2c67479ec24e4e  approved-concept-landscape.png
-d634a03a3e1b70f8fffb3c10ed07416e4c89b0770289a6123124a29040e08464  landscape-concept-vs-runtime.png
-85af47272104230dc698e6d940164677078ab40029bd232eae21e53db0709deb  runtime-landscape-1536x1024.png
+0aa8313484da40f1595fdf520789a7b3f2d3489a35bbbb5eb6f9b25eb265067c  landscape-concept-vs-runtime.png
+d269b99c1532b1657427b55406c49ea3d73f0f36141a6aab766eadd7e1f4281f  runtime-landscape-1536x1024.png
 256d40b21484561ac7fb2b13985b2df30a1a7c1cecfdad1147cdcf72fc132e73  runtime-portrait-200-percent-900x1440.png
-5de8e6887261c9ab863eb4fd20ded413005ba97928fc377199afb1feb976ad24  runtime-portrait-900x1440.png
+398785c3fbfb930747010d0bce312de9a1a8b0f4cdaeb3ef11a1956caaa2c008  runtime-portrait-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance
