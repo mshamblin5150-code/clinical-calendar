@@ -105,7 +105,7 @@ void main() {
               'retainedMemoryAfter25CyclesBytes': null,
               'monotonicRetainedMemoryGrowth': null,
               'releaseSizeAttributionByAssetSha256': null,
-              'approvedAssetSha256': null,
+              'manifestAssetSha256': null,
             },
           }),
         );

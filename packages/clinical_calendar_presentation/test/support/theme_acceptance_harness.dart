@@ -699,7 +699,6 @@ final class ThemePerformanceEvidence {
     required this.retainedMemoryAfterCyclesBytes,
     required this.monotonicRetainedMemoryGrowth,
     required this.releaseSizeAttributionByAssetSha256,
-    required this.approvedAssetSha256,
   });
 
   final ThemePerformanceMeasurement baseline;
@@ -708,9 +707,10 @@ final class ThemePerformanceEvidence {
   final int retainedMemoryAfterCyclesBytes;
   final bool monotonicRetainedMemoryGrowth;
   final Map<String, int> releaseSizeAttributionByAssetSha256;
-  final Set<String> approvedAssetSha256;
 
-  ThemeAcceptanceGateResult evaluate() {
+  ThemeAcceptanceGateResult evaluate({
+    required ThemeEvidenceManifest manifest,
+  }) {
     final failures = <String>[];
     if (baseline.frameIntervalMs <= 0 ||
         baseline.uiThreadFrameTimeMsP95 <= 0 ||
@@ -767,7 +767,7 @@ final class ThemePerformanceEvidence {
           (entry) =>
               !RegExp(r'^[0-9a-f]{64}$').hasMatch(entry.key) ||
               entry.value <= 0 ||
-              !approvedAssetSha256.contains(entry.key),
+              !manifest.assetHashes.values.contains(entry.key),
         ) ||
         attributedGrowth != math.max(0, releaseGrowth)) {
       failures.add(
@@ -781,15 +781,15 @@ final class ThemePerformanceEvidence {
     );
   }
 
-  Map<String, Object> toJson() => {
+  Map<String, Object> toJson({required ThemeEvidenceManifest manifest}) => {
     'baseline': baseline.toJson(),
     'candidate': candidate.toJson(),
     'swapLatencyMs': swapLatencyMs,
     'retainedMemoryAfterCyclesBytes': retainedMemoryAfterCyclesBytes,
     'monotonicRetainedMemoryGrowth': monotonicRetainedMemoryGrowth,
     'releaseSizeAttributionByAssetSha256': releaseSizeAttributionByAssetSha256,
-    'approvedAssetSha256': approvedAssetSha256.toList()..sort(),
-    'gate': evaluate().toJson(),
+    'manifestAssetSha256': manifest.assetHashes.values.toList()..sort(),
+    'gate': evaluate(manifest: manifest).toJson(),
   };
 }
 
@@ -1332,14 +1332,18 @@ bool _containsSensitiveIdentity(String value) => RegExp(
 ).hasMatch(value);
 
 bool _containsCredentialAssignment(String value) => RegExp(
-  r'(?:api[_-]?key|access[_-]?token|token|password|passphrase|otp|signature|sig)\s*[:=]\s*[^&\s]+',
+  r'(?:(?:api|db|database|private|signing)[_-]?key|key|access[_-]?token|token|password|passphrase|otp|signature|sig|client[_-]?secret|secret|auth(?:orization)?|credentials?)\s*[:=]\s*[^&\s]+',
   caseSensitive: false,
 ).hasMatch(value);
+
+abstract final class ThemeEvidenceSafety {
+  static bool isSafeReference(String value) => !_isUnsafeEvidenceUri(value);
+}
 
 bool _isUnsafeEvidenceUri(String value) {
   final uri = Uri.tryParse(value);
   final unsafeKey = RegExp(
-    r'^(?:api[_-]?key|access[_-]?token|token|password|passphrase|otp|signature|sig)$',
+    r'^(?:(?:api|db|database|private|signing)[_-]?key|key|access[_-]?token|token|password|passphrase|otp|signature|sig|client[_-]?secret|secret|auth(?:orization)?|credentials?)$',
     caseSensitive: false,
   );
   final fragmentParameters = uri == null

@@ -202,6 +202,43 @@ void main() {
       );
     });
 
+    test('evidence references reject credential keys and fragments', () {
+      for (final key in const [
+        'key',
+        'api_key',
+        'db_key',
+        'database-key',
+        'privateKey',
+        'signing_key',
+        'client_secret',
+        'secret',
+        'credential',
+        'token',
+        'signature',
+      ]) {
+        expect(
+          ThemeEvidenceSafety.isSafeReference(
+            'https://evidence.invalid/report?$key=fictional-secret',
+          ),
+          isFalse,
+          reason: key,
+        );
+        expect(
+          ThemeEvidenceSafety.isSafeReference(
+            'https://evidence.invalid/report#$key=fictional-secret',
+          ),
+          isFalse,
+          reason: 'fragment $key',
+        );
+      }
+      expect(
+        ThemeEvidenceSafety.isSafeReference(
+          'https://evidence.invalid/report?run=123&theme=graphite',
+        ),
+        isTrue,
+      );
+    });
+
     test('manifest identifies the candidate and rejects identifying fixtures', () {
       final manifest = ThemeEvidenceManifest(
         candidateCommit: '0123456789abcdef0123456789abcdef01234567',
@@ -310,6 +347,9 @@ void main() {
     });
 
     test('performance gate compares every measurement with the baseline', () {
+      final manifest = _performanceManifest();
+      const approvedAssetHash =
+          '4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15';
       const baseline = ThemePerformanceMeasurement(
         frameIntervalMs: 8.333,
         uiThreadFrameTimeMsP95: 3.403,
@@ -331,14 +371,8 @@ void main() {
         swapLatencyMs: 180,
         retainedMemoryAfterCyclesBytes: 221000000,
         monotonicRetainedMemoryGrowth: false,
-        releaseSizeAttributionByAssetSha256: const {
-          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa':
-              1000000,
-        },
-        approvedAssetSha256: const {
-          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        },
-      ).evaluate();
+        releaseSizeAttributionByAssetSha256: const {approvedAssetHash: 1000000},
+      ).evaluate(manifest: manifest);
       expect(passing.passed, isTrue);
 
       final failed = ThemePerformanceEvidence(
@@ -347,14 +381,8 @@ void main() {
         swapLatencyMs: 251,
         retainedMemoryAfterCyclesBytes: 221000000,
         monotonicRetainedMemoryGrowth: false,
-        releaseSizeAttributionByAssetSha256: const {
-          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa':
-              1000000,
-        },
-        approvedAssetSha256: const {
-          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        },
-      ).evaluate();
+        releaseSizeAttributionByAssetSha256: const {approvedAssetHash: 1000000},
+      ).evaluate(manifest: manifest);
       expect(failed.passed, isFalse);
       expect(failed.failures, contains(contains('250')));
 
@@ -364,14 +392,8 @@ void main() {
         swapLatencyMs: 180,
         retainedMemoryAfterCyclesBytes: 221000000,
         monotonicRetainedMemoryGrowth: false,
-        releaseSizeAttributionByAssetSha256: const {
-          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa':
-              1000001,
-        },
-        approvedAssetSha256: const {
-          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        },
-      ).evaluate();
+        releaseSizeAttributionByAssetSha256: const {approvedAssetHash: 1000001},
+      ).evaluate(manifest: manifest);
       expect(overAttributed.passed, isFalse);
       expect(overAttributed.failures, contains(contains('exact attribution')));
 
@@ -390,8 +412,7 @@ void main() {
           retainedMemoryAfterCyclesBytes: 0,
           monotonicRetainedMemoryGrowth: false,
           releaseSizeAttributionByAssetSha256: {},
-          approvedAssetSha256: {},
-        ).evaluate().passed,
+        ).evaluate(manifest: manifest).passed,
         isFalse,
       );
     });
@@ -760,3 +781,46 @@ void _expectWorkingStatePreserved(
   expect(state.focusNode.hasFocus, isTrue);
   expect(state.workflowController, same(workflowController));
 }
+
+ThemeEvidenceManifest _performanceManifest() => ThemeEvidenceManifest(
+  candidateCommit: '0123456789abcdef0123456789abcdef01234567',
+  buildNumber: 41,
+  themeId: graphiteThemeId,
+  displayName: 'Graphite',
+  fixtureId: 'catalog-acceptance-fictional-v1',
+  capturedAtUtc: DateTime.utc(2026, 8, 8),
+  environment: const ThemeAcceptanceEnvironment(
+    platform: 'Android',
+    deviceModel: 'SM-X920',
+    osVersion: '16',
+    displayMode: '2960x1848@120Hz',
+    orientation: 'landscape',
+    refreshRateHz: 120,
+  ),
+  assetHashes: const {
+    'assets/graphite_raster/panel-nine-slice-v1.png':
+        '4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15',
+  },
+  reportUris: const ['reports/performance.json'],
+  captureUris: const ['captures/performance.png'],
+  ciRunUri: 'https://github.com/example/actions/runs/123',
+  manualChecklistUris: const ['checklists/android-tablet.md'],
+  accessibilityScannerReportUri: 'reports/accessibility-scanner.json',
+  approvedSignerSha256:
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  retrievedEvidenceSha256: const {
+    'reports/performance.json':
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    'captures/performance.png':
+        'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+    'https://github.com/example/actions/runs/123':
+        'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+    'checklists/android-tablet.md':
+        'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+    'reports/accessibility-scanner.json':
+        'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+  },
+  contrastExceptions: const [],
+  gates: const [],
+  maintainerDecision: ThemeMaintainerDecision.pending,
+);
