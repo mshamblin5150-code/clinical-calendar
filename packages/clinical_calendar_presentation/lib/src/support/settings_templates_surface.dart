@@ -157,7 +157,9 @@ final class _SettingsTemplatesSurfaceState
       ClinicalCalendarThemeBundleRegistry.standard.isSelectableCatalogComplete;
 
   String _availableThemeId(String themeId) =>
-      themeId == variantFThemeId || themeId == graphiteThemeId
+      ClinicalCalendarThemeBundleRegistry.standard.galleryBundles.any(
+        (bundle) => bundle.id == themeId,
+      )
       ? themeId
       : graphiteThemeId;
 

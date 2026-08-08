@@ -300,6 +300,7 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
           : standardTheme;
       return GraphitePresentationFailureBoundary(
         onRestart: widget.onPresentationRestart,
+        onBundleFailure: _themePreview.handleRuntimeBundleFailure,
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Clinical Calendar',

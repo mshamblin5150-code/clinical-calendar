@@ -5,6 +5,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../additive_semantic_colors.dart';
 import '../tactical_frame.dart';
 import '../variant_f_theme.dart';
 import '../variant_f_raster_assets.dart';
@@ -111,6 +112,9 @@ final class PlacementProgressWheel extends StatelessWidget {
             painter: _ProgressWheelPainter(
               progress: progress,
               colors: context.clinicalColors,
+              additiveColors: Theme.of(
+                context,
+              ).extension<ClinicalCalendarAdditiveColors>(),
             ),
             child: Center(
               child: Column(
@@ -257,22 +261,14 @@ final class PlacementMetricLedger extends StatelessWidget {
     final progress = snapshot.progress;
     final metrics = <(String, int, Color?)>[
       ('Target', progress.targetMinutes, null),
-      ('Completed', progress.completedMinutes, context.clinicalColors.clinical),
+      ('Completed', progress.completedMinutes, _completedColor(context)),
       (
         'Scheduled',
         progress.scheduledMinutes,
         context.clinicalColors.scheduled,
       ),
-      (
-        'Unscheduled',
-        progress.unscheduledMinutes,
-        context.clinicalColors.urgent,
-      ),
-      (
-        'Over-Target',
-        progress.overTargetMinutes,
-        context.clinicalColors.primaryText,
-      ),
+      ('Unscheduled', progress.unscheduledMinutes, _unscheduledColor(context)),
+      ('Over-Target', progress.overTargetMinutes, _overTargetColor(context)),
     ];
     return Column(
       key: const Key('placement-metric-ledger'),
@@ -562,15 +558,20 @@ final class _ProgressSegment extends StatelessWidget {
     alignment: Alignment.centerLeft,
     child: FractionallySizedBox(
       widthFactor: (fill / 100).clamp(0, 1),
-      child: ColoredBox(color: context.clinicalColors.clinical),
+      child: ColoredBox(color: _completedColor(context)),
     ),
   );
 }
 
 final class _ProgressWheelPainter extends CustomPainter {
-  const _ProgressWheelPainter({required this.progress, required this.colors});
+  const _ProgressWheelPainter({
+    required this.progress,
+    required this.colors,
+    required this.additiveColors,
+  });
   final ClinicalPlacementProgress progress;
   final ClinicalCalendarColors colors;
+  final ClinicalCalendarAdditiveColors? additiveColors;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -603,9 +604,9 @@ final class _ProgressWheelPainter extends CustomPainter {
         target;
     var start = -math.pi / 2;
     for (final segment in [
-      (completed, colors.clinical),
+      (completed, additiveColors?.completed ?? colors.clinical),
       (scheduled, colors.scheduled),
-      (unscheduled, colors.urgent),
+      (unscheduled, additiveColors?.unscheduled ?? colors.urgent),
     ]) {
       if (segment.$1 <= 0) continue;
       final paint = Paint()
@@ -623,7 +624,7 @@ final class _ProgressWheelPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = math.max(stroke * .18, 2)
         ..strokeCap = StrokeCap.round
-        ..color = colors.primaryText;
+        ..color = additiveColors?.overTarget ?? colors.primaryText;
       canvas.drawArc(
         rect.inflate(stroke * .38),
         -math.pi / 2,
@@ -636,8 +637,24 @@ final class _ProgressWheelPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ProgressWheelPainter oldDelegate) =>
-      oldDelegate.progress != progress || oldDelegate.colors != colors;
+      oldDelegate.progress != progress ||
+      oldDelegate.colors != colors ||
+      oldDelegate.additiveColors != additiveColors;
 }
+
+Color _completedColor(BuildContext context) =>
+    Theme.of(context).extension<ClinicalCalendarAdditiveColors>()?.completed ??
+    context.clinicalColors.clinical;
+
+Color _unscheduledColor(BuildContext context) =>
+    Theme.of(
+      context,
+    ).extension<ClinicalCalendarAdditiveColors>()?.unscheduled ??
+    context.clinicalColors.urgent;
+
+Color _overTargetColor(BuildContext context) =>
+    Theme.of(context).extension<ClinicalCalendarAdditiveColors>()?.overTarget ??
+    context.clinicalColors.primaryText;
 
 final class _TacticalPanel extends StatelessWidget {
   const _TacticalPanel({

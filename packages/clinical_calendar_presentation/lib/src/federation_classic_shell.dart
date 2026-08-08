@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
 
 import 'additive_theme_shell.dart';
-import 'graphite_frame.dart';
+import 'federation_classic_frame.dart';
 import 'responsive_shell.dart';
 
-const graphiteCompactDestinationInsets = EdgeInsets.fromLTRB(18, 20, 18, 22);
+const federationClassicCompactDestinationInsets = EdgeInsets.fromLTRB(
+  18,
+  20,
+  18,
+  22,
+);
 
-Widget _buildGraphiteFrame(
+Widget _buildFederationClassicFrame(
   Widget child,
   EdgeInsets chromeInsets,
   EdgeInsets contentPadding,
-) => GraphiteNineSliceFrame(
+) => FederationClassicNineSliceFrame(
   chromeInsets: chromeInsets,
   contentPadding: contentPadding,
   child: child,
 );
 
-final class GraphiteDestinationSurface extends StatelessWidget {
-  const GraphiteDestinationSurface({
+final class FederationClassicDestinationSurface extends StatelessWidget {
+  const FederationClassicDestinationSurface({
     required this.destination,
     required this.entry,
     required this.onExit,
@@ -35,15 +40,15 @@ final class GraphiteDestinationSurface extends StatelessWidget {
     destination: destination,
     entry: entry,
     onExit: onExit,
-    frameBuilder: _buildGraphiteFrame,
-    statusSafeInsets: graphiteStatusSafeInsets,
-    compactDestinationInsets: graphiteCompactDestinationInsets,
+    frameBuilder: _buildFederationClassicFrame,
+    statusSafeInsets: federationClassicStatusSafeInsets,
+    compactDestinationInsets: federationClassicCompactDestinationInsets,
     child: child,
   );
 }
 
-final class GraphiteApplicationShell extends StatelessWidget {
-  const GraphiteApplicationShell({
+final class FederationClassicApplicationShell extends StatelessWidget {
+  const FederationClassicApplicationShell({
     required this.slots,
     required this.environmentName,
     required this.onOpenMenu,
@@ -71,10 +76,10 @@ final class GraphiteApplicationShell extends StatelessWidget {
     onOpenAttention: onOpenAttention,
     onAddSchedule: onAddSchedule,
     mobileIndex: mobileIndex,
-    frameBuilder: _buildGraphiteFrame,
-    calendarSafeInsets: graphiteCalendarSafeInsets,
-    placementsSafeInsets: graphitePlacementsSafeInsets,
-    planningSafeInsets: graphitePlanningSafeInsets,
-    statusSafeInsets: graphiteStatusSafeInsets,
+    frameBuilder: _buildFederationClassicFrame,
+    calendarSafeInsets: federationClassicCalendarSafeInsets,
+    placementsSafeInsets: federationClassicPlacementsSafeInsets,
+    planningSafeInsets: federationClassicPlanningSafeInsets,
+    statusSafeInsets: federationClassicStatusSafeInsets,
   );
 }

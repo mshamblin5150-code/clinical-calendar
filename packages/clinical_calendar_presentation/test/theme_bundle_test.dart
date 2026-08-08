@@ -3,11 +3,13 @@ import 'dart:ui' as ui;
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   const bundle = VariantFThemeBundle();
   const graphite = GraphiteThemeBundle();
+  const federationClassic = FederationClassicThemeBundle();
 
   test('Containment Drone is one complete internally owned bundle', () {
     ClinicalCalendarThemeBundleValidator.validate(const [bundle]);
@@ -81,12 +83,62 @@ void main() {
     );
   });
 
+  test('Federation Classic is a complete independently owned bundle', () {
+    ClinicalCalendarThemeBundleValidator.validate(const [federationClassic]);
+
+    expect(federationClassic.id, federationClassicThemeId);
+    expect(federationClassic.metadata.displayName, 'Federation Classic');
+    expect(
+      federationClassic.standardPresentation,
+      isA<FederationClassicVisualTheme>(),
+    );
+    expect(
+      federationClassic.shellRenderer,
+      isA<FederationClassicShellRenderer>(),
+    );
+    expect(federationClassic.frame.sourceSize, const Size(1536, 1024));
+    expect(
+      federationClassic.frame.sourceCuts,
+      const EdgeInsets.fromLTRB(120, 145, 120, 170),
+    );
+    expect(federationClassic.frame.assetPaths, hasLength(1));
+    expect(federationClassic.gallery.swatches, hasLength(5));
+    expect(federationClassic.marks.marks, hasLength(9));
+    expect(federationClassic.helpGuide.calendarStates, hasLength(5));
+    expect(
+      federationClassic.helpGuide.calendarStates,
+      everyElement(
+        isA<CalendarStateGuide>()
+            .having((state) => state.nonColorCue, 'non-color cue', isNotEmpty)
+            .having(
+              (state) => state.enhancedBehavior,
+              'Enhanced behavior',
+              isNotEmpty,
+            ),
+      ),
+    );
+    final additiveColors = federationClassic.standardPresentation
+        .createThemeData()
+        .extension<ClinicalCalendarAdditiveColors>()!;
+    expect(additiveColors.completed, FederationClassicColors.completed);
+    expect(additiveColors.unscheduled, FederationClassicColors.unscheduled);
+    expect(additiveColors.overTarget, FederationClassicColors.overTarget);
+    expect(additiveColors.today, FederationClassicColors.today);
+    expect(
+      ClinicalCalendarThemeBundleRegistry.standard.resolveRoot(
+        federationClassicThemeId,
+      ),
+      same(federationClassic),
+    );
+  });
+
   test(
     'Enhanced is an overlay and Standard round trips exactly for both bundles',
     () {
       for (final themedBundle in const <ClinicalCalendarThemeBundle>[
         VariantFThemeBundle(),
         GraphiteThemeBundle(),
+        FederationClassicThemeBundle(),
       ]) {
         final standard = themedBundle.standardPresentation.createThemeData();
         final enhanced = themedBundle.standardPresentation.createThemeData(
@@ -384,6 +436,65 @@ void main() {
   });
 
   testWidgets(
+    'Federation Classic shell uses only Federation Classic raster framing',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: federationClassic.standardPresentation.createThemeData(),
+          boundaryKey: GlobalKey(),
+          shell: federationClassic.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FederationClassicNineSliceFrame), findsWidgets);
+      expect(find.byType(GraphiteNineSliceFrame), findsNothing);
+      expect(find.byType(VariantFNineSliceFrame), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final size in const [Size(320, 568), Size(768, 1024), Size(1440, 900)]) {
+    testWidgets(
+      'Federation Classic shell fits ${size.width.toInt()}x${size.height.toInt()}',
+      (tester) async {
+        await tester.binding.setSurfaceSize(size);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          _shellHarness(
+            theme: federationClassic.standardPresentation.createThemeData(),
+            boundaryKey: GlobalKey(),
+            shell: federationClassic.shellRenderer.build(
+              slots: _slots,
+              environmentName: 'TEST',
+              onOpenMenu: _noop,
+              onOpenDestination: _ignoreDestination,
+              onOpenAttention: _noop,
+              onAddSchedule: _noop,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(FederationClassicNineSliceFrame), findsWidgets);
+        expect(find.byType(ClipRect), findsWidgets);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
     'Graphite destination keeps compact chrome and no Variant frame',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 700));
@@ -433,6 +544,8 @@ void main() {
                     onPressed: () => GraphitePresentationFailureBoundary.report(
                       context,
                       StateError('late decode'),
+                      themeId: graphiteThemeId,
+                      isGraphite: true,
                     ),
                     child: const Text('Fail frame'),
                   ),
@@ -455,6 +568,50 @@ void main() {
     await tester.tap(find.text('Restart'));
     expect(restarted, isTrue);
   });
+
+  testWidgets(
+    'Federation Classic frame decode failure swaps to complete Graphite',
+    (tester) async {
+      ClinicalCalendarThemeBundle effectiveBundle = federationClassic;
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) => GraphitePresentationFailureBoundary(
+            onRestart: _noop,
+            onBundleFailure: (failedThemeId) {
+              expect(failedThemeId, federationClassicThemeId);
+              setState(() => effectiveBundle = graphite);
+            },
+            child: effectiveBundle.id == federationClassicThemeId
+                ? DefaultAssetBundle(
+                    bundle: _FailingAssetBundle(),
+                    child: MaterialApp(
+                      theme: federationClassic.standardPresentation
+                          .createThemeData(),
+                      home: const FederationClassicNineSliceFrame(
+                        child: Text('Fictional Calendar content'),
+                      ),
+                    ),
+                  )
+                : MaterialApp(
+                    theme: graphite.standardPresentation.createThemeData(),
+                    home: graphite.shellRenderer.buildFrame(
+                      child: const Text('Fictional Calendar content'),
+                    ),
+                  ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
+      expect(find.byType(GraphiteNineSliceFrame), findsOneWidget);
+      expect(find.text('Fictional Calendar content'), findsOneWidget);
+      expect(
+        find.byKey(const Key('graphite-presentation-unavailable')),
+        findsNothing,
+      );
+    },
+  );
 }
 
 Widget _shellHarness({
@@ -520,4 +677,10 @@ final class _TestBundle implements ClinicalCalendarThemeBundle {
 
   @override
   ThemeHelpGuide get helpGuide => _delegate.helpGuide;
+}
+
+final class _FailingAssetBundle extends CachingAssetBundle {
+  @override
+  Future<ByteData> load(String key) =>
+      Future.error(StateError('fixture asset decode failure'));
 }

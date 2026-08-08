@@ -2,6 +2,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/src/calendar/calendar_data_source.dart';
 import 'package:clinical_calendar_presentation/src/calendar/calendar_models.dart';
 import 'package:clinical_calendar_presentation/src/calendar/calendar_period_view.dart';
+import 'package:clinical_calendar_presentation/src/federation_classic_theme.dart';
 import 'package:clinical_calendar_presentation/src/graphite_theme.dart';
 import 'package:clinical_calendar_presentation/src/theme_contract.dart';
 import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
@@ -76,6 +77,31 @@ void main() {
       expect(find.byKey(Key('theme-mark-${role.name}')), findsWidgets);
     }
   });
+
+  testWidgets(
+    'Federation Classic Calendar uses owned marks and a distinct Today color',
+    (tester) async {
+      await _pumpCalendar(
+        tester,
+        source: _MemoryCalendarDataSource(_snapshot()),
+        federationClassic: true,
+      );
+
+      for (final role in const [
+        ThemeSemanticRole.workShift,
+        ThemeSemanticRole.clinicalSession,
+        ThemeSemanticRole.protectedDay,
+        ThemeSemanticRole.today,
+      ]) {
+        expect(find.byKey(Key('theme-mark-${role.name}')), findsWidgets);
+      }
+      final todayIcon = tester.widget<Icon>(
+        find.byKey(const Key('theme-mark-today')).first,
+      );
+      expect(todayIcon.color, FederationClassicColors.today);
+      expect(todayIcon.color, isNot(FederationClassicColors.urgent));
+    },
+  );
 
   testWidgets('Month, Week, and Agenda navigate their correct periods', (
     tester,
@@ -328,6 +354,7 @@ Future<void> _pumpCalendar(
   ValueChanged<CalendarItemReference>? onOpenItem,
   bool bounded = false,
   bool graphite = false,
+  bool federationClassic = false,
   bool enhancedAccessibility = false,
   TextScaler textScaler = TextScaler.noScaling,
 }) async {
@@ -351,11 +378,17 @@ Future<void> _pumpCalendar(
   );
   await tester.pumpWidget(
     ClinicalCalendarSemanticMarkScope(
-      marks: graphite
+      marks: federationClassic
+          ? const FederationClassicThemeBundle().marks
+          : graphite
           ? const GraphiteThemeBundle().marks
           : const VariantFThemeBundle().marks,
       child: MaterialApp(
-        theme: graphite
+        theme: federationClassic
+            ? buildFederationClassicTheme(
+                enhancedAccessibility: enhancedAccessibility,
+              )
+            : graphite
             ? buildGraphiteTheme(enhancedAccessibility: enhancedAccessibility)
             : buildVariantFTheme(enhancedAccessibility: enhancedAccessibility),
         builder: (context, child) => MediaQuery(

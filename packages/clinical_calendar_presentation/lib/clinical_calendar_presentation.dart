@@ -1,6 +1,8 @@
 /// Shared responsive Flutter presentation surface.
 library;
 
+export 'src/additive_theme_shell.dart';
+export 'src/additive_semantic_colors.dart';
 export 'src/clinical_calendar_app.dart';
 export 'src/accessibility_tokens.dart';
 export 'src/code_only_presentation_recovery.dart';
@@ -15,6 +17,9 @@ export 'src/backup/backup_restore_surface.dart';
 export 'src/exports/export_surface.dart';
 export 'src/enhanced_accessibility_controller.dart';
 export 'src/enhanced_focus_perimeter.dart';
+export 'src/federation_classic_frame.dart';
+export 'src/federation_classic_shell.dart';
+export 'src/federation_classic_theme.dart';
 export 'src/graphite_frame.dart';
 export 'src/graphite_shell.dart';
 export 'src/graphite_theme.dart';

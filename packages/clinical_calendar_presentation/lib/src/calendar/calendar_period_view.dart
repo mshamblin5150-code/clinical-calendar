@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
+import '../additive_semantic_colors.dart';
 import '../date_input.dart';
 import '../theme_contract.dart';
 import '../variant_f_theme.dart';
@@ -544,7 +545,7 @@ final class _DayNumber extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final usesThemeTodayMark =
-        _usesGraphiteMarks(context) || context.accessibilityTokens.enhanced;
+        _usesAdditiveMarks(context) || context.accessibilityTokens.enhanced;
     return Row(
       children: [
         DecoratedBox(
@@ -602,15 +603,13 @@ final class _CompactMarkers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final graphite =
-        ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
-        graphiteThemeId;
+    final usesAdditiveMarks = _usesAdditiveMarks(context);
     return Wrap(
       spacing: 3,
       runSpacing: 3,
       children: [
         for (final entry in entries.take(6))
-          if (graphite)
+          if (usesAdditiveMarks)
             ThemeSemanticMarkIcon(
               key: Key('compact-${entry.kind.name}-${entry.id}'),
               role: _entryRole(entry.kind),
@@ -671,10 +670,7 @@ final class _MonthEventCard extends StatelessWidget {
             ),
             Row(
               children: [
-                if (ClinicalCalendarSemanticMarkScope.maybeOf(
-                      context,
-                    )?.themeId ==
-                    graphiteThemeId) ...[
+                if (_usesAdditiveMarks(context)) ...[
                   ThemeSemanticMarkIcon(
                     role: _entryRole(entry.kind),
                     size: 11,
@@ -810,7 +806,7 @@ final class _WeekDay extends StatelessWidget {
               Row(
                 children: [
                   if (today &&
-                      (_usesGraphiteMarks(context) ||
+                      (_usesAdditiveMarks(context) ||
                           context.accessibilityTokens.enhanced)) ...[
                     ThemeSemanticMarkIcon(
                       role: ThemeSemanticRole.today,
@@ -1033,7 +1029,7 @@ final class _AgendaAssignment extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      if (_usesGraphiteMarks(context))
+      if (_usesAdditiveMarks(context))
         ThemeSemanticMarkIcon(
           role: _entryRole(entry.kind),
           size: 17,
@@ -1090,8 +1086,7 @@ final class _PeriodEntryRow extends StatelessWidget {
           ),
           Row(
             children: [
-              if (ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
-                  graphiteThemeId) ...[
+              if (_usesAdditiveMarks(context)) ...[
                 ThemeSemanticMarkIcon(
                   role: _entryRole(entry.kind),
                   size: 16,
@@ -1455,24 +1450,29 @@ IconData _variantEntryIcon(CalendarEntryKind kind) => switch (kind) {
   CalendarEntryKind.protectedDay => Icons.shield_outlined,
 };
 
-bool _usesGraphiteMarks(BuildContext context) =>
-    ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
-    graphiteThemeId;
+bool _usesAdditiveMarks(BuildContext context) {
+  final themeId = ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId;
+  return themeId != null && themeId != variantFThemeId;
+}
 
 Color _todayAccent(BuildContext context) {
+  final additive = Theme.of(
+    context,
+  ).extension<ClinicalCalendarAdditiveColors>();
+  if (additive != null) return additive.today;
   if (context.accessibilityTokens.enhanced) {
     return context.accessibilityTokens.focusOuterColor;
   }
-  return _usesGraphiteMarks(context)
+  return _usesAdditiveMarks(context)
       ? Theme.of(context).colorScheme.primary
       : context.clinicalColors.urgent;
 }
 
-Color _todayBackground(BuildContext context) => _usesGraphiteMarks(context)
+Color _todayBackground(BuildContext context) => _usesAdditiveMarks(context)
     ? Theme.of(context).colorScheme.primaryContainer
     : const Color(0xFF321512);
 
-Color _todayForeground(BuildContext context) => _usesGraphiteMarks(context)
+Color _todayForeground(BuildContext context) => _usesAdditiveMarks(context)
     ? Theme.of(context).colorScheme.onPrimaryContainer
     : const Color(0xFFFFD8D2);
 

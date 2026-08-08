@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'additive_theme_shell.dart';
+import 'federation_classic_frame.dart';
+import 'federation_classic_shell.dart';
+import 'federation_classic_theme.dart';
 import 'graphite_frame.dart';
 import 'graphite_shell.dart';
 import 'graphite_theme.dart';
@@ -8,6 +12,7 @@ import 'tactical_frame.dart';
 import 'variant_f_theme.dart';
 
 const variantFThemeId = 'variant-f';
+const federationClassicThemeId = 'federation-classic';
 const graphiteThemeId = 'graphite';
 const themeGalleryFixtureId = 'theme-gallery-android-tablet-calendar-v1';
 const themeGalleryViewport = Size(1280, 800);
@@ -78,6 +83,24 @@ final class GraphiteVisualTheme implements ClinicalCalendarVisualTheme {
   @override
   ThemeData createThemeData({bool enhancedAccessibility = false}) =>
       buildGraphiteTheme(enhancedAccessibility: enhancedAccessibility);
+}
+
+final class FederationClassicVisualTheme
+    implements ClinicalCalendarVisualTheme {
+  const FederationClassicVisualTheme();
+
+  @override
+  String get id => federationClassicThemeId;
+
+  @override
+  String get themeId => id;
+
+  @override
+  ClinicalCalendarColors get semanticColors => federationClassicSemanticColors;
+
+  @override
+  ThemeData createThemeData({bool enhancedAccessibility = false}) =>
+      buildFederationClassicTheme(enhancedAccessibility: enhancedAccessibility);
 }
 
 abstract interface class ClinicalCalendarShellRenderer
@@ -191,7 +214,7 @@ final class GraphiteShellRenderer implements ClinicalCalendarShellRenderer {
   Widget buildFrame({required Widget child}) => GraphiteNineSliceFrame(
     chromeInsets: graphiteStatusSafeInsets,
     contentPadding: const EdgeInsets.all(8),
-    child: GraphitePanelInterior(child: child),
+    child: AdditiveThemePanelInterior(child: child),
   );
 
   @override
@@ -201,6 +224,58 @@ final class GraphiteShellRenderer implements ClinicalCalendarShellRenderer {
     required VoidCallback onExit,
     required Widget child,
   }) => GraphiteDestinationSurface(
+    destination: destination,
+    entry: entry,
+    onExit: onExit,
+    child: child,
+  );
+}
+
+final class FederationClassicShellRenderer
+    implements ClinicalCalendarShellRenderer {
+  const FederationClassicShellRenderer();
+
+  @override
+  String get themeId => federationClassicThemeId;
+
+  @override
+  String get rendererId => 'federation-classic-additive-responsive-shell-v1';
+
+  @override
+  Widget build({
+    required ResponsiveShellSlots slots,
+    required String environmentName,
+    required VoidCallback onOpenMenu,
+    required ValueChanged<ClinicalCalendarDestination> onOpenDestination,
+    required VoidCallback onOpenAttention,
+    required VoidCallback onAddSchedule,
+    int mobileIndex = 1,
+    Key? key,
+  }) => FederationClassicApplicationShell(
+    key: key,
+    slots: slots,
+    environmentName: environmentName,
+    onOpenMenu: onOpenMenu,
+    onOpenDestination: onOpenDestination,
+    onOpenAttention: onOpenAttention,
+    onAddSchedule: onAddSchedule,
+    mobileIndex: mobileIndex,
+  );
+
+  @override
+  Widget buildFrame({required Widget child}) => FederationClassicNineSliceFrame(
+    chromeInsets: federationClassicStatusSafeInsets,
+    contentPadding: const EdgeInsets.all(8),
+    child: AdditiveThemePanelInterior(child: child),
+  );
+
+  @override
+  Widget buildDestination({
+    required ClinicalCalendarDestination destination,
+    required DestinationEntry entry,
+    required VoidCallback onExit,
+    required Widget child,
+  }) => FederationClassicDestinationSurface(
     destination: destination,
     entry: entry,
     onExit: onExit,
@@ -510,6 +585,66 @@ final class GraphiteHelpGuide implements ThemeHelpGuide {
       nonColorCue: 'Today dot or explicit urgent status outline.',
       enhancedBehavior:
           'The dot, outline, and status text become more prominent.',
+    ),
+  ];
+}
+
+final class FederationClassicHelpGuide implements ThemeHelpGuide {
+  const FederationClassicHelpGuide();
+
+  @override
+  String get themeId => federationClassicThemeId;
+
+  @override
+  String get title => 'Federation Classic calendar states';
+
+  @override
+  List<CalendarStateGuide> get calendarStates => const [
+    CalendarStateGuide(
+      role: ThemeSemanticRole.clinicalSession,
+      label: 'Clinical Session',
+      description:
+          'Salmon and a solid leading rail identify clinical activity.',
+      color: FederationClassicColors.clinical,
+      nonColorCue: 'Medical-services icon, CLINICAL label, and solid rail.',
+      enhancedBehavior: 'The icon, label, and rail receive stronger emphasis.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.workShift,
+      label: 'Work Shift',
+      description: 'Lilac and paired rail marks identify work activity.',
+      color: FederationClassicColors.workAccent,
+      nonColorCue: 'Briefcase icon, WORK label, and two short rail marks.',
+      enhancedBehavior:
+          'The icon, label, and paired rails receive stronger emphasis.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.protectedDay,
+      label: 'Protected Day',
+      description: 'Warm cream outlines identify protected time.',
+      color: FederationClassicColors.protectedDayAccent,
+      nonColorCue: 'Shield icon, PROTECTED label, and dot-grid corner mark.',
+      enhancedBehavior:
+          'The shield, label, dot grid, and outline become more prominent.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.scheduledProgress,
+      label: 'Scheduled progress',
+      description: 'Warm amber identifies hours already scheduled.',
+      color: FederationClassicColors.scheduled,
+      nonColorCue: 'Clock icon and forward diagonal hatch.',
+      enhancedBehavior:
+          'The clock, hatch, label, and progress boundary become prominent.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.today,
+      label: 'Today or urgent',
+      description:
+          'Cool blue marks Today; coral with status text marks urgency.',
+      color: FederationClassicColors.today,
+      nonColorCue: 'TODAY top rule or explicit urgent warning status.',
+      enhancedBehavior:
+          'The rule, warning outline, and status text become more prominent.',
     ),
   ];
 }
@@ -825,6 +960,155 @@ final class GraphiteThemeBundle implements ClinicalCalendarThemeBundle {
   ThemeHelpGuide get helpGuide => const GraphiteHelpGuide();
 }
 
+final class FederationClassicThemeBundle
+    implements ClinicalCalendarThemeBundle {
+  const FederationClassicThemeBundle();
+
+  @override
+  String get id => federationClassicThemeId;
+
+  @override
+  ThemeBundleOrigin get origin => ThemeBundleOrigin.compiled;
+
+  @override
+  ThemeCatalogMetadata get metadata => const ThemeCatalogMetadata(
+    themeId: federationClassicThemeId,
+    displayName: 'Federation Classic',
+    personality:
+        'Warm amber and lilac structure around calm, high-contrast content bays.',
+  );
+
+  @override
+  ClinicalCalendarStandardPresentation get standardPresentation =>
+      const FederationClassicVisualTheme();
+
+  @override
+  ClinicalCalendarShellRenderer get shellRenderer =>
+      const FederationClassicShellRenderer();
+
+  @override
+  ThemeFrameDescriptor get frame => const ThemeFrameDescriptor(
+    themeId: federationClassicThemeId,
+    assetPackage: 'clinical_calendar_presentation',
+    primaryAsset: federationClassicFrameAsset,
+    assetPaths: [federationClassicFrameAsset],
+    sourceSize: Size(1536, 1024),
+    sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
+    safeInsets: {
+      ThemeFrameRegion.calendar: federationClassicCalendarSafeInsets,
+      ThemeFrameRegion.placements: federationClassicPlacementsSafeInsets,
+      ThemeFrameRegion.planning: federationClassicPlanningSafeInsets,
+      ThemeFrameRegion.status: federationClassicStatusSafeInsets,
+    },
+  );
+
+  @override
+  ThemeGalleryData get gallery => const ThemeGalleryData(
+    themeId: federationClassicThemeId,
+    rendererId: 'federation-classic-additive-responsive-shell-v1',
+    thumbnailFixtureId: themeGalleryFixtureId,
+    thumbnailViewport: themeGalleryViewport,
+    swatches: [
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.canvas,
+        label: 'Canvas',
+        colorName: 'near-black plum',
+        color: FederationClassicColors.canvas,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.structure,
+        label: 'Structure',
+        colorName: 'raised plum',
+        color: FederationClassicColors.surfaceRaised,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.clinicalSession,
+        label: 'Clinical Session',
+        colorName: 'warm salmon',
+        color: FederationClassicColors.clinical,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.workShift,
+        label: 'Work Shift',
+        colorName: 'soft lilac',
+        color: FederationClassicColors.workAccent,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.urgent,
+        label: 'Urgent',
+        colorName: 'signal coral',
+        color: FederationClassicColors.urgent,
+      ),
+    ],
+  );
+
+  @override
+  ClinicalCalendarSemanticMarks get marks =>
+      const ClinicalCalendarSemanticMarks(
+        themeId: federationClassicThemeId,
+        marks: [
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.clinicalSession,
+            markId: 'clinical-solid-leading-rail',
+            icon: Icons.medical_services_outlined,
+            description:
+                'Medical-services icon, CLINICAL label, and solid rail',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.workShift,
+            markId: 'work-paired-leading-rails',
+            icon: Icons.work_outline,
+            description: 'Briefcase icon, WORK label, and paired rail marks',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.protectedDay,
+            markId: 'protected-dot-grid-corner',
+            icon: Icons.shield_outlined,
+            description: 'Shield icon, PROTECTED label, and dot-grid marker',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.scheduledProgress,
+            markId: 'scheduled-forward-hatch',
+            icon: Icons.schedule_outlined,
+            description: 'Clock icon and forward diagonal hatch',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.completedSession,
+            markId: 'completed-check-ring',
+            icon: Icons.check_circle_outline,
+            description: 'Completed check-circle mark and COMPLETED label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.cancelledSession,
+            markId: 'cancelled-diagonal-slash',
+            icon: Icons.block_outlined,
+            description: 'Diagonal slash mark and CANCELLED label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.missedSession,
+            markId: 'missed-cross-ring',
+            icon: Icons.highlight_off_outlined,
+            description: 'Cross mark and MISSED label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.today,
+            markId: 'today-top-rule',
+            icon: Icons.today_outlined,
+            description: 'Top rule and visible TODAY label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.urgent,
+            markId: 'urgent-warning-status',
+            icon: Icons.warning_amber_outlined,
+            description: 'Warning icon, outline, and explicit urgent status',
+          ),
+        ],
+      );
+
+  @override
+  ThemeHelpGuide get helpGuide => const FederationClassicHelpGuide();
+}
+
 final class InvalidThemeBundle implements Exception {
   const InvalidThemeBundle(this.message);
 
@@ -923,6 +1207,7 @@ final class ClinicalCalendarThemeBundleRegistry {
   static final standard = ClinicalCalendarThemeBundleRegistry._({
     variantFThemeId: const VariantFThemeBundle(),
     graphiteThemeId: const GraphiteThemeBundle(),
+    federationClassicThemeId: const FederationClassicThemeBundle(),
   });
 
   final Map<String, ClinicalCalendarThemeBundle> _bundles;

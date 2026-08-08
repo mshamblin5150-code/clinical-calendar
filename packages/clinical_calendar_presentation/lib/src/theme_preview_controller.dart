@@ -136,6 +136,32 @@ final class ThemePreviewController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Removes a failed live bundle without changing the authoritative ID.
+  ///
+  /// A failed Preview returns to the valid applied bundle. A failed applied
+  /// bundle resolves to complete Graphite while its stored ID remains intact.
+  void handleRuntimeBundleFailure(String failedThemeId) {
+    if (_previewBundle?.id == failedThemeId) {
+      _preflightGeneration++;
+      _previewBundle = null;
+      _applyingThemeId = null;
+      _applyError = null;
+      _previewUnavailable = true;
+      _preflighting = false;
+      _authoritativeChangedDuringPreview = false;
+      notifyListeners();
+      return;
+    }
+    if (_authoritativeResolution.bundle.id != failedThemeId) return;
+    _authoritativeResolution = AppliedThemeResolution(
+      storedId: _authoritativeThemeId,
+      bundle: _registry.resolveSignedOut(),
+      isFallback: true,
+    );
+    _applyError = null;
+    notifyListeners();
+  }
+
   void updateAuthoritativeTheme({
     required String themeId,
     required int revision,

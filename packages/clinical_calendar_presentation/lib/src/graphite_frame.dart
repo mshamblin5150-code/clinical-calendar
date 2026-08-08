@@ -15,15 +15,28 @@ final class GraphitePresentationFailureBoundary extends StatefulWidget {
   const GraphitePresentationFailureBoundary({
     required this.child,
     this.onRestart,
+    this.onBundleFailure,
     super.key,
   });
 
   final Widget child;
   final VoidCallback? onRestart;
+  final ValueChanged<String>? onBundleFailure;
 
-  static void report(BuildContext context, Object error) => context
+  static void report(
+    BuildContext context,
+    Object error, {
+    required String themeId,
+    required bool isGraphite,
+  }) => context
       .dependOnInheritedWidgetOfExactType<_GraphiteFailureReporter>()
-      ?.onFailure(error);
+      ?.onFailure(
+        _PresentationFailure(
+          error: error,
+          themeId: themeId,
+          isGraphite: isGraphite,
+        ),
+      );
 
   @override
   State<GraphitePresentationFailureBoundary> createState() =>
@@ -34,8 +47,13 @@ final class _GraphitePresentationFailureBoundaryState
     extends State<GraphitePresentationFailureBoundary> {
   bool _failed = false;
 
-  void _report(Object _) {
-    if (mounted && !_failed) setState(() => _failed = true);
+  void _report(_PresentationFailure failure) {
+    if (!mounted || _failed) return;
+    if (failure.isGraphite) {
+      setState(() => _failed = true);
+      return;
+    }
+    widget.onBundleFailure?.call(failure.themeId);
   }
 
   @override
@@ -64,10 +82,23 @@ final class _GraphiteFailureReporter extends InheritedWidget {
     required super.child,
   });
 
-  final ValueChanged<Object> onFailure;
+  final ValueChanged<_PresentationFailure> onFailure;
 
   @override
   bool updateShouldNotify(_GraphiteFailureReporter oldWidget) => false;
+}
+
+@immutable
+final class _PresentationFailure {
+  const _PresentationFailure({
+    required this.error,
+    required this.themeId,
+    required this.isGraphite,
+  });
+
+  final Object error;
+  final String themeId;
+  final bool isGraphite;
 }
 
 /// Original Graphite housing. Only the center and edge seams stretch.
@@ -96,7 +127,12 @@ final class _GraphiteNineSliceFrameState extends State<GraphiteNineSliceFrame> {
     },
     onError: (Object error, StackTrace? stackTrace) {
       if (!mounted) return;
-      GraphitePresentationFailureBoundary.report(context, error);
+      GraphitePresentationFailureBoundary.report(
+        context,
+        error,
+        themeId: 'graphite',
+        isGraphite: true,
+      );
     },
   );
 

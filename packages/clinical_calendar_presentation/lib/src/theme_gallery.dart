@@ -128,7 +128,10 @@ final class _ThemeGalleryState extends State<ThemeGallery> {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(width: 280, child: masterList),
+                SizedBox(
+                  width: 280,
+                  child: SingleChildScrollView(child: masterList),
+                ),
                 const SizedBox(width: 16),
                 Expanded(child: SingleChildScrollView(child: detail)),
               ],
@@ -274,7 +277,7 @@ final class _ThemeDetail extends StatelessWidget {
       const SizedBox(height: 4),
       Text(bundle.metadata.personality),
       const SizedBox(height: 12),
-      _ThemeRuntimeThumbnail(bundle: bundle),
+      ThemeRuntimeThumbnail(bundle: bundle),
       const SizedBox(height: 12),
       Wrap(
         spacing: 8,
@@ -300,8 +303,9 @@ final class _ThemeDetail extends StatelessWidget {
   );
 }
 
-final class _ThemeRuntimeThumbnail extends StatelessWidget {
-  const _ThemeRuntimeThumbnail({required this.bundle});
+/// The deterministic real-bundle renderer used by gallery cards and evidence.
+final class ThemeRuntimeThumbnail extends StatelessWidget {
+  const ThemeRuntimeThumbnail({required this.bundle, super.key});
 
   final ClinicalCalendarThemeBundle bundle;
 

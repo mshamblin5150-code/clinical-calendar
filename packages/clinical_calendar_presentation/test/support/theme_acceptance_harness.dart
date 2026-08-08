@@ -854,6 +854,11 @@ ThemeRasterAcceptanceFixture themeRasterAcceptanceFixture(String themeId) =>
             '4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15',
         creationRecordUri: 'docs/concepts/themes/graphite/README.md',
       ),
+      federationClassicThemeId => const ThemeRasterAcceptanceFixture(
+        expectedSha256:
+            'd88711508354961c147c5d31064c48b205f3c71c511d2ee6500b0810da107689',
+        creationRecordUri: 'docs/concepts/themes/federation-classic/README.md',
+      ),
       _ => throw StateError('No primary-frame fixture for $themeId.'),
     };
 

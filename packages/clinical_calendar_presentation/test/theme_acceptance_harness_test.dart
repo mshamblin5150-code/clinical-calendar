@@ -90,33 +90,43 @@ void main() {
     for (final bundle
         in ClinicalCalendarThemeBundleRegistry.standard.galleryBundles) {
       for (final mode in ThemeAccessibilityMode.values) {
-        test(
-          '${bundle.id} ${mode.name} audits actual runtime state layers',
-          () {
-            final report = ThemeRuntimeTokenAuditor.audit(
-              bundle: bundle,
-              mode: mode,
-            );
+        test('${bundle.id} ${mode.name} audits actual runtime state layers', () {
+          final report = ThemeRuntimeTokenAuditor.audit(
+            bundle: bundle,
+            mode: mode,
+          );
 
-            expect(report.themeId, bundle.id);
-            expect(report.mode, mode);
+          expect(report.themeId, bundle.id);
+          expect(report.mode, mode);
+          expect(
+            report.entries.map((entry) => entry.state).toSet(),
+            containsAll(ThemeTokenState.values),
+          );
+          expect(report.entries.any((entry) => entry.permitted), isTrue);
+          expect(report.entries.any((entry) => !entry.permitted), isTrue);
+          if (bundle.id == federationClassicThemeId) {
             expect(
-              report.entries.map((entry) => entry.state).toSet(),
-              containsAll(ThemeTokenState.values),
-            );
-            expect(report.entries.any((entry) => entry.permitted), isTrue);
-            expect(report.entries.any((entry) => !entry.permitted), isTrue);
-            expect(
-              report.entries.every(
-                (entry) =>
-                    entry.compositedForeground.a == 1 &&
-                    entry.compositedBackground.a == 1,
-              ),
+              report.passed,
               isTrue,
+              reason: report.entries
+                  .where((entry) => !entry.passed)
+                  .map(
+                    (entry) =>
+                        '${entry.pairingId}: ${entry.contrastRatio.toStringAsFixed(2)} / ${entry.requiredRatio.toStringAsFixed(2)}',
+                  )
+                  .join('\n'),
             );
-            expect(report.toJson()['themeId'], bundle.id);
-          },
-        );
+          }
+          expect(
+            report.entries.every(
+              (entry) =>
+                  entry.compositedForeground.a == 1 &&
+                  entry.compositedBackground.a == 1,
+            ),
+            isTrue,
+          );
+          expect(report.toJson()['themeId'], bundle.id);
+        });
       }
     }
 
@@ -348,76 +358,83 @@ void main() {
       );
     });
 
-    test('performance gate compares every measurement with the baseline', () {
-      final manifest = _performanceManifest();
-      const approvedAssetHash =
-          '4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15';
-      const baseline = ThemePerformanceMeasurement(
-        frameIntervalMs: 8.333,
-        uiThreadFrameTimeMsP95: 3.403,
-        rasterThreadFrameTimeMsP95: 5.627,
-        retainedMemoryBytes: 219508000,
-        releaseSizeBytes: 50000000,
-      );
-      const passingCandidate = ThemePerformanceMeasurement(
-        frameIntervalMs: 8.333,
-        uiThreadFrameTimeMsP95: 3.5,
-        rasterThreadFrameTimeMsP95: 5.8,
-        retainedMemoryBytes: 220000000,
-        releaseSizeBytes: 51000000,
-      );
+    for (final bundle
+        in ClinicalCalendarThemeBundleRegistry.standard.galleryBundles) {
+      test('${bundle.id} performance contract evaluates every measurement', () {
+        final manifest = _performanceManifest(bundle);
+        final approvedAssetHash = themeRasterAcceptanceFixture(
+          bundle.id,
+        ).expectedSha256;
+        const baseline = ThemePerformanceMeasurement(
+          frameIntervalMs: 8.333,
+          uiThreadFrameTimeMsP95: 3.403,
+          rasterThreadFrameTimeMsP95: 5.627,
+          retainedMemoryBytes: 219508000,
+          releaseSizeBytes: 50000000,
+        );
+        const passingCandidate = ThemePerformanceMeasurement(
+          frameIntervalMs: 8.333,
+          uiThreadFrameTimeMsP95: 3.5,
+          rasterThreadFrameTimeMsP95: 5.8,
+          retainedMemoryBytes: 220000000,
+          releaseSizeBytes: 51000000,
+        );
 
-      final passing = ThemePerformanceEvidence(
-        baseline: baseline,
-        candidate: passingCandidate,
-        swapLatencyMs: 180,
-        retainedMemoryAfterCyclesBytes: 221000000,
-        monotonicRetainedMemoryGrowth: false,
-        releaseSizeAttributionByAssetSha256: const {approvedAssetHash: 1000000},
-      ).evaluate(manifest: manifest);
-      expect(passing.passed, isTrue);
-
-      final failed = ThemePerformanceEvidence(
-        baseline: baseline,
-        candidate: passingCandidate,
-        swapLatencyMs: 251,
-        retainedMemoryAfterCyclesBytes: 221000000,
-        monotonicRetainedMemoryGrowth: false,
-        releaseSizeAttributionByAssetSha256: const {approvedAssetHash: 1000000},
-      ).evaluate(manifest: manifest);
-      expect(failed.passed, isFalse);
-      expect(failed.failures, contains(contains('250')));
-
-      final overAttributed = ThemePerformanceEvidence(
-        baseline: baseline,
-        candidate: passingCandidate,
-        swapLatencyMs: 180,
-        retainedMemoryAfterCyclesBytes: 221000000,
-        monotonicRetainedMemoryGrowth: false,
-        releaseSizeAttributionByAssetSha256: const {approvedAssetHash: 1000001},
-      ).evaluate(manifest: manifest);
-      expect(overAttributed.passed, isFalse);
-      expect(overAttributed.failures, contains(contains('exact attribution')));
-
-      const invented = ThemePerformanceMeasurement(
-        frameIntervalMs: 8.333,
-        uiThreadFrameTimeMsP95: 0,
-        rasterThreadFrameTimeMsP95: 0,
-        retainedMemoryBytes: 0,
-        releaseSizeBytes: 0,
-      );
-      expect(
-        const ThemePerformanceEvidence(
+        final passing = ThemePerformanceEvidence(
           baseline: baseline,
-          candidate: invented,
-          swapLatencyMs: 0,
-          retainedMemoryAfterCyclesBytes: 0,
+          candidate: passingCandidate,
+          swapLatencyMs: 180,
+          retainedMemoryAfterCyclesBytes: 221000000,
           monotonicRetainedMemoryGrowth: false,
-          releaseSizeAttributionByAssetSha256: {},
-        ).evaluate(manifest: manifest).passed,
-        isFalse,
-      );
-    });
+          releaseSizeAttributionByAssetSha256: {approvedAssetHash: 1000000},
+        ).evaluate(manifest: manifest);
+        expect(passing.passed, isTrue);
+
+        final failed = ThemePerformanceEvidence(
+          baseline: baseline,
+          candidate: passingCandidate,
+          swapLatencyMs: 251,
+          retainedMemoryAfterCyclesBytes: 221000000,
+          monotonicRetainedMemoryGrowth: false,
+          releaseSizeAttributionByAssetSha256: {approvedAssetHash: 1000000},
+        ).evaluate(manifest: manifest);
+        expect(failed.passed, isFalse);
+        expect(failed.failures, contains(contains('250')));
+
+        final overAttributed = ThemePerformanceEvidence(
+          baseline: baseline,
+          candidate: passingCandidate,
+          swapLatencyMs: 180,
+          retainedMemoryAfterCyclesBytes: 221000000,
+          monotonicRetainedMemoryGrowth: false,
+          releaseSizeAttributionByAssetSha256: {approvedAssetHash: 1000001},
+        ).evaluate(manifest: manifest);
+        expect(overAttributed.passed, isFalse);
+        expect(
+          overAttributed.failures,
+          contains(contains('exact attribution')),
+        );
+
+        const invented = ThemePerformanceMeasurement(
+          frameIntervalMs: 8.333,
+          uiThreadFrameTimeMsP95: 0,
+          rasterThreadFrameTimeMsP95: 0,
+          retainedMemoryBytes: 0,
+          releaseSizeBytes: 0,
+        );
+        expect(
+          const ThemePerformanceEvidence(
+            baseline: baseline,
+            candidate: invented,
+            swapLatencyMs: 0,
+            retainedMemoryAfterCyclesBytes: 0,
+            monotonicRetainedMemoryGrowth: false,
+            releaseSizeAttributionByAssetSha256: {},
+          ).evaluate(manifest: manifest).passed,
+          isFalse,
+        );
+      });
+    }
   });
 
   group('executable catalog gates', () {
@@ -474,55 +491,122 @@ void main() {
       );
     }
 
-    test(
-      'thumbnail provenance requires a decoded pinned image and runtime swatches',
-      () async {
+    for (final bundle in bundles) {
+      test(
+        '${bundle.id} thumbnail auditor verifies bytes and runtime swatches',
+        () async {
+          final bytes = img.encodeBmp(
+            img.Image(
+              width: bundle.gallery.thumbnailViewport.width.round(),
+              height: bundle.gallery.thumbnailViewport.height.round(),
+              numChannels: 4,
+            ),
+          );
+          final evidence = ThemeThumbnailEvidence(
+            themeId: bundle.id,
+            rendererVersion: bundle.shellRenderer.rendererId,
+            fixtureId: bundle.gallery.thumbnailFixtureId,
+            viewport: bundle.gallery.thumbnailViewport,
+            sha256: sha256.convert(bytes).toString(),
+            captureUri: 'captures/${bundle.id}-thumbnail.bmp',
+            fictionalFixture: true,
+            swatches: [
+              for (final swatch in bundle.gallery.swatches)
+                ThemeThumbnailSwatchEvidence(
+                  role: swatch.role,
+                  label: swatch.label,
+                  color: swatch.color,
+                ),
+            ],
+          );
+
+          expect(
+            (await ThemeThumbnailAcceptanceAuditor.audit(
+              bundle: bundle,
+              bytes: bytes,
+              evidence: evidence,
+            )).passed,
+            isTrue,
+          );
+          expect(
+            (await ThemeThumbnailAcceptanceAuditor.audit(
+              bundle: bundle,
+              bytes: utf8.encode('stale-thumbnail'),
+              evidence: evidence,
+            )).passed,
+            isFalse,
+          );
+        },
+      );
+    }
+
+    testWidgets(
+      'Federation Classic thumbnail evidence comes from its real renderer',
+      (tester) async {
         final bundle = bundles.singleWhere(
-          (item) => item.id == graphiteThemeId,
+          (item) => item.id == federationClassicThemeId,
         );
-        final bytes = img.encodeBmp(
-          img.Image(
-            width: bundle.gallery.thumbnailViewport.width.round(),
-            height: bundle.gallery.thumbnailViewport.height.round(),
-            numChannels: 4,
+        await tester.binding.setSurfaceSize(bundle.gallery.thumbnailViewport);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SizedBox.fromSize(
+              size: bundle.gallery.thumbnailViewport,
+              child: ThemeRuntimeThumbnail(bundle: bundle),
+            ),
           ),
         );
-        final evidence = ThemeThumbnailEvidence(
-          themeId: bundle.id,
-          rendererVersion: bundle.shellRenderer.rendererId,
-          fixtureId: bundle.gallery.thumbnailFixtureId,
-          viewport: bundle.gallery.thumbnailViewport,
-          sha256: sha256.convert(bytes).toString(),
-          captureUri: 'captures/graphite-thumbnail.bmp',
-          fictionalFixture: true,
-          swatches: [
-            for (final swatch in bundle.gallery.swatches)
-              ThemeThumbnailSwatchEvidence(
-                role: swatch.role,
-                label: swatch.label,
-                color: swatch.color,
-              ),
-          ],
-        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
 
-        expect(
-          (await ThemeThumbnailAcceptanceAuditor.audit(
-            bundle: bundle,
-            bytes: bytes,
-            evidence: evidence,
-          )).passed,
-          isTrue,
+        final thumbnail = find.byKey(
+          Key('theme-gallery-thumbnail-${bundle.id}'),
         );
-        expect(
-          (await ThemeThumbnailAcceptanceAuditor.audit(
-            bundle: bundle,
-            bytes: utf8.encode('stale-thumbnail'),
-            evidence: evidence,
-          )).passed,
-          isFalse,
+        expect(tester.getSize(thumbnail), bundle.gallery.thumbnailViewport);
+        await expectLater(
+          thumbnail,
+          matchesGoldenFile('goldens/federation_classic_runtime_thumbnail.png'),
         );
+        expect(find.byType(FederationClassicNineSliceFrame), findsOneWidget);
+        expect(find.byType(GraphiteNineSliceFrame), findsNothing);
+        expect(find.byType(VariantFNineSliceFrame), findsNothing);
+        expect(tester.takeException(), isNull);
       },
     );
+
+    test('Federation Classic captured runtime thumbnail is audited', () async {
+      final bundle = bundles.singleWhere(
+        (item) => item.id == federationClassicThemeId,
+      );
+      final bytes = await File(
+        '${packageRoot.path}/test/goldens/'
+        'federation_classic_runtime_thumbnail.png',
+      ).readAsBytes();
+      final evidence = ThemeThumbnailEvidence(
+        themeId: bundle.id,
+        rendererVersion: bundle.shellRenderer.rendererId,
+        fixtureId: bundle.gallery.thumbnailFixtureId,
+        viewport: bundle.gallery.thumbnailViewport,
+        sha256: sha256.convert(bytes).toString(),
+        captureUri: 'captures/${bundle.id}-runtime-thumbnail.png',
+        fictionalFixture: true,
+        swatches: [
+          for (final swatch in bundle.gallery.swatches)
+            ThemeThumbnailSwatchEvidence(
+              role: swatch.role,
+              label: swatch.label,
+              color: swatch.color,
+            ),
+        ],
+      );
+
+      final result = await ThemeThumbnailAcceptanceAuditor.audit(
+        bundle: bundle,
+        bytes: bytes,
+        evidence: evidence,
+      );
+      expect(result.passed, isTrue, reason: result.failures.join('\n'));
+    });
 
     test('Containment Drone equality is exact and non-tolerant', () {
       const expected = [1, 2, 3, 4];
@@ -576,6 +660,14 @@ void main() {
               ),
             );
             final state = fixtureKey.currentState!;
+            final sourceEffectiveId = registry
+                .resolveApplied(source.id)
+                .bundle
+                .id;
+            final candidateEffectiveId = registry
+                .resolveApplied(candidate.id)
+                .bundle
+                .id;
             final workflowController = state.workflowController;
             await tester.enterText(
               find.byKey(const Key('acceptance-unsaved-field')),
@@ -597,8 +689,11 @@ void main() {
 
             controller.revert();
             await tester.pump();
-            expect(controller.effectiveBundle.id, source.id);
-            expect(controller.effectiveBundle.helpGuide.themeId, source.id);
+            expect(controller.effectiveBundle.id, sourceEffectiveId);
+            expect(
+              controller.effectiveBundle.helpGuide.themeId,
+              sourceEffectiveId,
+            );
             _expectWorkingStatePreserved(
               state,
               workflowController: workflowController,
@@ -619,6 +714,7 @@ void main() {
             controller.completeApply(revision: 9);
             await tester.pump();
             expect(controller.authoritativeThemeId, candidate.id);
+            expect(controller.effectiveBundle.id, candidateEffectiveId);
             _expectWorkingStatePreserved(
               state,
               workflowController: workflowController,
@@ -630,7 +726,7 @@ void main() {
               initialRevision: controller.authoritativeRevision,
             );
             addTearDown(restarted.dispose);
-            expect(restarted.effectiveBundle.id, candidate.id);
+            expect(restarted.effectiveBundle.id, candidateEffectiveId);
             expect(restarted.authoritativeRevision, 9);
           },
         );
@@ -784,11 +880,13 @@ void _expectWorkingStatePreserved(
   expect(state.workflowController, same(workflowController));
 }
 
-ThemeEvidenceManifest _performanceManifest() => ThemeEvidenceManifest(
+ThemeEvidenceManifest _performanceManifest(
+  ClinicalCalendarThemeBundle bundle,
+) => ThemeEvidenceManifest(
   candidateCommit: '0123456789abcdef0123456789abcdef01234567',
   buildNumber: 41,
-  themeId: graphiteThemeId,
-  displayName: 'Graphite',
+  themeId: bundle.id,
+  displayName: bundle.metadata.displayName,
   fixtureId: 'catalog-acceptance-fictional-v1',
   capturedAtUtc: DateTime.utc(2026, 8, 8),
   environment: const ThemeAcceptanceEnvironment(
@@ -799,9 +897,10 @@ ThemeEvidenceManifest _performanceManifest() => ThemeEvidenceManifest(
     orientation: 'landscape',
     refreshRateHz: 120,
   ),
-  assetHashes: const {
-    'assets/graphite_raster/panel-nine-slice-v1.png':
-        '4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15',
+  assetHashes: {
+    bundle.frame.primaryAsset: themeRasterAcceptanceFixture(
+      bundle.id,
+    ).expectedSha256,
   },
   reportUris: const ['reports/performance.json'],
   captureUris: const ['captures/performance.png'],

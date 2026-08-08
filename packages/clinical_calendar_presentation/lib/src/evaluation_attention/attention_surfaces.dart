@@ -256,8 +256,12 @@ final class _AttentionRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId ==
-                    graphiteThemeId ||
+            if ((ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId !=
+                        null &&
+                    ClinicalCalendarSemanticMarkScope.maybeOf(
+                          context,
+                        )?.themeId !=
+                        variantFThemeId) ||
                 context.accessibilityTokens.enhanced)
               ThemeSemanticMarkIcon(
                 role: item.urgency == AttentionUrgency.approaching
