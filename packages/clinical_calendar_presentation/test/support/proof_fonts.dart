@@ -5,6 +5,29 @@ import 'package:flutter/services.dart';
 Future<void> loadProofFonts() async {
   final candidates = <Directory>[];
 
+  for (final variable in ['FLUTTER_ROOT', 'FLUTTER_HOME']) {
+    final flutterRoot = Platform.environment[variable];
+    if (flutterRoot == null || flutterRoot.isEmpty) continue;
+    candidates.add(
+      Directory(
+        '$flutterRoot${Platform.pathSeparator}bin${Platform.pathSeparator}'
+        'cache${Platform.pathSeparator}artifacts${Platform.pathSeparator}'
+        'material_fonts',
+      ),
+    );
+  }
+
+  final path = Platform.environment['PATH'] ?? '';
+  for (final entry in path.split(Platform.isWindows ? ';' : ':')) {
+    if (entry.isEmpty) continue;
+    candidates.add(
+      Directory(
+        '$entry${Platform.pathSeparator}cache${Platform.pathSeparator}'
+        'artifacts${Platform.pathSeparator}material_fonts',
+      ),
+    );
+  }
+
   var executableRoot = File(Platform.resolvedExecutable).parent;
   while (executableRoot.parent.path != executableRoot.path) {
     candidates
