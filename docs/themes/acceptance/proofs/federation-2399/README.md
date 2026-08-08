@@ -2,8 +2,10 @@
 
 Issue: [#134](https://github.com/mshamblin5150-code/clinical-calendar/issues/134)
 
-Status: candidate implementation awaiting maintainer review. Keep the issue open
-until that review is complete.
+Status: **rejected by the maintainer on 2026-08-08** because the runtime is not
+visually close enough to the approved concept. These files are retained as
+historical comparison evidence only. They are not an acceptance baseline or a
+target for the next implementation. Keep issue #134 open.
 
 The landscape capture is the golden exemplar. It renders the production
 `Federation2399ShellRenderer` at 1536 x 1024 with fictional calendar data. The
@@ -29,5 +31,11 @@ a96da3c7cd060348aded17ec783c093128ef1e6ed3b31f53d1a3ec7793913cc8  approved-conce
 4b928e6d6afd0bcd3fce547f075350e6c3361dbf2828cdf4b99d952a82a1c7f3  landscape-concept-vs-runtime.png
 ```
 
-Physical Android tablet acceptance remains pending after the maintainer reviews
-these proofs. No debug build was installed over an existing device package.
+Physical Android tablet acceptance was not performed for this rejected
+candidate. No debug build was installed over an existing device package. A
+replacement candidate requires fresh deterministic proofs before physical
+acceptance.
+
+The replacement must follow
+`docs/themes/concept-fidelity-renderer-contract.md` and produce a new,
+independently versioned proof package.

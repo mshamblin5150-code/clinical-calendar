@@ -1,6 +1,9 @@
 # Additive theme contract
 
-Status: decision-complete contract approved in GitHub issue #112.
+Status: amended by the binding concept-fidelity renderer contract on
+2026-08-08. Issue #112 remains authoritative for catalog completeness,
+behavior, persistence, accessibility, and Variant F preservation; fixed
+tablet geometry for concept themes is superseded.
 
 Parent plan: [Plan the Seven-Theme Clinical Calendar Catalog](https://github.com/mshamblin5150-code/clinical-calendar/issues/104).
 
@@ -11,7 +14,9 @@ Evidence: [Containment Drone 47-Alpha additive-preservation research](../researc
 Clinical Calendar ships one closed catalog of exactly seven curated visual
 identities. Every identity changes presentation only. All themes preserve the
 same domain language, Student data, workflows, information architecture,
-responsive behavior, control locations, and accessibility semantics.
+workflow reachability, and accessibility semantics. Concept themes may own
+responsive composition and control placement under
+[`concept-fidelity-renderer-contract.md`](concept-fidelity-renderer-contract.md).
 
 Containment Drone 47-Alpha remains the accepted existing identity. With
 Enhanced accessibility off, catalog work must preserve its identifier,
@@ -87,16 +92,17 @@ controllers, domain services, loaded Student data, and live content surfaces:
 - `variant-f` delegates to the existing `buildVariantFTheme()`,
   `ResponsiveApplicationShell`, frames, painters, raster loaders, and Help
   guide.
-- The six additions use one additive responsive shell with fixed content
-  slots, breakpoints, navigation, and control locations, parameterized by
-  their complete bundles.
+- The six additions consume shared live content slots and workflow callbacks.
+  A theme may use the shared additive shell where it satisfies its approved
+  concept, or own its tablet composition under the concept-fidelity renderer
+  contract. Shared behavior and semantics are fixed; tablet geometry is not.
 
-This separation is a transitional preservation boundary. A later, separate
-GitHub issue must converge the lanes to one renderer contract. The legacy lane
-may be removed only after the unified path produces exact reference-image
-equality for `variant-f`, leaves its asset hashes and geometry unchanged,
-passes the full responsive suite, and receives fresh physical Android-tablet
-approval.
+This separation remains a preservation boundary. A later, separate GitHub
+issue may converge implementation infrastructure, but convergence does not
+require identical theme geometry. The legacy Variant F lane may be removed
+only after the replacement path produces exact reference-image equality for
+`variant-f`, leaves its asset hashes and geometry unchanged, passes the full
+responsive suite, and receives fresh physical Android-tablet approval.
 
 ## Containment Drone preservation boundary
 
@@ -166,9 +172,11 @@ Every new primary frame uses the normalized geometry contract:
 - no baked-in text, controls, meaningful icons, state information, cast
   shadows outside the housing, or semantic nodes.
 
-Artwork may differ radically, but a theme switch cannot move live controls,
-change responsive breakpoints, reduce content space, or place motifs behind
-Calendar data.
+Artwork may differ radically. Theme-owned shells may move live controls and
+change tablet breakpoints when required by an approved concept, provided they
+preserve the behavioral, semantic, accessibility, and evidence requirements
+in the concept-fidelity renderer contract. Motifs may never obscure Calendar
+data or interactive content.
 
 ## Gallery contract
 
@@ -333,7 +341,10 @@ than a generic guide borrowing another theme's colors.
 - frozen Variant F paths, bytes, hashes, geometry, palette, typography, Help,
   and renderer files;
 - migration preserves all pre-catalog Students on `variant-f`;
-- no incomplete bundle or partial catalog can enter the selectable registry.
+- no incomplete bundle or partial catalog can enter the selectable registry;
+- concept themes satisfy the landscape-exemplar, portrait, deterministic
+  proof, and explicit-maintainer-approval requirements in the
+  concept-fidelity renderer contract.
 
 ### Automated presentation matrix
 
@@ -341,8 +352,8 @@ All seven themes run with Enhanced off and on across the Android-tablet target
 viewport, the 320-logical-pixel compact regression viewport, and the existing
 responsive shell matrix. Shared workflow behavior remains one suite;
 parameterized theme tests cover bundle completeness, semantics, overflow,
-control locations, Help, Preview/Apply/Revert, fallback, synchronization, and
-state preservation.
+control reachability and callback behavior, theme-owned layout evidence, Help,
+Preview/Apply/Revert, fallback, synchronization, and state preservation.
 
 Before catalog plumbing, add automated Variant F asset hash/dimension/corner
 checks. Then compare the pre-catalog direct path with catalog-resolved
