@@ -10,6 +10,28 @@ import '../variant_f_theme.dart';
 import 'calendar_data_source.dart';
 import 'calendar_models.dart';
 
+/// Opt-in sizing policy for calendar hosts that intentionally constrain the
+/// month grid to a bounded dashboard bay.
+final class CalendarPeriodViewportPolicy extends InheritedWidget {
+  const CalendarPeriodViewportPolicy({
+    required this.useBoundedMonthGrid,
+    required super.child,
+    super.key,
+  });
+
+  final bool useBoundedMonthGrid;
+
+  static bool usesBoundedMonthGrid(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.useBoundedMonthGrid ??
+      false;
+
+  @override
+  bool updateShouldNotify(CalendarPeriodViewportPolicy oldWidget) =>
+      useBoundedMonthGrid != oldWidget.useBoundedMonthGrid;
+}
+
 final class CalendarPeriodView extends StatefulWidget {
   const CalendarPeriodView({
     required this.dataSource,
@@ -145,6 +167,8 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
       final calendar = snapshot.requireData;
       return LayoutBuilder(
         builder: (context, outerConstraints) {
+          final useBoundedMonthGrid =
+              CalendarPeriodViewportPolicy.usesBoundedMonthGrid(context);
           final periodView = LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 600;
@@ -156,6 +180,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                   selectedDates: _selectedDates,
                   weekStartsOn: widget.weekStartsOn,
                   compact: compact,
+                  useBoundedGrid: useBoundedMonthGrid,
                   twelveHourTime: widget.twelveHourTime,
                   onActivate: _activateDate,
                 ),
@@ -236,8 +261,9 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                       ),
                       if (context.accessibilityTokens.persistentExpandedLegend)
                         const _EnhancedCalendarLegend(),
-                      if ((_period == CalendarPeriod.week ||
-                              _period == CalendarPeriod.agenda) &&
+                      if (((_period == CalendarPeriod.week ||
+                                  _period == CalendarPeriod.agenda) ||
+                              useBoundedMonthGrid) &&
                           outerConstraints.hasBoundedHeight)
                         Expanded(child: periodView)
                       else
@@ -367,6 +393,7 @@ final class _MonthView extends StatelessWidget {
     required this.selectedDates,
     required this.weekStartsOn,
     required this.compact,
+    required this.useBoundedGrid,
     required this.twelveHourTime,
     required this.onActivate,
   });
@@ -377,6 +404,7 @@ final class _MonthView extends StatelessWidget {
   final Set<LocalDate> selectedDates;
   final int weekStartsOn;
   final bool compact;
+  final bool useBoundedGrid;
   final bool twelveHourTime;
   final _ActivateDate onActivate;
 
@@ -384,50 +412,94 @@ final class _MonthView extends StatelessWidget {
   Widget build(BuildContext context) {
     final dates = _monthDates(anchor, weekStartsOn);
     final weekdayLabels = _weekdayLabels(weekStartsOn, compact: compact);
-    return Column(
-      key: const Key('month-view'),
-      children: [
-        SizedBox(
-          height: 32,
-          child: Row(
-            children: [
-              for (final label in weekdayLabels)
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      label.toUpperCase(),
-                      style: Theme.of(context).textTheme.labelMedium,
+    if (!useBoundedGrid) {
+      return _buildMonthGrid(context, dates, weekdayLabels, null);
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        key: const Key('month-view'),
+        children: [
+          SizedBox(
+            height: 32,
+            child: Row(
+              children: [
+                for (final label in weekdayLabels)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        label.toUpperCase(),
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: dates.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7,
-            mainAxisExtent: compact ? 58 : 112,
-          ),
-          itemBuilder: (context, index) {
-            final date = dates[index];
-            return _MonthDayCell(
-              date: date,
-              outside: date.month != anchor.month,
-              today: date == today,
-              selected: selectedDates.contains(date),
-              entries: snapshot.entriesOn(date),
-              compact: compact,
-              twelveHourTime: twelveHourTime,
-              onActivate: onActivate,
-            );
-          },
-        ),
-      ],
+          _monthGrid(context, dates, constraints.maxHeight),
+        ],
+      ),
     );
   }
+
+  Widget _buildMonthGrid(
+    BuildContext context,
+    List<LocalDate> dates,
+    List<String> weekdayLabels,
+    double? boundedHeight,
+  ) => Column(
+    key: const Key('month-view'),
+    children: [
+      SizedBox(
+        height: 32,
+        child: Row(
+          children: [
+            for (final label in weekdayLabels)
+              Expanded(
+                child: Center(
+                  child: Text(
+                    label.toUpperCase(),
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      _monthGrid(context, dates, boundedHeight),
+    ],
+  );
+
+  Widget _monthGrid(
+    BuildContext context,
+    List<LocalDate> dates,
+    double? boundedHeight,
+  ) => GridView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    itemCount: dates.length,
+    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 7,
+      mainAxisExtent: boundedHeight != null
+          ? math.max(44, (boundedHeight - 32) / 6)
+          : compact
+          ? 58
+          : 112,
+    ),
+    itemBuilder: (context, index) {
+      final date = dates[index];
+      return _MonthDayCell(
+        date: date,
+        outside: date.month != anchor.month,
+        today: date == today,
+        selected: selectedDates.contains(date),
+        entries: snapshot.entriesOn(date),
+        compact: compact,
+        dense: boundedHeight != null && (boundedHeight - 32) / 6 < 88,
+        twelveHourTime: twelveHourTime,
+        onActivate: onActivate,
+      );
+    },
+  );
 }
 
 final class _MonthDayCell extends StatelessWidget {
@@ -438,6 +510,7 @@ final class _MonthDayCell extends StatelessWidget {
     required this.selected,
     required this.entries,
     required this.compact,
+    required this.dense,
     required this.twelveHourTime,
     required this.onActivate,
   });
@@ -448,6 +521,7 @@ final class _MonthDayCell extends StatelessWidget {
   final bool selected;
   final List<CalendarEntry> entries;
   final bool compact;
+  final bool dense;
   final bool twelveHourTime;
   final _ActivateDate onActivate;
 
@@ -496,6 +570,8 @@ final class _MonthDayCell extends StatelessWidget {
                 const SizedBox(height: 3),
                 if (compact)
                   _CompactMarkers(entries: entries)
+                else if (dense)
+                  _DenseMonthMarker(entries: entries)
                 else
                   Expanded(
                     child: ClipRect(
@@ -527,6 +603,58 @@ final class _MonthDayCell extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+final class _DenseMonthMarker extends StatelessWidget {
+  const _DenseMonthMarker({required this.entries});
+
+  final List<CalendarEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    if (entries.isEmpty) return const SizedBox.shrink();
+    final entry = entries.first;
+    final label = switch (entry.kind) {
+      CalendarEntryKind.workShift => 'WORK',
+      CalendarEntryKind.clinicalSession => 'CLINICAL',
+      CalendarEntryKind.protectedDay => 'PROTECTED',
+    };
+    final additionalCount = entries.length - 1;
+    return Row(
+      children: [
+        Container(width: 3, height: 16, color: _entryAccent(context, entry)),
+        const SizedBox(width: 4),
+        if (_usesAdditiveMarks(context)) ...[
+          ThemeSemanticMarkIcon(
+            role: _entryRole(entry.kind),
+            size: 10,
+            color: _entryAccent(context, entry),
+          ),
+          const SizedBox(width: 3),
+        ],
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.clip,
+            style: TextStyle(
+              fontSize: 9,
+              color: _entryAccent(context, entry),
+              letterSpacing: .4,
+            ),
+          ),
+        ),
+        if (additionalCount > 0)
+          Text(
+            '+$additionalCount',
+            style: TextStyle(
+              fontSize: 9,
+              color: Theme.of(context).textTheme.bodySmall?.color,
+            ),
+          ),
+      ],
     );
   }
 }

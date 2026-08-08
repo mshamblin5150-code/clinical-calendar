@@ -861,7 +861,7 @@ ThemeRasterAcceptanceFixture themeRasterAcceptanceFixture(String themeId) =>
       ),
       federation2399ThemeId => const ThemeRasterAcceptanceFixture(
         expectedSha256:
-            'cfaf6d6e9d4fa0b1a758980b939a7dcbef1e4f11dbacc3e8ee8aae71f2336a5d',
+            '1a11f86edb76286e6bf35c58188b23fee0a4414c0d173c8bd28f602732ec49aa',
         creationRecordUri: 'docs/concepts/themes/federation-2399/README.md',
       ),
       _ => throw StateError('No primary-frame fixture for $themeId.'),

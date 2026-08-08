@@ -16,9 +16,9 @@ Those concepts are visual references, not runtime assets or goldens.
 The runtime asset is
 `packages/clinical_calendar_presentation/assets/federation_2399_raster/panel-nine-slice-v1.png`.
 It was generated with the built-in image-generation workflow on 2026-08-08,
-then refined with the same built-in workflow to remove unique hardware from
-all four stretch bands. The final flat-magenta output was converted with the
-installed
+then replaced during the landscape-fidelity pass with a dark integrated
+outer chassis generated from the approved issue #114 dashboard as a style
+reference. The final flat-magenta output was converted with the installed
 `remove_chroma_key.py` helper using auto border sampling, a soft matte,
 thresholds 12/220, and despill. A deterministic nine-slice alignment pass
 mapped the generated dark-bay seams to the mandated cuts without introducing
@@ -32,7 +32,7 @@ Validated properties:
 - every pixel in the center stretch rectangle is fully opaque and its sampled
   cut-boundary pixels are dark charcoal;
 - no visible magenta-like pixels remain after despill; and
-- SHA-256: `cfaf6d6e9d4fa0b1a758980b939a7dcbef1e4f11dbacc3e8ee8aae71f2336a5d`.
+- SHA-256: `1a11f86edb76286e6bf35c58188b23fee0a4414c0d173c8bd28f602732ec49aa`.
 
 ## Generation prompt
 
@@ -65,6 +65,26 @@ Replace the exterior background with a perfectly flat #FF00FF chroma field,
 then remove the two small amber side markers and replace them with the same
 continuous burgundy/charcoal/cyan rail pattern above and below. Preserve the
 front-facing composition and introduce no unique details in any stretch band.
+```
+
+## Integrated chassis prompt
+
+```text
+Use case: stylized-concept
+Asset type: production 1536x1024 Android tablet nine-slice outer dashboard
+chassis for the Clinical Calendar Federation 2399 theme
+Input images: the approved landscape concept is a style/material/proportion
+reference only; the prior production frame is the geometry/edit target
+Primary request: create one original, standalone, front-facing outer tablet
+dashboard chassis in the concept's dark integrated Federation 2399 language:
+deep charcoal sculpted structure, restrained burgundy/plum inner layers, a
+narrow cool-silver lip, fine cyan channels, restrained aged-amber corner
+lights, and subtle pink edge accents
+Composition: exact 1536x1024, flat #FF00FF exterior chroma field, fixed cuts
+120/145/120/170, repeat-safe middle edge spans, distinctive hardware only in
+the four corner zones, and one fully opaque uninterrupted dark center bay
+Constraints: no internal panel dividers, text, logos, symbols, controls,
+calendar content, perspective, external shadows, or semantic raster content
 ```
 
 ## Originality boundary

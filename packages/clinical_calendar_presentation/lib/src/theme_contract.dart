@@ -312,7 +312,7 @@ final class Federation2399ShellRenderer
   String get themeId => federation2399ThemeId;
 
   @override
-  String get rendererId => 'federation-2399-additive-responsive-shell-v1';
+  String get rendererId => 'federation-2399-owned-responsive-console-v2';
 
   @override
   Widget build({
@@ -1289,7 +1289,7 @@ final class Federation2399ThemeBundle implements ClinicalCalendarThemeBundle {
   @override
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: federation2399ThemeId,
-    rendererId: 'federation-2399-additive-responsive-shell-v1',
+    rendererId: 'federation-2399-owned-responsive-console-v2',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [

@@ -565,6 +565,190 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Federation 2399 landscape composes one integrated concept chassis',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1536, 1024));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: federation2399.standardPresentation.createThemeData(),
+          boundaryKey: GlobalKey(),
+          shell: federation2399.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('federation-2399-landscape-shell')),
+        findsOneWidget,
+      );
+      expect(find.byType(Federation2399NineSliceFrame), findsOneWidget);
+      final placements = tester.getRect(
+        find.byKey(const Key('federation-2399-placement-bay')),
+      );
+      final calendar = tester.getRect(
+        find.byKey(const Key('federation-2399-calendar-bay')),
+      );
+      final planning = tester.getRect(
+        find.byKey(const Key('federation-2399-planning-bay')),
+      );
+      final insight = tester.getRect(
+        find.byKey(const Key('federation-2399-insight-bay')),
+      );
+      final navigation = tester.getRect(
+        find.byKey(const Key('federation-2399-bottom-navigation')),
+      );
+      expect(placements.right, lessThan(calendar.left));
+      expect(calendar.right, lessThan(insight.left));
+      expect(planning.top, greaterThan(calendar.top));
+      expect(planning.left, calendar.left);
+      expect(planning.right, calendar.right);
+      expect(navigation.top, greaterThan(planning.bottom));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Federation 2399 owned controls preserve shell callbacks', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1536, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var menuCount = 0;
+    var addCount = 0;
+    var attentionCount = 0;
+    final destinations = <ClinicalCalendarDestination>[];
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: federation2399.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: federation2399.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: () => menuCount++,
+          onOpenDestination: destinations.add,
+          onOpenAttention: () => attentionCount++,
+          onAddSchedule: () => addCount++,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open menu'));
+    await tester.tap(find.byTooltip('Add schedule'));
+    await tester.tap(find.byTooltip('Help'));
+    await tester.tap(find.byKey(const Key('federation-2399-navigation-2')));
+    await tester.tap(find.byKey(const Key('federation-2399-navigation-3')));
+    await tester.tap(find.byKey(const Key('federation-2399-navigation-4')));
+
+    expect(menuCount, 1);
+    expect(addCount, 1);
+    expect(attentionCount, 1);
+    expect(destinations, [
+      ClinicalCalendarDestination.help,
+      ClinicalCalendarDestination.clinicalPlacements,
+      ClinicalCalendarDestination.settings,
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Federation 2399 portrait has an intentional ordered console', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _shellHarness(
+        theme: federation2399.standardPresentation.createThemeData(),
+        boundaryKey: GlobalKey(),
+        shell: federation2399.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('federation-2399-portrait-shell')),
+      findsOneWidget,
+    );
+    expect(find.byType(Federation2399NineSliceFrame), findsOneWidget);
+    final calendar = tester.getRect(
+      find.byKey(const Key('federation-2399-calendar-bay')),
+    );
+    final planning = tester.getRect(
+      find.byKey(const Key('federation-2399-planning-bay')),
+    );
+    final placements = tester.getRect(
+      find.byKey(const Key('federation-2399-placement-bay')),
+    );
+    final insight = tester.getRect(
+      find.byKey(const Key('federation-2399-insight-bay')),
+    );
+    final navigation = tester.getRect(
+      find.byKey(const Key('federation-2399-bottom-navigation')),
+    );
+    expect(calendar.top, lessThan(planning.top));
+    expect(planning.top, lessThan(placements.top));
+    expect(placements.top, insight.top);
+    expect(placements.right, lessThan(insight.left));
+    expect(navigation.top, greaterThan(calendar.top));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Federation 2399 tablet console survives 200% text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: federation2399.standardPresentation.createThemeData(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: federation2399.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: _noop,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('federation-2399-portrait-shell')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('federation-2399-bottom-navigation')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   for (final size in const [Size(320, 568), Size(768, 1024), Size(1440, 900)]) {
     testWidgets(
       'Federation Classic shell fits ${size.width.toInt()}x${size.height.toInt()}',
