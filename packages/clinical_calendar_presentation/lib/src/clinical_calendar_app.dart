@@ -1784,14 +1784,17 @@ final class _PlanningRegion extends StatefulWidget {
 
 final class _PlanningRegionState extends State<_PlanningRegion> {
   bool _expanded = false;
-  bool _seededResponsiveState = false;
+  bool? _responsiveExpandedByDefault;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_seededResponsiveState) return;
-    _expanded = VariantFPlanningBayMode.expandedByDefaultOf(context);
-    _seededResponsiveState = true;
+    final expandedByDefault = VariantFPlanningBayMode.expandedByDefaultOf(
+      context,
+    );
+    if (_responsiveExpandedByDefault == expandedByDefault) return;
+    _expanded = expandedByDefault;
+    _responsiveExpandedByDefault = expandedByDefault;
   }
 
   void expand() {

@@ -6,11 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/proof_fonts.dart';
+
 const _studentId = '00000000-0000-4000-8000-000000000239';
 final _today = LocalDate(2026, 8, 5);
 
 void main() {
-  setUpAll(_loadProofFonts);
+  setUpAll(loadProofFonts);
 
   testWidgets('Botanical Study landscape matches its approved composition', (
     tester,
@@ -218,45 +220,6 @@ final class _ProofAssetBundle extends CachingAssetBundle {
     }
     return rootBundle.load(key);
   }
-}
-
-Future<void> _loadProofFonts() async {
-  var root = Directory.current.absolute;
-  File? roboto;
-  File? materialIcons;
-  while (root.parent.path != root.path) {
-    final fontDirectory = Directory(
-      '${root.path}${Platform.pathSeparator}.tooling${Platform.pathSeparator}'
-      'flutter${Platform.pathSeparator}bin${Platform.pathSeparator}cache'
-      '${Platform.pathSeparator}artifacts${Platform.pathSeparator}'
-      'material_fonts',
-    );
-    final candidateRoboto = File(
-      '${fontDirectory.path}${Platform.pathSeparator}roboto-regular.ttf',
-    );
-    final candidateIcons = File(
-      '${fontDirectory.path}${Platform.pathSeparator}'
-      'materialicons-regular.otf',
-    );
-    if (candidateRoboto.existsSync() && candidateIcons.existsSync()) {
-      roboto = candidateRoboto;
-      materialIcons = candidateIcons;
-      break;
-    }
-    root = root.parent;
-  }
-  if (roboto == null || materialIcons == null) {
-    throw StateError('Bundled Flutter proof fonts were not found.');
-  }
-  await _loadFont('ProofRoboto', roboto);
-  await _loadFont('MaterialIcons', materialIcons);
-}
-
-Future<void> _loadFont(String family, File file) async {
-  final bytes = Uint8List.fromList(await file.readAsBytes());
-  await (FontLoader(
-    family,
-  )..addFont(Future.value(ByteData.sublistView(bytes)))).load();
 }
 
 final class _PlacementsProof extends StatelessWidget {

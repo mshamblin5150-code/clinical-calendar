@@ -3,13 +3,31 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 Future<void> loadProofFonts() async {
-  final sdkCache = File(Platform.resolvedExecutable).parent.parent.parent;
-  final candidates = <Directory>[
-    Directory(
-      '${sdkCache.path}${Platform.pathSeparator}artifacts'
-      '${Platform.pathSeparator}material_fonts',
-    ),
-  ];
+  final candidates = <Directory>[];
+
+  var executableRoot = File(Platform.resolvedExecutable).parent;
+  while (executableRoot.parent.path != executableRoot.path) {
+    candidates
+      ..add(
+        Directory(
+          '${executableRoot.path}${Platform.pathSeparator}material_fonts',
+        ),
+      )
+      ..add(
+        Directory(
+          '${executableRoot.path}${Platform.pathSeparator}artifacts'
+          '${Platform.pathSeparator}material_fonts',
+        ),
+      )
+      ..add(
+        Directory(
+          '${executableRoot.path}${Platform.pathSeparator}cache'
+          '${Platform.pathSeparator}artifacts${Platform.pathSeparator}'
+          'material_fonts',
+        ),
+      );
+    executableRoot = executableRoot.parent;
+  }
 
   var root = Directory.current.absolute;
   while (root.parent.path != root.path) {
