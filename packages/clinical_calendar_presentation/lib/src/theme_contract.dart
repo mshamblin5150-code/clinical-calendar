@@ -936,6 +936,9 @@ final class ClinicalCalendarThemeBundleRegistry {
   List<ClinicalCalendarThemeBundle> get galleryBundles =>
       List.unmodifiable(_bundles.values);
 
+  /// Fixed account-independent presentation for every unauthenticated state.
+  ClinicalCalendarThemeBundle resolveSignedOut() => _bundles[graphiteThemeId]!;
+
   ClinicalCalendarThemeBundle resolveRoot(String id) {
     final bundle = _bundles[id];
     if (bundle == null) {
