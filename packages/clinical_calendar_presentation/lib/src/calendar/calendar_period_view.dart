@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import '../date_input.dart';
 import '../theme_contract.dart';
 import '../variant_f_theme.dart';
-import '../enhanced_focus_perimeter.dart';
 import 'calendar_data_source.dart';
 import 'calendar_models.dart';
 
@@ -450,46 +449,44 @@ final class _MonthDayCell extends StatelessWidget {
           selectionWidth: context.accessibilityTokens.selectionWidth,
           decorationOpacity: context.accessibilityTokens.decorationOpacity,
         ),
-        child: EnhancedFocusPerimeter(
-          child: InkWell(
-            onTap: () => onActivate(date, entries),
-            child: Padding(
-              padding: const EdgeInsets.all(5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _DayNumber(date: date, today: today, selected: selected),
-                  const SizedBox(height: 3),
-                  if (compact)
-                    _CompactMarkers(entries: entries)
-                  else
-                    Expanded(
-                      child: ClipRect(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (final entry in entries.take(1))
-                              _MonthEventCard(
-                                entry: entry,
-                                date: date,
-                                twelveHourTime: twelveHourTime,
-                                onTap: () => onActivate(
-                                  date,
-                                  entries,
-                                  preferredEntry: entry,
-                                ),
+        child: InkWell(
+          onTap: () => onActivate(date, entries),
+          child: Padding(
+            padding: const EdgeInsets.all(5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _DayNumber(date: date, today: today, selected: selected),
+                const SizedBox(height: 3),
+                if (compact)
+                  _CompactMarkers(entries: entries)
+                else
+                  Expanded(
+                    child: ClipRect(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final entry in entries.take(1))
+                            _MonthEventCard(
+                              entry: entry,
+                              date: date,
+                              twelveHourTime: twelveHourTime,
+                              onTap: () => onActivate(
+                                date,
+                                entries,
+                                preferredEntry: entry,
                               ),
-                            if (entries.length > 1)
-                              Text(
-                                '+${entries.length - 1} more',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                          ],
-                        ),
+                            ),
+                          if (entries.length > 1)
+                            Text(
+                              '+${entries.length - 1} more',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                        ],
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -544,7 +541,7 @@ final class _DayNumber extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: graphite && today
                 ? ThemeSemanticMarkIcon(
-                    role: ThemeSemanticRole.todayOrUrgent,
+                    role: ThemeSemanticRole.today,
                     size: 15,
                     color: _todayAccent(context),
                   )
@@ -767,51 +764,45 @@ final class _WeekDay extends StatelessWidget {
               : 1,
         ),
       ),
-      child: EnhancedFocusPerimeter(
-        child: InkWell(
-          onTap: () => onActivate(date, entries),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    if (today && _usesGraphiteMarks(context)) ...[
-                      ThemeSemanticMarkIcon(
-                        role: ThemeSemanticRole.todayOrUrgent,
-                        size: 16,
-                        color: _todayAccent(context),
-                      ),
-                      const SizedBox(width: 5),
-                    ],
-                    Expanded(
-                      child: Text(
-                        '${_weekdayName(date.asUtcCalendarDate.weekday)}, '
-                        '${_monthAbbreviation(date.month)} ${date.day}',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: today ? _todayAccent(context) : null,
-                        ),
+      child: InkWell(
+        onTap: () => onActivate(date, entries),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  if (today && _usesGraphiteMarks(context)) ...[
+                    ThemeSemanticMarkIcon(
+                      role: ThemeSemanticRole.today,
+                      size: 16,
+                      color: _todayAccent(context),
+                    ),
+                    const SizedBox(width: 5),
+                  ],
+                  Expanded(
+                    child: Text(
+                      '${_weekdayName(date.asUtcCalendarDate.weekday)}, '
+                      '${_monthAbbreviation(date.month)} ${date.day}',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: today ? _todayAccent(context) : null,
                       ),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              if (entries.isEmpty)
+                Text('Open day', style: Theme.of(context).textTheme.bodySmall),
+              for (final entry in entries)
+                _PeriodEntryRow(
+                  entry: entry,
+                  date: date,
+                  twelveHourTime: twelveHourTime,
+                  onTap: () => onActivate(date, entries, preferredEntry: entry),
                 ),
-                const SizedBox(height: 6),
-                if (entries.isEmpty)
-                  Text(
-                    'Open day',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                for (final entry in entries)
-                  _PeriodEntryRow(
-                    entry: entry,
-                    date: date,
-                    twelveHourTime: twelveHourTime,
-                    onTap: () =>
-                        onActivate(date, entries, preferredEntry: entry),
-                  ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
@@ -1025,7 +1016,7 @@ final class _AgendaAssignment extends StatelessWidget {
         ),
       ),
       const SizedBox(width: 6),
-      Text(entry.statusLabel, style: Theme.of(context).textTheme.bodySmall),
+      _CalendarStatusLabel(entry: entry),
     ],
   );
 }
@@ -1083,7 +1074,7 @@ final class _PeriodEntryRow extends StatelessWidget {
               entry.assignment!,
               style: Theme.of(context).textTheme.bodySmall,
             ),
-          Text(entry.statusLabel, style: Theme.of(context).textTheme.bodySmall),
+          _CalendarStatusLabel(entry: entry),
         ],
       ),
     ),
@@ -1094,19 +1085,15 @@ final class _EnhancedCalendarLegend extends StatelessWidget {
   const _EnhancedCalendarLegend();
 
   static const _items = <_EnhancedLegendItem>[
-    _EnhancedLegendItem.theme(
-      ThemeSemanticRole.clinicalSession,
-      'Clinical Session',
-    ),
-    _EnhancedLegendItem.theme(ThemeSemanticRole.workShift, 'Work Shift'),
-    _EnhancedLegendItem.theme(ThemeSemanticRole.protectedDay, 'Protected Day'),
-    _EnhancedLegendItem.icon(Icons.today_outlined, 'Today'),
-    _EnhancedLegendItem.icon(Icons.warning_amber_outlined, 'Urgent'),
-    _EnhancedLegendItem.icon(Icons.schedule_outlined, 'Scheduled Hours'),
-    _EnhancedLegendItem.icon(Icons.check_circle_outline, 'Completed Hours'),
-    _EnhancedLegendItem.icon(Icons.event_busy_outlined, 'Unscheduled Hours'),
-    _EnhancedLegendItem.icon(Icons.block_outlined, 'Cancelled Session'),
-    _EnhancedLegendItem.icon(Icons.highlight_off_outlined, 'Missed Session'),
+    _EnhancedLegendItem(ThemeSemanticRole.clinicalSession, 'Clinical Session'),
+    _EnhancedLegendItem(ThemeSemanticRole.workShift, 'Work Shift'),
+    _EnhancedLegendItem(ThemeSemanticRole.protectedDay, 'Protected Day'),
+    _EnhancedLegendItem(ThemeSemanticRole.today, 'Today'),
+    _EnhancedLegendItem(ThemeSemanticRole.urgent, 'Urgent'),
+    _EnhancedLegendItem(ThemeSemanticRole.scheduledProgress, 'Scheduled'),
+    _EnhancedLegendItem(ThemeSemanticRole.completedSession, 'Completed'),
+    _EnhancedLegendItem(ThemeSemanticRole.cancelledSession, 'Cancelled'),
+    _EnhancedLegendItem(ThemeSemanticRole.missedSession, 'Missed'),
   ];
 
   @override
@@ -1122,10 +1109,7 @@ final class _EnhancedCalendarLegend extends StatelessWidget {
         child: Row(
           children: [
             for (final item in _items) ...[
-              if (item.role case final role?)
-                ThemeSemanticMarkIcon(role: role, size: 18)
-              else
-                Icon(item.icon, size: 18),
+              ThemeSemanticMarkIcon(role: item.role, size: 18),
               const SizedBox(width: 4),
               Text(
                 item.label,
@@ -1143,14 +1127,44 @@ final class _EnhancedCalendarLegend extends StatelessWidget {
 }
 
 final class _EnhancedLegendItem {
-  const _EnhancedLegendItem.theme(this.role, this.label) : icon = null;
+  const _EnhancedLegendItem(this.role, this.label);
 
-  const _EnhancedLegendItem.icon(this.icon, this.label) : role = null;
-
-  final ThemeSemanticRole? role;
-  final IconData? icon;
+  final ThemeSemanticRole role;
   final String label;
 }
+
+final class _CalendarStatusLabel extends StatelessWidget {
+  const _CalendarStatusLabel({required this.entry});
+
+  final CalendarEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final role = _statusRole(entry.statusLabel);
+    if (!context.accessibilityTokens.enhanced || role == null) {
+      return Text(
+        entry.statusLabel,
+        style: Theme.of(context).textTheme.bodySmall,
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ThemeSemanticMarkIcon(role: role, size: 15),
+        const SizedBox(width: 4),
+        Text(entry.statusLabel, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+ThemeSemanticRole? _statusRole(String statusLabel) => switch (statusLabel) {
+  'Scheduled' || 'Awaiting Confirmation' => ThemeSemanticRole.scheduledProgress,
+  'Completed' => ThemeSemanticRole.completedSession,
+  'Cancelled' => ThemeSemanticRole.cancelledSession,
+  'Missed' => ThemeSemanticRole.missedSession,
+  _ => null,
+};
 
 final class _CalendarLoadFailure extends StatelessWidget {
   const _CalendarLoadFailure({required this.onRetry});

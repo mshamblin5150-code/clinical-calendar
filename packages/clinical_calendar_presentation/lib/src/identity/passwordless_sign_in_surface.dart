@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:flutter/material.dart';
 
-import '../enhanced_focus_perimeter.dart';
-
 final class PasswordlessSignInSurface extends StatefulWidget {
   const PasswordlessSignInSurface({
     required this.identity,
@@ -118,18 +116,16 @@ final class _PasswordlessSignInSurfaceState
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
-                    EnhancedFocusPerimeter(
-                      child: SwitchListTile(
-                        key: const Key('signed-out-enhanced-accessibility'),
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Enhanced accessibility'),
-                        subtitle: const Text(
-                          'Device-only for sign-in. Your Student setting loads '
-                          'after authentication.',
-                        ),
-                        value: widget.enhancedAccessibility,
-                        onChanged: widget.onEnhancedAccessibilityChanged,
+                    SwitchListTile(
+                      key: const Key('signed-out-enhanced-accessibility'),
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Enhanced accessibility'),
+                      subtitle: const Text(
+                        'Device-only for sign-in. Your Student setting loads '
+                        'after authentication.',
                       ),
+                      value: widget.enhancedAccessibility,
+                      onChanged: widget.onEnhancedAccessibilityChanged,
                     ),
                     const SizedBox(height: 8),
                     TextField(

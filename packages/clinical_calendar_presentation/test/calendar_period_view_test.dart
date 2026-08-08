@@ -28,11 +28,10 @@ void main() {
       'Protected Day',
       'Today',
       'Urgent',
-      'Scheduled Hours',
-      'Completed Hours',
-      'Unscheduled Hours',
-      'Cancelled Session',
-      'Missed Session',
+      'Scheduled',
+      'Completed',
+      'Cancelled',
+      'Missed',
     ]) {
       expect(find.text(label), findsWidgets);
     }
@@ -51,7 +50,7 @@ void main() {
       ThemeSemanticRole.workShift,
       ThemeSemanticRole.clinicalSession,
       ThemeSemanticRole.protectedDay,
-      ThemeSemanticRole.todayOrUrgent,
+      ThemeSemanticRole.today,
     ]) {
       expect(find.byKey(Key('theme-mark-${role.name}')), findsWidgets);
     }

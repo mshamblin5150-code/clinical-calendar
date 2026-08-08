@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'accessibility_tokens.dart';
 
@@ -19,6 +20,7 @@ final class _EnhancedGlobalFocusOverlayState
     with WidgetsBindingObserver {
   final _stackKey = GlobalKey();
   Rect? _focusRect;
+  Rect? _contentClipRect;
   bool _updateScheduled = false;
 
   @override
@@ -45,19 +47,46 @@ final class _EnhancedGlobalFocusOverlayState
       _updateScheduled = false;
       if (!mounted) return;
       final stack = _stackKey.currentContext?.findRenderObject();
-      final target = FocusManager.instance.primaryFocus?.context
-          ?.findRenderObject();
+      final focusContext = FocusManager.instance.primaryFocus?.context;
+      final target = focusContext?.findRenderObject();
       Rect? nextRect;
+      Rect? nextContentClipRect;
       if (stack is RenderBox && target is RenderBox && target.attached) {
         try {
           nextRect =
               target.localToGlobal(Offset.zero, ancestor: stack) & target.size;
+          nextContentClipRect = _nearestClipRect(target, stack, nextRect);
         } on Object {
           nextRect = null;
+          nextContentClipRect = null;
         }
       }
-      if (_focusRect != nextRect) setState(() => _focusRect = nextRect);
+      if (_focusRect != nextRect || _contentClipRect != nextContentClipRect) {
+        setState(() {
+          _focusRect = nextRect;
+          _contentClipRect = nextContentClipRect;
+        });
+      }
     });
+  }
+
+  Rect? _nearestClipRect(RenderBox target, RenderBox stack, Rect targetRect) {
+    Rect? result;
+    RenderObject? ancestor = target.parent;
+    while (ancestor != null && ancestor != stack) {
+      if (ancestor is RenderClipRect && ancestor.attached) {
+        final rect =
+            ancestor.localToGlobal(Offset.zero, ancestor: stack) &
+            ancestor.size;
+        if (rect.overlaps(targetRect) &&
+            (result == null ||
+                rect.width * rect.height < result.width * result.height)) {
+          result = rect;
+        }
+      }
+      ancestor = ancestor.parent;
+    }
+    return result;
   }
 
   @override
@@ -79,58 +108,20 @@ final class _EnhancedGlobalFocusOverlayState
           widget.child,
           if (tokens?.enhanced == true && _focusRect != null)
             Positioned.fromRect(
-              rect: _focusRect!.inflate(tokens!.focusWidth),
+              rect: _focusRect!
+                  .inflate(tokens!.focusWidth)
+                  .intersect(
+                    _contentClipRect ??
+                        (Offset.zero &
+                            (_stackKey.currentContext!.findRenderObject()!
+                                    as RenderBox)
+                                .size),
+                  ),
               child: IgnorePointer(
                 child: ExcludeSemantics(
                   child: CustomPaint(
                     key: const Key('enhanced-global-focus-perimeter'),
                     foregroundPainter: _DualToneFocusPainter(tokens),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Adds the Enhanced dual-tone focus perimeter without changing child layout.
-final class EnhancedFocusPerimeter extends StatefulWidget {
-  const EnhancedFocusPerimeter({required this.child, super.key});
-
-  final Widget child;
-
-  @override
-  State<EnhancedFocusPerimeter> createState() => _EnhancedFocusPerimeterState();
-}
-
-final class _EnhancedFocusPerimeterState extends State<EnhancedFocusPerimeter> {
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = Theme.of(
-      context,
-    ).extension<ClinicalCalendarAccessibilityTokens>();
-    if (tokens?.enhanced != true) return widget.child;
-    return Focus(
-      canRequestFocus: false,
-      skipTraversal: true,
-      onFocusChange: (focused) {
-        if (_focused != focused) setState(() => _focused = focused);
-      },
-      child: Stack(
-        fit: StackFit.passthrough,
-        children: [
-          widget.child,
-          if (_focused)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: ExcludeSemantics(
-                  child: CustomPaint(
-                    key: const Key('enhanced-dual-tone-focus-perimeter'),
-                    foregroundPainter: _DualToneFocusPainter(tokens!),
                   ),
                 ),
               ),

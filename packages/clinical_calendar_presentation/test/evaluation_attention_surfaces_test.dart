@@ -196,7 +196,7 @@ void main() {
     );
 
     expect(find.byKey(const Key('theme-mark-scheduledProgress')), findsWidgets);
-    expect(find.byKey(const Key('theme-mark-todayOrUrgent')), findsWidgets);
+    expect(find.byKey(const Key('theme-mark-urgent')), findsWidgets);
   });
 
   testWidgets('Evaluation Plan surface fits compact phone landscapes', (

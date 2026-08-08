@@ -100,10 +100,20 @@ void main() {
         theme: buildGraphiteTheme(enhancedAccessibility: true),
         builder: (context, child) => EnhancedGlobalFocusOverlay(child: child!),
         home: Center(
-          child: TextButton(
-            focusNode: focusNode,
-            onPressed: () {},
-            child: const Text('Continue'),
+          child: SizedBox(
+            width: 200,
+            height: 100,
+            child: ClipRect(
+              key: const Key('focus-content-boundary'),
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: TextButton(
+                  focusNode: focusNode,
+                  onPressed: () {},
+                  child: const Text('Continue'),
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -122,5 +132,13 @@ void main() {
       ).extension<ClinicalCalendarAccessibilityTokens>()?.focusWidth,
       3,
     );
+    final boundary = tester.getRect(
+      find.byKey(const Key('focus-content-boundary')),
+    );
+    final perimeter = tester.getRect(
+      find.byKey(const Key('enhanced-global-focus-perimeter')),
+    );
+    expect(boundary.contains(perimeter.topLeft), isTrue);
+    expect(boundary.contains(perimeter.bottomRight), isTrue);
   });
 }

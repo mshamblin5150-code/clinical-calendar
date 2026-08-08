@@ -23,7 +23,7 @@ void main() {
     );
     expect(bundle.frame.assetPaths, hasLength(4));
     expect(bundle.gallery.swatches, hasLength(5));
-    expect(bundle.marks.marks, hasLength(5));
+    expect(bundle.marks.marks, hasLength(9));
     expect(bundle.helpGuide.calendarStates, hasLength(5));
   });
 
@@ -55,7 +55,7 @@ void main() {
     );
     expect(graphite.frame.assetPaths, hasLength(1));
     expect(graphite.gallery.swatches, hasLength(5));
-    expect(graphite.marks.marks, hasLength(5));
+    expect(graphite.marks.marks, hasLength(9));
     expect(graphite.helpGuide.calendarStates, hasLength(5));
     expect(graphite.frame.safeInsets, const {
       ThemeFrameRegion.calendar: graphiteCalendarSafeInsets,

@@ -278,7 +278,11 @@ enum ThemeSemanticRole {
   workShift,
   protectedDay,
   scheduledProgress,
-  todayOrUrgent,
+  completedSession,
+  cancelledSession,
+  missedSession,
+  today,
+  urgent,
 }
 
 @immutable
@@ -361,7 +365,11 @@ IconData _defaultMarkIcon(ThemeSemanticRole role) => switch (role) {
   ThemeSemanticRole.workShift => Icons.work_outline,
   ThemeSemanticRole.protectedDay => Icons.shield_outlined,
   ThemeSemanticRole.scheduledProgress => Icons.schedule_outlined,
-  ThemeSemanticRole.todayOrUrgent => Icons.today_outlined,
+  ThemeSemanticRole.completedSession => Icons.check_circle_outline,
+  ThemeSemanticRole.cancelledSession => Icons.block_outlined,
+  ThemeSemanticRole.missedSession => Icons.highlight_off_outlined,
+  ThemeSemanticRole.today => Icons.today_outlined,
+  ThemeSemanticRole.urgent => Icons.warning_amber_outlined,
 };
 
 /// One theme-specific calendar-state explanation used by Help.
@@ -436,7 +444,7 @@ final class VariantFHelpGuide implements ThemeHelpGuide {
           'The label and progress boundary become more prominent.',
     ),
     CalendarStateGuide(
-      role: ThemeSemanticRole.todayOrUrgent,
+      role: ThemeSemanticRole.today,
       label: 'Today or urgent',
       description: 'Optic red is reserved for Today and urgent attention.',
       color: VariantFColors.urgent,
@@ -494,7 +502,7 @@ final class GraphiteHelpGuide implements ThemeHelpGuide {
           'The clock, hatch, and progress boundary become prominent.',
     ),
     CalendarStateGuide(
-      role: ThemeSemanticRole.todayOrUrgent,
+      role: ThemeSemanticRole.today,
       label: 'Today or urgent',
       description:
           'Teal identifies Today; coral with status text identifies urgent attention.',
@@ -634,10 +642,34 @@ final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
             description: 'Scheduled label and progress segment',
           ),
           ThemeSemanticMark(
-            role: ThemeSemanticRole.todayOrUrgent,
+            role: ThemeSemanticRole.completedSession,
+            markId: 'completed-check-ring',
+            icon: Icons.check_circle_outline,
+            description: 'Completed check-circle mark',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.cancelledSession,
+            markId: 'cancelled-slash-ring',
+            icon: Icons.block_outlined,
+            description: 'Cancelled slash-circle mark',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.missedSession,
+            markId: 'missed-cross-ring',
+            icon: Icons.highlight_off_outlined,
+            description: 'Missed cross-circle mark',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.today,
             markId: 'outlined-date-border',
             icon: Icons.today_outlined,
-            description: 'Outlined date border with explicit status text',
+            description: 'Today date-border mark',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.urgent,
+            markId: 'urgent-warning-triangle',
+            icon: Icons.warning_amber_outlined,
+            description: 'Urgent warning-triangle mark',
           ),
         ],
       );
@@ -757,10 +789,34 @@ final class GraphiteThemeBundle implements ClinicalCalendarThemeBundle {
             description: 'Clock mark and forward diagonal hatch',
           ),
           ThemeSemanticMark(
-            role: ThemeSemanticRole.todayOrUrgent,
-            markId: 'today-dot-status-outline',
+            role: ThemeSemanticRole.completedSession,
+            markId: 'completed-check-ring',
+            icon: Icons.check_circle_outline,
+            description: 'Completed check-circle mark',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.cancelledSession,
+            markId: 'cancelled-slash-ring',
+            icon: Icons.block_outlined,
+            description: 'Cancelled slash-circle mark',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.missedSession,
+            markId: 'missed-cross-ring',
+            icon: Icons.highlight_off_outlined,
+            description: 'Missed cross-circle mark',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.today,
+            markId: 'today-dot-outline',
             icon: Icons.today_outlined,
-            description: 'Today dot or explicit urgent status outline',
+            description: 'Today dot and date outline',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.urgent,
+            markId: 'urgent-warning-triangle',
+            icon: Icons.warning_amber_outlined,
+            description: 'Urgent warning-triangle mark',
           ),
         ],
       );
@@ -826,8 +882,7 @@ abstract final class ClinicalCalendarThemeBundleValidator {
               ThemeGallerySwatchRole.values.length ||
           bundle.marks.marks.length != ThemeSemanticRole.values.length ||
           bundle.helpGuide.title.trim().isEmpty ||
-          bundle.helpGuide.calendarStates.length !=
-              ThemeSemanticRole.values.length) {
+          bundle.helpGuide.calendarStates.length != 5) {
         throw InvalidThemeBundle('Theme $id is incomplete.');
       }
       if (bundle.gallery.rendererId != bundle.shellRenderer.rendererId) {

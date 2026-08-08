@@ -261,7 +261,7 @@ final class _AttentionRow extends StatelessWidget {
               ThemeSemanticMarkIcon(
                 role: item.urgency == AttentionUrgency.approaching
                     ? ThemeSemanticRole.scheduledProgress
-                    : ThemeSemanticRole.todayOrUrgent,
+                    : ThemeSemanticRole.urgent,
                 color: _urgencyColor(context, item.urgency),
                 size: 20,
               )

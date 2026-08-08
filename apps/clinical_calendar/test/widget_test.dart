@@ -547,6 +547,55 @@ void main() {
     },
   );
 
+  testWidgets(
+    'signed-out Enhanced serializes startup and rapid device writes',
+    (tester) async {
+      final storage = _DelayedDeviceSecureStorage();
+      final root = await app.buildProductionRoot(
+        secureStorage: storage,
+        identifiers: const _Identifiers(_deviceId),
+        clock: _FixedClock(),
+        environment: const AppEnvironment(
+          name: 'test',
+          supabaseUrl: 'https://project.supabase.co',
+          supabasePublishableKey: 'public-client-key',
+        ),
+        identityGateway: _IdentityGateway(),
+        connectivitySource: _ConnectivitySource(initial: false),
+        repositoryBootstrap: (_, _, _) async => _Repositories(),
+        graphiteAssetPreflight: () async {},
+        currentDevice: DeviceDescriptor(
+          name: 'Test device',
+          platform: DevicePlatform.windows,
+        ),
+      );
+      await tester.pumpWidget(root);
+      await tester.pump();
+      final toggle = find.byKey(const Key('signed-out-enhanced-accessibility'));
+
+      await tester.tap(toggle);
+      await tester.pump();
+      storage.deviceRead.complete('false');
+      await tester.pump();
+      expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+
+      await tester.tap(toggle);
+      await tester.pump();
+      expect(storage.deviceWrites, hasLength(1));
+      storage.deviceWrites.first.completion.complete();
+      await tester.pump();
+      expect(storage.deviceWrites, hasLength(2));
+      storage.deviceWrites.last.completion.complete();
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+      expect(
+        storage.values['clinical_calendar.device.enhanced_accessibility'],
+        'false',
+      );
+    },
+  );
+
   testWidgets('authenticated shell stays hidden when settings cannot load', (
     tester,
   ) async {
@@ -633,7 +682,7 @@ Future<void> _completePasswordlessSignIn(WidgetTester tester) async {
   await tester.pump();
 }
 
-final class _MemorySecureStorage implements SecureStorage {
+class _MemorySecureStorage implements SecureStorage {
   final Map<String, String> values = {};
 
   @override
@@ -644,6 +693,30 @@ final class _MemorySecureStorage implements SecureStorage {
 
   @override
   Future<void> write(String key, String value) async => values[key] = value;
+}
+
+final class _DelayedDeviceSecureStorage extends _MemorySecureStorage {
+  final deviceRead = Completer<String?>();
+  final deviceWrites = <({String value, Completer<void> completion})>[];
+
+  @override
+  Future<String?> read(String key) {
+    if (key == 'clinical_calendar.device.enhanced_accessibility') {
+      return deviceRead.future;
+    }
+    return super.read(key);
+  }
+
+  @override
+  Future<void> write(String key, String value) async {
+    if (key != 'clinical_calendar.device.enhanced_accessibility') {
+      return super.write(key, value);
+    }
+    final completion = Completer<void>();
+    deviceWrites.add((value: value, completion: completion));
+    await completion.future;
+    values[key] = value;
+  }
 }
 
 final class _Identifiers implements IdentifierGenerator {

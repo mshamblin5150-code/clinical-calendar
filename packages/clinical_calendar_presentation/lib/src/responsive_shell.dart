@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'tactical_frame.dart';
 import 'variant_f_theme.dart';
 import 'enhanced_accessibility_controller.dart';
-import 'enhanced_focus_perimeter.dart';
 import 'variant_f_raster_assets.dart';
 
 enum ClinicalCalendarDestination {
@@ -474,24 +473,22 @@ final class ApplicationMenu extends StatelessWidget {
           builder: (context, _) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              EnhancedFocusPerimeter(
-                child: SwitchListTile(
-                  key: const Key('enhanced-accessibility-setting'),
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Enhanced accessibility'),
-                  subtitle: Text(
-                    controller.isSaving
-                        ? 'Saving…'
-                        : 'Stronger contrast, focus, cues, and legends.',
-                  ),
-                  value: controller.enabled,
-                  onChanged: controller.isSaving
-                      ? null
-                      : (value) => controller.setEnabled(
-                          value,
-                          persist: onPersistEnhancedAccessibility!,
-                        ),
+              SwitchListTile(
+                key: const Key('enhanced-accessibility-setting'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Enhanced accessibility'),
+                subtitle: Text(
+                  controller.isSaving
+                      ? 'Saving…'
+                      : 'Stronger contrast, focus, cues, and legends.',
                 ),
+                value: controller.enabled,
+                onChanged: controller.isSaving
+                    ? null
+                    : (value) => controller.setEnabled(
+                        value,
+                        persist: onPersistEnhancedAccessibility!,
+                      ),
               ),
               if (controller.errorMessage case final message?)
                 Semantics(

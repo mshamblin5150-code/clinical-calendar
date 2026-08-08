@@ -639,6 +639,8 @@ final class _ProductionIdentityGateState
   Future<ClinicalCalendarApp>? _application;
   IdentitySession? _activeSession;
   bool _deviceEnhancedAccessibility = false;
+  int _deviceAccessibilityRevision = 0;
+  Future<void> _deviceAccessibilityWrites = Future.value();
 
   @override
   void initState() {
@@ -648,23 +650,31 @@ final class _ProductionIdentityGateState
   }
 
   Future<void> _loadDeviceEnhancedAccessibility() async {
+    final revision = _deviceAccessibilityRevision;
     final stored = await widget.secureStorage.read(
       _deviceEnhancedAccessibilityStorageKey,
     );
-    if (!mounted) return;
+    if (!mounted || revision != _deviceAccessibilityRevision) return;
     setState(() => _deviceEnhancedAccessibility = stored == 'true');
   }
 
   Future<void> _setDeviceEnhancedAccessibility(bool value) async {
     final previous = _deviceEnhancedAccessibility;
+    final revision = ++_deviceAccessibilityRevision;
     setState(() => _deviceEnhancedAccessibility = value);
-    try {
-      await widget.secureStorage.write(
+    final operation = _deviceAccessibilityWrites.then(
+      (_) => widget.secureStorage.write(
         _deviceEnhancedAccessibilityStorageKey,
         value.toString(),
-      );
+      ),
+    );
+    _deviceAccessibilityWrites = operation.catchError((_) {});
+    try {
+      await operation;
     } on Object {
-      if (mounted) setState(() => _deviceEnhancedAccessibility = previous);
+      if (mounted && revision == _deviceAccessibilityRevision) {
+        setState(() => _deviceEnhancedAccessibility = previous);
+      }
     }
   }
 
