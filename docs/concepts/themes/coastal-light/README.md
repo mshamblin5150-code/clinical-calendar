@@ -1,7 +1,7 @@
 # Coastal Light Android concept
 
-Status: dashboard direction and final display name awaiting maintainer review in
-GitHub issue #116.
+Status: dashboard direction and final display name approved by the maintainer
+in GitHub issue #116.
 
 This concept is grounded in direct inspection of National Park Service coastal
 sediment and winter-shore imagery, NOAA explanations of shallow-water color,
@@ -60,3 +60,26 @@ copy or color measurements.
 Production Flutter, final nine-slice artwork, implementation goldens, Theme
 Gallery concept, and physical Android acceptance remain outside this approval
 step.
+
+## Production asset record
+
+Issue #136 implemented the approved direction with two original raster assets
+generated through the built-in image-generation workflow using only
+`calendar-dashboard-concept-v1.png` as a visual reference:
+
+- `assets/coastal_light_raster/panel-nine-slice-v1.png` is a 1536×1024 RGBA
+  primary frame with transparent exterior corners and normalized
+  `120/145/120/170` cuts. Its SHA-256 is
+  `449bee6b6097389d0fc860069160f20def2425043c20bb1e3daf29fe3f55e22f`.
+- `assets/coastal_light_raster/dashboard-chassis-landscape-v1.png` is the
+  opaque, fixed 1536×1024 secondary landscape composition. Its SHA-256 is
+  `b308df3a6f1ed8049c23231d82add92e49d83ee9de8dec5ddd4717154f5cbb23`.
+
+The primary prompt requested one front-facing coastal-observatory nine-slice
+housing on a flat magenta chroma background, with a calm empty bay, repeat-safe
+stretch bands, shell-white and sea-glass contour rails, clear-blue datum rules,
+and sparse mineral inlays. The secondary prompt requested the approved crown,
+three-column hierarchy, Calendar-over-Planning center, right progress and
+attention rail, and five-segment navigation as decoration-only chassis art.
+Both prompts prohibited text, controls, operational content, literal beach or
+nautical imagery, and all borrowed military or science-fiction geometry.

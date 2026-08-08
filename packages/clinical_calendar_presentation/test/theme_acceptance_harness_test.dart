@@ -677,6 +677,74 @@ void main() {
       expect(result.passed, isTrue, reason: result.failures.join('\n'));
     });
 
+    testWidgets(
+      'Coastal Light thumbnail evidence comes from its real renderer',
+      (tester) async {
+        final bundle = bundles.singleWhere(
+          (item) => item.id == coastalCalmThemeId,
+        );
+        await tester.binding.setSurfaceSize(bundle.gallery.thumbnailViewport);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SizedBox.fromSize(
+              size: bundle.gallery.thumbnailViewport,
+              child: ThemeRuntimeThumbnail(bundle: bundle),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        final thumbnail = find.byKey(
+          Key('theme-gallery-thumbnail-${bundle.id}'),
+        );
+        expect(tester.getSize(thumbnail), bundle.gallery.thumbnailViewport);
+        await expectLater(
+          thumbnail,
+          matchesGoldenFile('goldens/coastal_light_runtime_thumbnail.png'),
+        );
+        expect(find.byType(CoastalLightNineSliceFrame), findsOneWidget);
+        expect(find.byType(GraphiteNineSliceFrame), findsNothing);
+        expect(find.byType(VariantFNineSliceFrame), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    test('Coastal Light captured runtime thumbnail is audited', () async {
+      final bundle = bundles.singleWhere(
+        (item) => item.id == coastalCalmThemeId,
+      );
+      final bytes = await File(
+        '${packageRoot.path}/test/goldens/'
+        'coastal_light_runtime_thumbnail.png',
+      ).readAsBytes();
+      final evidence = ThemeThumbnailEvidence(
+        themeId: bundle.id,
+        rendererVersion: bundle.shellRenderer.rendererId,
+        fixtureId: bundle.gallery.thumbnailFixtureId,
+        viewport: bundle.gallery.thumbnailViewport,
+        sha256: sha256.convert(bytes).toString(),
+        captureUri: 'captures/${bundle.id}-runtime-thumbnail.png',
+        fictionalFixture: true,
+        swatches: [
+          for (final swatch in bundle.gallery.swatches)
+            ThemeThumbnailSwatchEvidence(
+              role: swatch.role,
+              label: swatch.label,
+              color: swatch.color,
+            ),
+        ],
+      );
+
+      final result = await ThemeThumbnailAcceptanceAuditor.audit(
+        bundle: bundle,
+        bytes: bytes,
+        evidence: evidence,
+      );
+      expect(result.passed, isTrue, reason: result.failures.join('\n'));
+    });
+
     test('Containment Drone equality is exact and non-tolerant', () {
       const expected = [1, 2, 3, 4];
       expect(

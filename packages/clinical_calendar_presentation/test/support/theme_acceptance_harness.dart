@@ -864,6 +864,11 @@ ThemeRasterAcceptanceFixture themeRasterAcceptanceFixture(String themeId) =>
             '1a11f86edb76286e6bf35c58188b23fee0a4414c0d173c8bd28f602732ec49aa',
         creationRecordUri: 'docs/concepts/themes/federation-2399/README.md',
       ),
+      coastalCalmThemeId => const ThemeRasterAcceptanceFixture(
+        expectedSha256:
+            '449bee6b6097389d0fc860069160f20def2425043c20bb1e3daf29fe3f55e22f',
+        creationRecordUri: 'docs/concepts/themes/coastal-light/README.md',
+      ),
       _ => throw StateError('No primary-frame fixture for $themeId.'),
     };
 
