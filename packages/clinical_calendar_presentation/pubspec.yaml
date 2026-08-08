@@ -29,6 +29,7 @@ flutter:
   assets:
     - assets/federation_2399_raster/panel-nine-slice-v1.png
     - assets/federation_2399_raster/dashboard-chassis-landscape-v1.png
+    - assets/coastal_light_raster/
     - assets/federation_classic_raster/
     - assets/graphite_raster/
     - assets/placement_icons/

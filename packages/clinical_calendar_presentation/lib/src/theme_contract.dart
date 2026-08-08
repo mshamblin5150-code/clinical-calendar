@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'additive_theme_shell.dart';
+import 'coastal_light_frame.dart';
+import 'coastal_light_shell.dart';
+import 'coastal_light_theme.dart';
 import 'federation_classic_frame.dart';
 import 'federation_classic_shell.dart';
 import 'federation_classic_theme.dart';
@@ -17,6 +20,7 @@ import 'variant_f_theme.dart';
 const variantFThemeId = 'variant-f';
 const federationClassicThemeId = 'federation-classic';
 const federation2399ThemeId = 'federation-2399';
+const coastalCalmThemeId = 'coastal-calm';
 const graphiteThemeId = 'graphite';
 const themeGalleryFixtureId = 'theme-gallery-android-tablet-calendar-v1';
 const themeGalleryViewport = Size(1280, 800);
@@ -122,6 +126,23 @@ final class Federation2399VisualTheme implements ClinicalCalendarVisualTheme {
   @override
   ThemeData createThemeData({bool enhancedAccessibility = false}) =>
       buildFederation2399Theme(enhancedAccessibility: enhancedAccessibility);
+}
+
+final class CoastalLightVisualTheme implements ClinicalCalendarVisualTheme {
+  const CoastalLightVisualTheme();
+
+  @override
+  String get id => coastalCalmThemeId;
+
+  @override
+  String get themeId => id;
+
+  @override
+  ClinicalCalendarColors get semanticColors => coastalLightSemanticColors;
+
+  @override
+  ThemeData createThemeData({bool enhancedAccessibility = false}) =>
+      buildCoastalLightTheme(enhancedAccessibility: enhancedAccessibility);
 }
 
 abstract interface class ClinicalCalendarShellRenderer
@@ -349,6 +370,57 @@ final class Federation2399ShellRenderer
     required VoidCallback onExit,
     required Widget child,
   }) => Federation2399DestinationSurface(
+    destination: destination,
+    entry: entry,
+    onExit: onExit,
+    child: child,
+  );
+}
+
+final class CoastalLightShellRenderer implements ClinicalCalendarShellRenderer {
+  const CoastalLightShellRenderer();
+
+  @override
+  String get themeId => coastalCalmThemeId;
+
+  @override
+  String get rendererId => 'coastal-light-owned-responsive-observatory-v1';
+
+  @override
+  Widget build({
+    required ResponsiveShellSlots slots,
+    required String environmentName,
+    required VoidCallback onOpenMenu,
+    required ValueChanged<ClinicalCalendarDestination> onOpenDestination,
+    required VoidCallback onOpenAttention,
+    required VoidCallback onAddSchedule,
+    int mobileIndex = 1,
+    Key? key,
+  }) => CoastalLightApplicationShell(
+    key: key,
+    slots: slots,
+    environmentName: environmentName,
+    onOpenMenu: onOpenMenu,
+    onOpenDestination: onOpenDestination,
+    onOpenAttention: onOpenAttention,
+    onAddSchedule: onAddSchedule,
+    mobileIndex: mobileIndex,
+  );
+
+  @override
+  Widget buildFrame({required Widget child}) => CoastalLightNineSliceFrame(
+    chromeInsets: coastalLightStatusSafeInsets,
+    contentPadding: const EdgeInsets.all(8),
+    child: AdditiveThemePanelInterior(child: child),
+  );
+
+  @override
+  Widget buildDestination({
+    required ClinicalCalendarDestination destination,
+    required DestinationEntry entry,
+    required VoidCallback onExit,
+    required Widget child,
+  }) => CoastalLightDestinationSurface(
     destination: destination,
     entry: entry,
     onExit: onExit,
@@ -778,6 +850,68 @@ final class Federation2399HelpGuide implements ThemeHelpGuide {
       description:
           'Cool blue marks Today; coral with status text marks urgent attention.',
       color: Federation2399Colors.today,
+      nonColorCue: 'TODAY top rule or explicit urgent warning status.',
+      enhancedBehavior:
+          'The rule, warning outline, and status text are strengthened.',
+    ),
+  ];
+}
+
+final class CoastalLightHelpGuide implements ThemeHelpGuide {
+  const CoastalLightHelpGuide();
+
+  @override
+  String get themeId => coastalCalmThemeId;
+
+  @override
+  String get title => 'Coastal Light calendar states';
+
+  @override
+  List<CalendarStateGuide> get calendarStates => const [
+    CalendarStateGuide(
+      role: ThemeSemanticRole.clinicalSession,
+      label: 'Clinical Session',
+      description:
+          'Sea-glass teal and a continuous rail identify clinical activity.',
+      color: CoastalLightColors.clinical,
+      nonColorCue:
+          'Medical-services icon, CLINICAL label, and continuous rail.',
+      enhancedBehavior: 'The icon, label, and rail become more prominent.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.workShift,
+      label: 'Work Shift',
+      description: 'Clear blue and split rails identify work activity.',
+      color: CoastalLightColors.workMachinery,
+      nonColorCue:
+          'Briefcase icon, WORK label, and two separated rail segments.',
+      enhancedBehavior:
+          'The icon, label, and split rails become more prominent.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.protectedDay,
+      label: 'Protected Day',
+      description: 'Warm mineral inlays identify protected time.',
+      color: CoastalLightColors.protectedDayAccent,
+      nonColorCue: 'Shield icon, PROTECTED label, and dot-grid corner marker.',
+      enhancedBehavior:
+          'The shield, label, dot grid, and outline are strengthened.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.scheduledProgress,
+      label: 'Scheduled progress',
+      description: 'Warm mineral amber identifies hours already scheduled.',
+      color: CoastalLightColors.scheduled,
+      nonColorCue: 'Clock icon and forward diagonal hatch.',
+      enhancedBehavior:
+          'The clock, hatch, label, and boundary are strengthened.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.today,
+      label: 'Today or urgent',
+      description:
+          'Cool blue marks Today; coral with status text marks urgent attention.',
+      color: CoastalLightColors.today,
       nonColorCue: 'TODAY top rule or explicit urgent warning status.',
       enhancedBehavior:
           'The rule, warning outline, and status text are strengthened.',
@@ -1397,6 +1531,155 @@ final class Federation2399ThemeBundle implements ClinicalCalendarThemeBundle {
   ThemeHelpGuide get helpGuide => const Federation2399HelpGuide();
 }
 
+final class CoastalLightThemeBundle implements ClinicalCalendarThemeBundle {
+  const CoastalLightThemeBundle();
+
+  @override
+  String get id => coastalCalmThemeId;
+
+  @override
+  ThemeBundleOrigin get origin => ThemeBundleOrigin.compiled;
+
+  @override
+  ThemeCatalogMetadata get metadata => const ThemeCatalogMetadata(
+    themeId: coastalCalmThemeId,
+    displayName: 'Coastal Light',
+    personality:
+        'Shell-white calm, sea-glass structure, clear-blue rules, and warm mineral depth.',
+  );
+
+  @override
+  ClinicalCalendarStandardPresentation get standardPresentation =>
+      const CoastalLightVisualTheme();
+
+  @override
+  ClinicalCalendarShellRenderer get shellRenderer =>
+      const CoastalLightShellRenderer();
+
+  @override
+  ThemeFrameDescriptor get frame => const ThemeFrameDescriptor(
+    themeId: coastalCalmThemeId,
+    assetPackage: 'clinical_calendar_presentation',
+    primaryAsset: coastalLightFrameAsset,
+    assetPaths: [coastalLightFrameAsset, coastalLightLandscapeChassisAsset],
+    sourceSize: Size(1536, 1024),
+    sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
+    safeInsets: {
+      ThemeFrameRegion.calendar: coastalLightCalendarSafeInsets,
+      ThemeFrameRegion.placements: coastalLightPlacementsSafeInsets,
+      ThemeFrameRegion.planning: coastalLightPlanningSafeInsets,
+      ThemeFrameRegion.status: coastalLightStatusSafeInsets,
+    },
+  );
+
+  @override
+  ThemeGalleryData get gallery => const ThemeGalleryData(
+    themeId: coastalCalmThemeId,
+    rendererId: 'coastal-light-owned-responsive-observatory-v1',
+    thumbnailFixtureId: themeGalleryFixtureId,
+    thumbnailViewport: themeGalleryViewport,
+    swatches: [
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.canvas,
+        label: 'Canvas',
+        colorName: 'mist field',
+        color: CoastalLightColors.canvas,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.structure,
+        label: 'Structure',
+        colorName: 'shell white',
+        color: CoastalLightColors.surface,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.clinicalSession,
+        label: 'Clinical Session',
+        colorName: 'sea-glass teal',
+        color: CoastalLightColors.clinical,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.workShift,
+        label: 'Work Shift',
+        colorName: 'clear blue',
+        color: CoastalLightColors.workMachinery,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.urgent,
+        label: 'Urgent',
+        colorName: 'controlled coral',
+        color: CoastalLightColors.urgent,
+      ),
+    ],
+  );
+
+  @override
+  ClinicalCalendarSemanticMarks get marks =>
+      const ClinicalCalendarSemanticMarks(
+        themeId: coastalCalmThemeId,
+        marks: [
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.clinicalSession,
+            markId: 'clinical-continuous-leading-rail',
+            icon: Icons.medical_services_outlined,
+            description:
+                'Medical-services icon, CLINICAL label, and continuous rail',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.workShift,
+            markId: 'work-separated-leading-rails',
+            icon: Icons.work_outline,
+            description:
+                'Briefcase icon, WORK label, and separated rail segments',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.protectedDay,
+            markId: 'protected-dot-grid-corner',
+            icon: Icons.shield_outlined,
+            description: 'Shield icon, PROTECTED label, and dot-grid marker',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.scheduledProgress,
+            markId: 'scheduled-forward-hatch',
+            icon: Icons.schedule_outlined,
+            description: 'Clock icon and forward diagonal hatch',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.completedSession,
+            markId: 'completed-check-ring',
+            icon: Icons.check_circle_outline,
+            description: 'Check-circle mark and COMPLETED label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.cancelledSession,
+            markId: 'cancelled-diagonal-slash',
+            icon: Icons.block_outlined,
+            description: 'Diagonal slash mark and CANCELLED label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.missedSession,
+            markId: 'missed-cross-ring',
+            icon: Icons.highlight_off_outlined,
+            description: 'Cross mark and MISSED label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.today,
+            markId: 'today-top-rule',
+            icon: Icons.today_outlined,
+            description: 'Top rule and visible TODAY label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.urgent,
+            markId: 'urgent-warning-status',
+            icon: Icons.warning_amber_outlined,
+            description: 'Warning icon, outline, and explicit urgent status',
+          ),
+        ],
+      );
+
+  @override
+  ThemeHelpGuide get helpGuide => const CoastalLightHelpGuide();
+}
+
 final class InvalidThemeBundle implements Exception {
   const InvalidThemeBundle(this.message);
 
@@ -1497,6 +1780,7 @@ final class ClinicalCalendarThemeBundleRegistry {
     graphiteThemeId: const GraphiteThemeBundle(),
     federationClassicThemeId: const FederationClassicThemeBundle(),
     federation2399ThemeId: const Federation2399ThemeBundle(),
+    coastalCalmThemeId: const CoastalLightThemeBundle(),
   });
 
   final Map<String, ClinicalCalendarThemeBundle> _bundles;
