@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 Future<void> loadProofFonts() async {
   final candidates = <Directory>[];
+  final fontPairs = <({File roboto, File icons})>[];
 
   for (final variable in ['FLUTTER_ROOT', 'FLUTTER_HOME']) {
     final flutterRoot = Platform.environment[variable];
@@ -14,6 +15,9 @@ Future<void> loadProofFonts() async {
         'cache${Platform.pathSeparator}artifacts${Platform.pathSeparator}'
         'material_fonts',
       ),
+    );
+    fontPairs.add(
+      _devToolsFontPair('$flutterRoot${Platform.pathSeparator}bin'),
     );
   }
 
@@ -26,6 +30,7 @@ Future<void> loadProofFonts() async {
         'artifacts${Platform.pathSeparator}material_fonts',
       ),
     );
+    fontPairs.add(_devToolsFontPair(entry));
   }
 
   var executableRoot = File(Platform.resolvedExecutable).parent;
@@ -79,7 +84,29 @@ Future<void> loadProofFonts() async {
     }
   }
 
+  for (final pair in fontPairs) {
+    if (!pair.roboto.existsSync() || !pair.icons.existsSync()) continue;
+    await _loadFont('ProofRoboto', pair.roboto);
+    await _loadFont('MaterialIcons', pair.icons);
+    return;
+  }
+
   throw StateError('Bundled Flutter proof fonts were not found.');
+}
+
+({File roboto, File icons}) _devToolsFontPair(String flutterBin) {
+  final root =
+      '$flutterBin${Platform.pathSeparator}cache${Platform.pathSeparator}'
+      'dart-sdk${Platform.pathSeparator}bin${Platform.pathSeparator}resources'
+      '${Platform.pathSeparator}devtools${Platform.pathSeparator}assets'
+      '${Platform.pathSeparator}fonts';
+  return (
+    roboto: File(
+      '$root${Platform.pathSeparator}Roboto${Platform.pathSeparator}'
+      'Roboto-Regular.ttf',
+    ),
+    icons: File('$root${Platform.pathSeparator}MaterialIcons-Regular.otf'),
+  );
 }
 
 Future<void> _loadFont(String family, File file) async {
