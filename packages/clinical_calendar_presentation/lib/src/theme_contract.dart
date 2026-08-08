@@ -260,7 +260,7 @@ final class FederationClassicShellRenderer
   String get themeId => federationClassicThemeId;
 
   @override
-  String get rendererId => 'federation-classic-additive-responsive-shell-v1';
+  String get rendererId => 'federation-classic-owned-responsive-console-v2';
 
   @override
   Widget build({
@@ -1127,7 +1127,10 @@ final class FederationClassicThemeBundle
     themeId: federationClassicThemeId,
     assetPackage: 'clinical_calendar_presentation',
     primaryAsset: federationClassicFrameAsset,
-    assetPaths: [federationClassicFrameAsset],
+    assetPaths: [
+      federationClassicFrameAsset,
+      federationClassicLandscapeChassisAsset,
+    ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
     safeInsets: {
@@ -1141,7 +1144,7 @@ final class FederationClassicThemeBundle
   @override
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: federationClassicThemeId,
-    rendererId: 'federation-classic-additive-responsive-shell-v1',
+    rendererId: 'federation-classic-owned-responsive-console-v2',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [

@@ -1,6 +1,6 @@
 # Federation Classic implementation evidence
 
-Status: approved concept implemented for GitHub issue #133.
+Status: concept-fidelity renderer candidate prepared for GitHub issue #133.
 
 The maintainer approved both visual-direction surfaces in GitHub issue #113:
 
@@ -35,3 +35,29 @@ despill. Automated validation records:
 
 The runtime gallery thumbnail remains renderer-generated from the pinned
 fictional Android-tablet fixture rather than using either concept image.
+
+## Concept-fidelity landscape chassis
+
+`packages/clinical_calendar_presentation/assets/federation_classic_raster/dashboard-chassis-landscape-v1.png`
+is a secondary fixed landscape composition asset. The normalized transparent
+nine-slice above remains the primary frame and is still used for portrait,
+compact, and destination surfaces.
+
+The chassis was generated with the built-in image-generation workflow using
+`calendar-dashboard-concept-v3.png` only as a reference for silhouette,
+dominant bay proportions, asymmetric elbows, command crown, bottom deck, and
+classic LCARS material language. The final targeted edit removed two
+decorative rails from the right live-content bay. The request prohibited
+text, controls, data, meaningful symbols, operational content, Containment
+Drone geometry, Federation 2399 geometry, cyan accents, and tactical texture.
+
+Automated validation records:
+
+- dimensions: 1536 by 1024;
+- SHA-256: `e969582b7efdad72d6bf97f6ae8cade2820833257d17c4546d4b840754ebc3bf`;
+- operational text, icons, controls, and data: absent;
+- live-content bays: opaque, near-black, and uninterrupted.
+
+The deterministic runtime proof package is under
+`docs/themes/acceptance/proofs/federation-classic-v2/`. Its exact landscape
+exemplar is the approved concept's native 1586 by 992 viewport.
