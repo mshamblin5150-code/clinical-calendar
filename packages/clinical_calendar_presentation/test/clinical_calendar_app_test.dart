@@ -778,6 +778,155 @@ void main() {
     );
   });
 
+  testWidgets(
+    'Preview preserves Settings state and Apply persists transactionally',
+    (tester) async {
+      final repositories = _Repositories();
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: variantFThemeId,
+        initialRevision: 0,
+      );
+      addTearDown(preview.dispose);
+      await _pumpAt(
+        tester,
+        const Size(768, 1024),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: preview,
+        candidateThemePreflight: (_) async {},
+      );
+
+      await tester.tap(find.text('Settings').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('week-start-setting')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Monday').last);
+      await tester.pumpAndSettle();
+
+      final settingsScroll = find.descendant(
+        of: find.byKey(const Key('settings-templates-surface')),
+        matching: find.byType(Scrollable),
+      );
+      await tester.drag(settingsScroll.first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      await preview.preview(graphiteThemeId, preflight: (_) async {});
+      await tester.pumpAndSettle();
+      expect(preview.previewUnavailable, isFalse);
+      expect(preview.isPreviewing, isTrue);
+      expect(find.byType(GraphiteDestinationSurface), findsOneWidget);
+      expect(
+        find.byKey(const Key('settings-templates-surface')),
+        findsOneWidget,
+      );
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('week-start-setting')),
+        -300,
+        scrollable: settingsScroll.first,
+      );
+      expect(find.text('Monday'), findsWidgets);
+      expect(find.text('Previewing Graphite'), findsOneWidget);
+      expect(find.text('Not saved'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('apply-theme-preview')));
+      await tester.pumpAndSettle();
+
+      expect(preview.isPreviewing, isFalse);
+      expect(preview.authoritativeThemeId, graphiteThemeId);
+      expect(repositories.settings.value?.value.themeId, graphiteThemeId);
+      expect(find.byKey(const Key('theme-preview-control')), findsNothing);
+      expect(
+        find.byKey(const Key('settings-templates-surface')),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('failed Apply keeps Preview retryable and Revert available', (
+    tester,
+  ) async {
+    final repositories = _Repositories();
+    final preview = ThemePreviewController(
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      authoritativeThemeId: variantFThemeId,
+      initialRevision: 0,
+    );
+    addTearDown(preview.dispose);
+    await _pumpAt(
+      tester,
+      const Size(768, 1024),
+      dependencies: _dependencies(repositories: repositories),
+      themePreviewController: preview,
+    );
+    await preview.preview(graphiteThemeId, preflight: (_) async {});
+    await tester.pumpAndSettle();
+    repositories.settings.failNextPut = true;
+
+    await tester.tap(find.byKey(const Key('apply-theme-preview')));
+    await tester.pumpAndSettle();
+
+    expect(preview.isPreviewing, isTrue);
+    expect(preview.authoritativeThemeId, variantFThemeId);
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.byKey(const Key('revert-theme-preview')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('apply-theme-preview')));
+    await tester.pumpAndSettle();
+
+    expect(preview.isPreviewing, isFalse);
+    expect(preview.authoritativeThemeId, graphiteThemeId);
+  });
+
+  testWidgets('sign out and local removal discards an active Preview', (
+    tester,
+  ) async {
+    final gateway = _RecoveryOtpGateway();
+    final localCopy = _LocalCopyController();
+    final identity = PasswordlessIdentityService(
+      gateway: gateway,
+      secureStorage: _IdentitySecureStorage(),
+      identifiers: _Identifiers(),
+      clock: _Clock(),
+      currentDevice: DeviceDescriptor(
+        name: 'Test device',
+        platform: DevicePlatform.windows,
+      ),
+      localCopy: localCopy,
+    );
+    await identity.verifySignInCode('student@example.com', '123456');
+    final preview = ThemePreviewController(
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      authoritativeThemeId: variantFThemeId,
+      initialRevision: 0,
+    );
+    addTearDown(preview.dispose);
+    var removed = false;
+    await _pumpAt(
+      tester,
+      const Size(1024, 768),
+      identity: identity,
+      identityEmail: 'student@example.com',
+      onLocalCopyRemoved: () async => removed = true,
+      themePreviewController: preview,
+    );
+    await tester.tap(find.byKey(const Key('desktop-menu-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Connected Devices'));
+    await tester.pumpAndSettle();
+    await preview.preview(graphiteThemeId, preflight: (_) async {});
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('sign-out-remove-local-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-local-removal')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('remove-local-copy')));
+    await tester.pumpAndSettle();
+
+    expect(removed, isTrue);
+    expect(localCopy.removed, isTrue);
+    expect(preview.isPreviewing, isFalse);
+  });
+
   testWidgets('Variant F exposes semantic colors and shallow metrics', (
     tester,
   ) async {
@@ -842,8 +991,11 @@ Future<void> _pumpAt(
   OneShotRecoveryReauthenticationGate? recoveryProofGate,
   PasswordlessIdentityService? identity,
   String? identityEmail,
+  Future<void> Function()? onLocalCopyRemoved,
   PortableBackupWorkflows? portableBackupWorkflows,
   ExportWorkflowFactory? exportWorkflowFactory,
+  ThemePreviewController? themePreviewController,
+  CandidateThemePreflight? candidateThemePreflight,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -858,8 +1010,11 @@ Future<void> _pumpAt(
       recoveryProofGate: recoveryProofGate,
       identity: identity,
       identityEmail: identityEmail,
+      onLocalCopyRemoved: onLocalCopyRemoved,
       portableBackupWorkflows: portableBackupWorkflows,
       exportWorkflowFactory: exportWorkflowFactory,
+      themePreviewController: themePreviewController,
+      candidateThemePreflight: candidateThemePreflight,
     ),
   );
   await tester.pumpAndSettle();
@@ -948,7 +1103,39 @@ final class _RecoveryOtpGateway implements PasswordlessIdentityGateway {
   }) async => true;
 
   @override
+  Future<List<ConnectedDevice>> listConnectedDevices(
+    String accessToken,
+  ) async => const [];
+
+  @override
+  Future<void> signOutCurrentSession(String accessToken) async {}
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+final class _LocalCopyController implements LocalDeviceCopyController {
+  var removed = false;
+
+  @override
+  Future<LocalRemovalPreview> previewRemoval() async =>
+      const LocalRemovalPreview(pendingChangeCount: 0);
+
+  @override
+  Future<void> removeLocalCopy() async => removed = true;
+}
+
+final class _IdentitySecureStorage implements SecureStorage {
+  final _values = <String, String>{};
+
+  @override
+  Future<void> delete(String key) async => _values.remove(key);
+
+  @override
+  Future<String?> read(String key) async => _values[key];
+
+  @override
+  Future<void> write(String key, String value) async => _values[key] = value;
 }
 
 final class _RecoveryGate implements RecoveryReauthenticationGate {
@@ -1009,16 +1196,22 @@ final class _Repositories implements RepositoryRegistry {
     bool seedSynchronization = false,
     bool seedConflict = false,
   }) {
+    settings = _SettingsStore();
+    profile = _ProfileStore();
     synchronization = _ConflictSynchronizationRepository(seedConflict);
     repositories = _ReadRepositories(
       seedLifecycle: seedLifecycle,
       seedSynchronization: seedSynchronization,
       synchronization: synchronization,
+      settings: settings,
+      profile: profile,
     );
   }
 
   late final _ReadRepositories repositories;
   late final _ConflictSynchronizationRepository synchronization;
+  late final _SettingsStore settings;
+  late final _ProfileStore profile;
 
   @override
   Future<void> initialize() async {}
@@ -1031,7 +1224,13 @@ final class _Repositories implements RepositoryRegistry {
   @override
   Future<R> mutate<R>(
     R Function(LocalWriteRepositories repositories) callback,
-  ) async => callback(_ConflictWriteRepositories(synchronization));
+  ) async => callback(
+    _ConflictWriteRepositories(
+      synchronization,
+      settings: settings,
+      profile: profile,
+    ),
+  );
 }
 
 final class _ReadRepositories
@@ -1042,6 +1241,8 @@ final class _ReadRepositories
     required bool seedLifecycle,
     required bool seedSynchronization,
     required this.synchronization,
+    required this.settings,
+    required this.profile,
   }) : _workShifts = _EmptyReadRepository(),
        _clinicalSessions = seedLifecycle
            ? _StaticReadRepository([_sessionRecord()], (value) => value.id)
@@ -1074,6 +1275,8 @@ final class _ReadRepositories
 
   @override
   final SynchronizationLocalRepository synchronization;
+  final _SettingsStore settings;
+  final _ProfileStore profile;
 
   @override
   ReadRepository<WorkShift> get workShifts => _workShifts;
@@ -1112,18 +1315,33 @@ final class _ReadRepositories
       const _EmptyActivePlacement();
 
   @override
-  StudentProfileReadRepository get studentProfile => const _ProfileRead();
+  StudentProfileReadRepository get studentProfile => profile;
 
   @override
-  StudentSettingsReadRepository get studentSettings => const _SettingsRead();
+  StudentSettingsReadRepository get studentSettings => settings;
 }
 
 final class _ConflictWriteRepositories
-    implements SynchronizationLocalWriteRepositories {
-  _ConflictWriteRepositories(this.synchronization);
+    implements
+        SynchronizationLocalWriteRepositories,
+        SupportLocalWriteRepositories {
+  _ConflictWriteRepositories(
+    this.synchronization, {
+    required this.settings,
+    required this.profile,
+  });
 
   @override
   final SynchronizationLocalRepository synchronization;
+
+  final _SettingsStore settings;
+  final _ProfileStore profile;
+
+  @override
+  StudentSettingsRepository get studentSettings => settings;
+
+  @override
+  StudentProfileRepository get studentProfile => profile;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -1371,11 +1589,12 @@ StoredDomainRecord<Preceptor> _preceptorRecord() => StoredDomainRecord(
   updatedAtUtc: DateTime.utc(2026),
 );
 
-final class _ProfileRead implements StudentProfileReadRepository {
-  const _ProfileRead();
+final class _ProfileStore implements StudentProfileRepository {
+  StoredDomainRecord<StudentProfile>? value;
 
   @override
   StoredDomainRecord<StudentProfile>? find({required String studentId}) =>
+      value ??
       StoredDomainRecord(
         value: StudentProfile(id: studentId, displayName: 'Test Student'),
         studentId: studentId,
@@ -1383,14 +1602,71 @@ final class _ProfileRead implements StudentProfileReadRepository {
         createdAtUtc: DateTime.utc(2026),
         updatedAtUtc: DateTime.utc(2026),
       );
+
+  @override
+  MutationReceipt<StudentProfile> put({
+    required String studentId,
+    required StudentProfile profile,
+    required int expectedRevision,
+    required MutationToken mutation,
+  }) {
+    final current = find(studentId: studentId)!;
+    if (current.revision != expectedRevision) {
+      throw const RepositoryException(
+        RepositoryFailureKind.concurrentModification,
+        'stale profile',
+      );
+    }
+    value = StoredDomainRecord(
+      value: profile,
+      studentId: studentId,
+      revision: expectedRevision + 1,
+      createdAtUtc: current.createdAtUtc,
+      updatedAtUtc: mutation.occurredAtUtc,
+    );
+    return MutationReceipt(record: value!, replayed: false);
+  }
 }
 
-final class _SettingsRead implements StudentSettingsReadRepository {
-  const _SettingsRead();
+final class _SettingsStore implements StudentSettingsRepository {
+  StoredDomainRecord<StudentSettings>? value;
+  bool failNextPut = false;
 
   @override
   StoredDomainRecord<StudentSettings>? find({required String studentId}) =>
-      null;
+      value;
+
+  @override
+  MutationReceipt<StudentSettings> put({
+    required String studentId,
+    required StudentSettings settings,
+    required int expectedRevision,
+    required MutationToken mutation,
+  }) {
+    if (failNextPut) {
+      failNextPut = false;
+      throw const RepositoryException(
+        RepositoryFailureKind.persistenceFailure,
+        'simulated failure',
+      );
+    }
+    final current = value;
+    final revision = current?.revision ?? 0;
+    if (revision != expectedRevision) {
+      throw const RepositoryException(
+        RepositoryFailureKind.concurrentModification,
+        'stale settings',
+      );
+    }
+    value = StoredDomainRecord(
+      value: settings,
+      studentId: studentId,
+      revision: revision + 1,
+      createdAtUtc: current?.createdAtUtc ?? mutation.occurredAtUtc,
+      updatedAtUtc: mutation.occurredAtUtc,
+    );
+    return MutationReceipt(record: value!, replayed: false);
+  }
 }
 
 final class _EmptyActivePlacement

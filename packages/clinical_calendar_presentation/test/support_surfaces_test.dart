@@ -382,6 +382,48 @@ void main() {
     },
   );
 
+  testWidgets('Settings rebases its saved theme after synchronized updates', (
+    tester,
+  ) async {
+    StudentSettings? savedSettings;
+    Widget app(StudentSettings settings) => MaterialApp(
+      theme: const VariantFVisualTheme().createThemeData(),
+      home: Scaffold(
+        body: SafeArea(
+          child: SettingsTemplatesSurface(
+            key: const Key('synchronized-settings'),
+            settings: settings,
+            authoritativeThemeId: settings.themeId,
+            scheduleTemplates: const [],
+            newTemplateId: () => _id(31),
+            onSaveSettings: (settings) async => savedSettings = settings,
+            onSaveTemplate: (_) async {},
+            onRemoveTemplate: (_) async {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(app(StudentSettings(themeId: variantFThemeId)));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(app(StudentSettings(themeId: graphiteThemeId)));
+    await tester.pumpAndSettle();
+
+    final scrollable = find.descendant(
+      of: find.byKey(const Key('settings-templates-surface')),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('save-settings-templates-action')),
+      300,
+      scrollable: scrollable.first,
+    );
+    await tester.tap(find.byKey(const Key('save-settings-templates-action')));
+    await tester.pumpAndSettle();
+
+    expect(savedSettings?.themeId, graphiteThemeId);
+  });
+
   testWidgets('Settings notification controls do not overflow at 320px', (
     tester,
   ) async {
