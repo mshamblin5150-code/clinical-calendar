@@ -160,6 +160,7 @@ void main() {
       containsAll([
         federation2399FrameAsset,
         federation2399LandscapeChassisAsset,
+        federation2399DeltaAsset,
       ]),
     );
     expect(federation2399.gallery.swatches, hasLength(5));
@@ -231,7 +232,7 @@ void main() {
         ),
         (
           federation2399,
-          'federation-2399-owned-responsive-console-v3',
+          'federation-2399-owned-responsive-console-v4',
           Federation2399ApplicationShell,
         ),
       ];
@@ -1077,17 +1078,20 @@ void main() {
       final navigation = tester.getRect(
         find.byKey(const Key('federation-2399-bottom-navigation')),
       );
-      expect(crown.height / 1024, closeTo(.074, .01));
-      expect(placements.width / 1536, closeTo(.17, .01));
-      expect(insight.width / 1536, closeTo(.225, .01));
-      expect(calendar.width / 1536, closeTo(.478, .01));
+      // Absolute 1536 x 1024 coordinates measured from the approved #114
+      // concept, not ratios copied from the renderer implementation.
+      _expectRectCloseTo(crown, const Rect.fromLTWH(40, 45, 1044, 76));
+      _expectRectCloseTo(placements, const Rect.fromLTWH(54, 131, 261, 748));
+      _expectRectCloseTo(calendar, const Rect.fromLTWH(361, 133, 734, 458));
+      _expectRectCloseTo(planning, const Rect.fromLTWH(361, 625, 734, 251));
+      _expectRectCloseTo(insight, const Rect.fromLTWH(1158, 85, 346, 791));
+      _expectRectCloseTo(navigation, const Rect.fromLTWH(86, 916, 1364, 70));
       expect(placements.right, lessThan(calendar.left));
       expect(calendar.right, lessThan(insight.left));
       expect(planning.top, greaterThan(calendar.top));
       expect(planning.left, calendar.left);
       expect(planning.right, calendar.right);
       expect(navigation.top, greaterThan(planning.bottom));
-      expect(navigation.height / 1024, closeTo(.068, .01));
       expect(tester.takeException(), isNull);
     },
   );
@@ -1836,6 +1840,13 @@ const _slots = ResponsiveShellSlots(
 void _noop() {}
 
 void _ignoreDestination(ClinicalCalendarDestination _) {}
+
+void _expectRectCloseTo(Rect actual, Rect expected) {
+  expect(actual.left, closeTo(expected.left, 3));
+  expect(actual.top, closeTo(expected.top, 3));
+  expect(actual.width, closeTo(expected.width, 3));
+  expect(actual.height, closeTo(expected.height, 3));
+}
 
 final class _TestBundle implements ClinicalCalendarThemeBundle {
   const _TestBundle({
