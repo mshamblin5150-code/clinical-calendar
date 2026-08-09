@@ -180,10 +180,18 @@ void main() {
     final crown = tester.getRect(
       find.byKey(const Key('botanical-study-command-crown')),
     );
+    final axionDelta = tester.getRect(
+      find.byKey(const Key('botanical-study-axion-delta')),
+    );
+    final axionImage = tester.widget<Image>(
+      find.byKey(const Key('botanical-study-axion-delta-image')),
+    );
     final navigation = tester.getRect(
       find.byKey(const Key('botanical-study-bottom-navigation')),
     );
     _expectRectClose(crown, const Rect.fromLTWH(61, 0, 1494, 65));
+    expect(axionDelta.size, const Size.square(42));
+    expect(axionImage.color, isNull);
     _expectRectClose(placements, const Rect.fromLTWH(61, 66, 307, 834));
     _expectRectClose(calendar, const Rect.fromLTWH(378, 66, 767, 561));
     _expectRectClose(planning, const Rect.fromLTWH(378, 638, 767, 262));
@@ -242,8 +250,13 @@ void main() {
     final placements = tester.getRect(
       find.byKey(const Key('botanical-study-placement-bay')),
     );
+    final axionDelta = tester.getRect(
+      find.byKey(const Key('botanical-study-axion-delta')),
+    );
     expect(calendar.top, lessThan(planning.top));
     expect(planning.top, lessThan(placements.top));
+    expect(axionDelta.width, greaterThanOrEqualTo(36));
+    expect(axionDelta.height, greaterThanOrEqualTo(36));
     expect(tester.takeException(), isNull);
   });
 }
