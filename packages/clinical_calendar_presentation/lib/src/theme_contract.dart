@@ -1242,7 +1242,10 @@ final class GraphiteThemeBundle implements ClinicalCalendarThemeBundle {
     themeId: graphiteThemeId,
     assetPackage: 'clinical_calendar_presentation',
     primaryAsset: 'assets/graphite_raster/panel-nine-slice-v1.png',
-    assetPaths: ['assets/graphite_raster/panel-nine-slice-v1.png'],
+    assetPaths: [
+      'assets/graphite_raster/panel-nine-slice-v1.png',
+      graphiteDeltaAsset,
+    ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
     safeInsets: {

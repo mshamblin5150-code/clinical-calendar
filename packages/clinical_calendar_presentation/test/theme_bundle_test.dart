@@ -57,7 +57,8 @@ void main() {
       graphite.frame.sourceCuts,
       const EdgeInsets.fromLTRB(120, 145, 120, 170),
     );
-    expect(graphite.frame.assetPaths, hasLength(1));
+    expect(graphite.frame.assetPaths, hasLength(2));
+    expect(graphite.frame.assetPaths, contains(graphiteDeltaAsset));
     expect(graphite.gallery.swatches, hasLength(5));
     expect(graphite.marks.marks, hasLength(9));
     expect(graphite.helpGuide.calendarStates, hasLength(5));

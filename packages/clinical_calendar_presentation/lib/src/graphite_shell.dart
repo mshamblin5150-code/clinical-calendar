@@ -7,6 +7,7 @@ import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
 const graphiteCompactDestinationInsets = EdgeInsets.fromLTRB(18, 20, 18, 22);
+const graphiteDeltaAsset = 'assets/graphite_raster/axion-delta-mark-v2.png';
 
 Widget _buildGraphiteFrame(
   Widget child,
@@ -183,6 +184,14 @@ final class GraphiteApplicationShell extends StatelessWidget {
                     onOpenAttention: onOpenAttention,
                   ),
                 ),
+                const Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      key: Key('graphite-landscape-rails'),
+                      foregroundPainter: _GraphiteLandscapeRailsPainter(),
+                    ),
+                  ),
+                ),
               ],
             );
           },
@@ -310,6 +319,108 @@ final class GraphiteApplicationShell extends StatelessWidget {
 
 enum _GraphiteAccent { silver, emerald, coral }
 
+final class _GraphiteLandscapeRailsPainter extends CustomPainter {
+  const _GraphiteLandscapeRailsPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rails = <Rect>[
+      Rect.fromLTWH(0, 0, size.width, size.height * .077),
+      Rect.fromLTWH(
+        0,
+        size.height * .085,
+        size.width * .192,
+        size.height * .82,
+      ),
+      Rect.fromLTWH(
+        size.width * .198,
+        size.height * .085,
+        size.width * .553,
+        size.height * .553,
+      ),
+      Rect.fromLTWH(
+        size.width * .198,
+        size.height * .647,
+        size.width * .553,
+        size.height * .258,
+      ),
+      Rect.fromLTWH(
+        size.width * .757,
+        size.height * .085,
+        size.width * .243,
+        size.height * .82,
+      ),
+      Rect.fromLTWH(0, size.height * .914, size.width, size.height * .086),
+    ];
+    for (final rect in rails) {
+      _paintRail(canvas, rect);
+    }
+  }
+
+  void _paintRail(Canvas canvas, Rect bounds) {
+    final outer = RRect.fromRectAndRadius(
+      bounds.deflate(.5),
+      const Radius.circular(8),
+    );
+    final inner = RRect.fromRectAndRadius(
+      bounds.deflate(2.5),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(
+      outer.shift(const Offset(0, 1)),
+      Paint()
+        ..color = const Color(0xFF020304).withValues(alpha: .92)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    canvas.drawRRect(
+      outer,
+      Paint()
+        ..color = const Color(0xFF778188)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+    canvas.drawRRect(
+      inner,
+      Paint()
+        ..color = const Color(0xFF252C31)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+
+    final highlight = Path()
+      ..moveTo(bounds.left + 8, bounds.top + 1.5)
+      ..lineTo(bounds.right - 8, bounds.top + 1.5)
+      ..moveTo(bounds.left + 1.5, bounds.top + 8)
+      ..lineTo(bounds.left + 1.5, bounds.bottom - 8);
+    canvas.drawPath(
+      highlight,
+      Paint()
+        ..color = const Color(0xFFC5CCD0).withValues(alpha: .22)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = .8
+        ..strokeCap = StrokeCap.round,
+    );
+
+    final shade = Path()
+      ..moveTo(bounds.left + 8, bounds.bottom - 1.5)
+      ..lineTo(bounds.right - 8, bounds.bottom - 1.5)
+      ..moveTo(bounds.right - 1.5, bounds.top + 8)
+      ..lineTo(bounds.right - 1.5, bounds.bottom - 8);
+    canvas.drawPath(
+      shade,
+      Paint()
+        ..color = Colors.black.withValues(alpha: .82)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GraphiteLandscapeRailsPainter oldDelegate) => false;
+}
+
 abstract final class _GraphiteChrome {
   static const contentSurface = Color(0xFF13171A);
   static const raisedSurface = Color(0xFF171B1E);
@@ -373,37 +484,200 @@ final class _GraphiteLogoPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    Offset point(double x, double y) => Offset(size.width * x, size.height * y);
+
+    final deltaOuter = Path()
+      ..moveTo(size.width * .04, size.height * .91)
+      ..cubicTo(
+        size.width * .16,
+        size.height * .57,
+        size.width * .34,
+        size.height * .20,
+        size.width * .48,
+        size.height * .04,
+      )
+      ..cubicTo(
+        size.width * .59,
+        size.height * .18,
+        size.width * .75,
+        size.height * .50,
+        size.width * .87,
+        size.height * .84,
+      )
+      ..cubicTo(
+        size.width * .74,
+        size.height * .72,
+        size.width * .62,
+        size.height * .68,
+        size.width * .49,
+        size.height * .71,
+      )
+      ..cubicTo(
+        size.width * .31,
+        size.height * .75,
+        size.width * .16,
+        size.height * .84,
+        size.width * .04,
+        size.height * .91,
+      )
+      ..close();
+    final deltaCutout = Path()
+      ..moveTo(size.width * .29, size.height * .55)
+      ..lineTo(size.width * .48, size.height * .20)
+      ..lineTo(size.width * .65, size.height * .54)
+      ..cubicTo(
+        size.width * .54,
+        size.height * .52,
+        size.width * .41,
+        size.height * .52,
+        size.width * .29,
+        size.height * .55,
+      )
+      ..close();
+    final delta = Path.combine(
+      PathOperation.difference,
+      deltaOuter,
+      deltaCutout,
+    );
     final shadow = Paint()
-      ..color = Colors.black.withValues(alpha: .75)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 7
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final silver = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFF2F3F3), Color(0xFF7B8287)],
-      ).createShader(Offset.zero & size)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final silhouette = Path()
-      ..moveTo(size.width * .12, size.height * .88)
-      ..lineTo(size.width * .48, size.height * .08)
-      ..lineTo(size.width * .87, size.height * .88);
-    final crossbar = Path()
-      ..moveTo(size.width * .23, size.height * .64)
-      ..lineTo(size.width * .72, size.height * .49);
-    canvas.drawPath(silhouette, shadow);
-    canvas.drawPath(crossbar, shadow);
-    canvas.drawPath(silhouette, silver);
-    canvas.drawPath(crossbar, silver);
-    canvas.drawLine(
-      Offset(size.width * .34, size.height * .76),
-      Offset(size.width * .68, size.height * .67),
-      silver..strokeWidth = 2,
+      ..color = Colors.black.withValues(alpha: .9)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    canvas.drawPath(delta.shift(point(.025, .025)), shadow);
+    canvas.drawPath(
+      delta,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF8D9499),
+            Color(0xFFF9FAFA),
+            Color(0xFF777E84),
+            Color(0xFFE8EAEB),
+          ],
+          stops: [0, .32, .62, 1],
+        ).createShader(Offset.zero & size),
+    );
+    canvas.drawPath(
+      delta,
+      Paint()
+        ..color = const Color(0xFF24292D)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    final orbit = Path()
+      ..moveTo(size.width * .055, size.height * .72)
+      ..cubicTo(
+        size.width * .25,
+        size.height * .48,
+        size.width * .57,
+        size.height * .29,
+        size.width * .83,
+        size.height * .27,
+      )
+      ..cubicTo(
+        size.width * .93,
+        size.height * .26,
+        size.width * 1.01,
+        size.height * .30,
+        size.width * .98,
+        size.height * .37,
+      )
+      ..cubicTo(
+        size.width * .91,
+        size.height * .49,
+        size.width * .62,
+        size.height * .56,
+        size.width * .37,
+        size.height * .65,
+      )
+      ..cubicTo(
+        size.width * .20,
+        size.height * .71,
+        size.width * .10,
+        size.height * .78,
+        size.width * .04,
+        size.height * .86,
+      )
+      ..cubicTo(
+        size.width * .015,
+        size.height * .83,
+        size.width * .025,
+        size.height * .77,
+        size.width * .055,
+        size.height * .72,
+      )
+      ..close();
+    canvas.drawPath(orbit.shift(point(.02, .025)), shadow);
+    canvas.drawPath(
+      orbit,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFFFFFFF),
+            Color(0xFF8A9196),
+            Color(0xFFF1F2F2),
+            Color(0xFF747B80),
+          ],
+          stops: [0, .38, .65, 1],
+        ).createShader(Offset.zero & size),
+    );
+    canvas.drawPath(
+      orbit,
+      Paint()
+        ..color = const Color(0xFF24292D)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.3
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    final aperture = Path()
+      ..moveTo(size.width * .68, size.height * .39)
+      ..cubicTo(
+        size.width * .79,
+        size.height * .34,
+        size.width * .90,
+        size.height * .32,
+        size.width * .93,
+        size.height * .34,
+      )
+      ..cubicTo(
+        size.width * .89,
+        size.height * .41,
+        size.width * .79,
+        size.height * .47,
+        size.width * .66,
+        size.height * .51,
+      )
+      ..close();
+    canvas.drawPath(aperture, Paint()..color = const Color(0xFF111518));
+    canvas.drawPath(
+      aperture,
+      Paint()
+        ..color = const Color(0xFFDDE0E2)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = .8,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width * .08, size.height * .70)
+        ..cubicTo(
+          size.width * .31,
+          size.height * .46,
+          size.width * .61,
+          size.height * .31,
+          size.width * .86,
+          size.height * .29,
+        ),
+      Paint()
+        ..color = Colors.white.withValues(alpha: .82)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = .8
+        ..strokeCap = StrokeCap.round,
     );
   }
 
@@ -525,7 +799,15 @@ final class _GraphiteCommandCrown extends StatelessWidget {
         children: [
           SizedBox.square(
             dimension: compact ? 40 : 50,
-            child: const CustomPaint(painter: _GraphiteLogoPainter()),
+            child: Image.asset(
+              graphiteDeltaAsset,
+              package: 'clinical_calendar_presentation',
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+              semanticLabel: 'Axion delta',
+              errorBuilder: (context, error, stackTrace) =>
+                  const CustomPaint(painter: _GraphiteLogoPainter()),
+            ),
           ),
           SizedBox(width: compact ? 8 : 12),
           Expanded(

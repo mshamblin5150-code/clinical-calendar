@@ -22,6 +22,32 @@ void main() {
   ) async {
     await _pumpProof(tester, const Size(1536, 1024));
 
+    expect(find.byKey(const Key('graphite-landscape-rails')), findsOneWidget);
+
+    final planningBay = tester.getRect(
+      find.byKey(const Key('graphite-planning-bay')),
+    );
+    final endField = tester.getRect(
+      find.byKey(const Key('graphite-planning-field-END')),
+    );
+    expect(
+      planningBay.right - endField.right,
+      greaterThanOrEqualTo(48),
+      reason: 'The END field must clear the planning bay chrome.',
+    );
+
+    final delta = tester.widget<Image>(
+      find.descendant(
+        of: find.byKey(const Key('graphite-command-crown')),
+        matching: find.byType(Image),
+      ),
+    );
+    expect(
+      delta.color,
+      isNull,
+      reason: 'Preserve the supplied metallic delta.',
+    );
+
     await expectLater(
       find.byKey(const Key('graphite-proof')),
       matchesGoldenFile('goldens/graphite/graphite_landscape_1536x1024.png'),
@@ -82,6 +108,26 @@ void main() {
 
     expect(comparison.meanChannelSimilarity, lessThan(.93));
   });
+
+  test(
+    'Graphite delta is a transparent emblem rather than a tinted rectangle',
+    () {
+      final deltaFile = _findWorkspaceFile(
+        'packages/clinical_calendar_presentation/$graphiteDeltaAsset',
+      );
+      final delta = img.decodePng(deltaFile.readAsBytesSync());
+      expect(delta, isNotNull);
+      var visiblePixels = 0;
+      for (final pixel in delta!) {
+        if (pixel.a > 0) visiblePixels++;
+      }
+      expect(delta.getPixel(0, 0).a, 0);
+      expect(delta.getPixel(delta.width - 1, 0).a, 0);
+      expect(delta.getPixel(0, delta.height - 1).a, 0);
+      expect(delta.getPixel(delta.width - 1, delta.height - 1).a, 0);
+      expect(visiblePixels / (delta.width * delta.height), lessThan(.45));
+    },
+  );
 
   testWidgets('Graphite portrait is an intentional ordered recomposition', (
     tester,
@@ -199,6 +245,9 @@ Future<void> _pumpProof(
     frameFile: _findWorkspaceFile(
       'packages/clinical_calendar_presentation/$graphiteFrameAsset',
     ),
+    deltaFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/$graphiteDeltaAsset',
+    ),
   );
   final preloadKey = GlobalKey();
   await tester.pumpWidget(
@@ -211,6 +260,13 @@ Future<void> _pumpProof(
     await precacheImage(
       const AssetImage(
         graphiteFrameAsset,
+        package: 'clinical_calendar_presentation',
+      ),
+      preloadKey.currentContext!,
+    );
+    await precacheImage(
+      const AssetImage(
+        graphiteDeltaAsset,
         package: 'clinical_calendar_presentation',
       ),
       preloadKey.currentContext!,
@@ -592,17 +648,23 @@ final class _PlanningProof extends StatelessWidget {
                   ],
                 ),
                 const Spacer(),
-                const Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: _PlanningField('SCHEDULE TEMPLATE', 'MANUAL'),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: .96,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: _PlanningField('SCHEDULE TEMPLATE', 'MANUAL'),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(child: _PlanningField('START', '08:00')),
+                        SizedBox(width: 12),
+                        Expanded(child: _PlanningField('END', '16:00')),
+                      ],
                     ),
-                    SizedBox(width: 12),
-                    Expanded(child: _PlanningField('START', '08:00')),
-                    SizedBox(width: 12),
-                    Expanded(child: _PlanningField('END', '16:00')),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -660,6 +722,7 @@ final class _PlanningField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
+    key: Key('graphite-planning-field-$label'),
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
     decoration: BoxDecoration(
       border: Border.all(color: context.clinicalColors.insetBorder),
@@ -786,14 +849,18 @@ File _findWorkspaceFile(String relativePath) {
 }
 
 final class _ProofAssetBundle extends CachingAssetBundle {
-  _ProofAssetBundle({required this.frameFile});
+  _ProofAssetBundle({required this.frameFile, required this.deltaFile});
 
   final File frameFile;
+  final File deltaFile;
 
   @override
   Future<ByteData> load(String key) async {
     if (key == 'packages/clinical_calendar_presentation/$graphiteFrameAsset') {
       return ByteData.sublistView(await frameFile.readAsBytes());
+    }
+    if (key == 'packages/clinical_calendar_presentation/$graphiteDeltaAsset') {
+      return ByteData.sublistView(await deltaFile.readAsBytes());
     }
     return rootBundle.load(key);
   }

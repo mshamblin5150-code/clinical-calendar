@@ -22,7 +22,7 @@ against a self-generated runtime golden. The public
 - mean RGB-channel similarity at least `0.93`;
 - pixels within 32 levels in every RGB channel at least `0.82`.
 
-The accepted candidate measures above both bounds. The test uses the same
+The current candidate measures above both bounds. The test uses the same
 1536 by 1024 live Flutter render recorded below. Runtime goldens remain exact
 on the canonical Windows environment; the existing bounded non-Windows font
 rasterization policy remains separate from this concept comparison.
@@ -36,6 +36,18 @@ semantic palette remains unchanged.
 The concept shows two Protected Days in several calendar weeks. The runtime
 deliberately keeps one per calendar week because Student data and domain
 invariants remain normative even when a concept fixture conflicts with them.
+
+The crown uses `axion-delta-mark-v2.png`, a delta-only derivative of the Axion
+reference supplied by the maintainer on 2026-08-09. The built-in image editor
+removed the `AXION` wordmark and gray backdrop while preserving the polished
+silver delta-and-orbit identity on a flat magenta key. The standard chroma-key
+helper then produced a transparent 1254 by 1254 PNG with four alpha-zero
+corners. The runtime displays that metallic raster directly, without a tint;
+the code-painted delta remains only as an asset-load failure fallback.
+
+The Planning evidence also reserves at least 48 pixels between the END field
+and the outer planning-bay boundary. The current 1536 by 1024 proof measures
+68 pixels, preventing the end time from reading across the surrounding chrome.
 
 ## Evidence
 
@@ -61,10 +73,10 @@ remain untouched.
 
 ```text
 1d37e9c2c0f97a2428fbebfd0fc2b5d6e85e3281a634fa16ca2c67479ec24e4e  approved-concept-landscape.png
-2930bd0862872803a9c46d33aea66c98f522992050d24b357e37473c246ceb11  landscape-concept-vs-runtime.png
-e5cfc5731b641ab4fb75ebfc8339d361242b3c7e418d7be6add9a301f595b584  runtime-landscape-1536x1024.png
-a1e5299b5de137c9140dfc2b8f6de8144012ee01fba58324929ea5c65053db9f  runtime-portrait-200-percent-900x1440.png
-af4db6a8f9827d9a11bb86a7a93aac830e44e42fc3f48a308bcc2f621f2cff8c  runtime-portrait-900x1440.png
+c00807dfca5db3f6370e3f60a4210cd2d8f67c1742e3533333299f787288e232  landscape-concept-vs-runtime.png
+a14c874d9d50faa571ab2edf9e858b8832d4166a1aa5f502dc1e35aa6c76195e  runtime-landscape-1536x1024.png
+6f46bbbd58e1987224218899585753ed34eb8239ef9fd9a7f14d948a0744c126  runtime-portrait-200-percent-900x1440.png
+bd5a10ce5d2ee4d7d2161b31381b234ca7b431a0d5525936fe743d9e41f216d7  runtime-portrait-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance
