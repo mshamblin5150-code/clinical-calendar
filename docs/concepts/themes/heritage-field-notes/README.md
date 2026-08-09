@@ -57,6 +57,12 @@ brass material depth. This supersedes the earlier flat walnut-only housing
 restriction. Texture and metallic reflection remain confined to
 noninteractive chrome.
 
+The maintainer's subsequent border review requires the right-side brass tabs
+to read as physical journal separations attached to the page edge, never as
+free-floating controls, and requires the insight title to sit beside rather
+than beneath its green section rule. The approved concept's leather cover and
+aged-brass chassis are therefore the normative material reference.
+
 ## Artifact
 
 - `calendar-dashboard-concept-v1.png`

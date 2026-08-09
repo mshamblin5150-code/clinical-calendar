@@ -1,4 +1,7 @@
-# Field Archive concept-fidelity candidate
+# Rejected Field Archive proof — 2efad9d
+
+Status: **rejected/superseded by maintainer border and material feedback**.
+This directory is historical evidence only and is not an acceptance baseline.
 
 Issue: [#137](https://github.com/mshamblin5150-code/clinical-calendar/issues/137)
 
@@ -32,13 +35,9 @@ untouched 1536 by 1024 concept (excluding comparison labels): the
 deep leather-and-brass book-board chassis, Axion-delta archival crown, tall
 placement bays, central Calendar and Planning hierarchy, right progress and
 attention rail, indexed hardware, and bottom navigation deck. Field Archive
-reserves the concept-derived dark leather and dimensional aged brass for that
-outer chassis. Its right-side index tabs are part of the same raster chassis
-and visibly join the journal page edge instead of floating independently. The
-live page is backed by parchment and its interior bays use single quiet rules
-without nested rims or cast shadows, matching the concept's border hierarchy.
-The insight rail reserves a separate content inset beside its green section
-rule so `INTERNAL MEDICINE` never paints beneath the accent. It also
+reserves dark leather and dimensional brass for that outer chassis: the live page is
+backed by parchment and its interior bays use single quiet rules without
+nested rims or cast shadows, matching the concept's border hierarchy. It also
 opts into the concept's uppercase archival month toolbar, forest-selected
 period controls, abbreviated weekday row, filled semantic Calendar bars, and
 bottom legend while every other theme keeps its established default. Its
@@ -67,18 +66,6 @@ downscaled for the product crown. The final asset contains no added text and
 has SHA-256
 `21f3f6a7c3f4cc67ad0c86943d8191c622a2030ca6d51dd5c1dabf4d37327c06`.
 
-## Leather-and-brass chassis record
-
-The landscape renderer uses
-`assets/heritage_field_notes_materials/field-archive-chassis.png`, produced
-with the built-in image tool from the untouched approved concept. The edit
-preserved only its outer aged-leather cover, embossed edge treatment, antique
-brass perimeter and fasteners, and the connected page-edge index tabs. All
-text, controls, icons, paper content, and live panels were removed onto a flat
-magenta key; the installed chroma-removal helper produced the transparent
-product overlay. The final 1536 by 1024 asset has SHA-256
-`5b4001634b5ea68a49a2389021d1398499f6bd7cc30bc03372ba9ce841ccc83e`.
-
 ## Original frame creation record
 
 The production `panel-nine-slice-v1.png` was generated with the built-in image
@@ -97,12 +84,11 @@ corners, uses source cuts 120/145/120/170, and has SHA-256
 
 ```text
 bf131014c71df2adc4b34b70c99e3e5ed94e54f0e1753d3979d0b6e85da66c75  approved-concept-landscape.png
-19a57d43e8d98945d42c9c3bca6ffd39c1b22d362f6c7b7f58adbc4c668de6c4  landscape-concept-vs-runtime.png
-b34d95376c7fc319eda3b8fbb5a10221f2edd470903e7fa05a3620920c60409c  runtime-landscape-1536x1024.png
-f478aee3077f7430518ffc41b867b3d3ca60c72db794491da935e0cb406fc41f  runtime-portrait-900x1440.png
+003752bebdd1493a455ca365f266404dd36de6fdea998af4f23bd675b38fb509  landscape-concept-vs-runtime.png
+508a7d69ce730992bc8167e294b95457984f4421dab1ef1ea6b92e676f6a5aa4  runtime-landscape-1536x1024.png
+0a97d1bdcb381f45acd2031eb25f39c21a746ad6e4abafb5bfac89193eba9039  runtime-portrait-900x1440.png
 8abfea4d5498a60e9faae0bb2e250b62cbfed6984c92e5426ab3a8b875d99345  runtime-portrait-200-percent-900x1440.png
 21f3f6a7c3f4cc67ad0c86943d8191c622a2030ca6d51dd5c1dabf4d37327c06  axion-delta.png
-5b4001634b5ea68a49a2389021d1398499f6bd7cc30bc03372ba9ce841ccc83e  field-archive-chassis.png
 ```
 
 ## Physical Android-tablet acceptance

@@ -200,21 +200,22 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
             },
           ),
         ),
-        const Positioned.fill(
+        Positioned.fill(
           child: ExcludeSemantics(
             child: IgnorePointer(
-              child: CustomPaint(
-                painter: _HeritageFieldNotesArchiveChassisPainter(),
+              child: Image(
+                image: AssetImage(
+                  heritageFieldNotesMaterialChassisAsset,
+                  package: 'clinical_calendar_presentation',
+                ),
+                fit: BoxFit.fill,
+                filterQuality: FilterQuality.high,
+                errorBuilder: (context, error, stackTrace) => const CustomPaint(
+                  painter: _HeritageFieldNotesArchiveChassisPainter(),
+                ),
               ),
             ),
           ),
-        ),
-        const Positioned(
-          right: 0,
-          top: 94,
-          bottom: 94,
-          width: 42,
-          child: _HeritageFieldNotesIndexTabs(),
         ),
       ],
     ),
@@ -600,7 +601,11 @@ final class _HeritageFieldNotesConsoleBay extends StatelessWidget {
       clipper: _HeritageFieldNotesBayClipper(shape),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          shape == _HeritageFieldNotesBayShape.placement ? 14 : 12,
+          switch (shape) {
+            _HeritageFieldNotesBayShape.placement => 14,
+            _HeritageFieldNotesBayShape.insight => 34,
+            _ => 12,
+          },
           switch (shape) {
             _HeritageFieldNotesBayShape.calendar => 10,
             _HeritageFieldNotesBayShape.planning => 12,
@@ -1015,68 +1020,4 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
       ),
     );
   }
-}
-
-final class _HeritageFieldNotesIndexTabs extends StatelessWidget {
-  const _HeritageFieldNotesIndexTabs();
-
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: IgnorePointer(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          for (var index = 0; index < 7; index++)
-            Container(
-              width: index.isEven ? 42 : 36,
-              height: index == 3
-                  ? 104
-                  : index.isEven
-                  ? 88
-                  : 82,
-              decoration: BoxDecoration(
-                gradient: index.isEven
-                    ? const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF6C430C),
-                          Color(0xFFC49B45),
-                          Color(0xFF9A6B00),
-                          Color(0xFFD0AF62),
-                          Color(0xFF704A13),
-                        ],
-                        stops: [0, .24, .52, .76, 1],
-                      )
-                    : const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF694433),
-                          Color(0xFF402219),
-                          Color(0xFF170C09),
-                        ],
-                      ),
-                border: Border.all(color: const Color(0xFFD2A74B), width: 1.5),
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(6),
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: index.isEven
-                      ? const Color(0xFF1B110C)
-                      : const Color(0xFFD2A74B),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-        ],
-      ),
-    ),
-  );
 }

@@ -227,6 +227,7 @@ void main() {
     expect(fieldArchive.frame.assetPaths, const [
       heritageFieldNotesFrameAsset,
       heritageFieldNotesAxionDeltaAsset,
+      heritageFieldNotesMaterialChassisAsset,
     ]);
     expect(fieldArchive.gallery.swatches, hasLength(5));
     expect(fieldArchive.marks.marks, hasLength(9));

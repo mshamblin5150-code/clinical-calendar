@@ -87,6 +87,9 @@ Future<void> _pumpProof(
     brandFile: _findWorkspaceFile(
       'packages/clinical_calendar_presentation/$heritageFieldNotesAxionDeltaAsset',
     ),
+    chassisFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/$heritageFieldNotesMaterialChassisAsset',
+    ),
   );
   final preloadKey = GlobalKey();
   await tester.pumpWidget(
@@ -106,6 +109,13 @@ Future<void> _pumpProof(
     await precacheImage(
       const AssetImage(
         heritageFieldNotesAxionDeltaAsset,
+        package: 'clinical_calendar_presentation',
+      ),
+      preloadKey.currentContext!,
+    );
+    await precacheImage(
+      const AssetImage(
+        heritageFieldNotesMaterialChassisAsset,
         package: 'clinical_calendar_presentation',
       ),
       preloadKey.currentContext!,
@@ -187,10 +197,15 @@ File _findWorkspaceFile(String relativePath) {
 }
 
 final class _ProofAssetBundle extends CachingAssetBundle {
-  _ProofAssetBundle({required this.frameFile, required this.brandFile});
+  _ProofAssetBundle({
+    required this.frameFile,
+    required this.brandFile,
+    required this.chassisFile,
+  });
 
   final File frameFile;
   final File brandFile;
+  final File chassisFile;
 
   @override
   Future<ByteData> load(String key) async {
@@ -204,6 +219,12 @@ final class _ProofAssetBundle extends CachingAssetBundle {
         'packages/clinical_calendar_presentation/$heritageFieldNotesAxionDeltaAsset') {
       return ByteData.sublistView(
         Uint8List.fromList(await brandFile.readAsBytes()),
+      );
+    }
+    if (key ==
+        'packages/clinical_calendar_presentation/$heritageFieldNotesMaterialChassisAsset') {
+      return ByteData.sublistView(
+        Uint8List.fromList(await chassisFile.readAsBytes()),
       );
     }
     return rootBundle.load(key);
