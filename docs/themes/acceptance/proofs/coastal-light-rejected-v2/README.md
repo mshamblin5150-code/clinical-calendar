@@ -1,10 +1,11 @@
-# Coastal Light concept-fidelity proof v2
+# Coastal Light rejected concept-fidelity proof v2
 
-Status: **AWAITING EXPLICIT MAINTAINER VISUAL APPROVAL**.
+Status: **REJECTED by the maintainer on 2026-08-09**.
 
-This revision supersedes the rejected v1 proof. It is evidence for review, not
-an acceptance baseline. The approved 1586×992 concept remains normative until a
-maintainer explicitly accepts this runtime proof. Physical-device acceptance is
+This directory is historical evidence only and is not an acceptance baseline.
+The maintainer reported that the buttons, Settings navigation, hour breakdown,
+and attention rail still did not match the approved concept closely enough.
+The approved 1586×992 concept remains normative. Physical-device acceptance is
 tracked separately by #139.
 
 ## What changed after rejection

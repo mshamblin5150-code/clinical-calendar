@@ -874,6 +874,12 @@ ThemeRasterAcceptanceFixture themeRasterAcceptanceFixture(String themeId) =>
             'd8dd1c290cd87789ebc01a46d15f2a1fbb32b50c4c0c9afd9da89367b16542df',
         creationRecordUri: 'docs/concepts/themes/botanical-study/README.md',
       ),
+      heritageFieldNotesThemeId => const ThemeRasterAcceptanceFixture(
+        expectedSha256:
+            '5bdc8587d9e35595868e5ee6e983c2cfb35d06bc110bd5cbf5885345c1f2645b',
+        creationRecordUri:
+            'docs/themes/acceptance/proofs/heritage-field-notes/README.md',
+      ),
       _ => throw StateError('No primary-frame fixture for $themeId.'),
     };
 
