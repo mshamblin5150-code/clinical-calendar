@@ -173,6 +173,52 @@ final class PlacementProgressWheelGraphic extends StatelessWidget {
   );
 }
 
+/// Opt-in layout policy for a theme-owned progress bay.
+final class PlacementProgressPanelPolicy extends InheritedWidget {
+  const PlacementProgressPanelPolicy({
+    required this.wheelAlignment,
+    required this.wheelPadding,
+    required this.compactLedger,
+    this.conceptActionRail = false,
+    this.emphasizeProjection = false,
+    required super.child,
+    super.key,
+  });
+
+  final AlignmentGeometry wheelAlignment;
+  final EdgeInsetsGeometry wheelPadding;
+  final bool compactLedger;
+  final bool conceptActionRail;
+  final bool emphasizeProjection;
+
+  static PlacementProgressPanelPolicy? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<PlacementProgressPanelPolicy>();
+
+  @override
+  bool updateShouldNotify(PlacementProgressPanelPolicy oldWidget) =>
+      wheelAlignment != oldWidget.wheelAlignment ||
+      wheelPadding != oldWidget.wheelPadding ||
+      compactLedger != oldWidget.compactLedger ||
+      conceptActionRail != oldWidget.conceptActionRail ||
+      emphasizeProjection != oldWidget.emphasizeProjection;
+}
+
+/// Marks a placement panel embedded inside theme-owned housing so shared
+/// content does not paint a second tactical frame.
+final class EmbeddedPlacementPanelInterior extends InheritedWidget {
+  const EmbeddedPlacementPanelInterior({required super.child, super.key});
+
+  static bool isActive(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<
+            EmbeddedPlacementPanelInterior
+          >() !=
+      null;
+
+  @override
+  bool updateShouldNotify(EmbeddedPlacementPanelInterior oldWidget) => false;
+}
+
 final class PlacementProgressRail extends StatefulWidget {
   const PlacementProgressRail({
     required this.controller,
@@ -190,85 +236,140 @@ final class PlacementProgressRail extends StatefulWidget {
 }
 
 final class _PlacementProgressRailState extends State<PlacementProgressRail> {
-  bool _showPreceptors = false;
-
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: widget.controller,
     builder: (context, _) {
       final snapshot = widget.controller.activePlacement;
-      final sideBySide =
-          InsightRailPresentationPolicy.maybeOf(
-            context,
-          )?.placementProgressLayout ==
-          PlacementProgressRailLayout.sideBySide;
-      return _TacticalPanel(
+      return PlacementProgressPanel(
         key: const Key('placement-progress-rail'),
-        label: snapshot?.placement.name ?? 'Clinical Placement',
-        statusColor: context.clinicalColors.clinical,
-        child: snapshot == null
-            ? const _EmptyPlacementState()
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (sideBySide)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        PlacementProgressWheel(
-                          snapshot: snapshot,
-                          touch: widget.touch,
-                          onCycle: widget.controller.isBusy
-                              ? null
-                              : widget.controller.cyclePlacement,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: PlacementMetricLedger(snapshot: snapshot),
-                        ),
-                      ],
-                    )
-                  else ...[
-                    Align(
-                      child: PlacementProgressWheel(
-                        snapshot: snapshot,
-                        touch: widget.touch,
-                        onCycle: widget.controller.isBusy
-                            ? null
-                            : widget.controller.cyclePlacement,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    PlacementMetricLedger(snapshot: snapshot),
-                  ],
-                  const SizedBox(height: 8),
-                  TextButton(
-                    key: const Key('cycle-placement-action'),
-                    onPressed: widget.controller.isBusy
-                        ? null
-                        : widget.controller.cyclePlacement,
-                    child: Text(
-                      '${_usesTouchWording(widget.touch) ? 'TAP' : 'CLICK'} '
-                      'WHEEL TO VIEW NEXT PLACEMENT',
-                    ),
-                  ),
-                  TextButton(
-                    key: const Key('toggle-preceptor-breakdown'),
-                    onPressed: () =>
-                        setState(() => _showPreceptors = !_showPreceptors),
-                    child: Text(
-                      '${_showPreceptors ? 'HIDE' : 'SHOW'} PRECEPTOR BREAKDOWN',
-                    ),
-                  ),
-                  if (_showPreceptors) ...[
-                    const SizedBox(height: 6),
-                    PreceptorProgressBreakdown(snapshot: snapshot),
-                  ],
-                ],
-              ),
+        snapshot: snapshot,
+        touch: widget.touch,
+        onCycle: widget.controller.isBusy
+            ? null
+            : widget.controller.cyclePlacement,
       );
     },
   );
+}
+
+/// Production progress panel shared by the live controller rail and
+/// deterministic visual proofs.
+final class PlacementProgressPanel extends StatefulWidget {
+  const PlacementProgressPanel({
+    required this.snapshot,
+    required this.onCycle,
+    this.touch = false,
+    super.key,
+  });
+
+  final PlacementSnapshot? snapshot;
+  final VoidCallback? onCycle;
+  final bool touch;
+
+  @override
+  State<PlacementProgressPanel> createState() => _PlacementProgressPanelState();
+}
+
+final class _PlacementProgressPanelState extends State<PlacementProgressPanel> {
+  bool _showPreceptors = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final snapshot = widget.snapshot;
+    final policy = PlacementProgressPanelPolicy.maybeOf(context);
+    final compact = policy?.compactLedger ?? false;
+    final conceptActionRail = policy?.conceptActionRail ?? false;
+    final sideBySide =
+        InsightRailPresentationPolicy.maybeOf(
+          context,
+        )?.placementProgressLayout ==
+        PlacementProgressRailLayout.sideBySide;
+    final actionStyle = conceptActionRail
+        ? TextButton.styleFrom(
+            alignment: Alignment.centerLeft,
+            minimumSize: const Size(0, 48),
+            padding: const EdgeInsets.only(left: 34),
+          )
+        : null;
+    return _TacticalPanel(
+      label: snapshot?.placement.name ?? 'Clinical Placement',
+      statusColor: context.clinicalColors.clinical,
+      child: snapshot == null
+          ? const _EmptyPlacementState()
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (sideBySide)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      PlacementProgressWheel(
+                        snapshot: snapshot,
+                        touch: widget.touch,
+                        onCycle: widget.onCycle,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: PlacementMetricLedger(snapshot: snapshot),
+                      ),
+                    ],
+                  )
+                else ...[
+                  Padding(
+                    padding: policy?.wheelPadding ?? EdgeInsets.zero,
+                    child: Align(
+                      alignment: policy?.wheelAlignment ?? Alignment.center,
+                      child: PlacementProgressWheel(
+                        snapshot: snapshot,
+                        touch: widget.touch,
+                        onCycle: widget.onCycle,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: compact ? 8 : 12),
+                  PlacementMetricLedger(snapshot: snapshot),
+                ],
+                SizedBox(height: compact ? 4 : 8),
+                TextButton(
+                  key: const Key('cycle-placement-action'),
+                  onPressed: widget.onCycle,
+                  style: actionStyle,
+                  child: Transform.translate(
+                    offset: conceptActionRail
+                        ? const Offset(0, 12)
+                        : Offset.zero,
+                    child: Text(
+                      '${_usesTouchWording(widget.touch) ? 'TAP' : 'CLICK'} '
+                      'WHEEL TO VIEW NEXT PLACEMENT',
+                      key: const Key('cycle-placement-label'),
+                    ),
+                  ),
+                ),
+                TextButton(
+                  key: const Key('toggle-preceptor-breakdown'),
+                  onPressed: () =>
+                      setState(() => _showPreceptors = !_showPreceptors),
+                  style: actionStyle,
+                  child: Transform.translate(
+                    offset: conceptActionRail
+                        ? const Offset(0, -6)
+                        : Offset.zero,
+                    child: Text(
+                      '${_showPreceptors ? 'HIDE' : 'SHOW'} '
+                      'PRECEPTOR BREAKDOWN',
+                      key: const Key('preceptor-breakdown-label'),
+                    ),
+                  ),
+                ),
+                if (_showPreceptors) ...[
+                  const SizedBox(height: 6),
+                  PreceptorProgressBreakdown(snapshot: snapshot),
+                ],
+              ],
+            ),
+    );
+  }
 }
 
 bool _usesTouchWording(bool explicitTouch) =>
@@ -316,6 +417,9 @@ final class PlacementMetricLedger extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = snapshot.progress;
+    final policy = PlacementProgressPanelPolicy.maybeOf(context);
+    final compact = policy?.compactLedger ?? false;
+    final emphasizeProjection = policy?.emphasizeProjection ?? false;
     final metrics = <(String, int, Color?)>[
       ('Target', progress.targetMinutes, null),
       ('Completed', progress.completedMinutes, _completedColor(context)),
@@ -332,7 +436,7 @@ final class PlacementMetricLedger extends StatelessWidget {
       children: [
         for (final metric in metrics)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
+            padding: EdgeInsets.symmetric(vertical: compact ? 0 : 3),
             child: Row(
               children: [
                 if (metric.$3 case final color?)
@@ -357,13 +461,19 @@ final class PlacementMetricLedger extends StatelessWidget {
               ],
             ),
           ),
-        const Divider(height: 18),
+        Divider(height: compact ? 12 : 18),
         Align(
           alignment: Alignment.centerLeft,
           child: Text(
             _projectionText(progress),
             key: const Key('placement-projection'),
-            style: Theme.of(context).textTheme.bodySmall,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: emphasizeProjection
+                  ? context.clinicalColors.primaryText
+                  : null,
+              fontSize: emphasizeProjection ? 11 : null,
+              fontWeight: emphasizeProjection ? FontWeight.w600 : null,
+            ),
           ),
         ),
       ],
@@ -809,7 +919,8 @@ final class _TacticalPanel extends StatelessWidget {
         if (expandChild) Expanded(child: child) else child,
       ],
     );
-    if (VariantFRasterPanelInterior.isActive(context)) {
+    if (VariantFRasterPanelInterior.isActive(context) ||
+        EmbeddedPlacementPanelInterior.isActive(context)) {
       return Padding(padding: const EdgeInsets.all(8), child: content);
     }
     return VariantFTacticalFrame(

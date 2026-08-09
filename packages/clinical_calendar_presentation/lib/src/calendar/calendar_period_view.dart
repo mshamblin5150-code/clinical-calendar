@@ -29,6 +29,10 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
     this.useLeadingTitleCenteredPeriodToolbar = false,
     this.useArchiveEntryVisuals = false,
     this.showArchiveMonthLegend = false,
+    this.centerPeriodHeader = false,
+    this.useConceptMonthMarks = false,
+    this.suppressProtectedHatch = false,
+    this.clipDayDecoration = false,
     required super.child,
     super.key,
   }) : assert(monthWeekRows == 6 || monthWeekRows == 7);
@@ -46,6 +50,10 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
   final bool useLeadingTitleCenteredPeriodToolbar;
   final bool useArchiveEntryVisuals;
   final bool showArchiveMonthLegend;
+  final bool centerPeriodHeader;
+  final bool useConceptMonthMarks;
+  final bool suppressProtectedHatch;
+  final bool clipDayDecoration;
 
   static bool usesBoundedMonthGrid(BuildContext context) =>
       context
@@ -98,6 +106,30 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
           ?.useArchiveEntryVisuals ??
       false;
 
+  static bool centersPeriodHeader(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.centerPeriodHeader ??
+      false;
+
+  static bool usesConceptMonthMarks(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.useConceptMonthMarks ??
+      false;
+
+  static bool suppressesProtectedHatch(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.suppressProtectedHatch ??
+      false;
+
+  static bool clipsDayDecoration(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.clipDayDecoration ??
+      false;
+
   @override
   bool updateShouldNotify(CalendarPeriodViewportPolicy oldWidget) =>
       useBoundedMonthGrid != oldWidget.useBoundedMonthGrid ||
@@ -113,7 +145,11 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
       useLeadingTitleCenteredPeriodToolbar !=
           oldWidget.useLeadingTitleCenteredPeriodToolbar ||
       useArchiveEntryVisuals != oldWidget.useArchiveEntryVisuals ||
-      showArchiveMonthLegend != oldWidget.showArchiveMonthLegend;
+      showArchiveMonthLegend != oldWidget.showArchiveMonthLegend ||
+      centerPeriodHeader != oldWidget.centerPeriodHeader ||
+      useConceptMonthMarks != oldWidget.useConceptMonthMarks ||
+      suppressProtectedHatch != oldWidget.suppressProtectedHatch ||
+      clipDayDecoration != oldWidget.clipDayDecoration;
 }
 
 final class CalendarPeriodView extends StatefulWidget {
@@ -489,6 +525,81 @@ final class _CalendarToolbar extends StatelessWidget {
             expandedInsets: stackedCentered ? EdgeInsets.zero : null,
             onSelectionChanged: (selection) => onPeriod(selection.single),
           );
+          if (!compact &&
+              CalendarPeriodViewportPolicy.centersPeriodHeader(context)) {
+            final conceptArrowStyle = IconButton.styleFrom(
+              minimumSize: const Size.square(48),
+              padding: EdgeInsets.zero,
+            );
+            final conceptSwitcher = SegmentedButton<CalendarPeriod>(
+              key: const Key('calendar-period-switcher'),
+              showSelectedIcon: false,
+              style: const ButtonStyle(
+                minimumSize: WidgetStatePropertyAll(Size(0, 48)),
+              ),
+              segments: const [
+                ButtonSegment(
+                  value: CalendarPeriod.month,
+                  label: Text('Month'),
+                ),
+                ButtonSegment(value: CalendarPeriod.week, label: Text('Week')),
+                ButtonSegment(
+                  value: CalendarPeriod.agenda,
+                  label: Text('Agenda'),
+                ),
+              ],
+              selected: {period},
+              onSelectionChanged: (selection) => onPeriod(selection.single),
+            );
+            return SizedBox(
+              height: 80,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    right: 0,
+                    height: 48,
+                    child: Row(
+                      children: [
+                        IconButton(
+                          key: const Key('calendar-previous'),
+                          tooltip: 'Previous period',
+                          onPressed: onPrevious,
+                          style: conceptArrowStyle,
+                          icon: const Icon(Icons.chevron_left),
+                        ),
+                        Expanded(
+                          child: Text(
+                            title,
+                            key: const Key('calendar-period-title'),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        IconButton(
+                          key: const Key('calendar-next'),
+                          tooltip: 'Next period',
+                          onPressed: onNext,
+                          style: conceptArrowStyle,
+                          icon: const Icon(Icons.chevron_right),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    top: 32,
+                    right: 0,
+                    height: 48,
+                    child: Center(child: conceptSwitcher),
+                  ),
+                ],
+              ),
+            );
+          }
           if (compact) {
             return Column(
               children: [
@@ -982,6 +1093,10 @@ final class _MonthDayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final conceptDensity = CalendarPeriodViewportPolicy.usesConceptMonthMarks(
+      context,
+    );
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     final protected = entries.any(
       (entry) => entry.kind == CalendarEntryKind.protectedDay,
     );
@@ -1014,6 +1129,11 @@ final class _MonthDayCell extends StatelessWidget {
           todayAccent: _todayAccent(context),
           archiveTreatment: archiveEntryVisuals,
           protected: neutralCells || archiveEntryVisuals ? false : protected,
+          protectedHatch:
+              !CalendarPeriodViewportPolicy.suppressesProtectedHatch(context),
+          clipDecoration: CalendarPeriodViewportPolicy.clipsDayDecoration(
+            context,
+          ),
           work: neutralCells || archiveEntryVisuals ? false : work,
           today: today,
           selected: selected,
@@ -1038,19 +1158,28 @@ final class _MonthDayCell extends StatelessWidget {
           child: Padding(
             padding: dense && tightDenseSpacing
                 ? const EdgeInsets.symmetric(horizontal: 5, vertical: 2)
+                : conceptDensity
+                ? const EdgeInsets.all(3)
                 : monthCellMetrics.cellPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _DayNumber(date: date, today: today, selected: selected),
-                SizedBox(height: dense && tightDenseSpacing ? 0 : 3),
+                SizedBox(
+                  height: dense && tightDenseSpacing
+                      ? 0
+                      : conceptDensity
+                      ? 1
+                      : 3,
+                ),
                 if (compact ||
+                    (conceptDensity && enlargedText) ||
                     (!archiveEntryVisuals &&
                         Theme.of(context)
                                 .extension<ClinicalCalendarPresentationPolicy>()
                                 ?.denseMarkerStyle ==
                             CalendarDenseMarkerStyle.chip &&
-                        MediaQuery.textScalerOf(context).scale(1) > 1.3))
+                        enlargedText))
                   _CompactMarkers(entries: entries)
                 else if (dense &&
                     CalendarPeriodViewportPolicy.usesDenseMonthCards(context))
@@ -1167,6 +1296,9 @@ final class _DenseMonthMarker extends StatelessWidget {
   Widget build(BuildContext context) {
     if (entries.isEmpty) return const SizedBox.shrink();
     final entry = entries.first;
+    final conceptMarks = CalendarPeriodViewportPolicy.usesConceptMonthMarks(
+      context,
+    );
     final label = entry.kind.archiveLabel;
     final additionalCount = entries.length - 1;
     final archiveTreatment =
@@ -1255,9 +1387,12 @@ final class _DenseMonthMarker extends StatelessWidget {
     }
     return Row(
       children: [
-        Container(width: 3, height: 16, color: _entryAccent(context, entry)),
+        if (conceptMarks && entry.kind == CalendarEntryKind.protectedDay)
+          _ProtectedDotGrid(color: _entryAccent(context, entry))
+        else
+          Container(width: 3, height: 16, color: _entryAccent(context, entry)),
         const SizedBox(width: 4),
-        if (_usesAdditiveMarks(context)) ...[
+        if (!conceptMarks && _usesAdditiveMarks(context)) ...[
           ThemeSemanticMarkIcon(
             role: _entryRole(entry.kind),
             size: 10,
@@ -1285,9 +1420,34 @@ final class _DenseMonthMarker extends StatelessWidget {
               color: Theme.of(context).textTheme.bodySmall?.color,
             ),
           ),
+        if (conceptMarks && entry.kind == CalendarEntryKind.workShift)
+          Container(width: 3, height: 16, color: _entryAccent(context, entry)),
       ],
     );
   }
+}
+
+final class _ProtectedDotGrid extends StatelessWidget {
+  const _ProtectedDotGrid({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 16,
+    height: 16,
+    child: Wrap(
+      spacing: 3,
+      runSpacing: 3,
+      children: [
+        for (var index = 0; index < 9; index++)
+          DecoratedBox(
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: const SizedBox.square(dimension: 2),
+          ),
+      ],
+    ),
+  );
 }
 
 final class _ArchiveEntryMark extends StatelessWidget {
@@ -1380,6 +1540,9 @@ final class _DayNumber extends StatelessWidget {
         : 23.0;
     final usesThemeTodayMark =
         _usesAdditiveMarks(context) || context.accessibilityTokens.enhanced;
+    final conceptMarks = CalendarPeriodViewportPolicy.usesConceptMonthMarks(
+      context,
+    );
     if (archiveTreatment && today) {
       return SizedBox(
         width: double.infinity,
@@ -1445,17 +1608,19 @@ final class _DayNumber extends StatelessWidget {
       children: [
         DecoratedBox(
           decoration: BoxDecoration(
-            color: today ? _todayBackground(context) : Colors.transparent,
-            border: today
+            color: today && !conceptMarks
+                ? _todayBackground(context)
+                : Colors.transparent,
+            border: today && !conceptMarks
                 ? Border.all(
                     color: _todayAccent(context),
                     width: context.accessibilityTokens.selectionWidth,
                   )
                 : null,
-            shape: today && !scalesDayNumber
+            shape: today && !conceptMarks && !scalesDayNumber
                 ? BoxShape.circle
                 : BoxShape.rectangle,
-            borderRadius: today && scalesDayNumber
+            borderRadius: today && !conceptMarks && scalesDayNumber
                 ? BorderRadius.circular(dayNumberHeight / 2)
                 : null,
           ),
@@ -1466,7 +1631,9 @@ final class _DayNumber extends StatelessWidget {
               child: Text(
                 '${date.day}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: today ? _todayForeground(context) : null,
+                  color: today && !conceptMarks
+                      ? _todayForeground(context)
+                      : null,
                   fontWeight: today ? FontWeight.w700 : null,
                   fontSize: archiveTreatment ? 16 : null,
                 ),
@@ -1478,11 +1645,20 @@ final class _DayNumber extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerRight,
             child: usesThemeTodayMark && today
-                ? ThemeSemanticMarkIcon(
-                    role: ThemeSemanticRole.today,
-                    size: 15,
-                    color: _todayAccent(context),
-                  )
+                ? conceptMarks
+                      ? Text(
+                          'TODAY',
+                          style: TextStyle(
+                            color: _todayAccent(context),
+                            fontSize: 9,
+                            letterSpacing: .7,
+                          ),
+                        )
+                      : ThemeSemanticMarkIcon(
+                          role: ThemeSemanticRole.today,
+                          size: 15,
+                          color: _todayAccent(context),
+                        )
                 : selected
                 ? Icon(
                     Icons.check_circle,
@@ -2145,6 +2321,8 @@ final class _DayCellPainter extends CustomPainter {
     required this.todayAccent,
     required this.archiveTreatment,
     required this.protected,
+    required this.protectedHatch,
+    required this.clipDecoration,
     required this.work,
     required this.today,
     required this.selected,
@@ -2161,6 +2339,8 @@ final class _DayCellPainter extends CustomPainter {
   final Color todayAccent;
   final bool archiveTreatment;
   final bool protected;
+  final bool protectedHatch;
+  final bool clipDecoration;
   final bool work;
   final bool today;
   final bool selected;
@@ -2175,6 +2355,7 @@ final class _DayCellPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
+    if (clipDecoration) canvas.clipRect(rect);
     final background = Paint()
       ..color = outside
           ? archiveTreatment
@@ -2190,7 +2371,7 @@ final class _DayCellPainter extends CustomPainter {
           ? colors.work
           : colors.structure;
     canvas.drawRect(rect, background);
-    if (protected && !neutralEntryBackground) {
+    if (protected && protectedHatch && !neutralEntryBackground) {
       final stripe = Paint()
         ..color = colors.protectedDayAccent.withValues(
           alpha: .16 * decorationOpacity,
@@ -2292,6 +2473,8 @@ final class _DayCellPainter extends CustomPainter {
       todayAccent != oldDelegate.todayAccent ||
       archiveTreatment != oldDelegate.archiveTreatment ||
       protected != oldDelegate.protected ||
+      protectedHatch != oldDelegate.protectedHatch ||
+      clipDecoration != oldDelegate.clipDecoration ||
       work != oldDelegate.work ||
       today != oldDelegate.today ||
       selected != oldDelegate.selected ||

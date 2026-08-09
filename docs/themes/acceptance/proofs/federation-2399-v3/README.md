@@ -2,9 +2,11 @@
 
 Issue: [#134](https://github.com/mshamblin5150-code/clinical-calendar/issues/134)
 
-Status: **candidate awaiting explicit maintainer visual approval**. Physical
-Android-tablet acceptance is **pending**. Passing automation and this proof
-package do not approve the theme.
+Status: **rejected by the maintainer on 2026-08-08**. The Protected Day paint
+appeared to extend beyond its date, and the progress wheel, actions, and
+overall composition did not match the approved concept. This package is
+retained only as historical rejected evidence and must not be used as an
+acceptance baseline. Physical Android-tablet acceptance was not performed.
 
 This package replaces, but does not delete, the rejected `d1cfbff` evidence
 under `../federation-2399/`. No rejected runtime image or golden was reused.
