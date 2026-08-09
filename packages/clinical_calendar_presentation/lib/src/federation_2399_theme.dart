@@ -23,7 +23,9 @@ abstract final class Federation2399Colors {
   static const protectedDayAccent = Color(0xFFD6C9D9);
   static const completed = Color(0xFF95BD99);
   static const scheduled = Color(0xFFD8A65E);
-  static const unscheduled = Color(0xFFA9A3AE);
+  // Sampled from the approved #114 progress wheel. The approved concept is the
+  // normative visual target for this theme, including semantic state color.
+  static const unscheduled = Color(0xFFE45A4B);
   static const overTarget = Color(0xFFD98298);
   static const today = Color(0xFF89BFD2);
   static const urgent = Color(0xFFEF7D82);
@@ -57,7 +59,7 @@ const federation2399AdditiveColors = ClinicalCalendarAdditiveColors(
 
 const federation2399EnhancedAdditiveColors = ClinicalCalendarAdditiveColors(
   completed: Color(0xFFB1D5B3),
-  unscheduled: Color(0xFFD0C9D3),
+  unscheduled: Color(0xFFFF7668),
   overTarget: Color(0xFFF39CB2),
   today: Color(0xFFA8D5E5),
 );

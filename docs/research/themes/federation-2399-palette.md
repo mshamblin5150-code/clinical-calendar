@@ -50,7 +50,7 @@ All colors are opaque sRGB. `onAccent` is the only text/icon color permitted on 
 | `protectedDayAccent` | `#D6C9D9` | Protected Day outline and marker |
 | `completed` | `#95BD99` | Completed Hours/progress |
 | `scheduled` | `#D8A65E` | Scheduled Hours/progress |
-| `unscheduled` | `#A9A3AE` | Unscheduled Hours/progress |
+| `unscheduled` | `#E45A4B` | Unscheduled Hours/progress; approved #114 wheel sample |
 | `overTarget` | `#D98298` | Over-Target Hours/progress |
 | `today` | `#89BFD2` | Today marker only |
 | `urgent` | `#EF7D82` | Urgent attention and destructive emphasis |
@@ -127,7 +127,7 @@ Enhanced accessibility keeps the restrained identity but increases luminance sep
 | `protectedDayAccent` | `#D6C9D9` | `#EFE4F2` |
 | `completed` / `success` | `#95BD99` | `#B1D5B3` |
 | `scheduled` | `#D8A65E` | `#F0BE72` |
-| `unscheduled` | `#A9A3AE` | `#D0C9D3` |
+| `unscheduled` | `#E45A4B` | `#FF7668` |
 | `overTarget` | `#D98298` | `#F39CB2` |
 | `warning` | `#E4B85E` | `#F7CF76` |
 | `urgent` / `error` | `#EF7D82` | `#FF979B` |
@@ -135,7 +135,9 @@ Enhanced accessibility keeps the restrained identity but increases luminance sep
 | `focus` | `#F5D27A` | `#FFE28E` |
 | `onAccent` | `#150F16` | `#120C12` |
 
-All Enhanced accent-to-`structure` and `onAccent`-to-accent pairings are at least 8.97:1; `primaryText`/`structure` is 18.55:1. Enhanced mode also:
+Enhanced accent-to-`structure` pairings are at least 6.45:1 and
+`onAccent`-to-accent pairings are at least 7.40:1; `primaryText`/`structure`
+is 18.55:1. Enhanced mode also:
 
 - makes every semantic leading rail at least 4 logical pixels wide;
 - always shows the labels and glyphs in the mappings above, even where compact mode would otherwise abbreviate decoration;

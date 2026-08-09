@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
 import 'federation_2399_frame.dart';
+import 'placements/placement_progress_widgets.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
@@ -156,9 +157,9 @@ final class Federation2399ApplicationShell extends StatelessWidget {
               ),
               Positioned(
                 left: width * .754,
-                top: height * .10,
+                top: height * .083,
                 width: width * .225,
-                height: height * .755,
+                height: height * .772,
                 child: _Federation2399ConsoleBay(
                   key: const Key('federation-2399-insight-bay'),
                   accent: _Federation2399BayAccent.cyan,
@@ -327,6 +328,10 @@ final class _Federation2399CalendarViewport extends StatelessWidget {
       final calendar = CalendarPeriodViewportPolicy(
         useBoundedMonthGrid: true,
         scaleDayNumberWithText: true,
+        centerPeriodHeader: true,
+        useConceptMonthMarks: true,
+        suppressProtectedHatch: true,
+        clipDayDecoration: true,
         child: child,
       );
       if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
@@ -369,14 +374,29 @@ final class _Federation2399ConsoleBay extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           shape == _Federation2399BayShape.placement ? 14 : 12,
-          integrated ? 10 : 20,
+          integrated && shape == _Federation2399BayShape.placement
+              ? 32
+              : integrated
+              ? 10
+              : 20,
           shape == _Federation2399BayShape.insight ? 14 : 12,
           integrated ? 10 : 18,
         ),
         child: child,
       ),
     );
-    if (integrated) return content;
+    if (integrated) {
+      final integratedContent = shape == _Federation2399BayShape.insight
+          ? PlacementProgressPanelPolicy(
+              wheelAlignment: Alignment.centerLeft,
+              wheelPadding: const EdgeInsets.only(left: 30),
+              compactLedger: true,
+              conceptActionRail: true,
+              child: content,
+            )
+          : content;
+      return EmbeddedPlacementPanelInterior(child: integratedContent);
+    }
     return CustomPaint(
       painter: _Federation2399ConsoleBayPainter(
         surface: colors.structure,

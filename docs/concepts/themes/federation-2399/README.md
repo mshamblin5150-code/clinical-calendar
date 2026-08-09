@@ -96,7 +96,7 @@ insignia, labels, or meaningful controls.
 
 ## Concept-fidelity landscape chassis
 
-Issue #134 candidate v3 adds the secondary concept-composition asset
+Issue #134 adds the secondary concept-composition asset
 `packages/clinical_calendar_presentation/assets/federation_2399_raster/dashboard-chassis-landscape-v1.png`.
 It is a 1536 x 1024 opaque, non-semantic housing for the declared landscape
 golden exemplar. SHA-256:

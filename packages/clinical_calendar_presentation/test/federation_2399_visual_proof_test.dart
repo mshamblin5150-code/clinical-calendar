@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,88 @@ void main() {
         'goldens/federation_2399/federation_2399_landscape_1536x1024.png',
       ),
     );
+  });
+
+  testWidgets('Federation 2399 proof uses the live progress-wheel actions', (
+    tester,
+  ) async {
+    await _pumpProof(tester, const Size(1536, 1024));
+
+    expect(find.byKey(const Key('placement-progress-wheel')), findsOneWidget);
+    expect(find.byKey(const Key('cycle-placement-action')), findsOneWidget);
+    expect(find.byKey(const Key('toggle-preceptor-breakdown')), findsOneWidget);
+    expect(find.text('TAP WHEEL TO VIEW NEXT PLACEMENT'), findsOneWidget);
+    expect(find.text('SHOW PRECEPTOR BREAKDOWN'), findsOneWidget);
+    expect(find.text('0%'), findsNWidgets(2));
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('federation-2399-calendar-bay')),
+        matching: find.text('TODAY'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byType(VariantFTacticalFrame),
+      findsNothing,
+      reason: 'Federation 2399 must not paint Containment Drone framing.',
+    );
+  });
+
+  testWidgets('Federation 2399 progress rail follows concept coordinates', (
+    tester,
+  ) async {
+    await _pumpProof(tester, const Size(1536, 1024));
+
+    final wheel = tester.getRect(
+      find.byKey(const Key('placement-progress-wheel')),
+    );
+    final cycleAction = tester.getRect(
+      find.byKey(const Key('cycle-placement-label')),
+    );
+    final preceptorAction = tester.getRect(
+      find.byKey(const Key('preceptor-breakdown-label')),
+    );
+    expect(wheel.center.dx, closeTo(1278, 10));
+    expect(wheel.center.dy, closeTo(212, 10));
+    expect(cycleAction.center.dy, closeTo(459, 4));
+    expect(preceptorAction.center.dy, closeTo(489, 4));
+    expect(
+      tester.getRect(find.byKey(const Key('cycle-placement-action'))).height,
+      closeTo(48, .01),
+    );
+    expect(
+      tester
+          .getRect(find.byKey(const Key('toggle-preceptor-breakdown')))
+          .height,
+      closeTo(48, .01),
+    );
+  });
+
+  testWidgets('Federation 2399 Calendar header follows the concept hierarchy', (
+    tester,
+  ) async {
+    await _pumpProof(tester, const Size(1536, 1024));
+
+    final calendar = tester.getRect(
+      find.byKey(const Key('federation-2399-calendar-bay')),
+    );
+    final title = tester.getRect(
+      find.byKey(const Key('calendar-period-title')),
+    );
+    final switcher = tester.getRect(
+      find.byKey(const Key('calendar-period-switcher')),
+    );
+    final previous = tester.getRect(find.byKey(const Key('calendar-previous')));
+    final next = tester.getRect(find.byKey(const Key('calendar-next')));
+    expect(title.center.dx, closeTo(calendar.center.dx, 12));
+    expect(previous.center.dx, lessThan(title.left));
+    expect(next.center.dx, greaterThan(title.right));
+    expect(switcher.center.dy, greaterThan(title.center.dy));
+    expect(
+      tester.getRect(find.byKey(const Key('calendar-previous'))).height,
+      48,
+    );
+    expect(tester.getRect(find.byKey(const Key('calendar-next'))).height, 48);
   });
 
   testWidgets('Federation 2399 portrait is an intentional tablet console', (
@@ -69,6 +152,37 @@ void main() {
       matchesGoldenFile(
         'goldens/federation_2399/'
         'federation_2399_portrait_200_percent_900x1440.png',
+      ),
+    );
+
+    final portraitScrollable = find.descendant(
+      of: find.byKey(const Key('federation-2399-portrait-scroll')),
+      matching: find.byType(Scrollable),
+    );
+    final position = tester
+        .state<ScrollableState>(portraitScrollable.first)
+        .position;
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pumpAndSettle();
+
+    final placements = tester.getRect(
+      find.byKey(const Key('federation-2399-placement-bay')),
+    );
+    final attention = tester.getRect(
+      find.byKey(const Key('federation-2399-insight-bay')),
+    );
+    expect(placements.bottom, greaterThan(0));
+    expect(placements.top, lessThan(navigation.top));
+    expect(attention.bottom, greaterThan(0));
+    expect(attention.top, lessThan(navigation.top));
+    expect(find.text('PLACEMENT STATUS'), findsOneWidget);
+    expect(find.text('NEEDS ATTENTION'), findsWidgets);
+
+    await expectLater(
+      find.byKey(const Key('federation-2399-proof')),
+      matchesGoldenFile(
+        'goldens/federation_2399/'
+        'federation_2399_portrait_200_percent_scrolled_900x1440.png',
       ),
     );
   });
@@ -153,13 +267,16 @@ Future<void> _pumpProof(
         ),
         home: RepaintBoundary(
           key: const Key('federation-2399-proof'),
-          child: themeBundle.shellRenderer.build(
-            slots: slots,
-            environmentName: 'FEDERATION 2399',
-            onOpenMenu: _noop,
-            onOpenDestination: _ignoreDestination,
-            onOpenAttention: _noop,
-            onAddSchedule: _noop,
+          child: ClinicalCalendarSemanticMarkScope(
+            marks: themeBundle.marks,
+            child: themeBundle.shellRenderer.build(
+              slots: slots,
+              environmentName: '',
+              onOpenMenu: _noop,
+              onOpenDestination: _ignoreDestination,
+              onOpenAttention: _noop,
+              onAddSchedule: _noop,
+            ),
           ),
         ),
       ),
@@ -238,8 +355,8 @@ final class _PlacementsProof extends StatelessWidget {
       const _PlacementCard(
         name: 'INTERNAL MEDICINE',
         accent: Federation2399Colors.workMachinery,
-        completed: '42 hr',
-        scheduled: '24 hr',
+        completed: '0 hr',
+        scheduled: '8 hr',
       ),
       const Spacer(),
       Text(
@@ -302,9 +419,10 @@ final class _PlacementCard extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         _MetricLine('$completed / 90 hr completed', accent),
+        _MetricLine('0%', accent),
         _MetricLine('$scheduled scheduled', Federation2399Colors.scheduled),
         const _MetricLine(
-          '48 hr unscheduled',
+          '82 hr unscheduled',
           Federation2399Colors.unscheduled,
         ),
       ],
@@ -485,50 +603,10 @@ final class _InsightProof extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const _SectionTitle('INTERNAL MEDICINE'),
-      const SizedBox(height: 14),
-      Center(
-        child: SizedBox.square(
-          dimension: 126,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              const CircularProgressIndicator(
-                value: .47,
-                strokeWidth: 15,
-                color: Federation2399Colors.clinical,
-                backgroundColor: Federation2399Colors.control,
-              ),
-              Center(
-                child: Text(
-                  '42 hr\ncompleted',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-            ],
-          ),
-        ),
+      PlacementProgressPanel(
+        snapshot: _proofPlacementSnapshot(),
+        onCycle: _noop,
       ),
-      const SizedBox(height: 14),
-      const _MetricLine(
-        'Target                 90 hr',
-        Federation2399Colors.primaryText,
-      ),
-      const _MetricLine(
-        'Completed          42 hr',
-        Federation2399Colors.completed,
-      ),
-      const _MetricLine(
-        'Scheduled           24 hr',
-        Federation2399Colors.scheduled,
-      ),
-      const _MetricLine(
-        'Unscheduled       24 hr',
-        Federation2399Colors.unscheduled,
-      ),
-      const SizedBox(height: 18),
-      const Divider(),
       const SizedBox(height: 10),
       const _SectionTitle('NEEDS ATTENTION'),
       const SizedBox(height: 8),
@@ -541,10 +619,84 @@ final class _InsightProof extends StatelessWidget {
         title: 'INITIAL SELF-ASSESSMENT',
       ),
       const _AttentionCard(
+        icon: Icons.fact_check_outlined,
+        title: 'INITIAL SELF-ASSESSMENT',
+      ),
+      const _AttentionCard(
         icon: Icons.warning_amber_outlined,
         title: 'PLANNING INCOMPLETE',
       ),
     ],
+  );
+}
+
+PlacementSnapshot _proofPlacementSnapshot() {
+  const placementId = '00000000-0000-4000-8000-000000000241';
+  const planId = '00000000-0000-4000-8000-000000000242';
+  const preceptorId = '00000000-0000-4000-8000-000000000243';
+  final placement = ClinicalPlacement.create(
+    id: placementId,
+    name: 'Internal Medicine',
+    targetHours: TargetHours.fromWholeHours(90),
+    startDate: LocalDate(2026, 8, 1),
+    completionDeadline: LocalDate(2026, 12, 31),
+    attachedPreceptorIds: const [preceptorId],
+    primaryPreceptorId: preceptorId,
+    evaluationPlanId: planId,
+  );
+  final sessions = [
+    ClinicalSession.restore(
+      id: '00000000-0000-4000-8000-000000000245',
+      clinicalPlacementId: placementId,
+      preceptorId: preceptorId,
+      plannedInterval: ZonedInterval(
+        startDate: LocalDate(2026, 8, 20),
+        startTime: LocalTime(8, 0),
+        endTime: LocalTime(16, 0),
+        timeZone: TimeZoneId('America/New_York'),
+        startOffset: UtcOffset.inMinutes(-240),
+        endOffset: UtcOffset.inMinutes(-240),
+      ),
+      state: ClinicalSessionState.scheduled,
+    ),
+  ];
+  final progress = const ClinicalPlacementProgressEngine().derivePlacement(
+    placement: placement,
+    sessions: sessions,
+    historicalHoursEntries: const [],
+    today: LocalDate(2026, 8, 5),
+  );
+  final configuration = EvaluationPlanConfiguration();
+  final context = EvaluationPlanContext(
+    completedMinutes: progress.completedMinutes,
+    targetMinutes: progress.targetMinutes,
+    startDate: placement.startDate,
+    completionDeadline: placement.completionDeadline,
+    today: LocalDate(2026, 8, 5),
+  );
+  final plan = const EvaluationPlanEngine().create(
+    evaluationPlanId: planId,
+    configuration: configuration,
+    context: context,
+    primaryPreceptorId: preceptorId,
+  );
+  return PlacementSnapshot(
+    placement: placement,
+    placementRevision: 1,
+    evaluationPlanRevision: 1,
+    evaluationPlanConfiguration: configuration,
+    attachedPreceptors: [
+      PlacementPreceptorSnapshot(
+        preceptor: Preceptor(id: preceptorId, name: 'Dr. Rivera'),
+        revision: 1,
+        isPrimary: true,
+      ),
+    ],
+    progress: progress,
+    evaluation: const EvaluationPlanEngine().evaluate(plan, context),
+    derivedState: ClinicalPlacementState.active,
+    awaitingConfirmationSessionCount: 1,
+    scheduledFutureSessionCount: 2,
   );
 }
 
@@ -588,9 +740,9 @@ final class _PlacementSummaryProof extends StatelessWidget {
     children: [
       _SectionTitle('PLACEMENT STATUS'),
       SizedBox(height: 10),
-      _MetricLine('42 / 90 hr completed', Federation2399Colors.completed),
-      _MetricLine('24 hr scheduled', Federation2399Colors.scheduled),
-      _MetricLine('24 hr unscheduled', Federation2399Colors.unscheduled),
+      _MetricLine('0 / 90 hr completed', Federation2399Colors.completed),
+      _MetricLine('8 hr scheduled', Federation2399Colors.scheduled),
+      _MetricLine('82 hr unscheduled', Federation2399Colors.unscheduled),
     ],
   );
 }
