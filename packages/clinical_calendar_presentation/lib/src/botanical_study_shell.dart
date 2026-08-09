@@ -4,6 +4,7 @@ import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
 import 'botanical_study_frame.dart';
 import 'botanical_study_theme.dart';
+import 'graphite_frame.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
@@ -756,6 +757,15 @@ final class _BotanicalStudyAxionDeltaMark extends StatelessWidget {
         package: 'clinical_calendar_presentation',
         fit: BoxFit.contain,
         filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stackTrace) {
+          GraphitePresentationFailureBoundary.report(
+            context,
+            error,
+            themeId: 'botanical-study',
+            isGraphite: false,
+          );
+          return const ColoredBox(color: BotanicalStudyColors.canvas);
+        },
       ),
     ),
   );

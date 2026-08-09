@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -192,6 +193,7 @@ void main() {
     _expectRectClose(crown, const Rect.fromLTWH(61, 0, 1494, 65));
     expect(axionDelta.size, const Size.square(42));
     expect(axionImage.color, isNull);
+    expect(axionImage.errorBuilder, isNotNull);
     _expectRectClose(placements, const Rect.fromLTWH(61, 66, 307, 834));
     _expectRectClose(calendar, const Rect.fromLTWH(378, 66, 767, 561));
     _expectRectClose(planning, const Rect.fromLTWH(378, 638, 767, 262));
@@ -259,6 +261,124 @@ void main() {
     expect(axionDelta.height, greaterThanOrEqualTo(36));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Axion decode failure swaps the complete shell to Graphite', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1586, 992));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    ClinicalCalendarThemeBundle effectiveBundle = botanical;
+    String? failedThemeId;
+    final failingBundle = _FailingAxionAssetBundle(
+      frameFile: _findWorkspaceFile(botanicalStudyFrameAsset),
+      chassisFile: _findWorkspaceFile(botanicalStudyLandscapeChassisAsset),
+    );
+    final graphiteBundle = _GraphiteAssetBundle(
+      frameFile: _findWorkspaceFile(graphiteFrameAsset),
+    );
+
+    await tester.pumpWidget(
+      StatefulBuilder(
+        builder: (context, setState) => GraphitePresentationFailureBoundary(
+          onBundleFailure: (themeId) {
+            if (failedThemeId != null) return;
+            failedThemeId = themeId;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                setState(() => effectiveBundle = const GraphiteThemeBundle());
+              }
+            });
+          },
+          child: DefaultAssetBundle(
+            bundle: effectiveBundle.id == botanicalStudyThemeId
+                ? failingBundle
+                : graphiteBundle,
+            child: MaterialApp(
+              theme: effectiveBundle.standardPresentation.createThemeData(),
+              home: effectiveBundle.shellRenderer.build(
+                slots: _slots,
+                environmentName: 'TEST',
+                onOpenMenu: _noop,
+                onOpenDestination: _ignoreDestination,
+                onOpenAttention: _noop,
+                onAddSchedule: _noop,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(failedThemeId, botanicalStudyThemeId);
+    expect(failingBundle.failedAxionLoad, isTrue);
+    expect(effectiveBundle.id, graphiteThemeId);
+    expect(
+      find.byKey(const Key('graphite-presentation-unavailable')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('botanical-study-landscape-shell')),
+      findsNothing,
+    );
+    expect(find.byType(GraphiteApplicationShell), findsOneWidget);
+    expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+final class _FailingAxionAssetBundle extends CachingAssetBundle {
+  _FailingAxionAssetBundle({
+    required this.frameFile,
+    required this.chassisFile,
+  });
+
+  final File frameFile;
+  final File chassisFile;
+  bool failedAxionLoad = false;
+
+  @override
+  Future<ByteData> load(String key) async {
+    if (key.endsWith(botanicalStudyFrameAsset)) {
+      return ByteData.sublistView(await frameFile.readAsBytes());
+    }
+    if (key.endsWith(botanicalStudyLandscapeChassisAsset)) {
+      return ByteData.sublistView(await chassisFile.readAsBytes());
+    }
+    if (key.endsWith(botanicalStudyAxionLogoAsset)) {
+      failedAxionLoad = true;
+      throw StateError('fixture Axion decode failure');
+    }
+    return rootBundle.load(key);
+  }
+}
+
+final class _GraphiteAssetBundle extends CachingAssetBundle {
+  _GraphiteAssetBundle({required this.frameFile});
+
+  final File frameFile;
+
+  @override
+  Future<ByteData> load(String key) async {
+    if (key.endsWith(graphiteFrameAsset)) {
+      return ByteData.sublistView(await frameFile.readAsBytes());
+    }
+    return rootBundle.load(key);
+  }
+}
+
+File _findWorkspaceFile(String assetPath) {
+  var root = Directory.current.absolute;
+  final relativePath = 'packages/clinical_calendar_presentation/$assetPath'
+      .replaceAll('/', Platform.pathSeparator);
+  while (root.parent.path != root.path) {
+    final candidate = File(
+      '${root.path}${Platform.pathSeparator}$relativePath',
+    );
+    if (candidate.existsSync()) return candidate;
+    root = root.parent;
+  }
+  throw StateError('Botanical asset was not found: $assetPath');
 }
 
 const _slots = ResponsiveShellSlots(
