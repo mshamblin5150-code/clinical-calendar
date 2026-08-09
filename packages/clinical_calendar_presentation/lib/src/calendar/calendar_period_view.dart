@@ -328,7 +328,9 @@ final class _CalendarToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
+    padding: archiveTreatment
+        ? EdgeInsets.zero
+        : const EdgeInsets.fromLTRB(6, 6, 6, 8),
     child: LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 600;
@@ -441,7 +443,10 @@ final class _CalendarToolbar extends StatelessWidget {
                     ),
                   ),
                 ),
-                SizedBox(width: 336, height: 38, child: switcher),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: SizedBox(width: 336, height: 38, child: switcher),
+                ),
               ],
             ),
           );
@@ -480,20 +485,19 @@ final class _ArchiveCalendarLegend extends StatelessWidget {
     ),
     child: Row(
       children: const [
-        _ArchiveLegendItem(Icons.medical_services, 'CLINICAL'),
+        _ArchiveLegendItem('CLINICAL'),
         SizedBox(width: 38),
-        _ArchiveLegendItem(Icons.work, 'WORK'),
+        _ArchiveLegendItem('WORK'),
         SizedBox(width: 38),
-        _ArchiveLegendItem(Icons.shield, 'PROTECTED'),
+        _ArchiveLegendItem('PROTECTED'),
       ],
     ),
   );
 }
 
 final class _ArchiveLegendItem extends StatelessWidget {
-  const _ArchiveLegendItem(this.icon, this.label);
+  const _ArchiveLegendItem(this.label);
 
-  final IconData icon;
   final String label;
 
   @override
@@ -506,7 +510,7 @@ final class _ArchiveLegendItem extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 22, color: color),
+        _ArchiveEntryMark(label: label, size: 22, color: color),
         const SizedBox(width: 8),
         Text(
           label,
@@ -781,11 +785,7 @@ final class _DenseMonthMarker extends StatelessWidget {
         ),
         child: Row(
           children: [
-            ThemeSemanticMarkIcon(
-              role: _entryRole(entry.kind),
-              size: 15,
-              color: Colors.white,
-            ),
+            _ArchiveEntryMark(label: label, size: 15, color: Colors.white),
             const SizedBox(width: 4),
             Expanded(
               child: Text(
@@ -846,6 +846,57 @@ final class _DenseMonthMarker extends StatelessWidget {
   }
 }
 
+final class _ArchiveEntryMark extends StatelessWidget {
+  const _ArchiveEntryMark({
+    required this.label,
+    required this.size,
+    required this.color,
+  });
+
+  final String label;
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => switch (label) {
+    'WORK' || 'WORK SHIFT' => SizedBox.square(
+      dimension: size,
+      child: CustomPaint(painter: _ArchiveWorkStripePainter(color)),
+    ),
+    'PROTECTED' ||
+    'PROTECTED DAY' => Icon(Icons.shield, size: size, color: color),
+    _ => Icon(Icons.add, size: size, color: color),
+  };
+}
+
+final class _ArchiveWorkStripePainter extends CustomPainter {
+  const _ArchiveWorkStripePainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = size.width * .18
+      ..strokeCap = StrokeCap.square;
+    canvas.drawLine(
+      Offset(size.width * .08, size.height * .72),
+      Offset(size.width * .56, size.height * .18),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width * .42, size.height * .82),
+      Offset(size.width * .90, size.height * .28),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArchiveWorkStripePainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
 final class _DayNumber extends StatelessWidget {
   const _DayNumber({
     required this.date,
@@ -862,6 +913,8 @@ final class _DayNumber extends StatelessWidget {
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final scalesDayNumber =
         CalendarPeriodViewportPolicy.scalesDayNumberWithText(context);
+    final archiveTreatment =
+        CalendarPeriodViewportPolicy.showsArchiveMonthLegend(context);
     final dayNumberWidth = scalesDayNumber
         ? 23.0 * textScale.clamp(1.0, 2.0)
         : 23.0;
@@ -870,6 +923,41 @@ final class _DayNumber extends StatelessWidget {
         : 23.0;
     final usesThemeTodayMark =
         _usesAdditiveMarks(context) || context.accessibilityTokens.enhanced;
+    if (archiveTreatment && today) {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'TODAY',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: context.clinicalColors.clinical,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: context.clinicalColors.clinical,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${date.day}',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Row(
       children: [
         DecoratedBox(

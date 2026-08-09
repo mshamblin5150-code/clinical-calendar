@@ -130,6 +130,7 @@ ThemeData buildHeritageFieldNotesTheme({bool enhancedAccessibility = false}) {
   final base = ThemeData(
     brightness: Brightness.light,
     useMaterial3: true,
+    fontFamily: 'FieldArchiveCondensed',
     colorScheme: scheme,
     scaffoldBackgroundColor: HeritageFieldNotesColors.canvas,
     canvasColor: HeritageFieldNotesColors.canvas,
@@ -149,12 +150,12 @@ ThemeData buildHeritageFieldNotesTheme({bool enhancedAccessibility = false}) {
   );
   final fieldArchiveTextTheme = base.textTheme
       .copyWith(
-        bodySmall: base.textTheme.bodySmall?.copyWith(fontSize: 13),
-        labelSmall: base.textTheme.labelSmall?.copyWith(fontSize: 12),
-        labelMedium: base.textTheme.labelMedium?.copyWith(fontSize: 14),
-        titleSmall: base.textTheme.titleSmall?.copyWith(fontSize: 17),
-        titleMedium: base.textTheme.titleMedium?.copyWith(fontSize: 19),
-        titleLarge: base.textTheme.titleLarge?.copyWith(fontSize: 24),
+        bodySmall: base.textTheme.bodySmall?.copyWith(fontSize: 14),
+        labelSmall: base.textTheme.labelSmall?.copyWith(fontSize: 13),
+        labelMedium: base.textTheme.labelMedium?.copyWith(fontSize: 15),
+        titleSmall: base.textTheme.titleSmall?.copyWith(fontSize: 19),
+        titleMedium: base.textTheme.titleMedium?.copyWith(fontSize: 21),
+        titleLarge: base.textTheme.titleLarge?.copyWith(fontSize: 28),
       )
       .apply(
         bodyColor: HeritageFieldNotesColors.primaryText,

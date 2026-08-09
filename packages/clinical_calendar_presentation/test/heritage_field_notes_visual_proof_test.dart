@@ -104,13 +104,7 @@ Future<void> _pumpProof(
   await tester.pump();
   expect(tester.takeException(), isNull);
   const themeBundle = HeritageFieldNotesThemeBundle();
-  final baseTheme = themeBundle.standardPresentation.createThemeData();
-  final proofTheme = baseTheme.copyWith(
-    textTheme: baseTheme.textTheme.apply(fontFamily: 'ProofRoboto'),
-    primaryTextTheme: baseTheme.primaryTextTheme.apply(
-      fontFamily: 'ProofRoboto',
-    ),
-  );
+  final proofTheme = themeBundle.standardPresentation.createThemeData();
   final source = _ProofCalendarDataSource();
   final slots = ResponsiveShellSlots(
     centralContent: CalendarPeriodView(
@@ -201,33 +195,41 @@ final class _ProofAssetBundle extends CachingAssetBundle {
 
 Future<void> _loadProofFonts() async {
   var root = Directory.current.absolute;
-  File? roboto;
+  File? fieldArchive;
   File? materialIcons;
   while (root.parent.path != root.path) {
+    final fieldArchiveCandidate = File(
+      '${root.path}${Platform.pathSeparator}packages'
+      '${Platform.pathSeparator}clinical_calendar_presentation'
+      '${Platform.pathSeparator}assets${Platform.pathSeparator}'
+      'heritage_field_notes_fonts${Platform.pathSeparator}'
+      'RobotoCondensed-Variable.ttf',
+    );
     final fontDirectory = Directory(
       '${root.path}${Platform.pathSeparator}.tooling${Platform.pathSeparator}'
       'flutter${Platform.pathSeparator}bin${Platform.pathSeparator}cache'
       '${Platform.pathSeparator}artifacts${Platform.pathSeparator}'
       'material_fonts',
     );
-    final candidateRoboto = File(
-      '${fontDirectory.path}${Platform.pathSeparator}roboto-regular.ttf',
-    );
     final candidateIcons = File(
       '${fontDirectory.path}${Platform.pathSeparator}'
       'materialicons-regular.otf',
     );
-    if (candidateRoboto.existsSync() && candidateIcons.existsSync()) {
-      roboto = candidateRoboto;
+    if (fieldArchiveCandidate.existsSync()) {
+      fieldArchive = fieldArchiveCandidate;
+    }
+    if (candidateIcons.existsSync()) {
       materialIcons = candidateIcons;
+    }
+    if (fieldArchive != null && materialIcons != null) {
       break;
     }
     root = root.parent;
   }
-  if (roboto == null || materialIcons == null) {
+  if (fieldArchive == null || materialIcons == null) {
     throw StateError('Bundled Flutter proof fonts were not found.');
   }
-  await _loadFont('ProofRoboto', roboto);
+  await _loadFont('FieldArchiveCondensed', fieldArchive);
   await _loadFont('MaterialIcons', materialIcons);
 }
 
@@ -248,7 +250,7 @@ final class _PlacementsProof extends StatelessWidget {
       const _SectionTitle('MY PLACEMENTS'),
       const SizedBox(height: 12),
       const _PlacementCard(
-        name: 'ACCEPTANCE\nFAMILY MEDICINE',
+        name: 'ACCEPTANCE FAMILY MEDICINE',
         accent: HeritageFieldNotesColors.clinical,
         completed: '0 hr',
         scheduled: '8 hr',
@@ -263,13 +265,6 @@ final class _PlacementsProof extends StatelessWidget {
         unscheduled: '82 hr',
       ),
       const Spacer(),
-      Text(
-        'TAP A PLACEMENT FOR DETAILS',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: HeritageFieldNotesColors.workMachinery,
-          letterSpacing: 1.1,
-        ),
-      ),
     ],
   );
 }
@@ -297,6 +292,13 @@ final class _PlacementCard extends StatelessWidget {
       color: HeritageFieldNotesColors.surfaceRaised,
       border: Border.all(color: HeritageFieldNotesColors.insetBorder),
       borderRadius: BorderRadius.circular(8),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x242B2117),
+          blurRadius: 5,
+          offset: Offset(1, 2),
+        ),
+      ],
     ),
     foregroundDecoration: BoxDecoration(
       border: Border(left: BorderSide(color: accent, width: 7)),
@@ -305,12 +307,17 @@ final class _PlacementCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          name,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            letterSpacing: .5,
-            height: 1.25,
-            fontWeight: FontWeight.w700,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            name,
+            maxLines: 1,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              letterSpacing: .5,
+              height: 1.25,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         const SizedBox(height: 7),
@@ -420,6 +427,7 @@ final class _PlanningProof extends StatelessWidget {
                 label: 'ADD SCHEDULE',
                 width: 108,
                 tooltip: 'Add schedule',
+                color: HeritageFieldNotesColors.clinical,
               ),
               const SizedBox(width: 8),
               const _PlanningAction(
@@ -428,11 +436,15 @@ final class _PlanningProof extends StatelessWidget {
                 urgent: true,
               ),
               const SizedBox(width: 8),
-              const _PlanningAction(label: 'COLLAPSE', width: 96),
+              const _PlanningAction(
+                label: 'COLLAPSE',
+                width: 96,
+                color: Color(0xFF6B4B22),
+              ),
             ],
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         if (enlargedText)
           const SizedBox(
             height: 92,
@@ -521,7 +533,7 @@ final class _PlanningStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    width: MediaQuery.textScalerOf(context).scale(1) > 1.3 ? 250 : 180,
+    width: MediaQuery.textScalerOf(context).scale(1) > 1.3 ? 260 : 180,
     padding: const EdgeInsets.only(right: 18),
     decoration: const BoxDecoration(
       border: Border(
@@ -537,7 +549,16 @@ final class _PlanningStep extends StatelessWidget {
           child: Text(number),
         ),
         const SizedBox(width: 12),
-        Text(label, style: Theme.of(context).textTheme.labelMedium),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              '0 selected dates',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
       ],
     ),
   );
@@ -549,12 +570,14 @@ final class _PlanningAction extends StatelessWidget {
     required this.width,
     this.tooltip,
     this.urgent = false,
+    this.color,
   });
 
   final String label;
   final double width;
   final String? tooltip;
   final bool urgent;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -567,11 +590,11 @@ final class _PlanningAction extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           foregroundColor: urgent
               ? HeritageFieldNotesColors.urgent
-              : HeritageFieldNotesColors.primaryText,
+              : color ?? HeritageFieldNotesColors.primaryText,
           side: BorderSide(
             color: urgent
                 ? HeritageFieldNotesColors.urgent
-                : HeritageFieldNotesColors.insetBorder,
+                : color ?? HeritageFieldNotesColors.insetBorder,
           ),
         ),
         child: FittedBox(
@@ -592,28 +615,75 @@ final class _ChoiceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = switch (label) {
-      'WORK SHIFT' => Icons.work_outline,
-      'CLINICAL SESSION' => Icons.medical_services,
-      _ => Icons.shield_outlined,
-    };
+    final selected = label == 'CLINICAL SESSION';
+    final foreground = selected ? Colors.white : color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .12),
+        color: selected ? color : color.withValues(alpha: .08),
         border: Border.all(color: color),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 22),
+          _ArchiveChoiceMark(label: label, color: foreground),
           const SizedBox(width: 8),
-          Text(label, style: Theme.of(context).textTheme.labelMedium),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: foreground),
+          ),
         ],
       ),
     );
   }
+}
+
+final class _ArchiveChoiceMark extends StatelessWidget {
+  const _ArchiveChoiceMark({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => switch (label) {
+    'WORK SHIFT' => SizedBox.square(
+      dimension: 22,
+      child: CustomPaint(painter: _ProofWorkStripePainter(color)),
+    ),
+    'PROTECTED DAY' => Icon(Icons.shield, color: color, size: 22),
+    _ => Icon(Icons.add, color: color, size: 22),
+  };
+}
+
+final class _ProofWorkStripePainter extends CustomPainter {
+  const _ProofWorkStripePainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.square;
+    canvas.drawLine(
+      Offset(2, size.height * .72),
+      Offset(size.width * .56, 3),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width * .42, size.height - 3),
+      Offset(size.width - 2, size.height * .28),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ProofWorkStripePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 final class _FieldProof extends StatelessWidget {
@@ -635,7 +705,14 @@ final class _FieldProof extends StatelessWidget {
       children: [
         Text(label, style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 4),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
+        Row(
+          children: [
+            Expanded(
+              child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+            const Icon(Icons.keyboard_arrow_down, size: 18),
+          ],
+        ),
       ],
     ),
   );
@@ -658,10 +735,24 @@ final class _InsightProof extends StatelessWidget {
             children: [
               const CustomPaint(painter: _ArchiveProgressDialPainter()),
               Center(
-                child: Text(
-                  '0 hr\ncompleted',
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '0 hr\n',
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: HeritageFieldNotesColors.clinical,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      TextSpan(
+                        text: 'completed',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ],
+                  ),
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
             ],
@@ -720,6 +811,9 @@ final class _InsightProof extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: TextButton(
           onPressed: _noop,
+          style: TextButton.styleFrom(
+            foregroundColor: HeritageFieldNotesColors.scheduled,
+          ),
           child: const Text('SHOW PRECEPTOR BREAKDOWN'),
         ),
       ),
@@ -793,8 +887,8 @@ final class _AttentionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+    margin: const EdgeInsets.only(bottom: 4),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7.5),
     decoration: BoxDecoration(
       border: Border(
         left: const BorderSide(
@@ -840,9 +934,7 @@ final class _AttentionCard extends StatelessWidget {
               color: HeritageFieldNotesColors.urgent,
               fontWeight: FontWeight.w700,
             ),
-          )
-        else
-          const Icon(Icons.chevron_right, size: 18),
+          ),
       ],
     ),
   );
@@ -969,7 +1061,7 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
         endTime: LocalTime(16, 0),
         title: 'Clinical Session',
         assignment: 'Internal Medicine - Jordan Lee',
-        statusLabel: day == 3 ? 'Awaiting Confirmation' : 'Scheduled',
+        statusLabel: 'Scheduled',
       ),
   ]);
 }

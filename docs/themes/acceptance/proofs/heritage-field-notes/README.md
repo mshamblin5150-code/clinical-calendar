@@ -34,15 +34,18 @@ placement bays, central Calendar and Planning hierarchy, right progress and
 attention rail, indexed hardware, and bottom navigation deck. Field Archive
 also opts into the concept's uppercase archival month toolbar, forest-selected
 period controls, abbreviated weekday row, filled semantic Calendar bars, and
-bottom legend while every other theme keeps its established default. The proof
-fixture reproduces the concept's placement subtitles, progress metrics,
-Over-Target row, Planning step and controls, preceptor action, detailed
-attention rows, and Due markers. The renderer owns no clinical state,
-persistence, validation, or workflow logic.
+bottom legend while every other theme keeps its established default. Its
+theme-owned Roboto Condensed variable font is distributed with the upstream
+SIL Open Font License in `assets/heritage_field_notes_fonts/`; other themes do
+not consume it. The proof fixture reproduces the concept's placement
+subtitles, progress metrics, Over-Target row, Today stack, Planning step and
+controls, medical-cross/work-stripe/shield marks, preceptor action, detailed
+attention rows, Due markers, navigation colors, and indexed hardware. The
+renderer owns no clinical state, persistence, validation, or workflow logic.
 
-The earlier `30d7401` and `5deb099` proofs were rejected by the maintainer and
-are retained under their matching `rejected/` directories only as historical
-evidence. Neither is an acceptance or golden baseline.
+The earlier `30d7401`, `5deb099`, and `d3e2a89` proofs were rejected by the
+maintainer and are retained under their matching `rejected/` directories only
+as historical evidence. None is an acceptance or golden baseline.
 
 ## Original frame creation record
 
@@ -62,10 +65,10 @@ corners, uses source cuts 120/145/120/170, and has SHA-256
 
 ```text
 bf131014c71df2adc4b34b70c99e3e5ed94e54f0e1753d3979d0b6e85da66c75  approved-concept-landscape.png
-65c36133d8d30b839236d17d30a9023dc01b3f1901622a61723eeda7c8838514  landscape-concept-vs-runtime.png
-683acf628974d37d983902f95c28b912df00f66b2120f4a9673e72edf8bd95b7  runtime-landscape-1536x1024.png
-56ce51e9e45d6045271032d890fe3d1936a5cee3d8bff0a829a90e86fb2686d3  runtime-portrait-900x1440.png
-1fa104522ef4c3f793cf6675fe1be2f3624e3af05ee2831d23eab71f21f1a0cb  runtime-portrait-200-percent-900x1440.png
+de261607c7c01dead43e1289b560785ddbac3340c46ba848cb5b39b1643150be  landscape-concept-vs-runtime.png
+7c4151e4fe7763374d5c7841e154a8c9c286d15911c887cddaddeb4234f7b546  runtime-landscape-1536x1024.png
+c29ae494efadbf3d3cd9624e1fc2b59570b9e8e8fee077803a36ce434c003ea3  runtime-portrait-900x1440.png
+15a03a5ee366a868b98b125d869ca310b159f44c6afacd2f34d4ffbebfdb1c6a  runtime-portrait-200-percent-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance

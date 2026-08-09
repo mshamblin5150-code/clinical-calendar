@@ -213,7 +213,7 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
           right: 0,
           top: 94,
           bottom: 94,
-          width: 34,
+          width: 42,
           child: _HeritageFieldNotesIndexTabs(),
         ),
       ],
@@ -360,9 +360,9 @@ final class _HeritageFieldNotesArchiveChassisPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
-    const darkestWalnut = Color(0xFF21160F);
-    const walnut = Color(0xFF4A2F20);
-    const walnutHighlight = Color(0xFF765139);
+    const darkestWalnut = Color(0xFF1B110C);
+    const walnut = Color(0xFF3B2519);
+    const walnutHighlight = Color(0xFF5B3B29);
     const agedBrass = Color(0xFFB88A31);
     const brassHighlight = Color(0xFFE0BD68);
 
@@ -502,22 +502,42 @@ final class _HeritageFieldNotesConsoleBay extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           shape == _HeritageFieldNotesBayShape.placement ? 14 : 12,
-          shape == _HeritageFieldNotesBayShape.calendar ? 10 : 20,
+          switch (shape) {
+            _HeritageFieldNotesBayShape.calendar => 10,
+            _HeritageFieldNotesBayShape.planning => 12,
+            _ => 20,
+          },
           shape == _HeritageFieldNotesBayShape.insight ? 14 : 12,
-          shape == _HeritageFieldNotesBayShape.calendar ? 8 : 18,
+          switch (shape) {
+            _HeritageFieldNotesBayShape.calendar => 8,
+            _HeritageFieldNotesBayShape.planning => 13,
+            _ => 18,
+          },
         ),
         child: child,
       ),
     );
-    return CustomPaint(
-      painter: _HeritageFieldNotesConsoleBayPainter(
-        surface: colors.structure,
-        raised: colors.structureRaised,
-        border: colors.insetBorder,
-        accent: accentColor,
-        shape: shape,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x2B2B2117),
+            blurRadius: 6,
+            offset: Offset(1, 3),
+          ),
+        ],
       ),
-      child: content,
+      child: CustomPaint(
+        painter: _HeritageFieldNotesConsoleBayPainter(
+          surface: colors.structure,
+          raised: colors.structureRaised,
+          border: colors.insetBorder,
+          accent: accentColor,
+          shape: shape,
+        ),
+        child: content,
+      ),
     );
   }
 }
@@ -558,10 +578,12 @@ final class _HeritageFieldNotesConsoleBayPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2,
     );
-    canvas.drawRect(
-      Rect.fromLTWH(7, 18, 6, size.height - 36),
-      Paint()..color = accent,
-    );
+    if (shape == _HeritageFieldNotesBayShape.insight) {
+      canvas.drawRect(
+        const Rect.fromLTWH(17, 18, 6, 34),
+        Paint()..color = accent,
+      );
+    }
     canvas.drawLine(
       const Offset(22, 11),
       Offset(size.width - 18, 11),
@@ -654,7 +676,16 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                 key: const Key('application-menu-action'),
                 tooltip: 'Open menu',
                 onPressed: onOpenMenu,
-                icon: const Icon(Icons.calendar_month_outlined),
+                icon: const Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(Icons.inventory_2_outlined, size: 27),
+                    Positioned(
+                      top: 1,
+                      child: Icon(Icons.eco_outlined, size: 13),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -686,7 +717,7 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                             'FIELD ARCHIVE',
                             style: Theme.of(context).textTheme.labelMedium
                                 ?.copyWith(
-                                  color: context.clinicalColors.clinical,
+                                  color: context.clinicalColors.primaryText,
                                   letterSpacing: 1.4,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -701,10 +732,9 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                 onPressed: onAddSchedule,
                 icon: const Icon(Icons.add_box_outlined),
               )
-            else
+            else if (!enlargedText && environmentName.trim().isNotEmpty)
               PopupMenuButton<String>(
                 tooltip: 'Archive actions',
-                icon: const Icon(Icons.more_vert),
                 onSelected: (value) {
                   if (value == 'add') {
                     onAddSchedule();
@@ -716,24 +746,25 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                   PopupMenuItem(value: 'add', child: Text('Add schedule')),
                   PopupMenuItem(value: 'help', child: Text('Help')),
                 ],
-              ),
-            if (!compact && !enlargedText && environmentName.trim().isNotEmpty)
-              Container(
-                width: 142,
-                height: double.infinity,
-                margin: const EdgeInsets.only(left: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: context.clinicalColors.insetBorder),
+                child: Container(
+                  width: 130,
+                  height: double.infinity,
+                  margin: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(
+                        color: context.clinicalColors.insetBorder,
+                      ),
+                    ),
                   ),
-                ),
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'ARCHIVE NO.\n$environmentName',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    letterSpacing: .8,
-                    height: 1.35,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'ARCHIVE NO.\n$environmentName',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      letterSpacing: .8,
+                      height: 1.35,
+                    ),
                   ),
                 ),
               ),
@@ -786,7 +817,7 @@ final class _HeritageFieldNotesCrownPainter extends CustomPainter {
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
     final forestPaint = Paint()
-      ..color = forest
+      ..color = border.withValues(alpha: .72)
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(
@@ -833,6 +864,11 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
     ];
     final iconsOnly =
         compact || MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    Color destinationColor(BuildContext context, int index) => switch (index) {
+      1 => context.clinicalColors.clinical,
+      3 => context.clinicalColors.urgent,
+      _ => const Color(0xFF6B4B22),
+    };
     return Container(
       key: const Key('heritage-field-notes-bottom-navigation'),
       height: compact ? 68 : 82,
@@ -870,12 +906,7 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       border: Border(
-                        bottom: BorderSide(
-                          color: index == selectedIndex
-                              ? context.clinicalColors.clinical
-                              : Colors.transparent,
-                          width: 4,
-                        ),
+                        bottom: BorderSide(color: Colors.transparent, width: 1),
                         right: index < destinations.length - 1
                             ? BorderSide(
                                 color: context.clinicalColors.insetBorder
@@ -889,9 +920,7 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
                           ? Icon(
                               destinations[index].$1,
                               size: compact ? 24 : 32,
-                              color: index == selectedIndex
-                                  ? context.clinicalColors.clinical
-                                  : null,
+                              color: destinationColor(context, index),
                             )
                           : Column(
                               mainAxisSize: MainAxisSize.min,
@@ -899,15 +928,16 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
                                 Icon(
                                   destinations[index].$1,
                                   size: 32,
-                                  color: index == selectedIndex
-                                      ? context.clinicalColors.clinical
-                                      : null,
+                                  color: destinationColor(context, index),
                                 ),
                                 const SizedBox(height: 5),
                                 Text(
                                   destinations[index].$2,
                                   style: Theme.of(context).textTheme.titleSmall
-                                      ?.copyWith(letterSpacing: .7),
+                                      ?.copyWith(
+                                        letterSpacing: .7,
+                                        color: destinationColor(context, index),
+                                      ),
                                 ),
                               ],
                             ),
@@ -934,15 +964,30 @@ final class _HeritageFieldNotesIndexTabs extends StatelessWidget {
         children: [
           for (var index = 0; index < 7; index++)
             Container(
-              width: index.isEven ? 30 : 24,
-              height: index == 3 ? 92 : 68,
+              width: index.isEven ? 42 : 36,
+              height: index == 3
+                  ? 104
+                  : index.isEven
+                  ? 88
+                  : 82,
               decoration: BoxDecoration(
                 color: index.isEven
                     ? HeritageFieldNotesColors.protectedDayAccent
-                    : const Color(0xFF5A3A28),
+                    : const Color(0xFF3B2519),
                 border: Border.all(color: const Color(0xFFD2A74B), width: 1.5),
                 borderRadius: const BorderRadius.horizontal(
                   left: Radius.circular(6),
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: index.isEven
+                      ? const Color(0xFF1B110C)
+                      : const Color(0xFFD2A74B),
+                  shape: BoxShape.circle,
                 ),
               ),
             ),
