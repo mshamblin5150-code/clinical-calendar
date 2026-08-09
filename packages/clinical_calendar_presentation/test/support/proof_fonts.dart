@@ -5,6 +5,10 @@ import 'package:flutter/services.dart' show FontLoader;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
+// Current Linux proof rasterization peaks at 3.92% low-delta pixels across the
+// catalog. High-delta and aggregate-error bounds below remain authoritative
+// for rejecting localized or structural UI changes.
+const _nonWindowsPixelTolerance = 0.04;
 const _nonWindowsMeanChannelErrorTolerance = 0.003;
 const _nonWindowsHighDeltaPixelTolerance = 0.0025;
 const _highDeltaThreshold = 128;
@@ -147,7 +151,17 @@ final class _ProofGoldenComparator implements GoldenFileComparator {
     if (expected == null || actual == null) {
       return delegate.compare(imageBytes, golden);
     }
-    return proofImagesMatch(expected, actual);
+    final difference = _proofImageDifference(expected, actual);
+    final matches = difference != null && _differenceIsAccepted(difference);
+    if (!matches && difference != null) {
+      stderr.writeln(
+        'Proof golden delta for $golden: '
+        'changed=${difference.changedRatio}, '
+        'highDelta=${difference.highDeltaRatio}, '
+        'meanChannelError=${difference.meanChannelError}',
+      );
+    }
+    return matches;
   }
 
   @override
@@ -166,10 +180,25 @@ Uri? resolveProofGolden(GoldenFileComparator comparator, Uri golden) {
 }
 
 bool proofImagesMatch(img.Image expected, img.Image actual) {
+  final difference = _proofImageDifference(expected, actual);
+  return difference != null && _differenceIsAccepted(difference);
+}
+
+typedef _ProofImageDifference = ({
+  double changedRatio,
+  double highDeltaRatio,
+  double meanChannelError,
+});
+
+_ProofImageDifference? _proofImageDifference(
+  img.Image expected,
+  img.Image actual,
+) {
   if (expected.width != actual.width || expected.height != actual.height) {
-    return false;
+    return null;
   }
 
+  var changedPixels = 0;
   var highDeltaPixels = 0;
   var totalChannelError = 0;
   final pixelCount = expected.width * expected.height;
@@ -187,6 +216,7 @@ bool proofImagesMatch(img.Image expected, img.Image actual) {
       if (pixelError == 0) {
         continue;
       }
+      changedPixels++;
       totalChannelError += pixelError;
       if (channelErrors.any((error) => error >= _highDeltaThreshold)) {
         highDeltaPixels++;
@@ -194,8 +224,17 @@ bool proofImagesMatch(img.Image expected, img.Image actual) {
     }
   }
 
+  final changedRatio = changedPixels / pixelCount;
   final highDeltaRatio = highDeltaPixels / pixelCount;
   final meanChannelError = totalChannelError / (pixelCount * 4 * 255);
-  return highDeltaRatio <= _nonWindowsHighDeltaPixelTolerance &&
-      meanChannelError <= _nonWindowsMeanChannelErrorTolerance;
+  return (
+    changedRatio: changedRatio,
+    highDeltaRatio: highDeltaRatio,
+    meanChannelError: meanChannelError,
+  );
 }
+
+bool _differenceIsAccepted(_ProofImageDifference difference) =>
+    difference.changedRatio <= _nonWindowsPixelTolerance &&
+    difference.highDeltaRatio <= _nonWindowsHighDeltaPixelTolerance &&
+    difference.meanChannelError <= _nonWindowsMeanChannelErrorTolerance;

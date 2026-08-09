@@ -20,13 +20,44 @@ void main() {
     );
   });
 
-  test('proof comparison accepts widespread one-step rasterization noise', () {
+  test(
+    'proof comparison accepts distributed low-delta rasterization noise',
+    () {
+      final expected = img.Image(width: 100, height: 100)
+        ..clear(img.ColorRgb8(40, 40, 40));
+      final actual = img.Image.from(expected);
+      final changedPositions = <int>{};
+
+      for (var index = 0; index < 390; index++) {
+        final position = (index * 37) % (actual.width * actual.height);
+        changedPositions.add(position);
+        final x = position % actual.width;
+        final y = position ~/ actual.width;
+        actual.setPixelRgb(x, y, 48, 48, 48);
+      }
+
+      expect(changedPositions, hasLength(390));
+      expect(proofImagesMatch(expected, actual), isTrue);
+    },
+  );
+
+  test('proof comparison rejects low-delta noise above its ceiling', () {
     final expected = img.Image(width: 100, height: 100)
       ..clear(img.ColorRgb8(40, 40, 40));
-    final actual = img.Image(width: 100, height: 100)
-      ..clear(img.ColorRgb8(41, 41, 41));
+    final actual = img.Image.from(expected);
 
-    expect(proofImagesMatch(expected, actual), isTrue);
+    for (var index = 0; index < 410; index++) {
+      final position = (index * 37) % (actual.width * actual.height);
+      actual.setPixelRgb(
+        position % actual.width,
+        position ~/ actual.width,
+        48,
+        48,
+        48,
+      );
+    }
+
+    expect(proofImagesMatch(expected, actual), isFalse);
   });
 
   test('proof comparison rejects a localized high-contrast deletion', () {

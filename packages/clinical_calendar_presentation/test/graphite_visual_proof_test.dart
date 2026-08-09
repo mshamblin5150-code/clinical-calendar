@@ -1,10 +1,14 @@
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 
 import 'support/proof_fonts.dart';
 
@@ -19,10 +23,82 @@ void main() {
   ) async {
     await _pumpProof(tester, const Size(1536, 1024));
 
+    expect(find.byKey(const Key('graphite-landscape-rails')), findsOneWidget);
+    expect(find.byKey(const Key('calendar-today-label')), findsOneWidget);
+
+    final planningBay = tester.getRect(
+      find.byKey(const Key('graphite-planning-bay')),
+    );
+    final endField = tester.getRect(
+      find.byKey(const Key('graphite-planning-field-END')),
+    );
+    expect(
+      planningBay.right - endField.right,
+      greaterThanOrEqualTo(48),
+      reason: 'The END field must clear the planning bay chrome.',
+    );
+
+    expect(find.bySemanticsLabel('Graphite calendar mark'), findsOneWidget);
+
     await expectLater(
       find.byKey(const Key('graphite-proof')),
       matchesGoldenFile('goldens/graphite/graphite_landscape_1536x1024.png'),
     );
+  });
+
+  testWidgets('Graphite landscape directly matches the approved concept', (
+    tester,
+  ) async {
+    await _pumpProof(tester, const Size(1536, 1024));
+
+    final boundary = tester.renderObject<RenderRepaintBoundary>(
+      find.byKey(const Key('graphite-proof')),
+    );
+    final runtimeBytes = await tester.runAsync(() async {
+      final runtimeImage = await boundary.toImage(pixelRatio: .25);
+      final bytes = await runtimeImage.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      );
+      runtimeImage.dispose();
+      return bytes;
+    });
+    final concept = _loadApprovedConceptComparison();
+
+    final comparison = _compareConcept(
+      concept.getBytes(order: img.ChannelOrder.rgba),
+      runtimeBytes!.buffer.asUint8List(),
+    );
+    expect(
+      comparison.meanChannelSimilarity,
+      greaterThanOrEqualTo(.9288),
+      reason: 'mean channel similarity was ${comparison.meanChannelSimilarity}',
+    );
+    expect(
+      comparison.closePixelRatio,
+      greaterThanOrEqualTo(.8181),
+      reason: 'close-pixel ratio was ${comparison.closePixelRatio}',
+    );
+  });
+
+  test('direct concept gate rejects the superseded v2 landscape', () {
+    final rejectedFile = _findWorkspaceFile(
+      'docs/themes/acceptance/proofs/graphite-v2/'
+      'runtime-landscape-1536x1024.png',
+    );
+    final rejectedSource = img.decodePng(rejectedFile.readAsBytesSync());
+    expect(rejectedSource, isNotNull);
+    final rejected = img.copyResize(
+      rejectedSource!,
+      width: 384,
+      height: 256,
+      interpolation: img.Interpolation.average,
+    );
+    final comparison = _compareConcept(
+      _loadApprovedConceptComparison().getBytes(order: img.ChannelOrder.rgba),
+      rejected.getBytes(order: img.ChannelOrder.rgba),
+    );
+    expect(comparison.meanChannelSimilarity, lessThan(.9288));
+    expect(comparison.closePixelRatio, lessThan(.8181));
   });
 
   testWidgets('Graphite portrait is an intentional ordered recomposition', (
@@ -39,10 +115,16 @@ void main() {
   testWidgets('Graphite remains operable at 200 percent text scale', (
     tester,
   ) async {
+    var addScheduleInvocations = 0;
+    var profileInvocations = 0;
+    var menuInvocations = 0;
     await _pumpProof(
       tester,
       const Size(900, 1440),
       textScaler: const TextScaler.linear(2),
+      onAddSchedule: () => addScheduleInvocations++,
+      onOpenProfile: () => profileInvocations++,
+      onOpenMenu: () => menuInvocations++,
     );
     expect(find.byKey(const Key('graphite-portrait-scroll')), findsOneWidget);
     expect(
@@ -52,11 +134,24 @@ void main() {
     expect(find.byTooltip('Open menu'), findsOneWidget);
     expect(find.byTooltip('Add schedule'), findsOneWidget);
     final menuAction = tester.getRect(find.byTooltip('Open menu'));
+    final addAction = tester.getRect(find.byTooltip('Add schedule'));
+    final profileAction = tester.getRect(find.byTooltip('Open profile'));
     final navigation = tester.getRect(
       find.byKey(const Key('graphite-bottom-navigation')),
     );
-    expect(menuAction.top, greaterThanOrEqualTo(0));
-    expect(menuAction.bottom, lessThanOrEqualTo(1440));
+    for (final action in [addAction, profileAction, menuAction]) {
+      expect(action.left, greaterThanOrEqualTo(0));
+      expect(action.right, lessThanOrEqualTo(900));
+      expect(action.top, greaterThanOrEqualTo(0));
+      expect(action.bottom, lessThanOrEqualTo(1440));
+    }
+    await tester.tap(find.byTooltip('Add schedule'));
+    await tester.tap(find.byTooltip('Open profile'));
+    await tester.tap(find.byTooltip('Open menu'));
+    expect(addScheduleInvocations, 1);
+    expect(profileInvocations, 1);
+    expect(menuInvocations, 1);
+    await tester.pump();
     expect(navigation.top, greaterThan(1300));
     expect(navigation.bottom, lessThanOrEqualTo(1440));
 
@@ -69,10 +164,52 @@ void main() {
   });
 }
 
+img.Image _loadApprovedConceptComparison() {
+  final conceptFile = _findWorkspaceFile(
+    'docs/concepts/themes/graphite/calendar-dashboard-concept-v1.png',
+  );
+  final conceptSource = img.decodePng(conceptFile.readAsBytesSync());
+  if (conceptSource == null) {
+    throw StateError('The approved Graphite concept is not a valid PNG.');
+  }
+  return img.copyResize(
+    conceptSource,
+    width: 384,
+    height: 256,
+    interpolation: img.Interpolation.average,
+  );
+}
+
+({double meanChannelSimilarity, double closePixelRatio}) _compareConcept(
+  Uint8List concept,
+  Uint8List runtime,
+) {
+  assert(concept.length == runtime.length);
+  var totalChannelError = 0;
+  var closePixels = 0;
+  final pixelCount = runtime.length ~/ 4;
+  for (var offset = 0; offset < runtime.length; offset += 4) {
+    final redError = (concept[offset] - runtime[offset]).abs();
+    final greenError = (concept[offset + 1] - runtime[offset + 1]).abs();
+    final blueError = (concept[offset + 2] - runtime[offset + 2]).abs();
+    totalChannelError += redError + greenError + blueError;
+    if (redError <= 32 && greenError <= 32 && blueError <= 32) {
+      closePixels++;
+    }
+  }
+  return (
+    meanChannelSimilarity: 1 - totalChannelError / (pixelCount * 3 * 255),
+    closePixelRatio: closePixels / pixelCount,
+  );
+}
+
 Future<void> _pumpProof(
   WidgetTester tester,
   Size size, {
   TextScaler textScaler = TextScaler.noScaling,
+  VoidCallback onAddSchedule = _noop,
+  VoidCallback onOpenProfile = _noop,
+  VoidCallback onOpenMenu = _noop,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -127,9 +264,16 @@ Future<void> _pumpProof(
       lines: ['Session needs confirmation', 'Planning incomplete'],
       urgentFrom: 0,
     ),
-    profileAvatar: const CircleAvatar(
-      radius: 18,
-      child: Icon(Icons.person_outline, size: 20),
+    profileAvatar: Tooltip(
+      message: 'Open profile',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onOpenProfile,
+        child: const CircleAvatar(
+          radius: 18,
+          child: Icon(Icons.person_outline, size: 20),
+        ),
+      ),
     ),
   );
 
@@ -148,10 +292,10 @@ Future<void> _pumpProof(
           child: themeBundle.shellRenderer.build(
             slots: slots,
             environmentName: 'GRAPHITE',
-            onOpenMenu: _noop,
+            onOpenMenu: onOpenMenu,
             onOpenDestination: _ignoreDestination,
             onOpenAttention: _noop,
-            onAddSchedule: _noop,
+            onAddSchedule: onAddSchedule,
           ),
         ),
       ),
@@ -184,19 +328,19 @@ final class _PlacementsProof extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _ProofTitle('MY PLACEMENTS'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 26),
         _PlacementCard(
           name: 'ACCEPTANCE FAMILY MEDICINE',
           progress: 0,
-          accent: context.clinicalColors.clinical,
+          accent: Theme.of(context).colorScheme.primary,
           detail: '0 hr / 90 hr completed\n8 hr scheduled\n82 hr unscheduled',
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 22),
         _PlacementCard(
           name: 'INTERNAL MEDICINE',
-          progress: .47,
+          progress: 0,
           accent: context.clinicalColors.workMachinery,
-          detail: '42 hr / 90 hr completed\n24 hr scheduled\n24 hr unscheduled',
+          detail: '0 hr / 90 hr completed\n8 hr scheduled\n82 hr unscheduled',
         ),
       ],
     ),
@@ -217,43 +361,198 @@ final class _PlacementCard extends StatelessWidget {
   final String detail;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      border: Border(left: BorderSide(color: accent, width: 4)),
-      color: context.clinicalColors.structureRaised,
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(name, style: Theme.of(context).textTheme.labelMedium),
-        const SizedBox(height: 14),
-        Center(
-          child: SizedBox.square(
-            dimension: 96,
-            child: Stack(
-              fit: StackFit.expand,
+  Widget build(BuildContext context) => SizedBox(
+    height: 258,
+    child: Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 16, 16),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: context.clinicalColors.insetBorder.withValues(alpha: .72),
+        ),
+        borderRadius: BorderRadius.circular(8),
+        color: context.clinicalColors.structureRaised,
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            right: null,
+            child: Container(width: 4, color: accent),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 7),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircularProgressIndicator(
-                  value: progress,
-                  strokeWidth: 9,
-                  color: accent,
-                  backgroundColor: context.clinicalColors.insetBorder,
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-                Center(child: Text('${(progress * 100).round()}%')),
+                const SizedBox(height: 7),
+                Text(
+                  detail.split('\n').first,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const Spacer(),
+                Center(
+                  child: SizedBox.square(
+                    dimension: 104,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CustomPaint(
+                          painter: _PlacementWheelPainter(
+                            progress: progress,
+                            accent: accent,
+                          ),
+                        ),
+                        Center(
+                          child: Text(
+                            '${(progress * 100).round()}%',
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                _PlacementDependency(
+                  scheduled: true,
+                  accent: accent,
+                  label: detail.split('\n')[1],
+                ),
+                const SizedBox(height: 5),
+                _PlacementDependency(
+                  scheduled: false,
+                  accent: accent,
+                  label: detail.split('\n')[2],
+                ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 14),
-        Text(
-          detail,
-          style: Theme.of(context).textTheme.bodySmall,
-          strutStyle: const StrutStyle(height: 1.35),
-        ),
-      ],
+        ],
+      ),
     ),
   );
+}
+
+final class _PlacementWheelPainter extends CustomPainter {
+  const _PlacementWheelPainter({required this.progress, required this.accent});
+
+  final double progress;
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2 - 7;
+    canvas.drawCircle(
+      center,
+      radius + 4,
+      Paint()
+        ..color = const Color(0xFF1A1E21)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = const Color(0xFF4A5054)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 7,
+    );
+    canvas.drawCircle(
+      center,
+      radius - 5,
+      Paint()
+        ..color = const Color(0xFF252A2E)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+    if (progress > 0) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        -1.5708,
+        6.2832 * progress,
+        false,
+        Paint()
+          ..color = accent
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 7
+          ..strokeCap = StrokeCap.round,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PlacementWheelPainter oldDelegate) =>
+      progress != oldDelegate.progress || accent != oldDelegate.accent;
+}
+
+final class _PlacementDependency extends StatelessWidget {
+  const _PlacementDependency({
+    required this.scheduled,
+    required this.accent,
+    required this.label,
+  });
+
+  final bool scheduled;
+  final Color accent;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      SizedBox.square(
+        dimension: 21,
+        child: scheduled
+            ? Icon(
+                Icons.schedule_outlined,
+                size: 20,
+                color: context.clinicalColors.secondaryText,
+              )
+            : CustomPaint(painter: _DashedRingPainter(color: accent)),
+      ),
+      const SizedBox(width: 8),
+      Text(label, style: Theme.of(context).textTheme.bodyMedium),
+    ],
+  );
+}
+
+final class _DashedRingPainter extends CustomPainter {
+  const _DashedRingPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2 - 2;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    for (var index = 0; index < 10; index++) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        index * .6283,
+        .31,
+        false,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRingPainter oldDelegate) =>
+      color != oldDelegate.color;
 }
 
 final class _InsightProof extends StatelessWidget {
@@ -264,32 +563,87 @@ final class _InsightProof extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _ProofTitle('INTERNAL MEDICINE'),
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 20,
+              decoration: BoxDecoration(
+                color: context.clinicalColors.workMachinery,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(child: _ProofTitle('INTERNAL MEDICINE')),
+          ],
+        ),
         const SizedBox(height: 10),
         Center(
           child: SizedBox.square(
-            dimension: 116,
+            dimension: 136,
             child: Stack(
               fit: StackFit.expand,
               children: [
-                CircularProgressIndicator(
-                  value: .47,
-                  strokeWidth: 11,
-                  color: context.clinicalColors.clinical,
-                  backgroundColor: context.clinicalColors.insetBorder,
+                CustomPaint(
+                  painter: _DetailedWheelPainter(
+                    accent: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
-                const Center(
-                  child: Text('42 hr\ncompleted', textAlign: TextAlign.center),
+                Center(
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '0 hr\n',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 26,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'completed',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        const Text('Target                                      90 hr'),
-        const Text('Scheduled                               24 hr'),
-        const Text('Unscheduled                           24 hr'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 0),
+        const _InsightDependency(
+          icon: Icons.gps_fixed,
+          label: 'Target',
+          value: '90 hr',
+        ),
+        const _InsightDependency(
+          icon: Icons.check_circle_outline,
+          label: 'Completed',
+          value: '0 hr',
+        ),
+        const _InsightDependency(
+          icon: Icons.schedule_outlined,
+          label: 'Scheduled',
+          value: '8 hr',
+        ),
+        const _InsightDependency(
+          icon: Icons.radio_button_unchecked,
+          label: 'Unscheduled',
+          value: '82 hr',
+          dashed: true,
+        ),
+        const _InsightDependency(
+          icon: Icons.keyboard_double_arrow_up,
+          label: 'Over-Target',
+          value: '0 hr',
+        ),
+        const SizedBox(height: 4),
         const Divider(),
         Text(
           'Additional pace required',
@@ -298,38 +652,214 @@ final class _InsightProof extends StatelessWidget {
         Text(
           '21 hr 16 min / week',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: context.clinicalColors.clinical,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 28),
+        Text(
+          'TAP WHEEL TO VIEW NEXT PLACEMENT',
+          style: TextStyle(color: Theme.of(context).colorScheme.primary),
+        ),
+        const SizedBox(height: 18),
+        Text(
+          'SHOW PRECEPTOR BREAKDOWN',
+          style: TextStyle(color: context.clinicalColors.scheduled),
+        ),
+        const SizedBox(height: 20),
         const Divider(),
-        const _ProofTitle('NEEDS ATTENTION  •  5'),
         const SizedBox(height: 8),
-        for (final label in const [
-          'Clinical Session needs confirmation',
-          'Initial Self-Assessment — Due',
-          'Initial Self-Assessment — Internal Medicine',
-          'Planning incomplete',
-          'Interim Review threshold approaching',
-        ])
-          Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 20,
+              decoration: BoxDecoration(
+                color: context.clinicalColors.secondaryText,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(child: _ProofTitle('NEEDS ATTENTION')),
+            Text('ON  •  5', style: TextStyle(color: Color(0xFFFF8D86))),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const _AttentionProofItem(
+          icon: Icons.report_gmailerrorred_outlined,
+          title: 'CLINICAL SESSION NEEDS CONFIRMATION',
+          detail: 'Confirm the actual times and supervisor',
+        ),
+        const _AttentionProofItem(
+          icon: Icons.assignment_outlined,
+          title: 'INITIAL SELF-ASSESSMENT',
+          detail: 'Acceptance Family Medicine',
+          trailing: 'Due',
+        ),
+        const _AttentionProofItem(
+          icon: Icons.assignment_outlined,
+          title: 'INITIAL SELF-ASSESSMENT',
+          detail: 'Internal Medicine',
+          trailing: 'Due',
+        ),
+        const _AttentionProofItem(
+          icon: Icons.report_gmailerrorred_outlined,
+          title: 'PLANNING INCOMPLETE',
+          detail: 'Choose one empty Protected Day',
+        ),
+      ],
+    ),
+  );
+}
+
+final class _DetailedWheelPainter extends CustomPainter {
+  const _DetailedWheelPainter({required this.accent});
+
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final tickRadius = size.shortestSide / 2 - 6;
+    final tickPaint = Paint()
+      ..color = const Color(0xFF9BA3A8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    for (var index = 0; index < 60; index++) {
+      final angle = index * .10472 - 1.5708;
+      final outer = Offset(
+        center.dx + tickRadius * math.cos(angle),
+        center.dy + tickRadius * math.sin(angle),
+      );
+      final innerRadius = tickRadius - (index % 5 == 0 ? 5 : 3);
+      final inner = Offset(
+        center.dx + innerRadius * math.cos(angle),
+        center.dy + innerRadius * math.sin(angle),
+      );
+      canvas.drawLine(inner, outer, tickPaint);
+    }
+    canvas.drawCircle(
+      center,
+      tickRadius - 10,
+      Paint()
+        ..color = const Color(0xFF4A5054)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    canvas.drawCircle(
+      center,
+      tickRadius - 14,
+      Paint()
+        ..color = accent.withValues(alpha: .18)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DetailedWheelPainter oldDelegate) =>
+      accent != oldDelegate.accent;
+}
+
+final class _InsightDependency extends StatelessWidget {
+  const _InsightDependency({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.dashed = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool dashed;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      children: [
+        SizedBox.square(
+          dimension: 19,
+          child: dashed
+              ? CustomPaint(
+                  painter: _DashedRingPainter(
+                    color: context.clinicalColors.secondaryText,
+                  ),
+                )
+              : Icon(
+                  icon,
+                  size: 18,
+                  color: context.clinicalColors.secondaryText,
+                ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label)),
+        Text(value),
+      ],
+    ),
+  );
+}
+
+final class _AttentionProofItem extends StatelessWidget {
+  const _AttentionProofItem({
+    required this.icon,
+    required this.title,
+    required this.detail,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String title;
+  final String detail;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(minHeight: 68),
+    padding: const EdgeInsets.symmetric(vertical: 7),
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(
+          color: context.clinicalColors.insetBorder.withValues(alpha: .38),
+        ),
+      ),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, size: 38, color: context.clinicalColors.urgent),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: context.clinicalColors.urgent,
-                  width: 3,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: context.clinicalColors.urgent,
+              const SizedBox(height: 2),
+              Text(
+                detail,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-            ),
+            ],
           ),
+        ),
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          Text(
+            trailing!,
+            style: TextStyle(color: context.clinicalColors.urgent),
+          ),
+        ],
       ],
     ),
   );
@@ -339,62 +869,153 @@ final class _PlanningProof extends StatelessWidget {
   const _PlanningProof();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
+  Widget build(BuildContext context) {
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (enlargedText)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              const _ProofTitle('PLANNING'),
+              OutlinedButton(
+                onPressed: _noop,
+                child: const Text('ADD SCHEDULE'),
+              ),
+              OutlinedButton(
+                onPressed: _noop,
+                child: const Text('PLANNING INCOMPLETE'),
+              ),
+            ],
+          )
+        else
+          Row(
+            children: [
+              const Expanded(
+                child: Row(
+                  children: [
+                    _ProofTitle('PLANNING'),
+                    SizedBox(width: 18),
+                    Text('Build the monthly plan in this in-flow region.'),
+                  ],
+                ),
+              ),
+              OutlinedButton(
+                onPressed: _noop,
+                child: const Text('ADD SCHEDULE'),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: _noop,
+                child: const Text('PLANNING INCOMPLETE'),
+              ),
+            ],
+          ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: context.clinicalColors.insetBorder),
+              borderRadius: BorderRadius.circular(7),
+              color: context.clinicalColors.canvas,
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    _PlanningChoice(
+                      icon: Icons.looks_one_outlined,
+                      label: 'TYPE & TIME',
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    _PlanningChoice(
+                      icon: Icons.work_outline,
+                      label: 'WORK SHIFT',
+                      color: context.clinicalColors.workMachinery,
+                    ),
+                    const SizedBox(width: 12),
+                    _PlanningChoice(
+                      icon: Icons.medical_services_outlined,
+                      label: 'CLINICAL SESSION',
+                      color: context.clinicalColors.clinical,
+                    ),
+                    const SizedBox(width: 12),
+                    _PlanningChoice(
+                      icon: Icons.shield_outlined,
+                      label: 'PROTECTED DAY',
+                      color: context.clinicalColors.protectedDayAccent,
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: .96,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: _PlanningField('SCHEDULE TEMPLATE', 'MANUAL'),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(child: _PlanningField('START', '08:00')),
+                        SizedBox(width: 12),
+                        Expanded(child: _PlanningField('END', '16:00')),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _PlanningChoice extends StatelessWidget {
+  const _PlanningChoice({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Expanded(child: _ProofTitle('PLANNING')),
-          OutlinedButton(onPressed: _noop, child: const Text('ADD SCHEDULE')),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            onPressed: _noop,
-            child: const Text('PLANNING INCOMPLETE'),
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 9),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
-      const SizedBox(height: 8),
-      const Text('Build the monthly plan in this in-flow region.'),
-      const SizedBox(height: 10),
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          const Chip(label: Text('1  TYPE & TIME')),
-          Chip(
-            avatar: Icon(
-              Icons.work_outline,
-              color: context.clinicalColors.workMachinery,
-            ),
-            label: const Text('WORK SHIFT'),
-          ),
-          Chip(
-            avatar: Icon(
-              Icons.medical_services_outlined,
-              color: context.clinicalColors.clinical,
-            ),
-            label: const Text('CLINICAL SESSION'),
-          ),
-          Chip(
-            avatar: Icon(
-              Icons.shield_outlined,
-              color: context.clinicalColors.protectedDayAccent,
-            ),
-            label: const Text('PROTECTED DAY'),
-          ),
-        ],
-      ),
-      const Spacer(),
-      const Row(
-        children: [
-          Expanded(child: _PlanningField('SCHEDULE TEMPLATE', 'MANUAL')),
-          SizedBox(width: 8),
-          Expanded(child: _PlanningField('START', '08:00')),
-          SizedBox(width: 8),
-          Expanded(child: _PlanningField('END', '16:00')),
-        ],
-      ),
-    ],
+    ),
   );
 }
 
@@ -406,6 +1027,7 @@ final class _PlanningField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
+    key: Key('graphite-planning-field-$label'),
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
     decoration: BoxDecoration(
       border: Border.all(color: context.clinicalColors.insetBorder),

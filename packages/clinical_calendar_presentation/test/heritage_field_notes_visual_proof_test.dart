@@ -247,12 +247,12 @@ Future<void> _loadProofFonts() async {
     );
     if (fieldArchiveCandidate.existsSync()) {
       fieldArchive = fieldArchiveCandidate;
-      break;
     }
+    if (fieldArchive != null) break;
     root = root.parent;
   }
   if (fieldArchive == null) {
-    throw StateError('Bundled Field Archive proof font was not found.');
+    throw StateError('Field Archive proof font was not found.');
   }
   await _loadFont('FieldArchiveCondensed', fieldArchive);
 }
