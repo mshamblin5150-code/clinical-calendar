@@ -360,9 +360,9 @@ final class _HeritageFieldNotesArchiveChassisPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
-    const darkestWalnut = Color(0xFF1B110C);
-    const walnut = Color(0xFF3B2519);
-    const walnutHighlight = Color(0xFF5B3B29);
+    const darkestLeather = Color(0xFF170C09);
+    const archivalLeather = Color(0xFF402219);
+    const leatherHighlight = Color(0xFF694433);
     const agedBrass = Color(0xFFB88A31);
     const brassHighlight = Color(0xFFE0BD68);
 
@@ -378,9 +378,56 @@ final class _HeritageFieldNotesArchiveChassisPainter extends CustomPainter {
         ..shader = const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [walnutHighlight, walnut, darkestWalnut, walnut],
+          colors: [
+            leatherHighlight,
+            archivalLeather,
+            darkestLeather,
+            archivalLeather,
+          ],
           stops: [0, .32, .72, 1],
         ).createShader(outer),
+    );
+    _paintLeatherTexture(canvas, Rect.fromLTWH(0, 0, size.width, 10), seed: 3);
+    _paintLeatherTexture(
+      canvas,
+      Rect.fromLTWH(0, size.height - 16, size.width, 16),
+      seed: 7,
+    );
+    _paintLeatherTexture(
+      canvas,
+      Rect.fromLTWH(0, 10, 54, size.height - 26),
+      seed: 11,
+    );
+    _paintLeatherTexture(
+      canvas,
+      Rect.fromLTWH(size.width - 46, 10, 46, size.height - 26),
+      seed: 17,
+    );
+    final embossedDark = Paint()
+      ..color = darkestLeather.withValues(alpha: .72)
+      ..strokeWidth = 1.5;
+    final embossedLight = Paint()
+      ..color = leatherHighlight.withValues(alpha: .55)
+      ..strokeWidth = 1;
+    canvas.drawLine(
+      const Offset(8, 12),
+      Offset(8, size.height - 12),
+      embossedDark,
+    );
+    canvas.drawLine(
+      const Offset(10, 12),
+      Offset(10, size.height - 12),
+      embossedLight,
+    );
+    canvas.drawLine(
+      const Offset(47, 12),
+      Offset(47, size.height - 12),
+      embossedDark,
+    );
+    canvas.drawLine(
+      const Offset(49, 12),
+      Offset(49, size.height - 12),
+      embossedLight,
     );
 
     final pageWindowRRect = RRect.fromRectAndRadius(
@@ -390,14 +437,25 @@ final class _HeritageFieldNotesArchiveChassisPainter extends CustomPainter {
     canvas.drawRRect(
       pageWindowRRect,
       Paint()
-        ..color = darkestWalnut
+        ..color = darkestLeather
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4,
     );
     canvas.drawRRect(
       RRect.fromRectAndRadius(pageWindow.deflate(3), const Radius.circular(7)),
       Paint()
-        ..color = agedBrass
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF6C430C),
+            Color(0xFFC9A04B),
+            agedBrass,
+            Color(0xFFD6B66A),
+            Color(0xFF765015),
+          ],
+          stops: [0, .22, .52, .76, 1],
+        ).createShader(pageWindow)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5,
     );
@@ -422,7 +480,18 @@ final class _HeritageFieldNotesArchiveChassisPainter extends CustomPainter {
       final plate = Rect.fromCenter(center: center, width: 34, height: 34);
       canvas.drawRRect(
         RRect.fromRectAndRadius(plate, const Radius.circular(5)),
-        Paint()..color = agedBrass,
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF704A13),
+              Color(0xFFD2AF5D),
+              agedBrass,
+              Color(0xFF6C430C),
+            ],
+            stops: [0, .32, .68, 1],
+          ).createShader(plate),
       );
       canvas.drawRRect(
         RRect.fromRectAndRadius(plate.deflate(3), const Radius.circular(3)),
@@ -431,12 +500,38 @@ final class _HeritageFieldNotesArchiveChassisPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5,
       );
-      canvas.drawCircle(center, 4.5, Paint()..color = darkestWalnut);
+      canvas.drawCircle(center, 4.5, Paint()..color = darkestLeather);
       canvas.drawCircle(
         center.translate(-1, -1),
         1.5,
         Paint()..color = brassHighlight,
       );
+    }
+  }
+
+  void _paintLeatherTexture(Canvas canvas, Rect region, {required int seed}) {
+    if (region.isEmpty) return;
+    final shadow = Paint()..color = const Color(0x30100604);
+    final highlight = Paint()..color = const Color(0x28FFFFFF);
+    var row = 0;
+    for (double y = region.top + 2; y < region.bottom; y += 5.5, row++) {
+      var column = 0;
+      for (
+        double x = region.left + 2 + (row % 3) * 1.4;
+        x < region.right;
+        column++
+      ) {
+        final hash = (row * 17 + column * 31 + seed) % 13;
+        final center = Offset(x + (hash % 3) - 1, y + ((hash ~/ 3) % 3) - 1);
+        final pebble = Rect.fromCenter(
+          center: center,
+          width: 2.8 + (hash % 4) * .42,
+          height: 1.7 + (hash % 3) * .3,
+        );
+        canvas.drawOval(pebble, shadow);
+        canvas.drawCircle(center.translate(-.6, -.5), .52, highlight);
+        x += 5.4 + (hash % 5) * .85;
+      }
     }
   }
 
@@ -648,15 +743,13 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                 key: const Key('application-menu-action'),
                 tooltip: 'Open menu',
                 onPressed: onOpenMenu,
-                icon: const Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(Icons.inventory_2_outlined, size: 27),
-                    Positioned(
-                      top: 1,
-                      child: Icon(Icons.eco_outlined, size: 13),
-                    ),
-                  ],
+                padding: EdgeInsets.all(compact ? 4 : 2),
+                icon: Image.asset(
+                  heritageFieldNotesAxionDeltaAsset,
+                  package: 'clinical_calendar_presentation',
+                  width: compact ? 36 : 46,
+                  height: compact ? 36 : 46,
+                  filterQuality: FilterQuality.high,
                 ),
               ),
             ),
@@ -943,9 +1036,28 @@ final class _HeritageFieldNotesIndexTabs extends StatelessWidget {
                   ? 88
                   : 82,
               decoration: BoxDecoration(
-                color: index.isEven
-                    ? HeritageFieldNotesColors.protectedDayAccent
-                    : const Color(0xFF3B2519),
+                gradient: index.isEven
+                    ? const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF6C430C),
+                          Color(0xFFC49B45),
+                          Color(0xFF9A6B00),
+                          Color(0xFFD0AF62),
+                          Color(0xFF704A13),
+                        ],
+                        stops: [0, .24, .52, .76, 1],
+                      )
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF694433),
+                          Color(0xFF402219),
+                          Color(0xFF170C09),
+                        ],
+                      ),
                 border: Border.all(color: const Color(0xFFD2A74B), width: 1.5),
                 borderRadius: const BorderRadius.horizontal(
                   left: Radius.circular(6),

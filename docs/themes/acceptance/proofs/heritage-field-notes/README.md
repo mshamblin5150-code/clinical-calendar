@@ -29,10 +29,10 @@ The production renderer consumes the shared live Calendar, Planning, Clinical
 Placements, progress, attention, navigation, and callback slots. Theme-owned
 layout now resolves the approved #118 landscape coordinates directly from the
 untouched 1536 by 1024 concept (excluding comparison labels): the
-deep walnut-and-brass book-board chassis, two-line archival crown, tall
+deep leather-and-brass book-board chassis, Axion-delta archival crown, tall
 placement bays, central Calendar and Planning hierarchy, right progress and
 attention rail, indexed hardware, and bottom navigation deck. Field Archive
-reserves dark walnut and bright brass for that outer chassis: the live page is
+reserves dark leather and dimensional brass for that outer chassis: the live page is
 backed by parchment and its interior bays use single quiet rules without
 nested rims or cast shadows, matching the concept's border hierarchy. It also
 opts into the concept's uppercase archival month toolbar, forest-selected
@@ -46,10 +46,22 @@ controls, medical-cross/work-stripe/shield marks, preceptor action, detailed
 attention rows, Due markers, navigation colors, and indexed hardware. The
 renderer owns no clinical state, persistence, validation, or workflow logic.
 
-The earlier `30d7401`, `5deb099`, `d3e2a89`, and `2e8e544` proofs were rejected
-by the maintainer and are retained under their matching `rejected/`
-directories only as historical evidence. None is an acceptance or golden
-baseline.
+The earlier `30d7401`, `5deb099`, `d3e2a89`, `2e8e544`, and `8769486` proofs
+were rejected or superseded by the maintainer and are retained under their
+matching `rejected/` directories only as historical evidence. None is an
+acceptance or golden baseline.
+
+## Axion crown mark record
+
+The crown uses `assets/heritage_field_notes_brand/axion-delta.png`, derived
+from the maintainer-supplied Axion artwork (source SHA-256
+`c2ca738650ea9f71dbec7aba8cc881035df1cdb0d97399f47ef7ea5a2ef059ab`).
+The built-in image tool isolated the supplied metallic delta and orbital mark
+on a flat chroma background while removing the `AXION` wordmark; the installed
+chroma-removal helper produced the transparent asset, which was cropped and
+downscaled for the product crown. The final asset contains no added text and
+has SHA-256
+`21f3f6a7c3f4cc67ad0c86943d8191c622a2030ca6d51dd5c1dabf4d37327c06`.
 
 ## Original frame creation record
 
@@ -69,10 +81,11 @@ corners, uses source cuts 120/145/120/170, and has SHA-256
 
 ```text
 bf131014c71df2adc4b34b70c99e3e5ed94e54f0e1753d3979d0b6e85da66c75  approved-concept-landscape.png
-3cadb3e098f4b058ff3f0f507c5cf34c29e6891f91da9bc75476feb3f9221622  landscape-concept-vs-runtime.png
-f2a0296ded836b0288ce075f9d9a05d7920fbfe156763b5ab0f2a7ab82d8597f  runtime-landscape-1536x1024.png
-c0b8d9cb86cb962ead8154e2cfe75bc58725982a4b576fe62b2ec61908894073  runtime-portrait-900x1440.png
-f2e0fb3f7bd8049bc88732f06c0cefc540fdd39a45cfd99f8f403ac900624220  runtime-portrait-200-percent-900x1440.png
+003752bebdd1493a455ca365f266404dd36de6fdea998af4f23bd675b38fb509  landscape-concept-vs-runtime.png
+508a7d69ce730992bc8167e294b95457984f4421dab1ef1ea6b92e676f6a5aa4  runtime-landscape-1536x1024.png
+0a97d1bdcb381f45acd2031eb25f39c21a746ad6e4abafb5bfac89193eba9039  runtime-portrait-900x1440.png
+8abfea4d5498a60e9faae0bb2e250b62cbfed6984c92e5426ab3a8b875d99345  runtime-portrait-200-percent-900x1440.png
+21f3f6a7c3f4cc67ad0c86943d8191c622a2030ca6d51dd5c1dabf4d37327c06  axion-delta.png
 ```
 
 ## Physical Android-tablet acceptance

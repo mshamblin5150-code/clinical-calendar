@@ -24,8 +24,10 @@ notebook simulation.
 
 - Warm stone and parchment content bays remain opaque and texture-free.
 - Forest ink anchors navigation and structural rules.
-- Walnut book-board rails create a durable housing without simulated wood grain or leather.
-- Muted brass tabs and registration details provide archival indexing.
+- Leather-bound book-board rails use restrained fine-grain depth only in the
+  noninteractive housing; live parchment remains flat and texture-free.
+- Dimensional brass tabs, corner plates, and registration details provide
+  archival indexing through controlled highlights rather than corrosion.
 - Oxblood, blue-gray, sage, and teal remain controlled semantic accents.
 - Handwriting, stains, torn edges, page curls, maps, camouflage, tactical webbing, and military insignia are excluded.
 
@@ -48,6 +50,12 @@ Archive** name in the Codex session on 2026-08-06. Approval does not cover the
 catalog-wide Theme Gallery owned by issue #119, Enhanced accessibility owned
 by issue #120, production raster slicing, responsive insets, or final asset
 integration.
+
+On 2026-08-09 the maintainer explicitly directed the production renderer to
+carry the Axion delta in the crown and to reproduce the concept's leather and
+brass material depth. This supersedes the earlier flat walnut-only housing
+restriction. Texture and metallic reflection remain confined to
+noninteractive chrome.
 
 ## Artifact
 

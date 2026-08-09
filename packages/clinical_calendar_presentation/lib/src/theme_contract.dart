@@ -1544,7 +1544,7 @@ final class HeritageFieldNotesThemeBundle
     themeId: heritageFieldNotesThemeId,
     displayName: 'Field Archive',
     personality:
-        'Flat parchment records held in walnut book-board with forest ink, muted brass, and oxblood indexing.',
+        'Flat parchment records held in leather-bound book-board with forest ink, dimensional brass, and oxblood indexing.',
   );
 
   @override
@@ -1560,7 +1560,10 @@ final class HeritageFieldNotesThemeBundle
     themeId: heritageFieldNotesThemeId,
     assetPackage: 'clinical_calendar_presentation',
     primaryAsset: heritageFieldNotesFrameAsset,
-    assetPaths: [heritageFieldNotesFrameAsset],
+    assetPaths: [
+      heritageFieldNotesFrameAsset,
+      heritageFieldNotesAxionDeltaAsset,
+    ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
     safeInsets: {
@@ -1581,7 +1584,7 @@ final class HeritageFieldNotesThemeBundle
       ThemeGallerySwatch(
         role: ThemeGallerySwatchRole.canvas,
         label: 'Canvas',
-        colorName: 'walnut brown',
+        colorName: 'archive leather',
         color: HeritageFieldNotesColors.canvas,
       ),
       ThemeGallerySwatch(

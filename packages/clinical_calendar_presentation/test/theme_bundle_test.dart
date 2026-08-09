@@ -224,7 +224,10 @@ void main() {
       fieldArchive.frame.sourceCuts,
       const EdgeInsets.fromLTRB(120, 145, 120, 170),
     );
-    expect(fieldArchive.frame.assetPaths, const [heritageFieldNotesFrameAsset]);
+    expect(fieldArchive.frame.assetPaths, const [
+      heritageFieldNotesFrameAsset,
+      heritageFieldNotesAxionDeltaAsset,
+    ]);
     expect(fieldArchive.gallery.swatches, hasLength(5));
     expect(fieldArchive.marks.marks, hasLength(9));
     expect(fieldArchive.helpGuide.calendarStates, hasLength(5));
