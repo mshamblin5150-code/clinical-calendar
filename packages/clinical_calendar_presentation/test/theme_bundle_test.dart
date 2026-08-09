@@ -226,7 +226,7 @@ void main() {
         ),
         (
           graphite,
-          'graphite-owned-responsive-instrument-v2',
+          'graphite-owned-responsive-instrument-v3',
           GraphiteApplicationShell,
         ),
         (

@@ -85,14 +85,14 @@ final class GraphiteApplicationShell extends StatelessWidget {
     key: const Key('graphite-landscape-shell'),
     backgroundColor: const Color(0xFF090B0D),
     body: GraphiteNineSliceFrame(
-      chromeInsets: const EdgeInsets.all(6),
+      chromeInsets: const EdgeInsets.all(5),
       child: DecoratedBox(
         decoration: const BoxDecoration(
-          color: Color(0xFF090B0D),
-          gradient: RadialGradient(
-            center: Alignment.topCenter,
-            radius: 1.35,
-            colors: [Color(0xFF20262B), Color(0xFF090B0D)],
+          color: Color(0xFF101417),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF15191C), Color(0xFF0E1215)],
           ),
         ),
         child: LayoutBuilder(
@@ -102,10 +102,10 @@ final class GraphiteApplicationShell extends StatelessWidget {
             return Stack(
               children: [
                 Positioned(
-                  left: width * .004,
-                  top: height * .005,
-                  width: width * .992,
-                  height: height * .078,
+                  left: 0,
+                  top: 0,
+                  width: width,
+                  height: height * .077,
                   child: _GraphiteCommandCrown(
                     environmentName: environmentName,
                     onOpenMenu: onOpenMenu,
@@ -115,10 +115,10 @@ final class GraphiteApplicationShell extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  left: width * .004,
-                  top: height * .088,
-                  width: width * .19,
-                  height: height * .795,
+                  left: 0,
+                  top: height * .085,
+                  width: width * .192,
+                  height: height * .82,
                   child: _GraphiteInstrumentBay(
                     key: const Key('graphite-placement-bay'),
                     safeInsets: graphitePlacementsSafeInsets,
@@ -128,25 +128,26 @@ final class GraphiteApplicationShell extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  left: width * .2,
-                  top: height * .088,
-                  width: width * .55,
-                  height: height * .545,
+                  left: width * .198,
+                  top: height * .085,
+                  width: width * .553,
+                  height: height * .553,
                   child: _GraphiteInstrumentBay(
                     key: const Key('graphite-calendar-bay'),
                     safeInsets: graphiteCalendarSafeInsets,
                     accent: _GraphiteAccent.silver,
                     integrated: true,
+                    integratedPadding: EdgeInsets.zero,
                     child: _GraphiteCalendarViewport(
                       child: slots.centralContent,
                     ),
                   ),
                 ),
                 Positioned(
-                  left: width * .2,
-                  top: height * .638,
-                  width: width * .55,
-                  height: height * .245,
+                  left: width * .198,
+                  top: height * .647,
+                  width: width * .553,
+                  height: height * .258,
                   child: _GraphiteInstrumentBay(
                     key: const Key('graphite-planning-bay'),
                     safeInsets: graphitePlanningSafeInsets,
@@ -159,10 +160,10 @@ final class GraphiteApplicationShell extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  left: width * .756,
-                  top: height * .088,
-                  width: width * .24,
-                  height: height * .795,
+                  left: width * .757,
+                  top: height * .085,
+                  width: width * .243,
+                  height: height * .82,
                   child: _GraphiteInstrumentBay(
                     key: const Key('graphite-insight-bay'),
                     safeInsets: graphiteStatusSafeInsets,
@@ -172,9 +173,9 @@ final class GraphiteApplicationShell extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  left: width * .004,
-                  top: height * .89,
-                  width: width * .992,
+                  left: 0,
+                  top: height * .914,
+                  width: width,
                   height: height * .086,
                   child: _GraphiteNavigationRail(
                     selectedIndex: mobileIndex,
@@ -309,6 +310,107 @@ final class GraphiteApplicationShell extends StatelessWidget {
 
 enum _GraphiteAccent { silver, emerald, coral }
 
+abstract final class _GraphiteChrome {
+  static const contentSurface = Color(0xFF13171A);
+  static const raisedSurface = Color(0xFF171B1E);
+  static const decorativeBoundary = Color(0xFF5C646A);
+}
+
+final class _GraphiteGridIcon extends StatelessWidget {
+  const _GraphiteGridIcon();
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    size: const Size.square(28),
+    painter: _GraphiteGridPainter(
+      line: context.clinicalColors.secondaryText,
+      signal: context.clinicalColors.clinical,
+    ),
+  );
+}
+
+final class _GraphiteGridPainter extends CustomPainter {
+  const _GraphiteGridPainter({required this.line, required this.signal});
+
+  final Color line;
+  final Color signal;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const cell = 5.0;
+    const gap = 3.0;
+    final origin = Offset(
+      (size.width - (cell * 3 + gap * 2)) / 2,
+      (size.height - (cell * 3 + gap * 2)) / 2,
+    );
+    for (var row = 0; row < 3; row++) {
+      for (var column = 0; column < 3; column++) {
+        final rect = Rect.fromLTWH(
+          origin.dx + column * (cell + gap),
+          origin.dy + row * (cell + gap),
+          cell,
+          cell,
+        );
+        final active = row == 1 && column == 2;
+        canvas.drawRect(
+          rect,
+          Paint()
+            ..color = active ? signal : line.withValues(alpha: .62)
+            ..style = active ? PaintingStyle.fill : PaintingStyle.stroke
+            ..strokeWidth = 1,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GraphiteGridPainter oldDelegate) =>
+      line != oldDelegate.line || signal != oldDelegate.signal;
+}
+
+final class _GraphiteLogoPainter extends CustomPainter {
+  const _GraphiteLogoPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final shadow = Paint()
+      ..color = Colors.black.withValues(alpha: .75)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final silver = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFF2F3F3), Color(0xFF7B8287)],
+      ).createShader(Offset.zero & size)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final silhouette = Path()
+      ..moveTo(size.width * .12, size.height * .88)
+      ..lineTo(size.width * .48, size.height * .08)
+      ..lineTo(size.width * .87, size.height * .88);
+    final crossbar = Path()
+      ..moveTo(size.width * .23, size.height * .64)
+      ..lineTo(size.width * .72, size.height * .49);
+    canvas.drawPath(silhouette, shadow);
+    canvas.drawPath(crossbar, shadow);
+    canvas.drawPath(silhouette, silver);
+    canvas.drawPath(crossbar, silver);
+    canvas.drawLine(
+      Offset(size.width * .34, size.height * .76),
+      Offset(size.width * .68, size.height * .67),
+      silver..strokeWidth = 2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GraphiteLogoPainter oldDelegate) => false;
+}
+
 final class _GraphiteCalendarViewport extends StatelessWidget {
   const _GraphiteCalendarViewport({required this.child});
 
@@ -320,6 +422,7 @@ final class _GraphiteCalendarViewport extends StatelessWidget {
       final calendar = CalendarPeriodViewportPolicy(
         useBoundedMonthGrid: true,
         scaleDayNumberWithText: true,
+        useInstrumentChrome: true,
         child: child,
       );
       if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
@@ -342,6 +445,7 @@ final class _GraphiteInstrumentBay extends StatelessWidget {
     required this.accent,
     required this.child,
     this.integrated = false,
+    this.integratedPadding = const EdgeInsets.fromLTRB(23, 18, 23, 18),
     super.key,
   });
 
@@ -349,6 +453,7 @@ final class _GraphiteInstrumentBay extends StatelessWidget {
   final _GraphiteAccent accent;
   final Widget child;
   final bool integrated;
+  final EdgeInsets integratedPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -359,21 +464,23 @@ final class _GraphiteInstrumentBay extends StatelessWidget {
       _GraphiteAccent.coral => colors.urgent,
     };
     final content = ColoredBox(
-      color: colors.canvas.withValues(alpha: .96),
+      color: _GraphiteChrome.contentSurface.withValues(alpha: .96),
       child: Padding(
-        padding: integrated
-            ? const EdgeInsets.fromLTRB(16, 14, 16, 14)
-            : EdgeInsets.zero,
+        padding: integrated ? integratedPadding : EdgeInsets.zero,
         child: ClipRect(clipBehavior: Clip.hardEdge, child: child),
       ),
     );
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.structure.withValues(alpha: .74),
-        border: Border.all(color: accentColor.withValues(alpha: .34)),
-        borderRadius: BorderRadius.circular(9),
+        border: Border.all(
+          color: integrated
+              ? _GraphiteChrome.decorativeBoundary.withValues(alpha: .9)
+              : accentColor.withValues(alpha: .34),
+        ),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: const [
-          BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2)),
+          BoxShadow(color: Colors.black54, blurRadius: 3, offset: Offset(0, 1)),
         ],
       ),
       child: integrated
@@ -402,60 +509,58 @@ final class _GraphiteCommandCrown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     return Container(
       key: const Key('graphite-command-crown'),
       height: compact ? 72 : null,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 20),
       decoration: BoxDecoration(
-        color: context.clinicalColors.structureRaised,
-        border: Border.all(color: context.clinicalColors.insetBorder),
-        borderRadius: BorderRadius.circular(12),
+        color: _GraphiteChrome.raisedSurface,
+        border: Border.all(color: _GraphiteChrome.decorativeBoundary),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: const [
-          BoxShadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 2)),
+          BoxShadow(color: Colors.black87, blurRadius: 3, offset: Offset(0, 1)),
         ],
       ),
       child: Row(
         children: [
-          IconButton(
-            key: const Key('application-menu-action'),
-            tooltip: 'Open menu',
-            onPressed: onOpenMenu,
-            icon: const Icon(Icons.grid_view_outlined),
+          SizedBox.square(
+            dimension: compact ? 40 : 50,
+            child: const CustomPaint(painter: _GraphiteLogoPainter()),
           ),
-          if (!enlargedText) ...[
-            const SizedBox(width: 8),
-            const Icon(Icons.calendar_month_outlined),
-            const SizedBox(width: 10),
-          ],
+          SizedBox(width: compact ? 8 : 12),
           Expanded(
-            child: enlargedText
-                ? const SizedBox.shrink()
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'CLINICAL CALENDAR',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              letterSpacing: 1.8,
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      if (!compact)
-                        Text(
-                          environmentName.trim().isEmpty
-                              ? 'GRAPHITE'
-                              : 'GRAPHITE  •  $environmentName',
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: context.clinicalColors.secondaryText,
-                                letterSpacing: 1.3,
-                              ),
-                        ),
-                    ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'CLINICAL CALENDAR',
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  style: TextStyle(
+                    color: context.clinicalColors.primaryText,
+                    fontSize: compact ? 18 : 25,
+                    height: 1,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
+                if (!compact)
+                  Text(
+                    environmentName.trim().isEmpty ||
+                            environmentName.trim().toUpperCase() == 'GRAPHITE'
+                        ? 'GRAPHITE'
+                        : 'GRAPHITE  •  $environmentName',
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: context.clinicalColors.secondaryText,
+                      fontSize: 11,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+              ],
+            ),
           ),
           IconButton(
             tooltip: 'Add schedule',
@@ -469,7 +574,16 @@ final class _GraphiteCommandCrown extends StatelessWidget {
                   onOpenDestination(ClinicalCalendarDestination.help),
               icon: const Icon(Icons.help_outline),
             ),
-          profileAvatar,
+          SizedBox.square(
+            dimension: compact ? 36 : 40,
+            child: FittedBox(child: profileAvatar),
+          ),
+          IconButton(
+            key: const Key('application-menu-action'),
+            tooltip: 'Open menu',
+            onPressed: onOpenMenu,
+            icon: const _GraphiteGridIcon(),
+          ),
         ],
       ),
     );
@@ -504,9 +618,9 @@ final class _GraphiteNavigationRail extends StatelessWidget {
       key: const Key('graphite-bottom-navigation'),
       height: compact ? 68 : null,
       decoration: BoxDecoration(
-        color: context.clinicalColors.structureRaised,
-        border: Border.all(color: context.clinicalColors.insetBorder),
-        borderRadius: BorderRadius.circular(12),
+        color: _GraphiteChrome.raisedSurface,
+        border: Border.all(color: _GraphiteChrome.decorativeBoundary),
+        borderRadius: BorderRadius.circular(8),
       ),
       clipBehavior: Clip.antiAlias,
       child: Row(
@@ -534,38 +648,72 @@ final class _GraphiteNavigationRail extends StatelessWidget {
                         onOpenDestination(ClinicalCalendarDestination.settings);
                     }
                   },
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(
-                          color: index == selectedIndex
-                              ? context.clinicalColors.clinical
-                              : Colors.transparent,
-                          width: 4,
-                        ),
-                        right: index < destinations.length - 1
-                            ? BorderSide(
-                                color: context.clinicalColors.insetBorder
-                                    .withValues(alpha: .45),
-                              )
-                            : BorderSide.none,
-                      ),
-                    ),
-                    child: Center(
-                      child: iconsOnly
-                          ? Icon(destinations[index].$1)
-                          : FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(destinations[index].$1),
-                                  const SizedBox(width: 8),
-                                  Text(destinations[index].$2),
-                                ],
+                  child: Stack(
+                    children: [
+                      if (index == selectedIndex)
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: Container(
+                            width: 56,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              borderRadius: const BorderRadius.vertical(
+                                bottom: Radius.circular(2),
                               ),
                             ),
-                    ),
+                          ),
+                        ),
+                      if (index < destinations.length - 1)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            width: 1,
+                            height: 54,
+                            color: context.clinicalColors.insetBorder
+                                .withValues(alpha: .6),
+                          ),
+                        ),
+                      Center(
+                        child: iconsOnly
+                            ? Icon(
+                                destinations[index].$1,
+                                color: index == selectedIndex
+                                    ? Theme.of(context).colorScheme.primary
+                                    : null,
+                              )
+                            : FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      destinations[index].$1,
+                                      size: 34,
+                                      color: index == selectedIndex
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      destinations[index].$2,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        letterSpacing: .8,
+                                        color: index == selectedIndex
+                                            ? Theme.of(
+                                                context,
+                                              ).colorScheme.primary
+                                            : null,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                      ),
+                    ],
                   ),
                 ),
               ),

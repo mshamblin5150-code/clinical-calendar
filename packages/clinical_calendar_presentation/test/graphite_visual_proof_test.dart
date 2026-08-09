@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 
 import 'support/proof_fonts.dart';
 
@@ -25,6 +28,61 @@ void main() {
     );
   });
 
+  testWidgets('Graphite landscape directly matches the approved concept', (
+    tester,
+  ) async {
+    await _pumpProof(tester, const Size(1536, 1024));
+
+    final boundary = tester.renderObject<RenderRepaintBoundary>(
+      find.byKey(const Key('graphite-proof')),
+    );
+    final runtimeBytes = await tester.runAsync(() async {
+      final runtimeImage = await boundary.toImage(pixelRatio: .25);
+      final bytes = await runtimeImage.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      );
+      runtimeImage.dispose();
+      return bytes;
+    });
+    final concept = _loadApprovedConceptComparison();
+
+    final comparison = _compareConcept(
+      concept.getBytes(order: img.ChannelOrder.rgba),
+      runtimeBytes!.buffer.asUint8List(),
+    );
+    expect(
+      comparison.meanChannelSimilarity,
+      greaterThanOrEqualTo(.93),
+      reason: 'mean channel similarity was ${comparison.meanChannelSimilarity}',
+    );
+    expect(
+      comparison.closePixelRatio,
+      greaterThanOrEqualTo(.82),
+      reason: 'close-pixel ratio was ${comparison.closePixelRatio}',
+    );
+  });
+
+  test('direct concept gate rejects the superseded v2 landscape', () {
+    final rejectedFile = _findWorkspaceFile(
+      'docs/themes/acceptance/proofs/graphite-v2/'
+      'runtime-landscape-1536x1024.png',
+    );
+    final rejectedSource = img.decodePng(rejectedFile.readAsBytesSync());
+    expect(rejectedSource, isNotNull);
+    final rejected = img.copyResize(
+      rejectedSource!,
+      width: 384,
+      height: 256,
+      interpolation: img.Interpolation.average,
+    );
+    final comparison = _compareConcept(
+      _loadApprovedConceptComparison().getBytes(order: img.ChannelOrder.rgba),
+      rejected.getBytes(order: img.ChannelOrder.rgba),
+    );
+
+    expect(comparison.meanChannelSimilarity, lessThan(.93));
+  });
+
   testWidgets('Graphite portrait is an intentional ordered recomposition', (
     tester,
   ) async {
@@ -39,10 +97,16 @@ void main() {
   testWidgets('Graphite remains operable at 200 percent text scale', (
     tester,
   ) async {
+    var addScheduleInvocations = 0;
+    var profileInvocations = 0;
+    var menuInvocations = 0;
     await _pumpProof(
       tester,
       const Size(900, 1440),
       textScaler: const TextScaler.linear(2),
+      onAddSchedule: () => addScheduleInvocations++,
+      onOpenProfile: () => profileInvocations++,
+      onOpenMenu: () => menuInvocations++,
     );
     expect(find.byKey(const Key('graphite-portrait-scroll')), findsOneWidget);
     expect(
@@ -52,11 +116,24 @@ void main() {
     expect(find.byTooltip('Open menu'), findsOneWidget);
     expect(find.byTooltip('Add schedule'), findsOneWidget);
     final menuAction = tester.getRect(find.byTooltip('Open menu'));
+    final addAction = tester.getRect(find.byTooltip('Add schedule'));
+    final profileAction = tester.getRect(find.byTooltip('Open profile'));
     final navigation = tester.getRect(
       find.byKey(const Key('graphite-bottom-navigation')),
     );
-    expect(menuAction.top, greaterThanOrEqualTo(0));
-    expect(menuAction.bottom, lessThanOrEqualTo(1440));
+    for (final action in [addAction, profileAction, menuAction]) {
+      expect(action.left, greaterThanOrEqualTo(0));
+      expect(action.right, lessThanOrEqualTo(900));
+      expect(action.top, greaterThanOrEqualTo(0));
+      expect(action.bottom, lessThanOrEqualTo(1440));
+    }
+    await tester.tap(find.byTooltip('Add schedule'));
+    await tester.tap(find.byTooltip('Open profile'));
+    await tester.tap(find.byTooltip('Open menu'));
+    expect(addScheduleInvocations, 1);
+    expect(profileInvocations, 1);
+    expect(menuInvocations, 1);
+    await tester.pump();
     expect(navigation.top, greaterThan(1300));
     expect(navigation.bottom, lessThanOrEqualTo(1440));
 
@@ -69,10 +146,52 @@ void main() {
   });
 }
 
+img.Image _loadApprovedConceptComparison() {
+  final conceptFile = _findWorkspaceFile(
+    'docs/concepts/themes/graphite/calendar-dashboard-concept-v1.png',
+  );
+  final conceptSource = img.decodePng(conceptFile.readAsBytesSync());
+  if (conceptSource == null) {
+    throw StateError('The approved Graphite concept is not a valid PNG.');
+  }
+  return img.copyResize(
+    conceptSource,
+    width: 384,
+    height: 256,
+    interpolation: img.Interpolation.average,
+  );
+}
+
+({double meanChannelSimilarity, double closePixelRatio}) _compareConcept(
+  Uint8List concept,
+  Uint8List runtime,
+) {
+  assert(concept.length == runtime.length);
+  var totalChannelError = 0;
+  var closePixels = 0;
+  final pixelCount = runtime.length ~/ 4;
+  for (var offset = 0; offset < runtime.length; offset += 4) {
+    final redError = (concept[offset] - runtime[offset]).abs();
+    final greenError = (concept[offset + 1] - runtime[offset + 1]).abs();
+    final blueError = (concept[offset + 2] - runtime[offset + 2]).abs();
+    totalChannelError += redError + greenError + blueError;
+    if (redError <= 32 && greenError <= 32 && blueError <= 32) {
+      closePixels++;
+    }
+  }
+  return (
+    meanChannelSimilarity: 1 - totalChannelError / (pixelCount * 3 * 255),
+    closePixelRatio: closePixels / pixelCount,
+  );
+}
+
 Future<void> _pumpProof(
   WidgetTester tester,
   Size size, {
   TextScaler textScaler = TextScaler.noScaling,
+  VoidCallback onAddSchedule = _noop,
+  VoidCallback onOpenProfile = _noop,
+  VoidCallback onOpenMenu = _noop,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -127,9 +246,16 @@ Future<void> _pumpProof(
       lines: ['Session needs confirmation', 'Planning incomplete'],
       urgentFrom: 0,
     ),
-    profileAvatar: const CircleAvatar(
-      radius: 18,
-      child: Icon(Icons.person_outline, size: 20),
+    profileAvatar: Tooltip(
+      message: 'Open profile',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onOpenProfile,
+        child: const CircleAvatar(
+          radius: 18,
+          child: Icon(Icons.person_outline, size: 20),
+        ),
+      ),
     ),
   );
 
@@ -148,10 +274,10 @@ Future<void> _pumpProof(
           child: themeBundle.shellRenderer.build(
             slots: slots,
             environmentName: 'GRAPHITE',
-            onOpenMenu: _noop,
+            onOpenMenu: onOpenMenu,
             onOpenDestination: _ignoreDestination,
             onOpenAttention: _noop,
-            onAddSchedule: _noop,
+            onAddSchedule: onAddSchedule,
           ),
         ),
       ),
@@ -184,19 +310,19 @@ final class _PlacementsProof extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _ProofTitle('MY PLACEMENTS'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 26),
         _PlacementCard(
           name: 'ACCEPTANCE FAMILY MEDICINE',
           progress: 0,
           accent: context.clinicalColors.clinical,
           detail: '0 hr / 90 hr completed\n8 hr scheduled\n82 hr unscheduled',
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 22),
         _PlacementCard(
           name: 'INTERNAL MEDICINE',
-          progress: .47,
+          progress: 0,
           accent: context.clinicalColors.workMachinery,
-          detail: '42 hr / 90 hr completed\n24 hr scheduled\n24 hr unscheduled',
+          detail: '0 hr / 90 hr completed\n8 hr scheduled\n82 hr unscheduled',
         ),
       ],
     ),
@@ -217,41 +343,73 @@ final class _PlacementCard extends StatelessWidget {
   final String detail;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      border: Border(left: BorderSide(color: accent, width: 4)),
-      color: context.clinicalColors.structureRaised,
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(name, style: Theme.of(context).textTheme.labelMedium),
-        const SizedBox(height: 14),
-        Center(
-          child: SizedBox.square(
-            dimension: 96,
-            child: Stack(
-              fit: StackFit.expand,
+  Widget build(BuildContext context) => SizedBox(
+    height: 258,
+    child: Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 16, 16),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: context.clinicalColors.insetBorder.withValues(alpha: .72),
+        ),
+        borderRadius: BorderRadius.circular(8),
+        color: context.clinicalColors.structureRaised,
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            right: null,
+            child: Container(width: 4, color: accent),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 7),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircularProgressIndicator(
-                  value: progress,
-                  strokeWidth: 9,
-                  color: accent,
-                  backgroundColor: context.clinicalColors.insetBorder,
+                Text(
+                  name,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontSize: 15),
                 ),
-                Center(child: Text('${(progress * 100).round()}%')),
+                const SizedBox(height: 7),
+                Text(
+                  detail.split('\n').first,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const Spacer(),
+                Center(
+                  child: SizedBox.square(
+                    dimension: 104,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CircularProgressIndicator(
+                          value: progress,
+                          strokeWidth: 8,
+                          color: accent,
+                          backgroundColor: const Color(0xFF44494D),
+                        ),
+                        Center(
+                          child: Text(
+                            '${(progress * 100).round()}%',
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  detail.split('\n').skip(1).join('\n'),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  strutStyle: const StrutStyle(height: 1.35),
+                ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 14),
-        Text(
-          detail,
-          style: Theme.of(context).textTheme.bodySmall,
-          strutStyle: const StrutStyle(height: 1.35),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }
@@ -268,18 +426,18 @@ final class _InsightProof extends StatelessWidget {
         const SizedBox(height: 10),
         Center(
           child: SizedBox.square(
-            dimension: 116,
+            dimension: 126,
             child: Stack(
               fit: StackFit.expand,
               children: [
                 CircularProgressIndicator(
-                  value: .47,
-                  strokeWidth: 11,
+                  value: 0,
+                  strokeWidth: 8,
                   color: context.clinicalColors.clinical,
                   backgroundColor: context.clinicalColors.insetBorder,
                 ),
                 const Center(
-                  child: Text('42 hr\ncompleted', textAlign: TextAlign.center),
+                  child: Text('0 hr\ncompleted', textAlign: TextAlign.center),
                 ),
               ],
             ),
@@ -287,8 +445,10 @@ final class _InsightProof extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text('Target                                      90 hr'),
-        const Text('Scheduled                               24 hr'),
-        const Text('Unscheduled                           24 hr'),
+        const Text('Completed                                  0 hr'),
+        const Text('Scheduled                                  8 hr'),
+        const Text('Unscheduled                            82 hr'),
+        const Text('Over-Target                                0 hr'),
         const SizedBox(height: 12),
         const Divider(),
         Text(
@@ -301,7 +461,17 @@ final class _InsightProof extends StatelessWidget {
             color: context.clinicalColors.clinical,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
+        Text(
+          'TAP WHEEL TO VIEW NEXT PLACEMENT',
+          style: TextStyle(color: context.clinicalColors.clinical),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'SHOW PRECEPTOR BREAKDOWN',
+          style: TextStyle(color: context.clinicalColors.scheduled),
+        ),
+        const SizedBox(height: 60),
         const Divider(),
         const _ProofTitle('NEEDS ATTENTION  •  5'),
         const SizedBox(height: 8),
@@ -310,7 +480,6 @@ final class _InsightProof extends StatelessWidget {
           'Initial Self-Assessment — Due',
           'Initial Self-Assessment — Internal Medicine',
           'Planning incomplete',
-          'Interim Review threshold approaching',
         ])
           Container(
             margin: const EdgeInsets.only(bottom: 8),
@@ -339,62 +508,147 @@ final class _PlanningProof extends StatelessWidget {
   const _PlanningProof();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
+  Widget build(BuildContext context) {
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (enlargedText)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              const _ProofTitle('PLANNING'),
+              OutlinedButton(
+                onPressed: _noop,
+                child: const Text('ADD SCHEDULE'),
+              ),
+              OutlinedButton(
+                onPressed: _noop,
+                child: const Text('PLANNING INCOMPLETE'),
+              ),
+            ],
+          )
+        else
+          Row(
+            children: [
+              const Expanded(
+                child: Row(
+                  children: [
+                    _ProofTitle('PLANNING'),
+                    SizedBox(width: 18),
+                    Text('Build the monthly plan in this in-flow region.'),
+                  ],
+                ),
+              ),
+              OutlinedButton(
+                onPressed: _noop,
+                child: const Text('ADD SCHEDULE'),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: _noop,
+                child: const Text('PLANNING INCOMPLETE'),
+              ),
+            ],
+          ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: context.clinicalColors.insetBorder),
+              borderRadius: BorderRadius.circular(7),
+              color: context.clinicalColors.canvas,
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    _PlanningChoice(
+                      icon: Icons.looks_one_outlined,
+                      label: 'TYPE & TIME',
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    _PlanningChoice(
+                      icon: Icons.work_outline,
+                      label: 'WORK SHIFT',
+                      color: context.clinicalColors.workMachinery,
+                    ),
+                    const SizedBox(width: 12),
+                    _PlanningChoice(
+                      icon: Icons.medical_services_outlined,
+                      label: 'CLINICAL SESSION',
+                      color: context.clinicalColors.clinical,
+                    ),
+                    const SizedBox(width: 12),
+                    _PlanningChoice(
+                      icon: Icons.shield_outlined,
+                      label: 'PROTECTED DAY',
+                      color: context.clinicalColors.protectedDayAccent,
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                const Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: _PlanningField('SCHEDULE TEMPLATE', 'MANUAL'),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(child: _PlanningField('START', '08:00')),
+                    SizedBox(width: 12),
+                    Expanded(child: _PlanningField('END', '16:00')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _PlanningChoice extends StatelessWidget {
+  const _PlanningChoice({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Expanded(child: _ProofTitle('PLANNING')),
-          OutlinedButton(onPressed: _noop, child: const Text('ADD SCHEDULE')),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            onPressed: _noop,
-            child: const Text('PLANNING INCOMPLETE'),
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 9),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
-      const SizedBox(height: 8),
-      const Text('Build the monthly plan in this in-flow region.'),
-      const SizedBox(height: 10),
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          const Chip(label: Text('1  TYPE & TIME')),
-          Chip(
-            avatar: Icon(
-              Icons.work_outline,
-              color: context.clinicalColors.workMachinery,
-            ),
-            label: const Text('WORK SHIFT'),
-          ),
-          Chip(
-            avatar: Icon(
-              Icons.medical_services_outlined,
-              color: context.clinicalColors.clinical,
-            ),
-            label: const Text('CLINICAL SESSION'),
-          ),
-          Chip(
-            avatar: Icon(
-              Icons.shield_outlined,
-              color: context.clinicalColors.protectedDayAccent,
-            ),
-            label: const Text('PROTECTED DAY'),
-          ),
-        ],
-      ),
-      const Spacer(),
-      const Row(
-        children: [
-          Expanded(child: _PlanningField('SCHEDULE TEMPLATE', 'MANUAL')),
-          SizedBox(width: 8),
-          Expanded(child: _PlanningField('START', '08:00')),
-          SizedBox(width: 8),
-          Expanded(child: _PlanningField('END', '16:00')),
-        ],
-      ),
-    ],
+    ),
   );
 }
 
