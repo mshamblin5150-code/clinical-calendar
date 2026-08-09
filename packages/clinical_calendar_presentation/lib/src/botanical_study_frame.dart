@@ -7,6 +7,8 @@ import 'variant_f_theme.dart';
 
 const botanicalStudyFrameAsset =
     'assets/botanical_study_raster/panel-nine-slice-v1.png';
+const botanicalStudyLandscapeChassisAsset =
+    'assets/botanical_study_raster/dashboard-chassis-landscape-v2.png';
 const botanicalStudyCalendarSafeInsets = EdgeInsets.fromLTRB(38, 46, 38, 46);
 const botanicalStudyPlacementsSafeInsets = EdgeInsets.fromLTRB(30, 44, 30, 44);
 const botanicalStudyPlanningSafeInsets = EdgeInsets.fromLTRB(34, 46, 34, 42);
@@ -30,17 +32,46 @@ final class BotanicalStudyNineSliceFrame extends StatefulWidget {
       _BotanicalStudyNineSliceFrameState();
 }
 
-/// Full-screen concept housing used by the declared 1600 x 1000 exemplar.
+/// Fixed 1586 x 992 chassis derived from the approved issue #115 concept.
+/// The raster contains decoration only; [child] owns live content and meaning.
 final class BotanicalStudyLandscapeChassis extends StatelessWidget {
   const BotanicalStudyLandscapeChassis({required this.child, super.key});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => BotanicalStudyNineSliceFrame(
-    chromeInsets: const EdgeInsets.fromLTRB(26, 32, 26, 38),
-    child: ColoredBox(color: const Color(0xFFFFFDF8), child: child),
-  );
+  Widget build(BuildContext context) {
+    if (context.accessibilityTokens.decorationOpacity == 0) {
+      return ColoredBox(
+        key: const Key('botanical-study-enhanced-flat-chassis'),
+        color: context.clinicalColors.canvas,
+        child: child,
+      );
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ExcludeSemantics(
+          child: Image.asset(
+            botanicalStudyLandscapeChassisAsset,
+            package: 'clinical_calendar_presentation',
+            fit: BoxFit.fill,
+            filterQuality: FilterQuality.high,
+            errorBuilder: (context, error, stackTrace) {
+              GraphitePresentationFailureBoundary.report(
+                context,
+                error,
+                themeId: 'botanical-study',
+                isGraphite: false,
+              );
+              return const ColoredBox(color: Color(0xFFFFFDF8));
+            },
+          ),
+        ),
+        child,
+      ],
+    );
+  }
 }
 
 final class _BotanicalStudyNineSliceFrameState

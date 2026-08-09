@@ -64,7 +64,7 @@ const federation2399EnhancedAdditiveColors = ClinicalCalendarAdditiveColors(
   today: Color(0xFFA8D5E5),
 );
 
-const federation2399EntryVisuals = ClinicalCalendarEntryVisuals(
+const federation2399EntryVisuals = ClinicalCalendarPresentationPolicy(
   clinicalFill: Federation2399Colors.clinicalFill,
   leadingRailWidth: 4,
   segmentWorkRail: true,

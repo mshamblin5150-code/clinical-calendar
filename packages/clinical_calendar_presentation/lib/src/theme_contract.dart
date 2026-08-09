@@ -1843,7 +1843,7 @@ final class BotanicalStudyThemeBundle implements ClinicalCalendarThemeBundle {
     themeId: botanicalStudyThemeId,
     assetPackage: 'clinical_calendar_presentation',
     primaryAsset: botanicalStudyFrameAsset,
-    assetPaths: [botanicalStudyFrameAsset],
+    assetPaths: [botanicalStudyFrameAsset, botanicalStudyLandscapeChassisAsset],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
     safeInsets: {
