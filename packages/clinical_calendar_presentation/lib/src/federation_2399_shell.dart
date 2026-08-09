@@ -395,6 +395,7 @@ final class _Federation2399ConsoleBay extends StatelessWidget {
               wheelPadding: const EdgeInsets.only(left: 30),
               compactLedger: true,
               conceptActionRail: true,
+              emphasizeProjection: true,
               child: content,
             )
           : content;

@@ -70,6 +70,13 @@ void main() {
     expect(find.text('TAP WHEEL TO VIEW NEXT PLACEMENT'), findsOneWidget);
     expect(find.text('SHOW PRECEPTOR BREAKDOWN'), findsOneWidget);
     expect(find.textContaining('Additional pace required'), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('placement-projection')))
+          .style
+          ?.fontWeight,
+      FontWeight.w600,
+    );
     final projection = tester.getRect(
       find.byKey(const Key('placement-projection')),
     );

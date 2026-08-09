@@ -147,6 +147,7 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
     required this.wheelPadding,
     required this.compactLedger,
     this.conceptActionRail = false,
+    this.emphasizeProjection = false,
     required super.child,
     super.key,
   });
@@ -155,6 +156,7 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
   final EdgeInsetsGeometry wheelPadding;
   final bool compactLedger;
   final bool conceptActionRail;
+  final bool emphasizeProjection;
 
   static PlacementProgressPanelPolicy? maybeOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<PlacementProgressPanelPolicy>();
@@ -164,7 +166,8 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
       wheelAlignment != oldWidget.wheelAlignment ||
       wheelPadding != oldWidget.wheelPadding ||
       compactLedger != oldWidget.compactLedger ||
-      conceptActionRail != oldWidget.conceptActionRail;
+      conceptActionRail != oldWidget.conceptActionRail ||
+      emphasizeProjection != oldWidget.emphasizeProjection;
 }
 
 /// Marks a placement panel embedded inside theme-owned housing so shared
@@ -361,7 +364,7 @@ final class PlacementMetricLedger extends StatelessWidget {
     final progress = snapshot.progress;
     final policy = PlacementProgressPanelPolicy.maybeOf(context);
     final compact = policy?.compactLedger ?? false;
-    final emphasizeProjection = policy?.conceptActionRail ?? false;
+    final emphasizeProjection = policy?.emphasizeProjection ?? false;
     final metrics = <(String, int, Color?)>[
       ('Target', progress.targetMinutes, null),
       ('Completed', progress.completedMinutes, _completedColor(context)),

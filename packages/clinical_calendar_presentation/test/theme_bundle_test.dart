@@ -232,7 +232,7 @@ void main() {
         ),
         (
           federation2399,
-          'federation-2399-owned-responsive-console-v3',
+          'federation-2399-owned-responsive-console-v4',
           Federation2399ApplicationShell,
         ),
       ];
