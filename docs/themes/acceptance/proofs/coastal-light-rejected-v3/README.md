@@ -1,12 +1,13 @@
-# Coastal Light concept-fidelity proof v3
+# Coastal Light rejected concept-fidelity proof v3
 
 Issue: [#136](https://github.com/mshamblin5150-code/clinical-calendar/issues/136)
 
-Status: **AWAITING EXPLICIT MAINTAINER VISUAL APPROVAL**.
+Status: **REJECTED by the maintainer on 2026-08-09**.
 
-This revision supersedes the rejected v1 and v2 proofs. It is review evidence,
-not an acceptance baseline. The approved 1586×992 concept remains normative
-until a maintainer explicitly accepts this runtime proof. Physical Android
+This directory is historical evidence only and is not an acceptance baseline.
+The maintainer reported that the runtime still did not match the concept
+closely enough and specifically required the Axion delta in the application
+crown. The approved 1586×992 concept remains normative. Physical Android
 tablet acceptance remains pending under #139.
 
 ## What changed after v2 rejection

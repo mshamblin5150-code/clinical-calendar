@@ -341,6 +341,7 @@ final class _CoastalLightCalendarViewport extends StatelessWidget {
               useDenseMonthCards: !enlargedText,
               useNeutralMonthCells: true,
               useLeadingTitleCenteredPeriodToolbar: !enlargedText,
+              labelStyle: CalendarPeriodLabelStyle.compactUppercase,
               child: child,
             ),
           ),
@@ -634,17 +635,9 @@ final class _CoastalLightCommandCrown extends StatelessWidget {
                   child: InkWell(
                     key: const Key('application-menu-action'),
                     onTap: onOpenMenu,
-                    child: Align(
+                    child: const Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        'CLINICAL CALENDAR',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                              letterSpacing: 1.6,
-                              color: context.clinicalColors.clinical,
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
+                      child: _CoastalLightBrandLockup(),
                     ),
                   ),
                 ),
@@ -708,34 +701,10 @@ final class _CoastalLightCommandCrown extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: enlargedText
-                  ? const SizedBox.shrink()
-                  : Row(
-                      children: [
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'CLINICAL CALENDAR',
-                              style:
-                                  (compact
-                                          ? Theme.of(
-                                              context,
-                                            ).textTheme.labelLarge
-                                          : Theme.of(
-                                              context,
-                                            ).textTheme.headlineMedium)
-                                      ?.copyWith(
-                                        letterSpacing: compact ? 1.2 : 1.6,
-                                        color: context.clinicalColors.clinical,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+              child: _CoastalLightBrandLockup(
+                compact: compact,
+                hideTitle: enlargedText,
+              ),
             ),
             IconButton(
               key: const Key('application-menu-action'),
@@ -795,6 +764,102 @@ final class _CoastalLightCommandCrown extends StatelessWidget {
       child: content,
     );
   }
+}
+
+final class _CoastalLightBrandLockup extends StatelessWidget {
+  const _CoastalLightBrandLockup({
+    this.compact = false,
+    this.hideTitle = false,
+  });
+
+  final bool compact;
+  final bool hideTitle;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      SizedBox.square(
+        dimension: compact ? 34 : 46,
+        child: Semantics(
+          key: const Key('coastal-light-axion-delta'),
+          label: 'Axion delta',
+          image: true,
+          child: CustomPaint(
+            painter: _CoastalLightAxionDeltaPainter(
+              color: context.clinicalColors.clinical,
+            ),
+          ),
+        ),
+      ),
+      if (!hideTitle) ...[
+        SizedBox(width: compact ? 8 : 12),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'CLINICAL CALENDAR',
+              style:
+                  (compact
+                          ? Theme.of(context).textTheme.labelLarge
+                          : Theme.of(context).textTheme.headlineMedium)
+                      ?.copyWith(
+                        letterSpacing: compact ? 1.2 : 1.6,
+                        color: context.clinicalColors.clinical,
+                        fontWeight: FontWeight.w700,
+                      ),
+            ),
+          ),
+        ),
+      ],
+    ],
+  );
+}
+
+final class _CoastalLightAxionDeltaPainter extends CustomPainter {
+  const _CoastalLightAxionDeltaPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = size.shortestSide / 46;
+    canvas.save();
+    canvas.scale(scale, scale);
+
+    final delta = Path()
+      ..fillType = PathFillType.evenOdd
+      ..moveTo(5, 42)
+      ..quadraticBezierTo(14, 20, 21, 6)
+      ..quadraticBezierTo(23, 2, 26, 7)
+      ..quadraticBezierTo(34, 23, 41, 42)
+      ..quadraticBezierTo(42, 45, 38, 42)
+      ..lineTo(25, 17)
+      ..quadraticBezierTo(23, 14, 21, 18)
+      ..lineTo(10, 42)
+      ..quadraticBezierTo(7, 46, 5, 42)
+      ..close();
+    canvas.drawPath(delta, Paint()..color = color);
+
+    canvas.save();
+    canvas.translate(23, 27);
+    canvas.rotate(-.24);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset.zero, width: 39, height: 16),
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.2
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.restore();
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _CoastalLightAxionDeltaPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 enum _CoastalLightCrownAction { addSchedule, help }

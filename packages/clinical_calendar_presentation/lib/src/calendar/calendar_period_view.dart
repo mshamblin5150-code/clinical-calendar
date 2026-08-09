@@ -10,6 +10,8 @@ import '../variant_f_theme.dart';
 import 'calendar_data_source.dart';
 import 'calendar_models.dart';
 
+enum CalendarPeriodLabelStyle { standard, compactUppercase }
+
 /// Opt-in sizing policy for calendar hosts that intentionally constrain the
 /// month grid to a bounded dashboard bay.
 final class CalendarPeriodViewportPolicy extends InheritedWidget {
@@ -19,6 +21,7 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
     this.useDenseMonthCards = false,
     this.useNeutralMonthCells = false,
     this.useLeadingTitleCenteredPeriodToolbar = false,
+    this.labelStyle = CalendarPeriodLabelStyle.standard,
     required super.child,
     super.key,
   });
@@ -28,6 +31,7 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
   final bool useDenseMonthCards;
   final bool useNeutralMonthCells;
   final bool useLeadingTitleCenteredPeriodToolbar;
+  final CalendarPeriodLabelStyle labelStyle;
 
   static bool usesBoundedMonthGrid(BuildContext context) =>
       context
@@ -59,6 +63,12 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
           ?.useLeadingTitleCenteredPeriodToolbar ??
       false;
 
+  static CalendarPeriodLabelStyle labelStyleOf(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.labelStyle ??
+      CalendarPeriodLabelStyle.standard;
+
   @override
   bool updateShouldNotify(CalendarPeriodViewportPolicy oldWidget) =>
       useBoundedMonthGrid != oldWidget.useBoundedMonthGrid ||
@@ -66,7 +76,8 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
       useDenseMonthCards != oldWidget.useDenseMonthCards ||
       useNeutralMonthCells != oldWidget.useNeutralMonthCells ||
       useLeadingTitleCenteredPeriodToolbar !=
-          oldWidget.useLeadingTitleCenteredPeriodToolbar;
+          oldWidget.useLeadingTitleCenteredPeriodToolbar ||
+      labelStyle != oldWidget.labelStyle;
 }
 
 final class CalendarPeriodView extends StatefulWidget {
@@ -348,6 +359,12 @@ final class _CalendarToolbar extends StatelessWidget {
     child: LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 600;
+        final labelStyle = CalendarPeriodViewportPolicy.labelStyleOf(context);
+        final compactUppercaseLabels =
+            labelStyle == CalendarPeriodLabelStyle.compactUppercase;
+        final displayTitle = compactUppercaseLabels
+            ? title.toUpperCase()
+            : title;
         final conceptHeader =
             Theme.of(
               context,
@@ -373,10 +390,19 @@ final class _CalendarToolbar extends StatelessWidget {
         final switcher = SegmentedButton<CalendarPeriod>(
           key: const Key('calendar-period-switcher'),
           showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: CalendarPeriod.month, label: Text('Month')),
-            ButtonSegment(value: CalendarPeriod.week, label: Text('Week')),
-            ButtonSegment(value: CalendarPeriod.agenda, label: Text('Agenda')),
+          segments: [
+            ButtonSegment(
+              value: CalendarPeriod.month,
+              label: Text(compactUppercaseLabels ? 'MONTH' : 'Month'),
+            ),
+            ButtonSegment(
+              value: CalendarPeriod.week,
+              label: Text(compactUppercaseLabels ? 'WEEK' : 'Week'),
+            ),
+            ButtonSegment(
+              value: CalendarPeriod.agenda,
+              label: Text(compactUppercaseLabels ? 'AGENDA' : 'Agenda'),
+            ),
           ],
           selected: {period},
           onSelectionChanged: (selection) => onPeriod(selection.single),
@@ -394,7 +420,7 @@ final class _CalendarToolbar extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      title,
+                      displayTitle,
                       key: const Key('calendar-period-title'),
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -423,7 +449,7 @@ final class _CalendarToolbar extends StatelessWidget {
               SizedBox(
                 width: 220,
                 child: Text(
-                  title,
+                  displayTitle,
                   key: const Key('calendar-period-title'),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -469,7 +495,7 @@ final class _CalendarToolbar extends StatelessWidget {
             if (!conceptHeader) navigation else const SizedBox(width: 14),
             Expanded(
               child: Text(
-                title,
+                displayTitle,
                 key: const Key('calendar-period-title'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
@@ -512,7 +538,13 @@ final class _MonthView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dates = _monthDates(anchor, weekStartsOn);
-    final weekdayLabels = _weekdayLabels(weekStartsOn, compact: compact);
+    final weekdayLabels = _weekdayLabels(
+      weekStartsOn,
+      compact: compact,
+      abbreviated:
+          CalendarPeriodViewportPolicy.labelStyleOf(context) ==
+          CalendarPeriodLabelStyle.compactUppercase,
+    );
     final showLegend =
         Theme.of(
           context,
@@ -2099,10 +2131,16 @@ String _periodTitle(LocalDate anchor, CalendarPeriod period, int weekStartsOn) {
       '${_monthAbbreviation(last.month)} ${last.day}, ${last.year}';
 }
 
-List<String> _weekdayLabels(int weekStartsOn, {required bool compact}) => [
+List<String> _weekdayLabels(
+  int weekStartsOn, {
+  required bool compact,
+  required bool abbreviated,
+}) => [
   for (var offset = 0; offset < 7; offset++)
     compact
         ? _weekdayName(((weekStartsOn - 1 + offset) % 7) + 1).substring(0, 1)
+        : abbreviated
+        ? _weekdayName(((weekStartsOn - 1 + offset) % 7) + 1).substring(0, 3)
         : _weekdayName(((weekStartsOn - 1 + offset) % 7) + 1),
 ];
 

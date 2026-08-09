@@ -54,6 +54,16 @@ void main() {
     expect(calendar.height / 992, closeTo(.54, .006));
     expect(planning.height / 992, closeTo(.263, .006));
     expect(navigation.height / 992, closeTo(.076, .006));
+    expect(
+      find.byKey(const Key('coastal-light-axion-delta')),
+      findsOneWidget,
+      reason: 'The Coastal crown carries the approved Axion brand mark.',
+    );
+    expect(find.text('AUGUST 2026'), findsOneWidget);
+    for (final label in const ['MONTH', 'WEEK', 'AGENDA', 'SUN', 'SAT']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('SUNDAY'), findsNothing);
 
     final visibleEntries = find.byWidgetPredicate((widget) {
       final key = widget.key;
