@@ -66,7 +66,7 @@ List<ThemeTokenPairing> _runtimePermittedPairings({
   required ThemeData theme,
   required ClinicalCalendarColors colors,
   required ClinicalCalendarAccessibilityTokens? accessibility,
-  BuildContext? componentContext,
+  ThemeRuntimeComponentStyles? componentStyles,
 }) {
   final scheme = theme.colorScheme;
   final pairings = <ThemeTokenPairing>[];
@@ -92,58 +92,70 @@ List<ThemeTokenPairing> _runtimePermittedPairings({
       {WidgetState.disabled, WidgetState.selected},
     ),
   ];
-  final componentStyles = <(String, ButtonStyle?, Color, Color)>[
-    (
-      'filled',
-      componentContext == null
-          ? theme.filledButtonTheme.style
-          : const _AuditedFilledButton().effectiveStyle(componentContext),
-      scheme.onPrimary,
-      scheme.primary,
-    ),
-    (
-      'outlined',
-      componentContext == null
-          ? theme.outlinedButtonTheme.style
-          : const _AuditedOutlinedButton().effectiveStyle(componentContext),
-      scheme.onSurface,
-      Colors.transparent,
-    ),
-    (
-      'text',
-      componentContext == null
-          ? theme.textButtonTheme.style
-          : const _AuditedTextButton().effectiveStyle(componentContext),
-      scheme.primary,
-      Colors.transparent,
-    ),
-    (
-      'icon',
-      componentContext == null
-          ? theme.iconButtonTheme.style
-          : _effectiveIconButtonStyle(theme),
-      scheme.onSurface,
-      Colors.transparent,
-    ),
-    (
-      'segmented',
-      componentContext == null
-          ? theme.segmentedButtonTheme.style
-          : _effectiveSegmentedButtonStyle(theme),
-      scheme.onSurface,
-      Colors.transparent,
-    ),
-  ];
-  for (final component in componentStyles) {
+  final auditedComponentStyles =
+      <(String, ThemeRuntimeComponentStyle, Color, Color)>[
+        (
+          'filled',
+          componentStyles?.filled ??
+              ThemeRuntimeComponentStyle.declared(
+                theme.filledButtonTheme.style,
+              ),
+          scheme.onPrimary,
+          scheme.primary,
+        ),
+        (
+          'outlined',
+          componentStyles?.outlined ??
+              ThemeRuntimeComponentStyle.declared(
+                theme.outlinedButtonTheme.style,
+              ),
+          scheme.onSurface,
+          Colors.transparent,
+        ),
+        (
+          'text',
+          componentStyles?.text ??
+              ThemeRuntimeComponentStyle.declared(theme.textButtonTheme.style),
+          scheme.primary,
+          Colors.transparent,
+        ),
+        (
+          'icon',
+          componentStyles?.icon ??
+              ThemeRuntimeComponentStyle.declared(theme.iconButtonTheme.style),
+          scheme.onSurface,
+          Colors.transparent,
+        ),
+        (
+          'segmented',
+          componentStyles?.segmented ??
+              ThemeRuntimeComponentStyle.declared(
+                theme.segmentedButtonTheme.style,
+              ),
+          scheme.onSurface,
+          Colors.transparent,
+        ),
+      ];
+  for (final component in auditedComponentStyles) {
     for (final state in stateSpecs) {
       final foreground =
-          component.$2?.foregroundColor?.resolve(state.$3) ??
+          component.$2.resolveColor(
+            (style) => style.foregroundColor,
+            state.$3,
+          ) ??
           (state.$3.contains(WidgetState.disabled)
               ? theme.disabledColor
               : component.$3);
       final layer =
-          component.$2?.backgroundColor?.resolve(state.$3) ?? component.$4;
-      final overlay = component.$2?.overlayColor?.resolve(state.$3);
+          component.$2.resolveColor(
+            (style) => style.backgroundColor,
+            state.$3,
+          ) ??
+          component.$4;
+      final overlay = component.$2.resolveColor(
+        (style) => style.overlayColor,
+        state.$3,
+      );
       pairings.add(
         ThemeTokenPairing(
           pairingId: '${component.$1}-${state.$1}',
@@ -1191,100 +1203,86 @@ abstract final class ThemeContainmentDroneEqualityAuditor {
 
 void _auditNoop() {}
 
-final class _AuditedFilledButton extends FilledButton {
-  const _AuditedFilledButton()
-    : super(onPressed: _auditNoop, child: const SizedBox.shrink());
+final class _ButtonStyleInspector extends ButtonStyleButton {
+  const _ButtonStyleInspector()
+    : super(
+        onPressed: _auditNoop,
+        onLongPress: null,
+        onHover: null,
+        onFocusChange: null,
+        style: null,
+        focusNode: null,
+        autofocus: false,
+        clipBehavior: Clip.none,
+        child: const SizedBox.shrink(),
+      );
 
-  ButtonStyle effectiveStyle(BuildContext context) {
-    final defaults = defaultStyleOf(context);
-    final themed = themeStyleOf(context)?.merge(defaults) ?? defaults;
-    return style?.merge(themed) ?? themed;
-  }
-}
-
-final class _AuditedOutlinedButton extends OutlinedButton {
-  const _AuditedOutlinedButton()
-    : super(onPressed: _auditNoop, child: const SizedBox.shrink());
-
-  ButtonStyle effectiveStyle(BuildContext context) {
-    final defaults = defaultStyleOf(context);
-    final themed = themeStyleOf(context)?.merge(defaults) ?? defaults;
-    return style?.merge(themed) ?? themed;
-  }
-}
-
-final class _AuditedTextButton extends TextButton {
-  const _AuditedTextButton()
-    : super(onPressed: _auditNoop, child: const SizedBox.shrink());
-
-  ButtonStyle effectiveStyle(BuildContext context) {
-    final defaults = defaultStyleOf(context);
-    final themed = themeStyleOf(context)?.merge(defaults) ?? defaults;
-    return style?.merge(themed) ?? themed;
-  }
-}
-
-ButtonStyle _effectiveIconButtonStyle(ThemeData theme) {
-  final colors = theme.colorScheme;
-  final defaults = ButtonStyle(
-    backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
-    foregroundColor: WidgetStateProperty.resolveWith((states) {
-      if (states.contains(WidgetState.disabled)) {
-        return colors.onSurface.withValues(alpha: .38);
-      }
-      return states.contains(WidgetState.selected)
-          ? colors.primary
-          : colors.onSurfaceVariant;
-    }),
-    overlayColor: WidgetStateProperty.resolveWith((states) {
-      final selected = states.contains(WidgetState.selected);
-      final foreground = selected ? colors.primary : colors.onSurfaceVariant;
-      if (states.contains(WidgetState.pressed) ||
-          states.contains(WidgetState.focused)) {
-        return foreground.withValues(alpha: .1);
-      }
-      return Colors.transparent;
-    }),
+  ThemeRuntimeComponentStyle inspect(
+    ButtonStyleButton button,
+    BuildContext context,
+  ) => ThemeRuntimeComponentStyle(
+    widgetStyle: button.style,
+    themeStyle: button.themeStyleOf(context),
+    defaultStyle: button.defaultStyleOf(context),
   );
-  return theme.iconButtonTheme.style?.merge(defaults) ?? defaults;
+
+  @override
+  ButtonStyle defaultStyleOf(BuildContext context) => const ButtonStyle();
+
+  @override
+  ButtonStyle? themeStyleOf(BuildContext context) => null;
 }
 
-ButtonStyle _effectiveSegmentedButtonStyle(ThemeData theme) {
-  final colors = theme.colorScheme;
-  final defaults = ButtonStyle(
-    backgroundColor: WidgetStateProperty.resolveWith((states) {
-      if (states.contains(WidgetState.disabled)) return null;
-      return states.contains(WidgetState.selected)
-          ? colors.secondaryContainer
-          : null;
-    }),
-    foregroundColor: WidgetStateProperty.resolveWith((states) {
-      if (states.contains(WidgetState.disabled)) {
-        return colors.onSurface.withValues(alpha: .38);
-      }
-      return states.contains(WidgetState.selected)
-          ? colors.onSecondaryContainer
-          : colors.onSurface;
-    }),
-    overlayColor: WidgetStateProperty.resolveWith((states) {
-      if (!states.contains(WidgetState.pressed) &&
-          !states.contains(WidgetState.focused)) {
-        return Colors.transparent;
-      }
-      final foreground = states.contains(WidgetState.selected)
-          ? colors.onSecondaryContainer
-          : colors.onSurface;
-      return foreground.withValues(alpha: .1);
-    }),
-  );
-  return theme.segmentedButtonTheme.style?.merge(defaults) ?? defaults;
+@immutable
+final class ThemeRuntimeComponentStyle {
+  const ThemeRuntimeComponentStyle({
+    required this.widgetStyle,
+    required this.themeStyle,
+    required this.defaultStyle,
+  });
+
+  const ThemeRuntimeComponentStyle.declared(ButtonStyle? style)
+    : widgetStyle = style,
+      themeStyle = null,
+      defaultStyle = null;
+
+  final ButtonStyle? widgetStyle;
+  final ButtonStyle? themeStyle;
+  final ButtonStyle? defaultStyle;
+
+  Color? resolveColor(
+    WidgetStateProperty<Color?>? Function(ButtonStyle style) property,
+    Set<WidgetState> states,
+  ) {
+    Color? resolve(ButtonStyle? style) =>
+        style == null ? null : property(style)?.resolve(states);
+
+    return resolve(widgetStyle) ?? resolve(themeStyle) ?? resolve(defaultStyle);
+  }
+}
+
+@immutable
+final class ThemeRuntimeComponentStyles {
+  const ThemeRuntimeComponentStyles({
+    required this.filled,
+    required this.outlined,
+    required this.text,
+    required this.icon,
+    required this.segmented,
+  });
+
+  final ThemeRuntimeComponentStyle filled;
+  final ThemeRuntimeComponentStyle outlined;
+  final ThemeRuntimeComponentStyle text;
+  final ThemeRuntimeComponentStyle icon;
+  final ThemeRuntimeComponentStyle segmented;
 }
 
 abstract final class ThemeRuntimeTokenAuditor {
   static ThemeTokenAuditReport audit({
     required ClinicalCalendarThemeBundle bundle,
     required ThemeAccessibilityMode mode,
-    required BuildContext componentContext,
+    required ThemeRuntimeComponentStyles componentStyles,
   }) {
     final enhanced = mode == ThemeAccessibilityMode.enhanced;
     final theme = bundle.standardPresentation.createThemeData(
@@ -1299,7 +1297,7 @@ abstract final class ThemeRuntimeTokenAuditor {
       colors: colors,
       accessibility: accessibility,
       mode: mode,
-      componentContext: componentContext,
+      componentStyles: componentStyles,
     );
   }
 
@@ -1309,13 +1307,13 @@ abstract final class ThemeRuntimeTokenAuditor {
     required ClinicalCalendarColors colors,
     required ClinicalCalendarAccessibilityTokens? accessibility,
     required ThemeAccessibilityMode mode,
-    BuildContext? componentContext,
+    ThemeRuntimeComponentStyles? componentStyles,
   }) {
     final permitted = _runtimePermittedPairings(
       theme: theme,
       colors: colors,
       accessibility: accessibility,
-      componentContext: componentContext,
+      componentStyles: componentStyles,
     );
     final componentPairs = {
       for (final pairing in permitted)
@@ -1391,25 +1389,90 @@ Future<ThemeTokenAuditReport> auditRuntimeBundle(
   WidgetTester tester,
   ClinicalCalendarThemeBundle bundle,
   ThemeAccessibilityMode mode,
-) async {
-  late BuildContext componentContext;
+) => auditRuntimeThemeData(
+  tester,
+  themeId: bundle.id,
+  theme: bundle.standardPresentation.createThemeData(
+    enhancedAccessibility: mode == ThemeAccessibilityMode.enhanced,
+  ),
+  mode: mode,
+);
+
+Future<ThemeTokenAuditReport> auditRuntimeThemeData(
+  WidgetTester tester, {
+  required String themeId,
+  required ThemeData theme,
+  required ThemeAccessibilityMode mode,
+}) async {
+  const filledKey = ValueKey('runtime-audit-filled');
+  const outlinedKey = ValueKey('runtime-audit-outlined');
+  const textKey = ValueKey('runtime-audit-text');
+  const iconKey = ValueKey('runtime-audit-icon');
+  const segmentedKey = ValueKey('runtime-audit-segmented');
   await tester.pumpWidget(
     MaterialApp(
-      theme: bundle.standardPresentation.createThemeData(
-        enhancedAccessibility: mode == ThemeAccessibilityMode.enhanced,
-      ),
-      home: Builder(
-        builder: (context) {
-          componentContext = context;
-          return const SizedBox.shrink();
-        },
+      theme: theme,
+      home: Material(
+        child: Column(
+          children: [
+            const FilledButton(
+              key: filledKey,
+              onPressed: _auditNoop,
+              child: SizedBox.shrink(),
+            ),
+            const OutlinedButton(
+              key: outlinedKey,
+              onPressed: _auditNoop,
+              child: SizedBox.shrink(),
+            ),
+            const TextButton(
+              key: textKey,
+              onPressed: _auditNoop,
+              child: SizedBox.shrink(),
+            ),
+            const IconButton(
+              key: iconKey,
+              onPressed: _auditNoop,
+              isSelected: false,
+              icon: Icon(Icons.check),
+            ),
+            SegmentedButton<String>(
+              key: segmentedKey,
+              segments: const [ButtonSegment(value: 'one', label: Text('One'))],
+              selected: const {'one'},
+              onSelectionChanged: (_) {},
+            ),
+          ],
+        ),
       ),
     ),
   );
-  return ThemeRuntimeTokenAuditor.audit(
-    bundle: bundle,
+
+  Finder renderedButtonUnder(Key key) => find.descendant(
+    of: find.byKey(key),
+    matching: find.byWidgetPredicate((widget) => widget is ButtonStyleButton),
+  );
+
+  ThemeRuntimeComponentStyle capture(Finder finder) {
+    final button = tester.widget<ButtonStyleButton>(finder);
+    final context = tester.element(finder);
+    return const _ButtonStyleInspector().inspect(button, context);
+  }
+
+  final componentStyles = ThemeRuntimeComponentStyles(
+    filled: capture(find.byKey(filledKey)),
+    outlined: capture(find.byKey(outlinedKey)),
+    text: capture(find.byKey(textKey)),
+    icon: capture(renderedButtonUnder(iconKey)),
+    segmented: capture(renderedButtonUnder(segmentedKey)),
+  );
+  return ThemeRuntimeTokenAuditor.auditThemeData(
+    themeId: themeId,
+    theme: theme,
+    colors: theme.extension<ClinicalCalendarColors>()!,
+    accessibility: theme.extension<ClinicalCalendarAccessibilityTokens>(),
     mode: mode,
-    componentContext: componentContext,
+    componentStyles: componentStyles,
   );
 }
 

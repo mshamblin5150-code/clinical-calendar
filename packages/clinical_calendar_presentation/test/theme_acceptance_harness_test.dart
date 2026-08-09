@@ -199,6 +199,47 @@ void main() {
       expect(style.side!.resolve(pressedState)!.width, 2);
     });
 
+    testWidgets(
+      'runtime component states fall through null theme values to Flutter defaults',
+      (tester) async {
+        final bundle = ClinicalCalendarThemeBundleRegistry
+            .standard
+            .galleryBundles
+            .singleWhere((item) => item.id == graphiteThemeId);
+        final base = bundle.standardPresentation.createThemeData();
+        final theme = base.copyWith(
+          filledButtonTheme: FilledButtonThemeData(
+            style: (base.filledButtonTheme.style ?? const ButtonStyle())
+                .copyWith(
+                  overlayColor: WidgetStateProperty.resolveWith(
+                    (states) => states.contains(WidgetState.pressed)
+                        ? Colors.black
+                        : null,
+                  ),
+                ),
+          ),
+        );
+
+        final report = await auditRuntimeThemeData(
+          tester,
+          themeId: bundle.id,
+          theme: theme,
+          mode: ThemeAccessibilityMode.standard,
+        );
+
+        final focused = report.entries.singleWhere(
+          (entry) => entry.pairingId == 'filled-focused',
+        );
+        expect(
+          focused.compositedBackground,
+          Color.alphaBlend(
+            theme.colorScheme.onPrimary.withValues(alpha: 26 / 255),
+            theme.colorScheme.primary,
+          ),
+        );
+      },
+    );
+
     test('resolved pressed overlay participates in the runtime ratio', () {
       final bundle = ClinicalCalendarThemeBundleRegistry.standard.galleryBundles
           .singleWhere((item) => item.id == graphiteThemeId);
