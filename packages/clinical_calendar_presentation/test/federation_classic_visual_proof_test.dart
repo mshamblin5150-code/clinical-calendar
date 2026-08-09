@@ -71,7 +71,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v5/federation_classic_landscape_1586x992.png',
+        'goldens/federation_classic_v6/federation_classic_landscape_1586x992.png',
       ),
     );
   });
@@ -84,7 +84,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v5/federation_classic_portrait_900x1440.png',
+        'goldens/federation_classic_v6/federation_classic_portrait_900x1440.png',
       ),
     );
   });
@@ -119,7 +119,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v5/'
+        'goldens/federation_classic_v6/'
         'federation_classic_portrait_200_percent_900x1440.png',
       ),
     );

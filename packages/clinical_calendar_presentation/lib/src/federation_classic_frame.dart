@@ -126,12 +126,7 @@ final class _FederationClassicRasterRailsPainter extends CustomPainter {
     (Rect.fromLTWH(10, 39, 145, 164), Color(0xFFAF8ED6), 48),
     (Rect.fromLTWH(474, 53, 629, 42), Color(0xFFAF8ED6), 22),
     (Rect.fromLTWH(1306, 53, 262, 42), Color(0xFFF5AE25), 22),
-    (Rect.fromLTWH(10, 732, 127, 141), Color(0xFFFF8057), 48),
     (Rect.fromLTWH(1376, 830, 201, 40), Color(0xFFFF8057), 22),
-    (Rect.fromLTWH(18, 895, 155, 74), Color(0xFF65448C), 37),
-    (Rect.fromLTWH(18, 936, 45, 40), Color(0xFF65448C), 20),
-    (Rect.fromLTWH(1385, 895, 183, 74), Color(0xFFFF8057), 37),
-    (Rect.fromLTWH(1520, 936, 39, 40), Color(0xFFFF8057), 20),
   ];
 
   @override
@@ -215,10 +210,14 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
       ..quadraticBezierTo(10, 873, 10, 825)
       ..close();
     canvas.drawPath(lowerElbow, Paint()..color = _salmon);
-    canvas.drawRect(
-      const Rect.fromLTWH(137, 813, 59, 60),
-      Paint()..color = _amber,
-    );
+    final lowerAmberCap = Path()
+      ..moveTo(143, 813)
+      ..lineTo(150, 813)
+      ..quadraticBezierTo(196, 813, 196, 859)
+      ..lineTo(196, 873)
+      ..lineTo(143, 873)
+      ..close();
+    canvas.drawPath(lowerAmberCap, Paint()..color = _amber);
 
     _rounded(canvas, const Rect.fromLTWH(474, 53, 629, 42), _lilac, 22);
     canvas.drawRect(
@@ -263,10 +262,48 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.4,
     );
-    _rounded(canvas, const Rect.fromLTWH(18, 895, 155, 74), _lilacDark, 37);
-    _rounded(canvas, const Rect.fromLTWH(18, 936, 45, 40), _lilacDark, 20);
-    _rounded(canvas, const Rect.fromLTWH(1385, 895, 183, 74), _salmon, 37);
-    _rounded(canvas, const Rect.fromLTWH(1520, 936, 39, 40), _salmon, 20);
+    final navigationLeftElbow = Path()
+      ..moveTo(55, 895)
+      ..lineTo(173, 895)
+      ..lineTo(173, 936)
+      ..lineTo(83, 936)
+      ..quadraticBezierTo(63, 936, 63, 956)
+      ..lineTo(63, 969)
+      ..lineTo(55, 969)
+      ..quadraticBezierTo(18, 969, 18, 932)
+      ..quadraticBezierTo(18, 895, 55, 895)
+      ..close();
+    canvas.drawPath(navigationLeftElbow, Paint()..color = _lilacDark);
+    final navigationLeftBranch = Path()
+      ..moveTo(82, 946)
+      ..lineTo(173, 946)
+      ..lineTo(173, 969)
+      ..lineTo(82, 969)
+      ..quadraticBezierTo(70, 969, 70, 957.5)
+      ..quadraticBezierTo(70, 946, 82, 946)
+      ..close();
+    canvas.drawPath(navigationLeftBranch, Paint()..color = _lilacDark);
+
+    final navigationRightElbow = Path()
+      ..moveTo(1385, 895)
+      ..lineTo(1531, 895)
+      ..quadraticBezierTo(1568, 895, 1568, 932)
+      ..lineTo(1568, 946)
+      ..quadraticBezierTo(1568, 969, 1545, 969)
+      ..lineTo(1538, 969)
+      ..lineTo(1538, 956)
+      ..quadraticBezierTo(1538, 936, 1518, 936)
+      ..lineTo(1385, 936)
+      ..close();
+    canvas.drawPath(navigationRightElbow, Paint()..color = _salmon);
+    final navigationRightBranch = Path()
+      ..moveTo(1385, 946)
+      ..lineTo(1508, 946)
+      ..quadraticBezierTo(1520, 946, 1520, 957.5)
+      ..quadraticBezierTo(1520, 969, 1508, 969)
+      ..lineTo(1385, 969)
+      ..close();
+    canvas.drawPath(navigationRightBranch, Paint()..color = _salmon);
     canvas.restore();
   }
 
@@ -308,6 +345,7 @@ final class _FederationClassicLandscapeCutoutPainter extends CustomPainter {
     final cutout = Paint()..color = const Color(0xFF02040D);
     canvas.drawRect(const Rect.fromLTWH(90, 105, 65, 98), cutout);
     canvas.drawRect(const Rect.fromLTWH(90, 732, 47, 81), cutout);
+    canvas.drawRect(const Rect.fromLTWH(137, 813, 6, 60), cutout);
     canvas.drawRect(const Rect.fromLTWH(1441, 830, 5, 40), cutout);
     canvas.drawRect(const Rect.fromLTWH(63, 936, 8, 33), cutout);
     canvas.drawRect(const Rect.fromLTWH(1520, 936, 18, 33), cutout);
