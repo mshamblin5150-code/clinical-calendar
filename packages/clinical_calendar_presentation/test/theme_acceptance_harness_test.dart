@@ -107,21 +107,17 @@ void main() {
           );
           expect(report.entries.any((entry) => entry.permitted), isTrue);
           expect(report.entries.any((entry) => !entry.permitted), isTrue);
-          if (bundle.id == federationClassicThemeId ||
-              bundle.id == federation2399ThemeId ||
-              bundle.id == heritageFieldNotesThemeId) {
-            expect(
-              report.passed,
-              isTrue,
-              reason: report.entries
-                  .where((entry) => !entry.passed)
-                  .map(
-                    (entry) =>
-                        '${entry.pairingId}: ${entry.contrastRatio.toStringAsFixed(2)} / ${entry.requiredRatio.toStringAsFixed(2)}',
-                  )
-                  .join('\n'),
-            );
-          }
+          expect(
+            report.passed,
+            isTrue,
+            reason: report.entries
+                .where((entry) => !entry.passed)
+                .map(
+                  (entry) =>
+                      '${entry.pairingId}: ${entry.contrastRatio.toStringAsFixed(2)} / ${entry.requiredRatio.toStringAsFixed(2)}',
+                )
+                .join('\n'),
+          );
           expect(
             report.entries.every(
               (entry) =>
@@ -158,6 +154,25 @@ void main() {
       expect(entry.compositedForeground, isNot(const Color(0x80FFFFFF)));
       expect(entry.contrastRatio, greaterThan(1));
       expect(entry.contrastRatio, lessThan(21));
+    });
+
+    test('inactive controls are audited without a WCAG contrast floor', () {
+      final report = ThemeRuntimeTokenAuditor.auditPairings(
+        themeId: 'fixture',
+        mode: ThemeAccessibilityMode.standard,
+        pairings: const [
+          ThemeTokenPairing(
+            pairingId: 'disabled-label',
+            state: ThemeTokenState.disabled,
+            contentKind: ThemeContrastContentKind.inactiveControl,
+            foreground: Color(0xFF777777),
+            background: ThemePaintStack(base: Color(0xFF888888)),
+          ),
+        ],
+      );
+
+      expect(report.passed, isTrue);
+      expect(report.entries.single.requiredRatio, 1);
     });
 
     test('resolved pressed overlay participates in the runtime ratio', () {

@@ -342,6 +342,7 @@ WidgetStateProperty<Color?> _botanicalStudyForeground(Color enabled) =>
 
 ThemeData _applyBotanicalStudyEnhancedAccessibility(ThemeData standard) {
   const enhancedBoundary = Color(0xFF5C5048);
+  const enhancedPrimary = Color(0xFF3B1D37);
   const enhancedColors = ClinicalCalendarColors(
     canvas: BotanicalStudyColors.surface,
     structure: BotanicalStudyColors.housing,
@@ -349,7 +350,7 @@ ThemeData _applyBotanicalStudyEnhancedAccessibility(ThemeData standard) {
     insetBorder: Color(0xFF5C5048),
     primaryText: Color(0xFF21131F),
     secondaryText: Color(0xFF514452),
-    clinical: BotanicalStudyColors.clinical,
+    clinical: Color(0xFF36533F),
     work: BotanicalStudyColors.work,
     workMachinery: BotanicalStudyColors.workAccent,
     protectedDay: BotanicalStudyColors.protectedDay,
@@ -359,9 +360,14 @@ ThemeData _applyBotanicalStudyEnhancedAccessibility(ThemeData standard) {
   );
   return standard.copyWith(
     colorScheme: standard.colorScheme.copyWith(
-      primary: BotanicalStudyColors.primary,
-      secondary: enhancedColors.scheduled,
-      error: enhancedColors.urgent,
+      primary: enhancedPrimary,
+      onPrimary: Colors.white,
+      secondary: const Color(0xFF4A2947),
+      onSecondary: Colors.white,
+      tertiary: const Color(0xFF45321C),
+      onTertiary: Colors.white,
+      error: const Color(0xFF681A2B),
+      onError: Colors.white,
       onSurface: enhancedColors.primaryText,
       onSurfaceVariant: enhancedColors.secondaryText,
       outline: enhancedColors.insetBorder,
@@ -405,6 +411,17 @@ ThemeData _applyBotanicalStudyEnhancedAccessibility(ThemeData standard) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: standard.filledButtonTheme.style?.copyWith(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? BotanicalStudyColors.surfaceRaised
+              : enhancedPrimary,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? enhancedColors.primaryText
+              : Colors.white,
+        ),
+        overlayColor: const WidgetStatePropertyAll(Colors.transparent),
         side: const WidgetStatePropertyAll(
           BorderSide(color: enhancedBoundary, width: 1.5),
         ),
@@ -415,6 +432,16 @@ ThemeData _applyBotanicalStudyEnhancedAccessibility(ThemeData standard) {
         side: const WidgetStatePropertyAll(
           BorderSide(color: enhancedBoundary, width: 1.5),
         ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: standard.textButtonTheme.style?.copyWith(
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? enhancedColors.primaryText
+              : enhancedPrimary,
+        ),
+        overlayColor: const WidgetStatePropertyAll(Colors.transparent),
       ),
     ),
     extensions: const [

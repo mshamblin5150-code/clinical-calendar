@@ -43,7 +43,12 @@ enum ThemeAcceptanceState { pending, accepted }
 
 enum ThemeAccessibilityMode { standard, enhanced }
 
-enum ThemeContrastContentKind { normalText, largeText, graphic }
+enum ThemeContrastContentKind {
+  normalText,
+  largeText,
+  graphic,
+  inactiveControl,
+}
 
 enum ThemeTokenState {
   defaultState,
@@ -116,7 +121,9 @@ List<ThemeTokenPairing> _runtimePermittedPairings({
         ThemeTokenPairing(
           pairingId: '${component.$1}-${state.$1}',
           state: state.$2,
-          contentKind: ThemeContrastContentKind.normalText,
+          contentKind: state.$3.contains(WidgetState.disabled)
+              ? ThemeContrastContentKind.inactiveControl
+              : ThemeContrastContentKind.normalText,
           foreground: foreground,
           background: ThemePaintStack(
             base: scheme.surface,
@@ -1335,6 +1342,7 @@ double _requiredRatio(
   (ThemeContrastContentKind.largeText, ThemeAccessibilityMode.enhanced) => 4.5,
   (ThemeContrastContentKind.graphic, ThemeAccessibilityMode.standard) => 3,
   (ThemeContrastContentKind.graphic, ThemeAccessibilityMode.enhanced) => 4.5,
+  (ThemeContrastContentKind.inactiveControl, _) => 1,
 };
 
 double _contrastRatio(Color foreground, Color background) {
