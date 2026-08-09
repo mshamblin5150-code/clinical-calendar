@@ -67,6 +67,7 @@ const heritageFieldNotesEntryVisuals = ClinicalCalendarEntryVisuals(
   leadingRailWidth: 4,
   segmentWorkRail: true,
   protectedDotGridCorner: true,
+  denseMonthChip: true,
 );
 
 const heritageFieldNotesStandardAccessibilityTokens =

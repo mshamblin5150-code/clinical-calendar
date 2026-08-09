@@ -27,10 +27,17 @@ Renderer contract: `heritage-field-notes-owned-archive-v1`.
 
 The production renderer consumes the shared live Calendar, Planning, Clinical
 Placements, progress, attention, navigation, and callback slots. Theme-owned
-layout supplies the approved crown, tall archive bays, central Calendar and
-Planning hierarchy, right status rail, indexed bottom navigation, and portrait
-recomposition. It owns no clinical state, persistence, validation, or workflow
-logic. Default rendering paths for every other theme remain unchanged.
+layout now resolves the approved #118 landscape coordinates directly: the
+deep walnut-and-brass book-board chassis, two-line archival crown, tall
+placement bays, central Calendar and Planning hierarchy, right progress and
+attention rail, indexed hardware, and bottom navigation deck. Field Archive
+also opts into filled semantic Calendar bars matching the concept while every
+other theme keeps its established default. The renderer owns no clinical
+state, persistence, validation, or workflow logic.
+
+The earlier `30d7401` proof was rejected by the maintainer and is retained
+under `rejected/30d7401/` only as historical evidence. It is not an acceptance
+or golden baseline.
 
 ## Original frame creation record
 
@@ -50,10 +57,10 @@ corners, uses source cuts 120/145/120/170, and has SHA-256
 
 ```text
 bf131014c71df2adc4b34b70c99e3e5ed94e54f0e1753d3979d0b6e85da66c75  approved-concept-landscape.png
-89e9da5aa75dbd1be5978a7e2f5999685a0c17cbd48ab5ad5bc81b1f9586abef  landscape-concept-vs-runtime.png
-f933ce80dcce7bb0ae7eaf24ae9337a6dd69cd9cb92e0fd6d76d561392eabf2a  runtime-landscape-1536x1024.png
-d8902ef4722ee0979e0dfff448d7b38e5707e0feff4e111c5ad196bfc333da8c  runtime-portrait-900x1440.png
-6b48ea16f81c45057f18c3ca9f678dd1591c5d3da1920c406d4e82b5264abaf2  runtime-portrait-200-percent-900x1440.png
+8923b2bc0737be1933d9e62c4b576746d57f881530b155cdf07ca8f92fa0952a  landscape-concept-vs-runtime.png
+09a679664a0b9ae2ec022cb90a047f860b1af9920235eb1e91aaeccbf8b96dbb  runtime-landscape-1536x1024.png
+44769c3bd9ce838d99f368d418c8c12c22228901093943118bed1dbb81b480cc  runtime-portrait-900x1440.png
+7f81600f1a4d04e0856ac8720ddd5dbdc1ef1b24f3a2bff052bd85613b4cdf0b  runtime-portrait-200-percent-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance

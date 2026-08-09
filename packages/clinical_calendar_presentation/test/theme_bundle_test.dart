@@ -229,6 +229,13 @@ void main() {
     expect(fieldArchive.marks.marks, hasLength(9));
     expect(fieldArchive.helpGuide.calendarStates, hasLength(5));
     expect(
+      fieldArchive.standardPresentation
+          .createThemeData()
+          .extension<ClinicalCalendarEntryVisuals>()
+          ?.denseMonthChip,
+      isTrue,
+    );
+    expect(
       ClinicalCalendarThemeBundleRegistry.standard.resolveRoot(
         heritageFieldNotesThemeId,
       ),
@@ -316,6 +323,23 @@ void main() {
           'federation-2399-owned-responsive-console-v3',
         ),
       );
+      for (final establishedId in const [
+        variantFThemeId,
+        graphiteThemeId,
+        federationClassicThemeId,
+        federation2399ThemeId,
+      ]) {
+        final visuals = registry
+            .resolveRoot(establishedId)
+            .standardPresentation
+            .createThemeData()
+            .extension<ClinicalCalendarEntryVisuals>();
+        expect(
+          visuals?.denseMonthChip ?? false,
+          isFalse,
+          reason: '$establishedId must retain its established Calendar path',
+        );
+      }
     },
   );
 
@@ -880,10 +904,33 @@ void main() {
     final navigation = tester.getRect(
       find.byKey(const Key('heritage-field-notes-bottom-navigation')),
     );
-    expect(crown.width / 1536, closeTo(.913, .01));
-    expect(placements.width / 1536, closeTo(.17, .02));
-    expect(calendar.width / 1536, closeTo(.512, .01));
-    expect(insight.width / 1536, closeTo(.19, .02));
+    // Approved concept #118 is the independent source of truth for the
+    // landscape exemplar geometry. These coordinates describe its inner
+    // book-board composition at 1536 by 1024.
+    expect(crown.left / 1536, closeTo(.036, .006));
+    expect(crown.top / 1024, closeTo(.057, .006));
+    expect(crown.width / 1536, closeTo(.935, .008));
+    expect(crown.height / 1024, closeTo(.073, .008));
+    expect(placements.left / 1536, closeTo(.036, .006));
+    expect(placements.top / 1024, closeTo(.139, .006));
+    expect(placements.width / 1536, closeTo(.188, .008));
+    expect(placements.height / 1024, closeTo(.756, .008));
+    expect(calendar.left / 1536, closeTo(.229, .006));
+    expect(calendar.top / 1024, closeTo(.139, .006));
+    expect(calendar.width / 1536, closeTo(.514, .008));
+    expect(calendar.height / 1024, closeTo(.535, .008));
+    expect(planning.left / 1536, closeTo(.229, .006));
+    expect(planning.top / 1024, closeTo(.683, .006));
+    expect(planning.width / 1536, closeTo(.514, .008));
+    expect(planning.height / 1024, closeTo(.211, .008));
+    expect(insight.left / 1536, closeTo(.749, .006));
+    expect(insight.top / 1024, closeTo(.139, .006));
+    expect(insight.width / 1536, closeTo(.222, .008));
+    expect(insight.height / 1024, closeTo(.756, .008));
+    expect(navigation.left / 1536, closeTo(.036, .006));
+    expect(navigation.top / 1024, closeTo(.903, .006));
+    expect(navigation.width / 1536, closeTo(.935, .008));
+    expect(navigation.height / 1024, closeTo(.079, .008));
     expect(placements.right, lessThan(calendar.left));
     expect(calendar.right, lessThan(insight.left));
     expect(planning.left, calendar.left);

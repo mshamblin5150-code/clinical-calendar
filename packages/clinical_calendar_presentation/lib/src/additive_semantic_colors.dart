@@ -55,12 +55,14 @@ final class ClinicalCalendarEntryVisuals
     required this.leadingRailWidth,
     required this.segmentWorkRail,
     required this.protectedDotGridCorner,
+    this.denseMonthChip = false,
   });
 
   final Color clinicalFill;
   final double leadingRailWidth;
   final bool segmentWorkRail;
   final bool protectedDotGridCorner;
+  final bool denseMonthChip;
 
   @override
   ClinicalCalendarEntryVisuals copyWith({
@@ -68,12 +70,14 @@ final class ClinicalCalendarEntryVisuals
     double? leadingRailWidth,
     bool? segmentWorkRail,
     bool? protectedDotGridCorner,
+    bool? denseMonthChip,
   }) => ClinicalCalendarEntryVisuals(
     clinicalFill: clinicalFill ?? this.clinicalFill,
     leadingRailWidth: leadingRailWidth ?? this.leadingRailWidth,
     segmentWorkRail: segmentWorkRail ?? this.segmentWorkRail,
     protectedDotGridCorner:
         protectedDotGridCorner ?? this.protectedDotGridCorner,
+    denseMonthChip: denseMonthChip ?? this.denseMonthChip,
   );
 
   @override
@@ -90,6 +94,7 @@ final class ClinicalCalendarEntryVisuals
       protectedDotGridCorner: t < .5
           ? protectedDotGridCorner
           : other.protectedDotGridCorner,
+      denseMonthChip: t < .5 ? denseMonthChip : other.denseMonthChip,
     );
   }
 }

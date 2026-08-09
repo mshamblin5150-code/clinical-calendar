@@ -142,7 +142,7 @@ Future<void> _pumpProof(
           key: const Key('heritage-field-notes-proof'),
           child: themeBundle.shellRenderer.build(
             slots: slots,
-            environmentName: 'ARCHIVE NO. CC-2026-08',
+            environmentName: 'CC-2026-08',
             onOpenMenu: _noop,
             onOpenDestination: _ignoreDestination,
             onOpenAttention: _noop,
@@ -251,13 +251,15 @@ final class _PlacementsProof extends StatelessWidget {
         accent: HeritageFieldNotesColors.clinical,
         completed: '0 hr',
         scheduled: '8 hr',
+        unscheduled: '82 hr',
       ),
       const SizedBox(height: 12),
       const _PlacementCard(
         name: 'INTERNAL MEDICINE',
         accent: HeritageFieldNotesColors.workMachinery,
-        completed: '42 hr',
-        scheduled: '24 hr',
+        completed: '0 hr',
+        scheduled: '8 hr',
+        unscheduled: '82 hr',
       ),
       const Spacer(),
       Text(
@@ -277,15 +279,18 @@ final class _PlacementCard extends StatelessWidget {
     required this.accent,
     required this.completed,
     required this.scheduled,
+    required this.unscheduled,
   });
 
   final String name;
   final Color accent;
   final String completed;
   final String scheduled;
+  final String unscheduled;
 
   @override
   Widget build(BuildContext context) => Container(
+    height: 290,
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
       color: HeritageFieldNotesColors.surfaceRaised,
@@ -318,11 +323,37 @@ final class _PlacementCard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 14),
+        const Spacer(),
+        Center(
+          child: SizedBox.square(
+            dimension: 92,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CircularProgressIndicator(
+                  value: completed == '0 hr' ? 0 : .47,
+                  strokeWidth: 9,
+                  color: accent,
+                  backgroundColor: HeritageFieldNotesColors.control,
+                ),
+                Center(
+                  child: Text(
+                    completed == '0 hr' ? '0%' : '47%',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const Spacer(),
         _MetricLine('$completed / 90 hr completed', accent),
         _MetricLine('$scheduled scheduled', HeritageFieldNotesColors.scheduled),
-        const _MetricLine(
-          '48 hr unscheduled',
+        _MetricLine(
+          '$unscheduled unscheduled',
           HeritageFieldNotesColors.unscheduled,
         ),
       ],
@@ -521,14 +552,14 @@ final class _InsightProof extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               const CircularProgressIndicator(
-                value: .47,
+                value: 0,
                 strokeWidth: 15,
                 color: HeritageFieldNotesColors.clinical,
                 backgroundColor: HeritageFieldNotesColors.control,
               ),
               Center(
                 child: Text(
-                  '42 hr\ncompleted',
+                  '0 hr\ncompleted',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
@@ -543,16 +574,38 @@ final class _InsightProof extends StatelessWidget {
         HeritageFieldNotesColors.primaryText,
       ),
       const _MetricLine(
-        'Completed          42 hr',
+        'Completed            0 hr',
         HeritageFieldNotesColors.completed,
       ),
       const _MetricLine(
-        'Scheduled           24 hr',
+        'Scheduled             8 hr',
         HeritageFieldNotesColors.scheduled,
       ),
       const _MetricLine(
-        'Unscheduled       24 hr',
+        'Unscheduled       82 hr',
         HeritageFieldNotesColors.unscheduled,
+      ),
+      const SizedBox(height: 10),
+      const Divider(),
+      const SizedBox(height: 8),
+      Text(
+        'Additional pace required',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+      Text(
+        '21 hr 16 min / week',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: HeritageFieldNotesColors.clinical,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        'TAP WHEEL TO VIEW NEXT PLACEMENT',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: HeritageFieldNotesColors.clinical,
+        ),
       ),
       const SizedBox(height: 18),
       const Divider(),

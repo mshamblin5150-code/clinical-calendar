@@ -94,18 +94,29 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         HeritageFieldNotesNineSliceFrame(
-          chromeInsets: const EdgeInsets.fromLTRB(60, 28, 60, 46),
+          chromeInsets: const EdgeInsets.fromLTRB(46, 46, 46, 10),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              final height = constraints.maxHeight;
+              // Concept #118 is 1536 by 1024. Resolve every dominant region
+              // from those normalized outer-viewport coordinates so the
+              // runtime retains the approved book-board composition at other
+              // landscape tablet sizes without uniformly scaling its text.
+              final outerWidth = constraints.maxWidth + 92;
+              final outerHeight = constraints.maxHeight + 56;
+              double x(double fraction) => outerWidth * fraction - 46;
+              double y(double fraction) => outerHeight * fraction - 46;
+              double w(double fraction) => outerWidth * fraction;
+              double h(double fraction) => outerHeight * fraction;
               return Stack(
                 children: [
+                  const Positioned.fill(
+                    child: ColoredBox(color: HeritageFieldNotesColors.canvas),
+                  ),
                   Positioned(
-                    left: width * .005,
-                    top: height * .006,
-                    width: width * .99,
-                    height: height * .082,
+                    left: x(.036),
+                    top: y(.057),
+                    width: w(.935),
+                    height: h(.073),
                     child: _HeritageFieldNotesCommandCrown(
                       environmentName: environmentName,
                       onOpenMenu: onOpenMenu,
@@ -115,10 +126,10 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    left: 0,
-                    top: height * .06,
-                    width: width * .19,
-                    height: height * .84,
+                    left: x(.036),
+                    top: y(.139),
+                    width: w(.188),
+                    height: h(.756),
                     child: _HeritageFieldNotesConsoleBay(
                       key: const Key('heritage-field-notes-placement-bay'),
                       accent: _HeritageFieldNotesBayAccent.brass,
@@ -127,10 +138,10 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    left: width * .21,
-                    top: height * .06,
-                    width: width * .555,
-                    height: height * .585,
+                    left: x(.229),
+                    top: y(.139),
+                    width: w(.514),
+                    height: h(.535),
                     child: _HeritageFieldNotesConsoleBay(
                       key: const Key('heritage-field-notes-calendar-bay'),
                       accent: _HeritageFieldNotesBayAccent.forest,
@@ -141,10 +152,10 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    left: width * .21,
-                    top: height * .655,
-                    width: width * .555,
-                    height: height * .245,
+                    left: x(.229),
+                    top: y(.683),
+                    width: w(.514),
+                    height: h(.211),
                     child: _HeritageFieldNotesConsoleBay(
                       key: const Key('heritage-field-notes-planning-bay'),
                       accent: _HeritageFieldNotesBayAccent.forest,
@@ -156,10 +167,10 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    left: width * .775,
-                    top: height * .06,
-                    width: width * .225,
-                    height: height * .84,
+                    left: x(.749),
+                    top: y(.139),
+                    width: w(.222),
+                    height: h(.756),
                     child: _HeritageFieldNotesConsoleBay(
                       key: const Key('heritage-field-notes-insight-bay'),
                       accent: _HeritageFieldNotesBayAccent.brass,
@@ -168,10 +179,10 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    left: 0,
-                    top: height * .904,
-                    width: width,
-                    height: height * .084,
+                    left: x(.036),
+                    top: y(.903),
+                    width: w(.935),
+                    height: h(.079),
                     child: _HeritageFieldNotesNavigationDeck(
                       selectedIndex: mobileIndex,
                       onOpenDestination: onOpenDestination,
@@ -183,11 +194,20 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
             },
           ),
         ),
+        const Positioned.fill(
+          child: ExcludeSemantics(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _HeritageFieldNotesArchiveChassisPainter(),
+              ),
+            ),
+          ),
+        ),
         const Positioned(
-          right: 5,
-          top: 126,
-          bottom: 126,
-          width: 30,
+          right: 0,
+          top: 112,
+          bottom: 112,
+          width: 34,
           child: _HeritageFieldNotesIndexTabs(),
         ),
       ],
@@ -326,6 +346,108 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
     planningSafeInsets: heritageFieldNotesPlanningSafeInsets,
     statusSafeInsets: heritageFieldNotesStatusSafeInsets,
   );
+}
+
+final class _HeritageFieldNotesArchiveChassisPainter extends CustomPainter {
+  const _HeritageFieldNotesArchiveChassisPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    const darkestWalnut = Color(0xFF21160F);
+    const walnut = Color(0xFF4A2F20);
+    const walnutHighlight = Color(0xFF765139);
+    const agedBrass = Color(0xFFB88A31);
+    const brassHighlight = Color(0xFFE0BD68);
+
+    final outer = Offset.zero & size;
+    final pageWindow = Rect.fromLTRB(46, 46, size.width - 46, size.height - 10);
+    final board = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(outer)
+      ..addRect(pageWindow);
+    canvas.drawPath(
+      board,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [walnutHighlight, walnut, darkestWalnut, walnut],
+          stops: [0, .32, .72, 1],
+        ).createShader(outer),
+    );
+    final grain = Paint()
+      ..color = brassHighlight.withValues(alpha: .13)
+      ..strokeWidth = 1;
+    for (double y = 13; y < 45; y += 7) {
+      canvas.drawLine(Offset(12, y), Offset(size.width - 12, y + 2), grain);
+    }
+    for (double x = 13; x < 45; x += 7) {
+      canvas.drawLine(Offset(x, 48), Offset(x + 2, size.height - 12), grain);
+      canvas.drawLine(
+        Offset(size.width - x, 48),
+        Offset(size.width - x - 2, size.height - 12),
+        grain,
+      );
+    }
+
+    canvas.drawRect(
+      pageWindow,
+      Paint()
+        ..color = darkestWalnut
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 18,
+    );
+    canvas.drawRect(
+      pageWindow.deflate(5),
+      Paint()
+        ..color = agedBrass
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5,
+    );
+    canvas.drawRect(
+      pageWindow.deflate(9),
+      Paint()
+        ..color = brassHighlight.withValues(alpha: .72)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+
+    for (final corner in [
+      const Alignment(-1, -1),
+      const Alignment(1, -1),
+      const Alignment(-1, 1),
+      const Alignment(1, 1),
+    ]) {
+      final center = Offset(
+        corner.x < 0 ? 36 : size.width - 36,
+        corner.y < 0 ? 36 : size.height - 28,
+      );
+      final plate = Rect.fromCenter(center: center, width: 34, height: 34);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(plate, const Radius.circular(5)),
+        Paint()..color = agedBrass,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(plate.deflate(3), const Radius.circular(3)),
+        Paint()
+          ..color = brassHighlight
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+      canvas.drawCircle(center, 4.5, Paint()..color = darkestWalnut);
+      canvas.drawCircle(
+        center.translate(-1, -1),
+        1.5,
+        Paint()..color = brassHighlight,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(
+    covariant _HeritageFieldNotesArchiveChassisPainter oldDelegate,
+  ) => false;
 }
 
 enum _HeritageFieldNotesBayAccent { forest, brass }
@@ -517,37 +639,46 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
       key: const Key('heritage-field-notes-command-crown'),
       height: compact ? 72 : 92,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14),
         child: Row(
           children: [
-            IconButton(
-              key: const Key('application-menu-action'),
-              tooltip: 'Open menu',
-              onPressed: onOpenMenu,
-              icon: const Icon(Icons.grid_view_outlined),
+            Container(
+              width: compact ? 44 : 52,
+              height: compact ? 44 : 52,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: context.clinicalColors.structure,
+                border: Border.all(
+                  color: context.clinicalColors.clinical,
+                  width: 2,
+                ),
+              ),
+              child: IconButton(
+                key: const Key('application-menu-action'),
+                tooltip: 'Open menu',
+                onPressed: onOpenMenu,
+                icon: const Icon(Icons.calendar_month_outlined),
+              ),
             ),
-            if (!enlargedText) ...[
-              const SizedBox(width: 8),
-              const Icon(Icons.calendar_month_outlined),
-              const SizedBox(width: 10),
-            ],
+            const SizedBox(width: 12),
             Expanded(
               child: enlargedText
                   ? const SizedBox.shrink()
-                  : Row(
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Flexible(
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              compact
-                                  ? 'CLINICAL CALENDAR'
-                                  : 'CLINICAL CALENDAR  ·  FIELD ARCHIVE',
-                              style: Theme.of(context).textTheme.labelLarge
+                              'CLINICAL CALENDAR',
+                              style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
-                                    letterSpacing: compact ? 1.2 : 2.1,
-                                    color: context.clinicalColors.clinical,
+                                    letterSpacing: compact ? 1.2 : 2.3,
+                                    color: context.clinicalColors.primaryText,
+                                    fontWeight: FontWeight.w800,
                                   ),
                             ),
                           ),
@@ -555,8 +686,13 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                         if (!compact && environmentName.trim().isNotEmpty) ...[
                           const SizedBox(width: 12),
                           Text(
-                            environmentName,
-                            style: Theme.of(context).textTheme.labelSmall,
+                            'FIELD ARCHIVE',
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  color: context.clinicalColors.clinical,
+                                  letterSpacing: 1.4,
+                                  fontWeight: FontWeight.w700,
+                                ),
                           ),
                         ],
                       ],
@@ -574,6 +710,26 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                     onOpenDestination(ClinicalCalendarDestination.help),
                 icon: const Icon(Icons.help_outline),
               ),
+            if (!compact && !enlargedText && environmentName.trim().isNotEmpty)
+              Container(
+                width: 142,
+                height: double.infinity,
+                margin: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: context.clinicalColors.insetBorder),
+                  ),
+                ),
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'ARCHIVE NO.\n$environmentName',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    letterSpacing: .8,
+                    height: 1.35,
+                  ),
+                ),
+              ),
             profileAvatar,
           ],
         ),
@@ -583,7 +739,7 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
       painter: _HeritageFieldNotesCrownPainter(
         structure: context.clinicalColors.structureRaised,
         border: context.clinicalColors.insetBorder,
-        brass: context.clinicalColors.workMachinery,
+        brass: context.clinicalColors.protectedDayAccent,
         forest: context.clinicalColors.clinical,
       ),
       child: content,
@@ -729,7 +885,7 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
                                   ? context.clinicalColors.clinical
                                   : null,
                             )
-                          : Row(
+                          : Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
@@ -738,8 +894,12 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
                                       ? context.clinicalColors.clinical
                                       : null,
                                 ),
-                                const SizedBox(width: 8),
-                                Text(destinations[index].$2),
+                                const SizedBox(height: 5),
+                                Text(
+                                  destinations[index].$2,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(letterSpacing: .8),
+                                ),
                               ],
                             ),
                     ),

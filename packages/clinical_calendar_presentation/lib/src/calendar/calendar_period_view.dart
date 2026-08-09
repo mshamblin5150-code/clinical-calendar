@@ -560,6 +560,11 @@ final class _MonthDayCell extends StatelessWidget {
         painter: _DayCellPainter(
           colors: context.clinicalColors,
           todayAccent: _todayAccent(context),
+          entryChipMode:
+              Theme.of(
+                context,
+              ).extension<ClinicalCalendarEntryVisuals>()?.denseMonthChip ??
+              false,
           protected: protected,
           work: work,
           today: today,
@@ -631,6 +636,48 @@ final class _DenseMonthMarker extends StatelessWidget {
       CalendarEntryKind.protectedDay => 'PROTECTED',
     };
     final additionalCount = entries.length - 1;
+    final entryVisuals = Theme.of(
+      context,
+    ).extension<ClinicalCalendarEntryVisuals>();
+    if (entryVisuals?.denseMonthChip ?? false) {
+      final accent = _entryAccent(context, entry);
+      return Container(
+        height: 22,
+        padding: const EdgeInsets.symmetric(horizontal: 5),
+        decoration: BoxDecoration(
+          color: accent,
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Row(
+          children: [
+            ThemeSemanticMarkIcon(
+              role: _entryRole(entry.kind),
+              size: 11,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.clip,
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: .35,
+                ),
+              ),
+            ),
+            if (additionalCount > 0)
+              Text(
+                '+$additionalCount',
+                style: const TextStyle(fontSize: 9, color: Colors.white),
+              ),
+          ],
+        ),
+      );
+    }
     return Row(
       children: [
         Container(width: 3, height: 16, color: _entryAccent(context, entry)),
@@ -1391,6 +1438,7 @@ final class _DayCellPainter extends CustomPainter {
   const _DayCellPainter({
     required this.colors,
     required this.todayAccent,
+    required this.entryChipMode,
     required this.protected,
     required this.work,
     required this.today,
@@ -1402,6 +1450,7 @@ final class _DayCellPainter extends CustomPainter {
 
   final ClinicalCalendarColors colors;
   final Color todayAccent;
+  final bool entryChipMode;
   final bool protected;
   final bool work;
   final bool today;
@@ -1416,13 +1465,15 @@ final class _DayCellPainter extends CustomPainter {
     final background = Paint()
       ..color = outside
           ? colors.canvas.withValues(alpha: .62)
+          : entryChipMode
+          ? colors.structure
           : protected
           ? colors.protectedDay
           : work
           ? colors.work
           : colors.structure;
     canvas.drawRect(rect, background);
-    if (protected) {
+    if (protected && !entryChipMode) {
       final stripe = Paint()
         ..color = colors.protectedDayAccent.withValues(
           alpha: .16 * decorationOpacity,
@@ -1436,7 +1487,7 @@ final class _DayCellPainter extends CustomPainter {
         );
       }
     }
-    if (work) {
+    if (work && !entryChipMode) {
       canvas.drawRect(
         Rect.fromLTWH(0, 0, 3, size.height),
         Paint()..color = colors.workMachinery,
@@ -1496,6 +1547,7 @@ final class _DayCellPainter extends CustomPainter {
   bool shouldRepaint(_DayCellPainter oldDelegate) =>
       colors != oldDelegate.colors ||
       todayAccent != oldDelegate.todayAccent ||
+      entryChipMode != oldDelegate.entryChipMode ||
       protected != oldDelegate.protected ||
       work != oldDelegate.work ||
       today != oldDelegate.today ||
