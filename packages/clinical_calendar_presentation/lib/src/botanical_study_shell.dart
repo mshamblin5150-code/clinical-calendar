@@ -7,6 +7,9 @@ import 'botanical_study_theme.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
+const botanicalStudyAxionLogoAsset =
+    'assets/botanical_study_raster/axion-delta-mark-v2.png';
+
 const botanicalStudyCompactDestinationInsets = EdgeInsets.fromLTRB(
   18,
   20,
@@ -396,12 +399,12 @@ final class _BotanicalStudyConsoleBay extends StatelessWidget {
         ),
         _BotanicalStudyBayShape.planning => const EdgeInsets.fromLTRB(
           12,
-          8,
+          11,
           12,
           10,
         ),
         _BotanicalStudyBayShape.insight => const EdgeInsets.fromLTRB(
-          12,
+          9,
           18,
           12,
           18,
@@ -576,26 +579,43 @@ final class _BotanicalStudyCommandCrown extends StatelessWidget {
       return SizedBox(
         key: const Key('botanical-study-command-crown'),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 10, 7),
+          padding: const EdgeInsets.fromLTRB(29, 8, 10, 7),
           child: Row(
             children: [
               Tooltip(
                 message: 'Open menu',
-                child: TextButton(
-                  key: const Key('application-menu-action'),
-                  onPressed: onOpenMenu,
-                  style: TextButton.styleFrom(
-                    foregroundColor: BotanicalStudyColors.focus,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    minimumSize: const Size(44, 44),
-                  ),
-                  child: const Text(
-                    'CLINICAL CALENDAR',
-                    style: TextStyle(
-                      fontSize: 27,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: .5,
+                child: Transform.translate(
+                  offset: const Offset(0, 5),
+                  child: TextButton(
+                    key: const Key('application-menu-action'),
+                    onPressed: onOpenMenu,
+                    style: TextButton.styleFrom(
+                      foregroundColor: BotanicalStudyColors.focus,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      minimumSize: const Size(44, 44),
                     ),
+                    child: const Text(
+                      'CLINICAL CALENDAR',
+                      style: TextStyle(
+                        fontSize: 29,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: .5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox.square(
+                dimension: 34,
+                child: ExcludeSemantics(
+                  child: Image.asset(
+                    botanicalStudyAxionLogoAsset,
+                    package: 'clinical_calendar_presentation',
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    color: BotanicalStudyColors.focus.withValues(alpha: .82),
+                    colorBlendMode: BlendMode.srcIn,
                   ),
                 ),
               ),
@@ -623,7 +643,14 @@ final class _BotanicalStudyCommandCrown extends StatelessWidget {
                 ),
               if (!enlargedText) ...[
                 const SizedBox(width: 22),
-                const SizedBox(width: 245, child: _BotanicalStudyScale()),
+                Transform.translate(
+                  offset: const Offset(0, 5),
+                  child: const SizedBox(
+                    width: 254,
+                    height: 38,
+                    child: _BotanicalStudyScale(),
+                  ),
+                ),
                 const SizedBox(width: 8),
               ],
               IconButton(
@@ -727,17 +754,25 @@ final class _BotanicalStudyScale extends StatelessWidget {
   const _BotanicalStudyScale();
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: _BotanicalStudyScalePainter(
-      color: BotanicalStudyColors.textSecondary,
+  Widget build(BuildContext context) => ColoredBox(
+    color: BotanicalStudyColors.canvas,
+    child: CustomPaint(
+      painter: _BotanicalStudyScalePainter(
+        color: BotanicalStudyColors.textSecondary,
+        textStyle: DefaultTextStyle.of(context).style,
+      ),
     ),
   );
 }
 
 final class _BotanicalStudyScalePainter extends CustomPainter {
-  const _BotanicalStudyScalePainter({required this.color});
+  const _BotanicalStudyScalePainter({
+    required this.color,
+    required this.textStyle,
+  });
 
   final Color color;
+  final TextStyle textStyle;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -745,8 +780,8 @@ final class _BotanicalStudyScalePainter extends CustomPainter {
       ..color = color
       ..strokeWidth = 1;
     const labels = ['cm', '0', '1', '2', '3', '4', '5'];
-    const style = TextStyle(fontSize: 9);
-    final lineY = size.height * .62;
+    final style = textStyle.copyWith(fontSize: 9, color: color);
+    final lineY = size.height * .72;
     canvas.drawLine(Offset(32, lineY), Offset(size.width - 4, lineY), paint);
     for (var index = 0; index < labels.length; index++) {
       final x = index == 0 ? 0.0 : 34 + (size.width - 42) * (index - 1) / 5;
@@ -754,22 +789,19 @@ final class _BotanicalStudyScalePainter extends CustomPainter {
         canvas.drawLine(Offset(x, lineY - 7), Offset(x, lineY + 7), paint);
       }
       final painter = TextPainter(
-        text: TextSpan(
-          text: labels[index],
-          style: style.copyWith(color: color),
-        ),
+        text: TextSpan(text: labels[index], style: style),
         textDirection: TextDirection.ltr,
       )..layout();
       painter.paint(
         canvas,
-        Offset(x - (index == 0 ? 0 : painter.width / 2), 0),
+        Offset(x - (index == 0 ? 0 : painter.width / 2), 7),
       );
     }
   }
 
   @override
   bool shouldRepaint(covariant _BotanicalStudyScalePainter oldDelegate) =>
-      oldDelegate.color != color;
+      oldDelegate.color != color || oldDelegate.textStyle != textStyle;
 }
 
 final class _BotanicalStudyCrownPainter extends CustomPainter {
@@ -844,12 +876,42 @@ final class _BotanicalStudyNavigationDeck extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const destinations = [
-      (Icons.today_outlined, 'TODAY'),
-      (Icons.calendar_month_outlined, 'CALENDAR'),
-      (Icons.track_changes_outlined, 'PLACEMENTS'),
-      (Icons.notifications_outlined, 'ATTENTION'),
-      (Icons.settings_outlined, 'SETTINGS'),
+    const items = [
+      _BotanicalNavigationItem(
+        icon: Icons.calendar_today_outlined,
+        label: 'TODAY',
+        action: _BotanicalNavigationAction.calendar,
+        integratedFlex: 328,
+        integratedOffset: 25,
+      ),
+      _BotanicalNavigationItem(
+        icon: Icons.calendar_month_outlined,
+        label: 'CALENDAR',
+        action: _BotanicalNavigationAction.calendar,
+        integratedFlex: 313,
+        integratedOffset: 6,
+      ),
+      _BotanicalNavigationItem(
+        icon: Icons.work_outline,
+        label: 'PLACEMENTS',
+        action: _BotanicalNavigationAction.placements,
+        integratedFlex: 298,
+        integratedOffset: 2,
+      ),
+      _BotanicalNavigationItem(
+        icon: Icons.warning_amber_outlined,
+        label: 'ATTENTION',
+        action: _BotanicalNavigationAction.attention,
+        integratedFlex: 265,
+        integratedOffset: 13,
+      ),
+      _BotanicalNavigationItem(
+        icon: Icons.settings_outlined,
+        label: 'SETTINGS',
+        action: _BotanicalNavigationAction.settings,
+        integratedFlex: 382,
+        integratedOffset: -55,
+      ),
     ];
     final iconsOnly =
         compact || MediaQuery.textScalerOf(context).scale(1) > 1.3;
@@ -868,26 +930,26 @@ final class _BotanicalStudyNavigationDeck extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Row(
         children: [
-          for (var index = 0; index < destinations.length; index++)
+          for (var index = 0; index < items.length; index++)
             Expanded(
+              flex: integrated ? items[index].integratedFlex : 1,
               child: Semantics(
                 button: true,
                 selected: index == selectedIndex,
-                label: destinations[index].$2,
+                label: items[index].label,
                 child: InkWell(
                   key: Key('botanical-study-navigation-$index'),
                   onTap: () {
-                    switch (index) {
-                      case 0:
-                      case 1:
+                    switch (items[index].action) {
+                      case _BotanicalNavigationAction.calendar:
                         onOpenDestination(ClinicalCalendarDestination.calendar);
-                      case 2:
+                      case _BotanicalNavigationAction.placements:
                         onOpenDestination(
                           ClinicalCalendarDestination.clinicalPlacements,
                         );
-                      case 3:
+                      case _BotanicalNavigationAction.attention:
                         onOpenAttention();
-                      case 4:
+                      case _BotanicalNavigationAction.settings:
                         onOpenDestination(ClinicalCalendarDestination.settings);
                     }
                   },
@@ -905,7 +967,7 @@ final class _BotanicalStudyNavigationDeck extends StatelessWidget {
                               : Colors.transparent,
                           width: 4,
                         ),
-                        right: index < destinations.length - 1
+                        right: index < items.length - 1
                             ? BorderSide(
                                 color: context.clinicalColors.insetBorder
                                     .withValues(alpha: .5),
@@ -914,38 +976,54 @@ final class _BotanicalStudyNavigationDeck extends StatelessWidget {
                       ),
                     ),
                     child: Center(
-                      child: iconsOnly
-                          ? Icon(
-                              destinations[index].$1,
-                              color: integrated && index == selectedIndex
-                                  ? BotanicalStudyColors.canvas
-                                  : index == selectedIndex
-                                  ? context.clinicalColors.workMachinery
-                                  : null,
-                            )
-                          : Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  destinations[index].$1,
-                                  color: integrated && index == selectedIndex
-                                      ? BotanicalStudyColors.canvas
-                                      : index == selectedIndex
-                                      ? context.clinicalColors.workMachinery
-                                      : null,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  destinations[index].$2,
-                                  style: TextStyle(
+                      child: Transform.translate(
+                        offset: Offset(
+                          integrated ? items[index].integratedOffset : 0,
+                          0,
+                        ),
+                        child: iconsOnly
+                            ? Icon(
+                                items[index].icon,
+                                size: integrated ? 30 : null,
+                                color: integrated && index == selectedIndex
+                                    ? BotanicalStudyColors.canvas
+                                    : index == selectedIndex
+                                    ? context.clinicalColors.workMachinery
+                                    : integrated
+                                    ? context.clinicalColors.clinical
+                                    : null,
+                              )
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    items[index].icon,
+                                    size: integrated ? 30 : null,
                                     color: integrated && index == selectedIndex
                                         ? BotanicalStudyColors.canvas
+                                        : index == selectedIndex
+                                        ? context.clinicalColors.workMachinery
+                                        : integrated
+                                        ? context.clinicalColors.clinical
                                         : null,
-                                    fontWeight: FontWeight.w600,
                                   ),
-                                ),
-                              ],
-                            ),
+                                  SizedBox(width: integrated ? 12 : 8),
+                                  Text(
+                                    items[index].label,
+                                    style: TextStyle(
+                                      fontSize: integrated ? 16 : null,
+                                      color:
+                                          integrated && index == selectedIndex
+                                          ? BotanicalStudyColors.canvas
+                                          : integrated
+                                          ? context.clinicalColors.clinical
+                                          : null,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
                     ),
                   ),
                 ),
@@ -955,4 +1033,23 @@ final class _BotanicalStudyNavigationDeck extends StatelessWidget {
       ),
     );
   }
+}
+
+enum _BotanicalNavigationAction { calendar, placements, attention, settings }
+
+@immutable
+final class _BotanicalNavigationItem {
+  const _BotanicalNavigationItem({
+    required this.icon,
+    required this.label,
+    required this.action,
+    required this.integratedFlex,
+    required this.integratedOffset,
+  });
+
+  final IconData icon;
+  final String label;
+  final _BotanicalNavigationAction action;
+  final int integratedFlex;
+  final double integratedOffset;
 }

@@ -452,6 +452,11 @@ final class _CalendarToolbar extends StatelessWidget {
         ? const EdgeInsets.fromLTRB(22, 8, 22, 8)
         : archiveTreatment
         ? EdgeInsets.zero
+        : Theme.of(
+                context,
+              ).extension<ClinicalCalendarPresentationPolicy>()?.toolbarStyle ==
+              CalendarToolbarStyle.conceptTitle
+        ? const EdgeInsets.fromLTRB(6, 5, 6, 5)
         : const EdgeInsets.fromLTRB(6, 6, 6, 8),
     child: LayoutBuilder(
       builder: (context, constraints) {
@@ -694,35 +699,31 @@ final class _ArchiveCalendarLegend extends StatelessWidget {
     ),
     child: const Row(
       children: [
-        _ArchiveLegendItem('CLINICAL'),
+        _ArchiveLegendItem(CalendarEntryKind.clinicalSession),
         SizedBox(width: 38),
-        _ArchiveLegendItem('WORK'),
+        _ArchiveLegendItem(CalendarEntryKind.workShift),
         SizedBox(width: 38),
-        _ArchiveLegendItem('PROTECTED'),
+        _ArchiveLegendItem(CalendarEntryKind.protectedDay),
       ],
     ),
   );
 }
 
 final class _ArchiveLegendItem extends StatelessWidget {
-  const _ArchiveLegendItem(this.label);
+  const _ArchiveLegendItem(this.kind);
 
-  final String label;
+  final CalendarEntryKind kind;
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (label) {
-      'CLINICAL' => context.clinicalColors.clinical,
-      'WORK' => context.clinicalColors.workMachinery,
-      _ => context.clinicalColors.protectedDayAccent,
-    };
+    final color = kind.archiveColor(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _ArchiveEntryMark(label: label, size: 22, color: color),
+        _ArchiveEntryMark(kind: kind, size: 22, color: color),
         const SizedBox(width: 8),
         Text(
-          label,
+          kind.archiveLabel,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
             color: color,
             fontWeight: FontWeight.w700,
@@ -770,6 +771,8 @@ final class _MonthView extends StatelessWidget {
           context,
         ).extension<ClinicalCalendarPresentationPolicy>()?.showMonthLegend ??
         false;
+    final monthCellMetrics = _monthCellMetrics(context);
+    final weekdayHeaderHeight = monthCellMetrics.weekdayHeaderHeight;
     if (!useBoundedGrid) {
       return _buildMonthGrid(context, dates, weekdayLabels, null);
     }
@@ -780,6 +783,7 @@ final class _MonthView extends StatelessWidget {
           _weekdayHeader(
             context,
             weekdayLabels,
+            height: weekdayHeaderHeight,
             colored:
                 Theme.of(context)
                     .extension<ClinicalCalendarPresentationPolicy>()
@@ -790,6 +794,7 @@ final class _MonthView extends StatelessWidget {
             context,
             dates,
             constraints.maxHeight - (showLegend ? 38 : 0),
+            weekdayHeaderHeight,
           ),
           if (showLegend) const _BotanicalMonthLegend(),
         ],
@@ -808,23 +813,30 @@ final class _MonthView extends StatelessWidget {
       _weekdayHeader(
         context,
         weekdayLabels,
+        height: _monthCellMetrics(context).weekdayHeaderHeight,
         colored:
             Theme.of(context)
                 .extension<ClinicalCalendarPresentationPolicy>()
                 ?.colorWeekdayHeader ??
             false,
       ),
-      _monthGrid(context, dates, boundedHeight),
+      _monthGrid(
+        context,
+        dates,
+        boundedHeight,
+        _monthCellMetrics(context).weekdayHeaderHeight,
+      ),
     ],
   );
 
   Widget _weekdayHeader(
     BuildContext context,
     List<String> weekdayLabels, {
+    required double height,
     required bool colored,
   }) {
     final header = SizedBox(
-      height: 32,
+      height: height,
       child: Row(
         children: [
           for (final label in weekdayLabels)
@@ -832,7 +844,12 @@ final class _MonthView extends StatelessWidget {
               child: Center(
                 child: Text(
                   label.toUpperCase(),
-                  style: Theme.of(context).textTheme.labelMedium,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontSize: _monthCellMetrics(context).weekdayLabelFontSize,
+                    fontWeight: _monthCellMetrics(
+                      context,
+                    ).weekdayLabelFontWeight,
+                  ),
                 ),
               ),
             ),
@@ -848,6 +865,7 @@ final class _MonthView extends StatelessWidget {
     BuildContext context,
     List<LocalDate> dates,
     double? boundedHeight,
+    double weekdayHeaderHeight,
   ) {
     Widget dayCell(int index) {
       final date = dates[index];
@@ -858,7 +876,9 @@ final class _MonthView extends StatelessWidget {
         selected: selectedDates.contains(date),
         entries: snapshot.entriesOn(date),
         compact: compact,
-        dense: boundedHeight != null && (boundedHeight - 32) / 6 < 88,
+        dense:
+            boundedHeight != null &&
+            (boundedHeight - weekdayHeaderHeight) / 6 < 88,
         twelveHourTime: twelveHourTime,
         onActivate: onActivate,
       );
@@ -868,7 +888,9 @@ final class _MonthView extends StatelessWidget {
       context,
     ).extension<ClinicalCalendarPresentationPolicy>()?.monthColumnFlex;
     if (columnFlex != null && boundedHeight != null) {
-      final rowHeight = math.max(44, (boundedHeight - 32) / 6).toDouble();
+      final rowHeight = math
+          .max(44, (boundedHeight - weekdayHeaderHeight) / 6)
+          .toDouble();
       return SizedBox(
         height: rowHeight * 6,
         child: Column(
@@ -982,6 +1004,7 @@ final class _MonthDayCell extends StatelessWidget {
     final neutralCells = CalendarPeriodViewportPolicy.usesNeutralMonthCells(
       context,
     );
+    final monthCellMetrics = _monthCellMetrics(context);
     final archiveEntryVisuals =
         CalendarPeriodViewportPolicy.usesArchiveEntryVisuals(context);
     return Semantics(
@@ -1017,11 +1040,12 @@ final class _MonthDayCell extends StatelessWidget {
           selectionWidth: context.accessibilityTokens.selectionWidth,
           decorationOpacity: context.accessibilityTokens.decorationOpacity,
           instrumentChrome: instrumentChrome,
+          monthCellMetrics: monthCellMetrics,
         ),
         child: InkWell(
           onTap: () => onActivate(date, entries),
           child: Padding(
-            padding: const EdgeInsets.all(5),
+            padding: monthCellMetrics.cellPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1104,11 +1128,7 @@ final class _DenseMonthEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = switch (entry.kind) {
-      CalendarEntryKind.workShift => 'WORK',
-      CalendarEntryKind.clinicalSession => 'CLINICAL',
-      CalendarEntryKind.protectedDay => 'PROTECTED',
-    };
+    final label = entry.kind.archiveLabel;
     final accent = _entryAccent(context, entry);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -1168,11 +1188,7 @@ final class _DenseMonthMarker extends StatelessWidget {
   Widget build(BuildContext context) {
     if (entries.isEmpty) return const SizedBox.shrink();
     final entry = entries.first;
-    final label = switch (entry.kind) {
-      CalendarEntryKind.workShift => 'WORK',
-      CalendarEntryKind.clinicalSession => 'CLINICAL',
-      CalendarEntryKind.protectedDay => 'PROTECTED',
-    };
+    final label = entry.kind.archiveLabel;
     final additionalCount = entries.length - 1;
     final archiveTreatment =
         CalendarPeriodViewportPolicy.usesArchiveEntryVisuals(context);
@@ -1187,7 +1203,7 @@ final class _DenseMonthMarker extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _ArchiveEntryMark(label: label, size: 15, color: Colors.white),
+            _ArchiveEntryMark(kind: entry.kind, size: 15, color: Colors.white),
             const SizedBox(width: 4),
             Expanded(
               child: Text(
@@ -1218,9 +1234,12 @@ final class _DenseMonthMarker extends StatelessWidget {
             CalendarDenseMarkerStyle.chip &&
         MediaQuery.textScalerOf(context).scale(1) <= 1.3;
     if (asChip && !instrumentChrome) {
+      final monthCellMetrics = _monthCellMetrics(context);
       return Container(
-        height: 28,
-        padding: const EdgeInsets.symmetric(horizontal: 7),
+        height: monthCellMetrics.markerHeight,
+        padding: EdgeInsets.symmetric(
+          horizontal: monthCellMetrics.markerHorizontalPadding,
+        ),
         decoration: _entryDecoration(context, entry).copyWith(
           border: Border.all(
             color: _entryAccent(context, entry).withValues(alpha: .18),
@@ -1231,10 +1250,10 @@ final class _DenseMonthMarker extends StatelessWidget {
           children: [
             ThemeSemanticMarkIcon(
               role: _entryRole(entry.kind),
-              size: 16,
+              size: monthCellMetrics.markerIconSize,
               color: _entryAccent(context, entry),
             ),
-            const SizedBox(width: 7),
+            SizedBox(width: monthCellMetrics.markerGap),
             Expanded(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -1243,7 +1262,7 @@ final class _DenseMonthMarker extends StatelessWidget {
                   label,
                   maxLines: 1,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: monthCellMetrics.markerFontSize,
                     fontWeight: FontWeight.w600,
                     color: _entryAccent(context, entry),
                   ),
@@ -1316,24 +1335,31 @@ final class _DenseMonthMarker extends StatelessWidget {
 
 final class _ArchiveEntryMark extends StatelessWidget {
   const _ArchiveEntryMark({
-    required this.label,
+    required this.kind,
     required this.size,
     required this.color,
   });
 
-  final String label;
+  final CalendarEntryKind kind;
   final double size;
   final Color color;
 
   @override
-  Widget build(BuildContext context) => switch (label) {
-    'WORK' || 'WORK SHIFT' => SizedBox.square(
+  Widget build(BuildContext context) => switch (kind) {
+    CalendarEntryKind.workShift => SizedBox.square(
       dimension: size,
       child: CustomPaint(painter: _ArchiveWorkStripePainter(color)),
     ),
-    'PROTECTED' ||
-    'PROTECTED DAY' => Icon(Icons.shield, size: size, color: color),
-    _ => Icon(Icons.add, size: size, color: color),
+    CalendarEntryKind.protectedDay => Icon(
+      Icons.shield,
+      size: size,
+      color: color,
+    ),
+    CalendarEntryKind.clinicalSession => Icon(
+      Icons.add,
+      size: size,
+      color: color,
+    ),
   };
 }
 
@@ -1378,6 +1404,12 @@ final class _DayNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final monthCellMetrics = _monthCellMetrics(context);
+    final conceptAccent =
+        Theme.of(
+          context,
+        ).extension<ClinicalCalendarPresentationPolicy>()?.selectedDayBorder ??
+        _todayAccent(context);
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final scalesDayNumber =
         CalendarPeriodViewportPolicy.scalesDayNumberWithText(context);
@@ -1474,6 +1506,32 @@ final class _DayNumber extends StatelessWidget {
             ),
           ],
         ),
+      );
+    }
+    if (monthCellMetrics.showTodayLabel) {
+      return Row(
+        children: [
+          Text(
+            '${date.day}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: monthCellMetrics.dayNumberFontSize,
+              fontWeight: today ? FontWeight.w700 : FontWeight.w500,
+              color: today ? conceptAccent : null,
+            ),
+          ),
+          if (today) ...[
+            const SizedBox(width: 10),
+            Text(
+              'TODAY',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: conceptAccent,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: .5,
+              ),
+            ),
+          ],
+        ],
       );
     }
     return Row(
@@ -2190,6 +2248,7 @@ final class _DayCellPainter extends CustomPainter {
     required this.selectionWidth,
     required this.decorationOpacity,
     required this.instrumentChrome,
+    required this.monthCellMetrics,
   });
 
   final ClinicalCalendarColors colors;
@@ -2206,6 +2265,7 @@ final class _DayCellPainter extends CustomPainter {
   final double selectionWidth;
   final double decorationOpacity;
   final bool instrumentChrome;
+  final CalendarMonthCellMetrics monthCellMetrics;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -2249,19 +2309,41 @@ final class _DayCellPainter extends CustomPainter {
       rect.deflate(.5),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = today ? math.max(2, selectionWidth) : 1
-        ..color = today
+        ..strokeWidth = monthCellMetrics.roundedSelection
+            ? monthCellMetrics.gridStrokeWidth
+            : today
+            ? math.max(2, selectionWidth)
+            : monthCellMetrics.gridStrokeWidth
+        ..color = monthCellMetrics.roundedSelection
+            ? colors.insetBorder.withValues(alpha: monthCellMetrics.gridOpacity)
+            : today
             ? todayAccent
             : archiveTreatment
             ? colors.insetBorder.withValues(alpha: .52)
             : colors.insetBorder,
     );
+    if (monthCellMetrics.roundedSelection && today && !selected) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect.deflate(3), const Radius.circular(7)),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = selectionWidth
+          ..color = selectedBorder ?? todayAccent,
+      );
+    }
     if (selected) {
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = selectionWidth
         ..color = selectedBorder ?? colors.clinical;
       final selectedRect = rect.deflate(3);
+      if (monthCellMetrics.roundedSelection) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(selectedRect, const Radius.circular(7)),
+          paint,
+        );
+        return;
+      }
       const dash = 5.0;
       const gap = 3.0;
       for (
@@ -2314,8 +2396,15 @@ final class _DayCellPainter extends CustomPainter {
       selectedBorder != oldDelegate.selectedBorder ||
       selectionWidth != oldDelegate.selectionWidth ||
       decorationOpacity != oldDelegate.decorationOpacity ||
-      instrumentChrome != oldDelegate.instrumentChrome;
+      instrumentChrome != oldDelegate.instrumentChrome ||
+      monthCellMetrics != oldDelegate.monthCellMetrics;
 }
+
+CalendarMonthCellMetrics _monthCellMetrics(BuildContext context) =>
+    Theme.of(
+      context,
+    ).extension<ClinicalCalendarPresentationPolicy>()?.monthCellMetrics ??
+    const CalendarMonthCellMetrics();
 
 final class _AgendaBackgroundPainter extends CustomPainter {
   const _AgendaBackgroundPainter({
@@ -2466,6 +2555,20 @@ ThemeSemanticRole _entryRole(CalendarEntryKind kind) => switch (kind) {
   CalendarEntryKind.clinicalSession => ThemeSemanticRole.clinicalSession,
   CalendarEntryKind.protectedDay => ThemeSemanticRole.protectedDay,
 };
+
+extension _ArchiveCalendarEntryKind on CalendarEntryKind {
+  String get archiveLabel => switch (this) {
+    CalendarEntryKind.workShift => 'WORK',
+    CalendarEntryKind.clinicalSession => 'CLINICAL',
+    CalendarEntryKind.protectedDay => 'PROTECTED',
+  };
+
+  Color archiveColor(BuildContext context) => switch (this) {
+    CalendarEntryKind.workShift => context.clinicalColors.workMachinery,
+    CalendarEntryKind.clinicalSession => context.clinicalColors.clinical,
+    CalendarEntryKind.protectedDay => context.clinicalColors.protectedDayAccent,
+  };
+}
 
 IconData _variantEntryIcon(CalendarEntryKind kind) => switch (kind) {
   CalendarEntryKind.workShift => Icons.work_outline,
