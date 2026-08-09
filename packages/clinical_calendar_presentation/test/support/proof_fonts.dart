@@ -13,9 +13,13 @@ const _nonWindowsMeanChannelErrorTolerance = 0.003;
 const _nonWindowsHighDeltaPixelTolerance = 0.0025;
 const _highDeltaThreshold = 128;
 
+GoldenFileComparator createProofGoldenComparator(
+  GoldenFileComparator delegate,
+) => _ProofGoldenComparator(delegate);
+
 Future<void> prepareProofEnvironment() async {
   if (!Platform.isWindows && goldenFileComparator is! _ProofGoldenComparator) {
-    goldenFileComparator = _ProofGoldenComparator(goldenFileComparator);
+    goldenFileComparator = createProofGoldenComparator(goldenFileComparator);
   }
   await loadProofFonts();
 }
