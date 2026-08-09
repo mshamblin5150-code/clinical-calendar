@@ -449,13 +449,13 @@ void main() {
         : Directory('packages/clinical_calendar_presentation');
     final bundles = ClinicalCalendarThemeBundleRegistry.standard.galleryBundles;
 
-    test('registry audits ownership and remains Pending while partial', () {
+    test('complete registry passes ownership and catalog coverage audit', () {
       final result = ThemeRegistryAcceptanceAuditor.audit(
         ClinicalCalendarThemeBundleRegistry.standard,
       );
 
-      expect(result.passed, isFalse);
-      expect(result.failures, contains(contains('seven')));
+      expect(result.passed, isTrue);
+      expect(result.failures, isEmpty);
       for (final bundle in bundles) {
         expect(result.failures, isNot(contains(contains(bundle.id))));
       }

@@ -345,13 +345,16 @@ void main() {
     expect(resolved.isFallback, isTrue);
   });
 
-  test('Graphite remains fallback until the complete catalog activates', () {
-    final resolved = ClinicalCalendarThemeBundleRegistry.standard
-        .resolveApplied(graphiteThemeId);
+  test('every catalog ID resolves as its authoritative complete bundle', () {
+    final registry = ClinicalCalendarThemeBundleRegistry.standard;
 
-    expect(resolved.storedId, graphiteThemeId);
-    expect(resolved.bundle, isA<GraphiteThemeBundle>());
-    expect(resolved.isFallback, isTrue);
+    for (final bundle in registry.selectableBundles) {
+      final resolved = registry.resolveApplied(bundle.id);
+
+      expect(resolved.storedId, bundle.id);
+      expect(resolved.bundle, same(bundle));
+      expect(resolved.isFallback, isFalse);
+    }
   });
 
   test(
@@ -394,11 +397,22 @@ void main() {
     },
   );
 
-  test('partial catalog is not selectable or visible', () {
+  test('closed catalog activates exactly seven immutable IDs together', () {
     final registry = ClinicalCalendarThemeBundleRegistry.standard;
 
-    expect(registry.isSelectableCatalogComplete, isFalse);
-    expect(registry.selectableBundles, isEmpty);
+    expect(registry.isSelectableCatalogComplete, isTrue);
+    expect(
+      registry.selectableBundles.map((bundle) => bundle.id),
+      orderedEquals(const [
+        variantFThemeId,
+        graphiteThemeId,
+        federationClassicThemeId,
+        federation2399ThemeId,
+        coastalCalmThemeId,
+        botanicalStudyThemeId,
+        heritageFieldNotesThemeId,
+      ]),
+    );
   });
 
   test('duplicate bundles are rejected', () {

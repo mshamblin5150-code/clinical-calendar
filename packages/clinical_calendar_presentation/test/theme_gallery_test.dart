@@ -81,41 +81,49 @@ void main() {
     },
   );
 
-  testWidgets('Settings gates the Gallery until catalog activation', (
-    tester,
-  ) async {
-    StudentSettings? saved;
-    await tester.binding.setSurfaceSize(const Size(768, 1024));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const VariantFVisualTheme().createThemeData(),
-        home: Scaffold(
-          body: SettingsTemplatesSurface(
-            settings: StudentSettings(),
-            scheduleTemplates: const [],
-            newTemplateId: () => 'unused',
-            onSaveSettings: (settings) async => saved = settings,
-            onSaveTemplate: (_) async {},
-            onRemoveTemplate: (_) async {},
+  testWidgets(
+    'Settings exposes the complete Gallery after catalog activation',
+    (tester) async {
+      StudentSettings? saved;
+      await tester.binding.setSurfaceSize(const Size(768, 1024));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: const VariantFVisualTheme().createThemeData(),
+          home: Scaffold(
+            body: SettingsTemplatesSurface(
+              settings: StudentSettings(),
+              scheduleTemplates: const [],
+              newTemplateId: () => 'unused',
+              onSaveSettings: (settings) async => saved = settings,
+              onSaveTemplate: (_) async {},
+              onRemoveTemplate: (_) async {},
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    expect(find.byKey(const Key('theme-setting')), findsOneWidget);
-    expect(find.byKey(const Key('theme-gallery')), findsNothing);
+      expect(find.byKey(const Key('theme-setting')), findsNothing);
+      expect(find.byKey(const Key('theme-gallery')), findsOneWidget);
+      for (final bundle
+          in ClinicalCalendarThemeBundleRegistry.standard.selectableBundles) {
+        expect(
+          find.byKey(Key('theme-gallery-row-${bundle.id}')),
+          findsOneWidget,
+        );
+      }
 
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('save-settings-templates-action')),
-      500,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.byKey(const Key('save-settings-templates-action')));
-    await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('save-settings-templates-action')),
+        500,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.byKey(const Key('save-settings-templates-action')));
+      await tester.pumpAndSettle();
 
-    expect(saved?.themeId, variantFThemeId);
-  });
+      expect(saved?.themeId, graphiteThemeId);
+    },
+  );
 
   testWidgets('keyboard navigation changes only the inspected identity', (
     tester,

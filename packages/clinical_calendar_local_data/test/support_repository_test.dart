@@ -113,7 +113,7 @@ void main() {
         final settings = support.studentSettings.find(studentId: _studentId)!;
         expect(settings.value.weekStart, DateTime.monday);
         expect(settings.value.timeDisplay, TimeDisplayPreference.twelveHour);
-        expect(settings.value.themeId, StudentSettings.variantFThemeId);
+        expect(settings.value.themeId, StudentSettings.graphiteThemeId);
         expect(
           settings.value.synchronization,
           SynchronizationPreference.paused,
