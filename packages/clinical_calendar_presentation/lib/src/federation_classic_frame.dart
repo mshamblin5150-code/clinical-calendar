@@ -6,8 +6,8 @@ import 'graphite_frame.dart';
 
 const federationClassicFrameAsset =
     'assets/federation_classic_raster/panel-nine-slice-v1.png';
-const federationClassicLandscapeChassisAsset =
-    'assets/federation_classic_raster/dashboard-chassis-landscape-v1.png';
+const federationClassicRailNineSliceAsset =
+    'assets/federation_classic_raster/lcars-rail-nine-slice-v1.png';
 const federationClassicCalendarSafeInsets = EdgeInsets.fromLTRB(38, 46, 38, 46);
 const federationClassicPlacementsSafeInsets = EdgeInsets.fromLTRB(
   30,
@@ -19,18 +19,147 @@ const federationClassicPlanningSafeInsets = EdgeInsets.fromLTRB(34, 46, 34, 42);
 const federationClassicStatusSafeInsets = EdgeInsets.fromLTRB(30, 44, 34, 44);
 
 /// Piecewise golden-exemplar chassis measured from the approved issue #113
-/// composition. It deliberately paints independent rails and seams instead of
-/// stretching a complete dashboard bitmap.
+/// composition. It renders the major rails as independent nine-slice raster
+/// pieces instead of stretching a complete dashboard bitmap.
 final class FederationClassicLandscapeChassis extends StatelessWidget {
   const FederationClassicLandscapeChassis({required this.child, super.key});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: const _FederationClassicLandscapePainter(),
-    child: child,
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      const CustomPaint(painter: _FederationClassicLandscapePainter()),
+      const FederationClassicRasterRails(),
+      child,
+    ],
   );
+}
+
+final class FederationClassicLandscapeGeometry {
+  const FederationClassicLandscapeGeometry._();
+
+  static const exemplar = Size(1586, 992);
+  static const crown = Rect.fromLTWH(194, 39, 1374, 57);
+  static const placements = Rect.fromLTWH(90, 112, 306, 702);
+  static const calendar = Rect.fromLTWH(406, 112, 736, 473);
+  static const planning = Rect.fromLTWH(406, 591, 736, 276);
+  static const insight = Rect.fromLTWH(1162, 112, 367, 702);
+  static const navigation = Rect.fromLTWH(10, 887, 1566, 97);
+
+  static Rect scale(Rect rect, Size size) => Rect.fromLTWH(
+    rect.left * size.width / exemplar.width,
+    rect.top * size.height / exemplar.height,
+    rect.width * size.width / exemplar.width,
+    rect.height * size.height / exemplar.height,
+  );
+}
+
+/// Loads one neutral rail material and renders each chassis rail separately
+/// with [Canvas.drawImageNine]. Only the center and edge seams stretch.
+final class FederationClassicRasterRails extends StatefulWidget {
+  const FederationClassicRasterRails({super.key});
+
+  static const centerSlice = Rect.fromLTRB(64, 64, 448, 448);
+
+  @override
+  State<FederationClassicRasterRails> createState() =>
+      _FederationClassicRasterRailsState();
+}
+
+final class _FederationClassicRasterRailsState
+    extends State<FederationClassicRasterRails> {
+  ImageStream? _stream;
+  ImageInfo? _image;
+  late final ImageStreamListener _listener = ImageStreamListener(
+    (image, _) {
+      if (mounted) setState(() => _image = image);
+    },
+    onError: (Object error, StackTrace? stackTrace) {
+      if (!mounted) return;
+      GraphitePresentationFailureBoundary.report(
+        context,
+        error,
+        themeId: 'federation-classic',
+        isGraphite: false,
+      );
+    },
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = const AssetImage(
+      federationClassicRailNineSliceAsset,
+      package: 'clinical_calendar_presentation',
+    ).resolve(createLocalImageConfiguration(context));
+    if (next.key == _stream?.key) return;
+    _stream?.removeListener(_listener);
+    _image?.dispose();
+    _image = null;
+    _stream = next..addListener(_listener);
+  }
+
+  @override
+  void dispose() {
+    _stream?.removeListener(_listener);
+    _image?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _image == null
+        ? null
+        : _FederationClassicRasterRailsPainter(_image!.image),
+  );
+}
+
+final class _FederationClassicRasterRailsPainter extends CustomPainter {
+  const _FederationClassicRasterRailsPainter(this.image);
+
+  final ui.Image image;
+
+  static const _rails = <(Rect, Color)>[
+    (Rect.fromLTWH(10, 39, 145, 164), Color(0xFFAF8ED6)),
+    (Rect.fromLTWH(474, 53, 629, 42), Color(0xFFAF8ED6)),
+    (Rect.fromLTWH(1306, 53, 262, 42), Color(0xFFF5AE25)),
+    (Rect.fromLTWH(10, 761, 186, 112), Color(0xFFFF8057)),
+    (Rect.fromLTWH(1376, 830, 201, 40), Color(0xFFFF8057)),
+    (Rect.fromLTWH(18, 896, 155, 79), Color(0xFF65448C)),
+    (Rect.fromLTWH(1385, 896, 183, 79), Color(0xFFFF8057)),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final (conceptRect, color) in _rails) {
+      final destination = FederationClassicLandscapeGeometry.scale(
+        conceptRect,
+        size,
+      );
+      canvas.save();
+      canvas.clipRRect(
+        RRect.fromRectAndRadius(
+          destination,
+          Radius.circular(48 * size.width / 1586),
+        ),
+      );
+      canvas.drawImageNine(
+        image,
+        FederationClassicRasterRails.centerSlice,
+        destination,
+        Paint()
+          ..colorFilter = ColorFilter.mode(color, BlendMode.modulate)
+          ..filterQuality = FilterQuality.high,
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FederationClassicRasterRailsPainter oldDelegate) =>
+      oldDelegate.image != image;
 }
 
 final class _FederationClassicLandscapePainter extends CustomPainter {
@@ -90,26 +219,10 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
     );
     _rounded(canvas, const Rect.fromLTWH(1306, 53, 262, 42), _amber, 22);
 
-    _panel(
-      canvas,
-      const Rect.fromLTWH(90, 112, 306, 702),
-      const Radius.circular(12),
-    );
-    _panel(
-      canvas,
-      const Rect.fromLTWH(406, 112, 736, 473),
-      const Radius.circular(12),
-    );
-    _panel(
-      canvas,
-      const Rect.fromLTWH(406, 591, 736, 276),
-      const Radius.circular(12),
-    );
-    _panel(
-      canvas,
-      const Rect.fromLTWH(1162, 112, 367, 702),
-      const Radius.circular(12),
-    );
+    _panel(canvas, FederationClassicLandscapeGeometry.placements);
+    _panel(canvas, FederationClassicLandscapeGeometry.calendar);
+    _panel(canvas, FederationClassicLandscapeGeometry.planning);
+    _panel(canvas, FederationClassicLandscapeGeometry.insight);
 
     _segments(
       canvas,
@@ -149,9 +262,9 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
     canvas.restore();
   }
 
-  void _panel(Canvas canvas, Rect rect, Radius radius) {
+  void _panel(Canvas canvas, Rect rect) {
     canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, radius),
+      RRect.fromRectAndRadius(rect, const Radius.circular(12)),
       Paint()
         ..color = _outline.withValues(alpha: .78)
         ..style = PaintingStyle.stroke

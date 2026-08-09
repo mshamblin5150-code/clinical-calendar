@@ -107,7 +107,7 @@ void main() {
       federationClassic.frame.assetPaths,
       containsAll([
         federationClassicFrameAsset,
-        federationClassicLandscapeChassisAsset,
+        federationClassicRailNineSliceAsset,
       ]),
     );
     expect(federationClassic.gallery.swatches, hasLength(5));
@@ -758,12 +758,10 @@ void main() {
 
       expect(find.byType(FederationClassicLandscapeChassis), findsOneWidget);
       expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
+      expect(find.byType(FederationClassicRasterRails), findsOneWidget);
       expect(
-        find.descendant(
-          of: find.byType(FederationClassicLandscapeChassis),
-          matching: find.byType(Image),
-        ),
-        findsNothing,
+        FederationClassicRasterRails.centerSlice,
+        const Rect.fromLTRB(64, 64, 448, 448),
       );
       expect(find.byType(GraphiteNineSliceFrame), findsNothing);
       expect(find.byType(VariantFNineSliceFrame), findsNothing);

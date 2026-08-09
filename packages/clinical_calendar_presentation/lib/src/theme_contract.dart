@@ -302,7 +302,7 @@ final class FederationClassicShellRenderer
   String get themeId => federationClassicThemeId;
 
   @override
-  String get rendererId => 'federation-classic-owned-responsive-console-v2';
+  String get rendererId => 'federation-classic-owned-responsive-console-v3';
 
   @override
   Widget build({
@@ -1392,7 +1392,7 @@ final class FederationClassicThemeBundle
     primaryAsset: federationClassicFrameAsset,
     assetPaths: [
       federationClassicFrameAsset,
-      federationClassicLandscapeChassisAsset,
+      federationClassicRailNineSliceAsset,
     ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
@@ -1407,7 +1407,7 @@ final class FederationClassicThemeBundle
   @override
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: federationClassicThemeId,
-    rendererId: 'federation-classic-owned-responsive-console-v2',
+    rendererId: 'federation-classic-owned-responsive-console-v3',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [

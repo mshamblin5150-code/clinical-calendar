@@ -94,13 +94,13 @@ final class FederationClassicApplicationShell extends StatelessWidget {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
+          final size = Size(width, height);
+          Rect rect(Rect conceptRect) =>
+              FederationClassicLandscapeGeometry.scale(conceptRect, size);
           return Stack(
             children: [
-              Positioned(
-                left: width * (194 / 1586),
-                top: height * (39 / 992),
-                width: width * (1374 / 1586),
-                height: height * (57 / 992),
+              Positioned.fromRect(
+                rect: rect(FederationClassicLandscapeGeometry.crown),
                 child: _FederationClassicCommandCrown(
                   environmentName: environmentName,
                   onOpenMenu: onOpenMenu,
@@ -110,11 +110,8 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                   integrated: true,
                 ),
               ),
-              Positioned(
-                left: width * (90 / 1586),
-                top: height * (112 / 992),
-                width: width * (306 / 1586),
-                height: height * (702 / 992),
+              Positioned.fromRect(
+                rect: rect(FederationClassicLandscapeGeometry.placements),
                 child: _FederationClassicConsoleBay(
                   key: const Key('federation-classic-placement-bay'),
                   accent: _FederationClassicBayAccent.lilac,
@@ -123,11 +120,8 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                   child: slots.placementDock,
                 ),
               ),
-              Positioned(
-                left: width * (406 / 1586),
-                top: height * (112 / 992),
-                width: width * (736 / 1586),
-                height: height * (473 / 992),
+              Positioned.fromRect(
+                rect: rect(FederationClassicLandscapeGeometry.calendar),
                 child: _FederationClassicConsoleBay(
                   key: const Key('federation-classic-calendar-bay'),
                   accent: _FederationClassicBayAccent.salmon,
@@ -138,27 +132,21 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
-                left: width * (406 / 1586),
-                top: height * (591 / 992),
-                width: width * (736 / 1586),
-                height: height * (276 / 992),
+              Positioned.fromRect(
+                rect: rect(FederationClassicLandscapeGeometry.planning),
                 child: _FederationClassicConsoleBay(
                   key: const Key('federation-classic-planning-bay'),
                   accent: _FederationClassicBayAccent.salmon,
                   shape: _FederationClassicBayShape.planning,
                   integrated: true,
                   child: VariantFPlanningBayMode(
-                    expandedByDefault: true,
+                    expandedByDefault: false,
                     child: slots.planningRegion,
                   ),
                 ),
               ),
-              Positioned(
-                left: width * (1162 / 1586),
-                top: height * (112 / 992),
-                width: width * (367 / 1586),
-                height: height * (702 / 992),
+              Positioned.fromRect(
+                rect: rect(FederationClassicLandscapeGeometry.insight),
                 child: _FederationClassicConsoleBay(
                   key: const Key('federation-classic-insight-bay'),
                   accent: _FederationClassicBayAccent.lilac,
@@ -167,11 +155,8 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                   child: slots.insightRail,
                 ),
               ),
-              Positioned(
-                left: width * (10 / 1586),
-                top: height * (887 / 992),
-                width: width * (1566 / 1586),
-                height: height * (97 / 992),
+              Positioned.fromRect(
+                rect: rect(FederationClassicLandscapeGeometry.navigation),
                 child: _FederationClassicNavigationDeck(
                   selectedIndex: mobileIndex,
                   onOpenDestination: onOpenDestination,

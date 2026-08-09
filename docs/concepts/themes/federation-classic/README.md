@@ -38,12 +38,23 @@ fictional Android-tablet fixture rather than using either concept image.
 
 ## Concept-fidelity landscape chassis
 
-`packages/clinical_calendar_presentation/assets/federation_classic_raster/dashboard-chassis-landscape-v1.png`
-is retained as rejected v2 provenance only. Production no longer stretches
-this complete dashboard bitmap. Landscape uses piecewise Flutter-painted
-rails and seams measured at the approved concept's native 1586 by 992
+`docs/themes/acceptance/proofs/federation-classic-v2/rejected-dashboard-chassis-landscape-v1.png`
+is retained as rejected v2 provenance only and is excluded from production
+assets and preflight. Production no longer stretches this complete dashboard
+bitmap. Landscape uses independently positioned
+nine-slice raster rails measured at the approved concept's native 1586 by 992
 viewport; the normalized transparent nine-slice remains the primary frame for
 portrait, compact, and destination surfaces.
+
+The piecewise landscape rails use
+`packages/clinical_calendar_presentation/assets/federation_classic_raster/lcars-rail-nine-slice-v1.png`,
+a deterministic 512 by 512 neutral material tile drawn locally from simple
+rounded geometry. Each independently positioned LCARS rail clips and tints the
+tile, while only its 384 by 384 center and edge seams stretch. SHA-256:
+`b2bba0adc8ef15433b05b127577d39dc4c74e6ff764f7ed184311b36c7879c0c`.
+All four corner alpha values are zero; the tile contains no text, symbols,
+controls, or operational data. No generative model or other theme asset was
+used.
 
 The chassis was generated with the built-in image-generation workflow using
 `calendar-dashboard-concept-v3.png` only as a reference for silhouette,

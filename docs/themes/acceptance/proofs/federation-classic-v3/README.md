@@ -9,15 +9,16 @@ baseline.
 
 The approved issue #113 concept is the independent normative source. The
 landscape runtime uses concept-measured live-region rectangles at the native
-1586 by 992 exemplar and piecewise Flutter-painted LCARS rails; it does not
-stretch the rejected full-dashboard raster.
+1586 by 992 exemplar and independently stretched nine-slice raster LCARS
+rails; it does not stretch the rejected full-dashboard raster.
 
 ## Evidence
 
 - `approved-concept-landscape.png`: untouched approved #113 concept.
-- `runtime-landscape-1586x992.png`: deterministic production renderer with
-  fictional Calendar, Planning, Clinical Placements, progress, and attention
-  data.
+- `runtime-landscape-1586x992.png`: deterministic production shell renderer
+  with the production `CalendarPeriodView` and representative fictional
+  fixtures at the public Planning, Clinical Placements, progress, and
+  attention slot boundary.
 - `landscape-concept-vs-runtime.png`: equal-size labeled comparison.
 - `runtime-portrait-900x1440.png`: Federation Classic's distinct vertical
   LCARS-spine portrait recomposition.
@@ -27,9 +28,12 @@ stretch the rejected full-dashboard raster.
 
 Renderer contract: `federation-classic-owned-responsive-console-v3`.
 
-Automated checks prove independent concept-measured geometry, shared live
-content visibility, callback routing, responsive behavior, and immutable
-goldens. They support review but cannot grant visual approval.
+The separate `ClinicalCalendarApp` integration test renders this shell with
+the actual production `CalendarPeriodView`, Planning region,
+`PlacementDock`, `PlacementProgressRail`, and `AttentionRail`, including the
+real Planning command surface. Automated checks also prove independent
+concept-measured geometry, callback routing, responsive behavior, and
+immutable goldens. They support review but cannot grant visual approval.
 
 ## SHA-256
 
