@@ -77,10 +77,10 @@ Automated validation records:
 - operational text, icons, controls, and data: absent;
 - live-content bays: opaque, near-black, and uninterrupted.
 
-The rejected deterministic v2 through v6 proofs remain under their versioned
+The rejected deterministic v2 through v7 proofs remain under their versioned
 acceptance-proof directories as immutable negative baselines. The replacement
-candidate is under `docs/themes/acceptance/proofs/federation-classic-v7/`.
-All use the approved concept's native 1586 by 992 landscape viewport, but v7
+candidate is under `docs/themes/acceptance/proofs/federation-classic-v8/`.
+All use the approved concept's native 1586 by 992 landscape viewport, but v8
 is the only current review candidate.
 
 ## Axion identity mark

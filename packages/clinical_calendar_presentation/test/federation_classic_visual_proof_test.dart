@@ -27,7 +27,10 @@ void main() {
       find.byKey(const Key('federation-classic-axion-delta')),
       findsOneWidget,
     );
-    expect(find.text('CLINICAL CALENDAR'), findsNothing);
+    expect(find.text('CLINICAL CALENDAR'), findsOneWidget);
+    final studentInitials = tester.getRect(find.text('AB'));
+    expect(studentInitials.center.dx, closeTo(1501, 2));
+    expect(studentInitials.center.dy, closeTo(74, 2));
     final title = tester.getRect(
       find.byKey(const Key('calendar-period-title')),
     );
@@ -76,7 +79,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v7/federation_classic_landscape_1586x992.png',
+        'goldens/federation_classic_v8/federation_classic_landscape_1586x992.png',
       ),
     );
   });
@@ -86,10 +89,16 @@ void main() {
   ) async {
     await _pumpProof(tester, const Size(900, 1440));
 
+    expect(find.text('CLINICAL CALENDAR'), findsOneWidget);
+    expect(
+      find.byKey(const Key('federation-classic-axion-delta')),
+      findsOneWidget,
+    );
+
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v7/federation_classic_portrait_900x1440.png',
+        'goldens/federation_classic_v8/federation_classic_portrait_900x1440.png',
       ),
     );
   });
@@ -124,7 +133,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v7/'
+        'goldens/federation_classic_v8/'
         'federation_classic_portrait_200_percent_900x1440.png',
       ),
     );

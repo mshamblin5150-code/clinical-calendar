@@ -2,8 +2,11 @@
 
 Issue: [#133](https://github.com/mshamblin5150-code/clinical-calendar/issues/133)
 
-Status: **candidate awaiting explicit maintainer visual approval**. Passing
-tests and similarity checks do not grant approval.
+Status: **REJECTED by the maintainer on 2026-08-09**. The Axion delta was
+inserted, but the product name was incorrectly removed from the crown, the
+Student identity was not centered on its amber rail, and LCARS junctions such
+as the lower-left salmon elbow remained visibly disjointed. This package is
+retained only as a negative baseline.
 
 V7 addresses the maintainer's rejection of v6:
 

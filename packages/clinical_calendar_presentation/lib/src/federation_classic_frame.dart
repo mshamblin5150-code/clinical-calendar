@@ -188,7 +188,7 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
       ..close();
     canvas.drawPath(upperElbow, Paint()..color = _lilac);
     canvas.drawRect(
-      const Rect.fromLTWH(155, 39, 12, 66),
+      const Rect.fromLTWH(164, 39, 11, 66),
       Paint()..color = _lilac,
     );
     _rectSegments(canvas, const [
@@ -197,7 +197,6 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
       (Rect.fromLTWH(10, 362, 79, 57), _salmon),
       (Rect.fromLTWH(10, 421, 79, 110), _salmon),
       (Rect.fromLTWH(10, 534, 79, 188), _amber),
-      (Rect.fromLTWH(10, 732, 79, 120), Color(0xFFD56843)),
     ]);
     final lowerElbow = Path()
       ..moveTo(10, 732)
@@ -210,7 +209,7 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
       ..lineTo(58, 873)
       ..quadraticBezierTo(10, 873, 10, 825)
       ..close();
-    canvas.drawPath(lowerElbow, Paint()..color = _salmon);
+    canvas.drawPath(lowerElbow, Paint()..color = const Color(0xFFD56843));
     final lowerAmberCap = Path()
       ..moveTo(143, 813)
       ..lineTo(150, 813)

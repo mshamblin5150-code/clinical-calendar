@@ -6,13 +6,13 @@ import 'package:image/image.dart' as img;
 void main() {
   final concept = img.decodePng(
     File(
-      '../../docs/themes/acceptance/proofs/federation-classic-v7/'
+      '../../docs/themes/acceptance/proofs/federation-classic-v8/'
       'approved-concept-landscape.png',
     ).readAsBytesSync(),
   )!;
   final runtime = img.decodePng(
     File(
-      'test/goldens/federation_classic_v7/'
+      'test/goldens/federation_classic_v8/'
       'federation_classic_landscape_1586x992.png',
     ).readAsBytesSync(),
   )!;
@@ -60,6 +60,39 @@ void main() {
     stdout.writeln('${entry.key}-boundary: ${score.toStringAsFixed(4)}');
     if (score < minimumPanelBoundarySimilarity) failed = true;
   }
+  const junctionRegions =
+      <String, ({int left, int top, int width, int height})>{
+        'upper-left-elbow': (left: 10, top: 39, width: 157, height: 164),
+        'lower-left-elbow': (left: 10, top: 732, width: 186, height: 141),
+        'crown-left-seam': (left: 150, top: 39, width: 35, height: 66),
+        'crown-center-seam': (left: 1070, top: 48, width: 45, height: 52),
+        'crown-right-seam': (left: 1295, top: 48, width: 40, height: 52),
+        'right-lower-elbow': (left: 1370, top: 775, width: 207, height: 95),
+        'navigation-left-elbow': (left: 10, top: 887, width: 180, height: 97),
+        'navigation-right-elbow': (
+          left: 1375,
+          top: 887,
+          width: 201,
+          height: 97,
+        ),
+      };
+  const maximumJunctionColorError = <String, double>{
+    // The concept elbow has a subtle material gradient; production keeps the
+    // same silhouette and average lilac without reintroducing overlay bands.
+    'upper-left-elbow': .15,
+    'lower-left-elbow': .08,
+    'crown-left-seam': .10,
+    'crown-center-seam': .10,
+    'crown-right-seam': .12,
+    'right-lower-elbow': .10,
+    'navigation-left-elbow': .10,
+    'navigation-right-elbow': .10,
+  };
+  for (final entry in junctionRegions.entries) {
+    final error = _meanRgbError(concept, runtime, entry.value);
+    stdout.writeln('${entry.key}-color-error: ${error.toStringAsFixed(4)}');
+    if (error > maximumJunctionColorError[entry.key]!) failed = true;
+  }
   // Isolate the ring itself; the adjacent metric ledger is not wheel chrome.
   const wheelRegion = (left: 1162, top: 162, width: 146, height: 146);
   final wheelScore = _iou(concept, runtime, wheelRegion);
@@ -75,6 +108,26 @@ void main() {
   );
   if (runtimeBanding > conceptBanding + .025) failed = true;
   if (failed) exitCode = 1;
+}
+
+double _meanRgbError(
+  img.Image concept,
+  img.Image runtime,
+  ({int left, int top, int width, int height}) region,
+) {
+  var error = 0.0;
+  for (var y = region.top; y < region.top + region.height; y++) {
+    for (var x = region.left; x < region.left + region.width; x++) {
+      final expected = concept.getPixel(x, y);
+      final actual = runtime.getPixel(x, y);
+      error +=
+          ((expected.rNormalized - actual.rNormalized).abs() +
+              (expected.gNormalized - actual.gNormalized).abs() +
+              (expected.bNormalized - actual.bNormalized).abs()) /
+          3;
+    }
+  }
+  return error / (region.width * region.height);
 }
 
 double _rowLuminanceRange(
