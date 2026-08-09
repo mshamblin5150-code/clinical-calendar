@@ -51,8 +51,8 @@ but they cannot replace maintainer review.
 
 ```text
 9d7de52026ffe05e7bca073693a65be502afc74c7d805a28005e56d2c1877a14  approved-concept-landscape.png
-b4e288bbe9136131d0e47447afe5bf79796c0f321a5cc2ebcbd6b73c1bd6ae8d  landscape-concept-vs-runtime.png
-718a4be1e00ca07ae3d4de41a6a1effbde5b6ec358cd524ad09d7cedd57cdd72  runtime-landscape-1586x992.png
+573200bffbbab227e41330bd2828d7ddd22889a3175e1027089c7c332bc344d8  landscape-concept-vs-runtime.png
+36d15b50c1c69661aafcb32eb67b50eec4eafe8ab323399b9230303ab631044a  runtime-landscape-1586x992.png
 2d07ac9d1dfd067017ebec7ef7eb81042befc17c1e1547ef8892f3a897c5366f  runtime-portrait-200-percent-900x1440.png
 bb616f86ccdcb78865fe25df19c64629a133157ba5f58bc8fa4f1745b23ae7fd  runtime-portrait-900x1440.png
 ```

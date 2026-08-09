@@ -31,6 +31,16 @@ void main() {
     final studentInitials = tester.getRect(find.text('AB'));
     expect(studentInitials.center.dx, closeTo(1501, 2));
     expect(studentInitials.center.dy, closeTo(74, 2));
+    final addScheduleTarget = tester.getRect(
+      find.widgetWithIcon(IconButton, Icons.add),
+    );
+    final studentMenuTarget = tester.getRect(
+      find.byKey(const Key('federation-classic-help-menu')),
+    );
+    expect(addScheduleTarget.width, greaterThanOrEqualTo(43.99));
+    expect(addScheduleTarget.height, greaterThanOrEqualTo(43.99));
+    expect(studentMenuTarget.width, greaterThanOrEqualTo(43.99));
+    expect(studentMenuTarget.height, greaterThanOrEqualTo(43.99));
     final title = tester.getRect(
       find.byKey(const Key('calendar-period-title')),
     );
