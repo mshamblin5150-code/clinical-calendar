@@ -607,7 +607,14 @@ final class _InsightProof extends StatelessWidget {
           color: HeritageFieldNotesColors.clinical,
         ),
       ),
-      const SizedBox(height: 18),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(
+          onPressed: _noop,
+          child: const Text('SHOW PRECEPTOR BREAKDOWN'),
+        ),
+      ),
+      const SizedBox(height: 6),
       const Divider(),
       const SizedBox(height: 10),
       const _SectionTitle('NEEDS ATTENTION'),
@@ -618,7 +625,11 @@ final class _InsightProof extends StatelessWidget {
       ),
       const _AttentionCard(
         icon: Icons.fact_check_outlined,
-        title: 'INITIAL SELF-ASSESSMENT',
+        title: 'INITIAL SELF-ASSESSMENT\nACCEPTANCE FAMILY MEDICINE',
+      ),
+      const _AttentionCard(
+        icon: Icons.fact_check_outlined,
+        title: 'INITIAL SELF-ASSESSMENT\nINTERNAL MEDICINE',
       ),
       const _AttentionCard(
         icon: Icons.warning_amber_outlined,
