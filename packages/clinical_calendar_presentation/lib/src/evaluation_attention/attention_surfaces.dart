@@ -244,82 +244,107 @@ final class _AttentionRow extends StatelessWidget {
   final bool expanded;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: context.clinicalColors.structureRaised,
-    child: InkWell(
-      key: Key('attention-item-${item.id}'),
-      onTap: onOpen,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 56),
-        decoration: BoxDecoration(
-          border: Border(
-            left: BorderSide(
-              color: _urgencyColor(context, item.urgency),
-              width: 3,
-            ),
-            top: BorderSide(color: context.clinicalColors.insetBorder),
-            right: BorderSide(color: context.clinicalColors.insetBorder),
-            bottom: BorderSide(color: context.clinicalColors.insetBorder),
+  Widget build(BuildContext context) {
+    final outlined =
+        InsightRailPresentationPolicy.maybeOf(context)?.outlinedAttentionRows ??
+        false;
+    final outlineColor = outlined
+        ? context.clinicalColors.workMachinery.withValues(alpha: .35)
+        : context.clinicalColors.insetBorder;
+    return Material(
+      color: context.clinicalColors.structureRaised,
+      borderRadius: outlined ? BorderRadius.circular(8) : null,
+      clipBehavior: outlined ? Clip.antiAlias : Clip.none,
+      child: InkWell(
+        key: Key('attention-item-${item.id}'),
+        onTap: onOpen,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 56),
+          decoration: BoxDecoration(
+            border: outlined
+                ? Border.all(color: outlineColor)
+                : Border(
+                    left: BorderSide(
+                      color: _urgencyColor(context, item.urgency),
+                      width: 3,
+                    ),
+                    top: BorderSide(color: outlineColor),
+                    right: BorderSide(color: outlineColor),
+                    bottom: BorderSide(color: outlineColor),
+                  ),
+            borderRadius: outlined ? BorderRadius.circular(8) : null,
+          ),
+          foregroundDecoration: outlined
+              ? BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: _urgencyColor(context, item.urgency),
+                      width: 3,
+                    ),
+                  ),
+                )
+              : null,
+          padding: const EdgeInsets.all(9),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if ((ClinicalCalendarSemanticMarkScope.maybeOf(
+                            context,
+                          )?.themeId !=
+                          null &&
+                      ClinicalCalendarSemanticMarkScope.maybeOf(
+                            context,
+                          )?.themeId !=
+                          variantFThemeId) ||
+                  context.accessibilityTokens.enhanced)
+                ThemeSemanticMarkIcon(
+                  role: item.urgency == AttentionUrgency.approaching
+                      ? ThemeSemanticRole.scheduledProgress
+                      : ThemeSemanticRole.urgent,
+                  color: _urgencyColor(context, item.urgency),
+                  size: 20,
+                )
+              else
+                Icon(
+                  _kindIcon(item),
+                  color: _urgencyColor(context, item.urgency),
+                  size: 20,
+                ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      item.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      item.detail,
+                      maxLines: expanded ? null : 3,
+                      overflow: expanded ? null : TextOverflow.ellipsis,
+                    ),
+                    if (expanded) ...[
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: onOpen,
+                          icon: const Icon(Icons.arrow_forward, size: 18),
+                          label: Text(_actionLabel(item.destination)),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (!expanded) const Icon(Icons.chevron_right, size: 20),
+            ],
           ),
         ),
-        padding: const EdgeInsets.all(9),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if ((ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId !=
-                        null &&
-                    ClinicalCalendarSemanticMarkScope.maybeOf(
-                          context,
-                        )?.themeId !=
-                        variantFThemeId) ||
-                context.accessibilityTokens.enhanced)
-              ThemeSemanticMarkIcon(
-                role: item.urgency == AttentionUrgency.approaching
-                    ? ThemeSemanticRole.scheduledProgress
-                    : ThemeSemanticRole.urgent,
-                color: _urgencyColor(context, item.urgency),
-                size: 20,
-              )
-            else
-              Icon(
-                _kindIcon(item),
-                color: _urgencyColor(context, item.urgency),
-                size: 20,
-              ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    item.title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Text(
-                    item.detail,
-                    maxLines: expanded ? null : 3,
-                    overflow: expanded ? null : TextOverflow.ellipsis,
-                  ),
-                  if (expanded) ...[
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: onOpen,
-                        icon: const Icon(Icons.arrow_forward, size: 18),
-                        label: Text(_actionLabel(item.destination)),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (!expanded) const Icon(Icons.chevron_right, size: 20),
-          ],
-        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 Color _urgencyColor(BuildContext context, AttentionUrgency urgency) =>

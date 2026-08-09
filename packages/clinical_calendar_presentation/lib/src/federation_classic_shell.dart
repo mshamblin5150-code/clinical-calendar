@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
 import 'federation_classic_frame.dart';
+import 'federation_classic_theme.dart';
 import 'insight_rail_presentation_policy.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
@@ -157,6 +158,7 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                     placementProgressLayout:
                         PlacementProgressRailLayout.sideBySide,
                     expandedAttentionRows: true,
+                    outlinedAttentionRows: true,
                     child: slots.insightRail,
                   ),
                 ),
@@ -335,6 +337,11 @@ final class _FederationClassicCalendarViewport extends StatelessWidget {
         useBoundedMonthGrid: true,
         scaleDayNumberWithText: true,
         toolbarLayout: CalendarPeriodToolbarLayout.stackedCentered,
+        compactWeekdayLabels: true,
+        uppercasePeriodTitle: true,
+        monthWeekRows: 7,
+        todayAccentOverride: FederationClassicColors.scheduled,
+        todayBackgroundOverride: FederationClassicColors.canvas,
         child: child,
       );
       if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
@@ -521,17 +528,21 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'CLINICAL CALENDAR',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              color: const Color(0xFFFFE4BE),
-                              fontSize: 30,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: .1,
-                            ),
+                    child: Transform.scale(
+                      scaleX: .88,
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'CLINICAL CALENDAR',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: const Color(0xFFFFE4BE),
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: .1,
+                              ),
+                        ),
                       ),
                     ),
                   ),
@@ -780,15 +791,15 @@ final class _FederationClassicNavigationDeck extends StatelessWidget {
         final iconsOnly =
             vertical ||
             compact ||
-            constraints.maxWidth < (integrated ? 1500 : 900) ||
+            (!integrated && constraints.maxWidth < 900) ||
             MediaQuery.textScalerOf(context).scale(1) > 1.3;
         if (integrated) {
           const buttonRects = [
-            Rect.fromLTWH(144, 7, 146, 83),
-            Rect.fromLTWH(355, 7, 289, 83),
-            Rect.fromLTWH(680, 7, 200, 83),
-            Rect.fromLTWH(950, 7, 215, 83),
-            Rect.fromLTWH(1223, 7, 161, 83),
+            Rect.fromLTWH(144, 11, 146, 75),
+            Rect.fromLTWH(355, 11, 289, 75),
+            Rect.fromLTWH(680, 11, 200, 75),
+            Rect.fromLTWH(950, 11, 215, 75),
+            Rect.fromLTWH(1223, 11, 161, 75),
           ];
           final scaleX = constraints.maxWidth / 1566;
           final scaleY = constraints.maxHeight / 97;
@@ -960,25 +971,33 @@ final class _FederationClassicNavigationButton extends StatelessWidget {
                       ? Theme.of(context).colorScheme.onPrimary
                       : context.clinicalColors.workMachinery,
                 )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
+              : Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Icon(
-                      item.icon,
-                      color: selected
-                          ? Theme.of(context).colorScheme.onPrimary
-                          : context.clinicalColors.workMachinery,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      item.label,
-                      style: TextStyle(
+                    Positioned(
+                      top: 7,
+                      child: Icon(
+                        item.icon,
+                        size: 30,
                         color: selected
                             ? Theme.of(context).colorScheme.onPrimary
                             : context.clinicalColors.workMachinery,
-                        fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 5,
+                      child: Text(
+                        item.label,
+                        style: TextStyle(
+                          color: selected
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : context.clinicalColors.workMachinery,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                          fontSize: 16,
+                          letterSpacing: .6,
+                        ),
                       ),
                     ),
                   ],

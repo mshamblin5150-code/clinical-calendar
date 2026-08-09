@@ -6,13 +6,13 @@ import 'package:image/image.dart' as img;
 void main() {
   final concept = img.decodePng(
     File(
-      '../../docs/themes/acceptance/proofs/federation-classic-v4/'
+      '../../docs/themes/acceptance/proofs/federation-classic-v5/'
       'approved-concept-landscape.png',
     ).readAsBytesSync(),
   )!;
   final runtime = img.decodePng(
     File(
-      'test/goldens/federation_classic_v4/'
+      'test/goldens/federation_classic_v5/'
       'federation_classic_landscape_1586x992.png',
     ).readAsBytesSync(),
   )!;
@@ -27,14 +27,19 @@ void main() {
     'navigation': (left: 0, top: 875, width: 1586, height: 117),
   };
 
-  // Pinned against rejected v3: its right rail (0.6280) and navigation
-  // (0.6091) must remain below this acceptance floor.
-  const minimumSimilarity = 0.68;
+  // Pinned above rejected v4's measured negative baseline: crown 0.8668,
+  // left rails 0.9087, right rails 0.7329, and navigation 0.6987.
+  const minimumSimilarity = <String, double>{
+    'crown': .87,
+    'left-rails': .90,
+    'right-rails': .735,
+    'navigation': .71,
+  };
   var failed = false;
   for (final entry in regions.entries) {
     final score = _iou(concept, runtime, entry.value);
     stdout.writeln('${entry.key}: ${score.toStringAsFixed(4)}');
-    if (score < minimumSimilarity) failed = true;
+    if (score < minimumSimilarity[entry.key]!) failed = true;
   }
   if (failed) exitCode = 1;
 }

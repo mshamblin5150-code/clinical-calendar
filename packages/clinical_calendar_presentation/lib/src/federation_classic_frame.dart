@@ -7,7 +7,7 @@ import 'graphite_frame.dart';
 const federationClassicFrameAsset =
     'assets/federation_classic_raster/panel-nine-slice-v1.png';
 const federationClassicRailNineSliceAsset =
-    'assets/federation_classic_raster/lcars-rail-nine-slice-v1.png';
+    'assets/federation_classic_raster/lcars-rail-nine-slice-v2.png';
 const federationClassicCalendarSafeInsets = EdgeInsets.fromLTRB(38, 46, 38, 46);
 const federationClassicPlacementsSafeInsets = EdgeInsets.fromLTRB(
   30,
@@ -122,21 +122,21 @@ final class _FederationClassicRasterRailsPainter extends CustomPainter {
 
   final ui.Image image;
 
-  static const _rails = <(Rect, Color)>[
-    (Rect.fromLTWH(10, 39, 145, 164), Color(0xFFAF8ED6)),
-    (Rect.fromLTWH(474, 53, 629, 42), Color(0xFFAF8ED6)),
-    (Rect.fromLTWH(1306, 53, 262, 42), Color(0xFFF5AE25)),
-    (Rect.fromLTWH(10, 732, 186, 141), Color(0xFFFF8057)),
-    (Rect.fromLTWH(1376, 830, 201, 40), Color(0xFFFF8057)),
-    (Rect.fromLTWH(18, 895, 155, 74), Color(0xFF65448C)),
-    (Rect.fromLTWH(18, 936, 45, 40), Color(0xFF65448C)),
-    (Rect.fromLTWH(1385, 895, 183, 74), Color(0xFFFF8057)),
-    (Rect.fromLTWH(1520, 936, 39, 40), Color(0xFFFF8057)),
+  static const _rails = <(Rect, Color, double)>[
+    (Rect.fromLTWH(10, 39, 145, 164), Color(0xFFAF8ED6), 48),
+    (Rect.fromLTWH(474, 53, 629, 42), Color(0xFFAF8ED6), 22),
+    (Rect.fromLTWH(1306, 53, 262, 42), Color(0xFFF5AE25), 22),
+    (Rect.fromLTWH(10, 732, 127, 141), Color(0xFFFF8057), 48),
+    (Rect.fromLTWH(1376, 830, 201, 40), Color(0xFFFF8057), 22),
+    (Rect.fromLTWH(18, 895, 155, 74), Color(0xFF65448C), 37),
+    (Rect.fromLTWH(18, 936, 45, 40), Color(0xFF65448C), 20),
+    (Rect.fromLTWH(1385, 895, 183, 74), Color(0xFFFF8057), 37),
+    (Rect.fromLTWH(1520, 936, 39, 40), Color(0xFFFF8057), 20),
   ];
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (final (conceptRect, color) in _rails) {
+    for (final (conceptRect, color, conceptRadius) in _rails) {
       final destination = FederationClassicLandscapeGeometry.scale(
         conceptRect,
         size,
@@ -145,7 +145,7 @@ final class _FederationClassicRasterRailsPainter extends CustomPainter {
       canvas.clipRRect(
         RRect.fromRectAndRadius(
           destination,
-          Radius.circular(48 * size.width / 1586),
+          Radius.circular(conceptRadius * size.width / 1586),
         ),
       );
       canvas.drawImageNine(

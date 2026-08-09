@@ -20,7 +20,7 @@ void main() {
     await _pumpProof(tester, const Size(1586, 992));
 
     expect(find.text('MY PLACEMENTS'), findsOneWidget);
-    expect(find.text('August 2026'), findsOneWidget);
+    expect(find.text('AUGUST 2026'), findsOneWidget);
     expect(find.text('PLANNING'), findsOneWidget);
     expect(find.text('NEEDS ATTENTION'), findsOneWidget);
     final title = tester.getRect(
@@ -32,7 +32,13 @@ void main() {
     expect(title.center.dx, closeTo(774, 3));
     expect(title.center.dy, closeTo(141, 3));
     expect(switcher.left, closeTo(593, 5));
-    expect(switcher.top, closeTo(162, 3));
+    expect(switcher.top, closeTo(158, 3));
+    expect(
+      find.byKey(const Key('calendar-day-2026-09-12')),
+      findsOneWidget,
+      reason: 'The approved concept shows seven complete Calendar rows.',
+    );
+    expect(find.text('SUNDAY'), findsNothing);
     for (final (index, expectedCenter) in const [
       (0, 227.0),
       (1, 510.0),
@@ -48,11 +54,24 @@ void main() {
         closeTo(expectedCenter, 3),
       );
     }
+    final todayControl = find.byKey(
+      const Key('federation-classic-navigation-0'),
+    );
+    final todayIcon = tester.getRect(
+      find.descendant(
+        of: todayControl,
+        matching: find.byIcon(Icons.today_outlined),
+      ),
+    );
+    final todayLabel = tester.getRect(
+      find.descendant(of: todayControl, matching: find.text('TODAY')),
+    );
+    expect(todayIcon.bottom, lessThan(todayLabel.top));
 
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v4/federation_classic_landscape_1586x992.png',
+        'goldens/federation_classic_v5/federation_classic_landscape_1586x992.png',
       ),
     );
   });
@@ -65,7 +84,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v4/federation_classic_portrait_900x1440.png',
+        'goldens/federation_classic_v5/federation_classic_portrait_900x1440.png',
       ),
     );
   });
@@ -100,7 +119,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v4/'
+        'goldens/federation_classic_v5/'
         'federation_classic_portrait_200_percent_900x1440.png',
       ),
     );
@@ -127,13 +146,15 @@ Future<void> _pumpProof(
     ),
   );
   await tester.runAsync(() async {
-    await precacheImage(
-      const AssetImage(
-        federationClassicFrameAsset,
-        package: 'clinical_calendar_presentation',
-      ),
-      preloadKey.currentContext!,
-    );
+    for (final asset in const [
+      federationClassicFrameAsset,
+      federationClassicRailNineSliceAsset,
+    ]) {
+      await precacheImage(
+        AssetImage(asset, package: 'clinical_calendar_presentation'),
+        preloadKey.currentContext!,
+      );
+    }
   });
   await tester.pump();
   expect(tester.takeException(), isNull);
@@ -179,13 +200,20 @@ Future<void> _pumpProof(
         ),
         home: RepaintBoundary(
           key: const Key('federation-classic-proof'),
-          child: themeBundle.shellRenderer.build(
-            slots: slots,
-            environmentName: 'FEDERATION CLASSIC',
-            onOpenMenu: _noop,
-            onOpenDestination: _ignoreDestination,
-            onOpenAttention: _noop,
-            onAddSchedule: _noop,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: themeBundle.shellRenderer.build(
+                  slots: slots,
+                  environmentName: 'FEDERATION CLASSIC',
+                  onOpenMenu: _noop,
+                  onOpenDestination: _ignoreDestination,
+                  onOpenAttention: _noop,
+                  onAddSchedule: _noop,
+                ),
+              ),
+              if (size.width > size.height) const _AndroidStatusBarProof(),
+            ],
           ),
         ),
       ),
@@ -207,6 +235,54 @@ Future<void> _pumpProof(
   }
   await tester.pump();
   expect(tester.takeException(), isNull);
+}
+
+final class _AndroidStatusBarProof extends StatelessWidget {
+  const _AndroidStatusBarProof();
+
+  @override
+  Widget build(BuildContext context) => const Positioned(
+    left: 14,
+    top: 8,
+    right: 14,
+    height: 22,
+    child: IgnorePointer(
+      child: Row(
+        children: [
+          Text(
+            '6:10',
+            style: TextStyle(
+              fontFamily: 'ProofRoboto',
+              fontSize: 14,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(width: 28),
+          Text(
+            'Wed, Aug 5',
+            style: TextStyle(
+              fontFamily: 'ProofRoboto',
+              fontSize: 14,
+              color: Colors.white,
+            ),
+          ),
+          Spacer(),
+          Icon(Icons.wifi, size: 14, color: Colors.white),
+          SizedBox(width: 5),
+          Icon(Icons.battery_full, size: 14, color: Colors.white),
+          SizedBox(width: 4),
+          Text(
+            '100%',
+            style: TextStyle(
+              fontFamily: 'ProofRoboto',
+              fontSize: 14,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 File _findWorkspaceFile(String relativePath) {
@@ -245,20 +321,29 @@ final class _PlacementsProof extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       const Padding(
-        padding: EdgeInsets.only(left: 10),
-        child: _SectionTitle('MY PLACEMENTS'),
+        padding: EdgeInsets.symmetric(horizontal: 10),
+        child: Row(
+          children: [
+            Expanded(child: _SectionTitle('MY PLACEMENTS')),
+            Icon(
+              Icons.settings_outlined,
+              size: 22,
+              color: FederationClassicColors.workAccent,
+            ),
+          ],
+        ),
       ),
       const SizedBox(height: 20),
       const _PlacementCard(
-        name: 'ACCEPTANCE\nFAMILY MEDICINE',
-        accent: FederationClassicColors.clinical,
+        name: 'Acceptance\nFamily Medicine',
+        accent: FederationClassicColors.workAccent,
         completed: '0 hr',
         scheduled: '8 hr',
       ),
       const SizedBox(height: 12),
       const _PlacementCard(
-        name: 'INTERNAL MEDICINE',
-        accent: FederationClassicColors.workAccent,
+        name: 'Internal Medicine',
+        accent: FederationClassicColors.clinical,
         completed: '0 hr',
         scheduled: '8 hr',
       ),
@@ -313,10 +398,9 @@ final class _PlacementCard extends StatelessWidget {
             Expanded(
               child: Text(
                 name,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  letterSpacing: 1.1,
-                  height: 1.35,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(height: 1.25),
               ),
             ),
           ],
@@ -354,7 +438,12 @@ final class _MetricLine extends StatelessWidget {
         ),
         const SizedBox(width: 9),
         Expanded(
-          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+          child: Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontSize: 14),
+          ),
         ),
       ],
     ),
@@ -648,7 +737,7 @@ final class _InsightProof extends StatelessWidget {
           ),
         ],
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 5),
       Text(
         'Additional pace required - 21 hr 16 min / week',
         style: Theme.of(context).textTheme.bodySmall,
@@ -663,7 +752,7 @@ final class _InsightProof extends StatelessWidget {
         'SHOW PRECEPTOR BREAKDOWN',
         FederationClassicColors.clinical,
       ),
-      const SizedBox(height: 15),
+      const SizedBox(height: 34),
       const Row(
         children: [
           _SectionTitle('NEEDS ATTENTION'),
@@ -766,11 +855,14 @@ final class _AttentionCard extends StatelessWidget {
     ),
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
     decoration: BoxDecoration(
+      border: Border.all(
+        color: FederationClassicColors.outline.withValues(alpha: .35),
+      ),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    foregroundDecoration: const BoxDecoration(
       border: Border(
-        left: const BorderSide(color: FederationClassicColors.urgent, width: 3),
-        bottom: BorderSide(
-          color: FederationClassicColors.outline.withValues(alpha: .35),
-        ),
+        left: BorderSide(color: FederationClassicColors.urgent, width: 3),
       ),
     ),
     child: Row(
@@ -782,10 +874,20 @@ final class _AttentionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(title, style: Theme.of(context).textTheme.labelSmall),
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(fontSize: 13),
+              ),
               if (subtitle case final subtitle?) ...[
                 const SizedBox(height: 3),
-                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  subtitle,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontSize: 14),
+                ),
               ],
             ],
           ),

@@ -1,11 +1,12 @@
-# Federation Classic concept-fidelity candidate v4
+# Federation Classic rejected proof v4
 
 Issue: [#133](https://github.com/mshamblin5150-code/clinical-calendar/issues/133)
 
-Status: **candidate awaiting explicit maintainer visual approval**. This
-package does not claim approval or physical Android-tablet acceptance. The
-rejected v2 and v3 proofs remain immutable historical evidence and were used
-only as negative baselines.
+Status: **REJECTED by the maintainer on 2026-08-08**. The candidate improved
+the measured chassis but still retained six Calendar rows, generic weekday and
+period styling, inline bottom navigation, underscaled typography, approximate
+internal spacing, and a scratched rail material. It is an immutable negative
+baseline, not an acceptance target.
 
 The approved issue #113 concept is the independent normative source. V4
 corrects the v3 drift by preserving the concept's negative-space rail cutouts,

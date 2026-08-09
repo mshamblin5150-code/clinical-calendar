@@ -18,7 +18,7 @@ abstract final class FederationClassicColors {
   static const outlineVariant = Color(0xFF3B2750);
   static const primary = Color(0xFFF6B44B);
   static const onPrimary = Color(0xFF1A0E06);
-  static const primaryContainer = Color(0xFF3B2750);
+  static const primaryContainer = Color(0xFF160F1D);
   static const clinical = Color(0xFFF29A72);
   static const clinicalFill = Color(0xFF44251F);
   static const work = Color(0xFF3B2A4D);
@@ -43,9 +43,9 @@ const federationClassicSemanticColors = ClinicalCalendarColors(
   primaryText: FederationClassicColors.text,
   secondaryText: FederationClassicColors.textSecondary,
   clinical: FederationClassicColors.clinical,
-  work: FederationClassicColors.work,
+  work: FederationClassicColors.surface,
   workMachinery: FederationClassicColors.workAccent,
-  protectedDay: FederationClassicColors.protectedDay,
+  protectedDay: FederationClassicColors.surface,
   protectedDayAccent: FederationClassicColors.protectedDayAccent,
   scheduled: FederationClassicColors.scheduled,
   urgent: FederationClassicColors.urgent,
@@ -73,7 +73,7 @@ const federationClassicStandardAccessibilityTokens =
       focusWidth: 3,
       selectionWidth: 1,
       persistentExpandedLegend: false,
-      decorationOpacity: 1,
+      decorationOpacity: 0,
     );
 
 ThemeData buildFederationClassicTheme({bool enhancedAccessibility = false}) {
@@ -131,11 +131,31 @@ ThemeData buildFederationClassicTheme({bool enhancedAccessibility = false}) {
     borderRadius: BorderRadius.circular(8),
     side: const BorderSide(color: FederationClassicColors.outline),
   );
+  final classicTextTheme = base.textTheme
+      .copyWith(
+        headlineSmall: base.textTheme.headlineSmall?.copyWith(
+          fontSize: 25,
+          fontWeight: FontWeight.w700,
+        ),
+        titleLarge: base.textTheme.titleLarge?.copyWith(
+          fontSize: 23,
+          fontWeight: FontWeight.w700,
+        ),
+        titleMedium: base.textTheme.titleMedium?.copyWith(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+        titleSmall: base.textTheme.titleSmall?.copyWith(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+      )
+      .apply(
+        bodyColor: FederationClassicColors.text,
+        displayColor: FederationClassicColors.text,
+      );
   final standard = base.copyWith(
-    textTheme: base.textTheme.apply(
-      bodyColor: FederationClassicColors.text,
-      displayColor: FederationClassicColors.text,
-    ),
+    textTheme: classicTextTheme,
     cardTheme: CardThemeData(
       color: FederationClassicColors.surfaceRaised,
       surfaceTintColor: Colors.transparent,
@@ -228,8 +248,18 @@ ThemeData buildFederationClassicTheme({bool enhancedAccessibility = false}) {
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: ButtonStyle(
-        foregroundColor: _federationClassicForeground(
-          FederationClassicColors.text,
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? FederationClassicColors.onPrimary
+              : FederationClassicColors.textSecondary,
+        ),
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? FederationClassicColors.primary
+              : FederationClassicColors.canvas,
+        ),
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: FederationClassicColors.outline),
         ),
       ),
     ),

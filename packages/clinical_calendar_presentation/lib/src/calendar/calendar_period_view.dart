@@ -19,13 +19,23 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
     required this.useBoundedMonthGrid,
     this.scaleDayNumberWithText = false,
     this.toolbarLayout = CalendarPeriodToolbarLayout.inline,
+    this.compactWeekdayLabels = false,
+    this.uppercasePeriodTitle = false,
+    this.monthWeekRows = 6,
+    this.todayAccentOverride,
+    this.todayBackgroundOverride,
     required super.child,
     super.key,
-  });
+  }) : assert(monthWeekRows == 6 || monthWeekRows == 7);
 
   final bool useBoundedMonthGrid;
   final bool scaleDayNumberWithText;
   final CalendarPeriodToolbarLayout toolbarLayout;
+  final bool compactWeekdayLabels;
+  final bool uppercasePeriodTitle;
+  final int monthWeekRows;
+  final Color? todayAccentOverride;
+  final Color? todayBackgroundOverride;
 
   static bool usesBoundedMonthGrid(BuildContext context) =>
       context
@@ -45,11 +55,19 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
           ?.toolbarLayout ??
       CalendarPeriodToolbarLayout.inline;
 
+  static CalendarPeriodViewportPolicy? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>();
+
   @override
   bool updateShouldNotify(CalendarPeriodViewportPolicy oldWidget) =>
       useBoundedMonthGrid != oldWidget.useBoundedMonthGrid ||
       scaleDayNumberWithText != oldWidget.scaleDayNumberWithText ||
-      toolbarLayout != oldWidget.toolbarLayout;
+      toolbarLayout != oldWidget.toolbarLayout ||
+      compactWeekdayLabels != oldWidget.compactWeekdayLabels ||
+      uppercasePeriodTitle != oldWidget.uppercasePeriodTitle ||
+      monthWeekRows != oldWidget.monthWeekRows ||
+      todayAccentOverride != oldWidget.todayAccentOverride ||
+      todayBackgroundOverride != oldWidget.todayBackgroundOverride;
 }
 
 final class CalendarPeriodView extends StatefulWidget {
@@ -189,6 +207,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
         builder: (context, outerConstraints) {
           final useBoundedMonthGrid =
               CalendarPeriodViewportPolicy.usesBoundedMonthGrid(context);
+          final viewportPolicy = CalendarPeriodViewportPolicy.maybeOf(context);
           final periodView = LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 600;
@@ -201,6 +220,9 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                   weekStartsOn: widget.weekStartsOn,
                   compact: compact,
                   useBoundedGrid: useBoundedMonthGrid,
+                  compactWeekdayLabels:
+                      viewportPolicy?.compactWeekdayLabels ?? false,
+                  weekRows: viewportPolicy?.monthWeekRows ?? 6,
                   twelveHourTime: widget.twelveHourTime,
                   onActivate: _activateDate,
                 ),
@@ -325,9 +347,13 @@ final class _CalendarToolbar extends StatelessWidget {
     child: LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 600;
+        final viewportPolicy = CalendarPeriodViewportPolicy.maybeOf(context);
         final stackedCentered =
             CalendarPeriodViewportPolicy.toolbarLayoutOf(context) ==
             CalendarPeriodToolbarLayout.stackedCentered;
+        final resolvedTitle = viewportPolicy?.uppercasePeriodTitle ?? false
+            ? title.toUpperCase()
+            : title;
         final navigation = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -348,10 +374,19 @@ final class _CalendarToolbar extends StatelessWidget {
         final switcher = SegmentedButton<CalendarPeriod>(
           key: const Key('calendar-period-switcher'),
           showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: CalendarPeriod.month, label: Text('Month')),
-            ButtonSegment(value: CalendarPeriod.week, label: Text('Week')),
-            ButtonSegment(value: CalendarPeriod.agenda, label: Text('Agenda')),
+          segments: [
+            ButtonSegment(
+              value: CalendarPeriod.month,
+              label: Text(stackedCentered ? 'MONTH' : 'Month'),
+            ),
+            ButtonSegment(
+              value: CalendarPeriod.week,
+              label: Text(stackedCentered ? 'WEEK' : 'Week'),
+            ),
+            ButtonSegment(
+              value: CalendarPeriod.agenda,
+              label: Text(stackedCentered ? 'AGENDA' : 'Agenda'),
+            ),
           ],
           selected: {period},
           expandedInsets: stackedCentered ? EdgeInsets.zero : null,
@@ -370,7 +405,7 @@ final class _CalendarToolbar extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      title,
+                      resolvedTitle,
                       key: const Key('calendar-period-title'),
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -393,7 +428,7 @@ final class _CalendarToolbar extends StatelessWidget {
         }
         if (stackedCentered) {
           return SizedBox(
-            height: 81,
+            height: 77,
             child: Stack(
               children: [
                 Positioned(
@@ -411,7 +446,7 @@ final class _CalendarToolbar extends StatelessWidget {
                       ),
                       Expanded(
                         child: Text(
-                          title,
+                          resolvedTitle,
                           key: const Key('calendar-period-title'),
                           textAlign: TextAlign.center,
                           maxLines: 1,
@@ -429,7 +464,7 @@ final class _CalendarToolbar extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  top: 44,
+                  top: 40,
                   left: (constraints.maxWidth - 356) / 2,
                   width: 356,
                   height: 35,
@@ -444,7 +479,7 @@ final class _CalendarToolbar extends StatelessWidget {
             navigation,
             Expanded(
               child: Text(
-                title,
+                resolvedTitle,
                 key: const Key('calendar-period-title'),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
@@ -466,6 +501,8 @@ final class _MonthView extends StatelessWidget {
     required this.weekStartsOn,
     required this.compact,
     required this.useBoundedGrid,
+    required this.compactWeekdayLabels,
+    required this.weekRows,
     required this.twelveHourTime,
     required this.onActivate,
   });
@@ -477,13 +514,18 @@ final class _MonthView extends StatelessWidget {
   final int weekStartsOn;
   final bool compact;
   final bool useBoundedGrid;
+  final bool compactWeekdayLabels;
+  final int weekRows;
   final bool twelveHourTime;
   final _ActivateDate onActivate;
 
   @override
   Widget build(BuildContext context) {
-    final dates = _monthDates(anchor, weekStartsOn);
-    final weekdayLabels = _weekdayLabels(weekStartsOn, compact: compact);
+    final dates = _monthDates(anchor, weekStartsOn, weekRows: weekRows);
+    final weekdayLabels = _weekdayLabels(
+      weekStartsOn,
+      compact: compact || compactWeekdayLabels,
+    );
     if (!useBoundedGrid) {
       return _buildMonthGrid(context, dates, weekdayLabels, null);
     }
@@ -552,7 +594,7 @@ final class _MonthView extends StatelessWidget {
     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
       crossAxisCount: 7,
       mainAxisExtent: boundedHeight != null
-          ? math.max(44, (boundedHeight - 32) / 6)
+          ? math.max(44, (boundedHeight - 32) / weekRows)
           : compact
           ? 58
           : 112,
@@ -566,7 +608,8 @@ final class _MonthView extends StatelessWidget {
         selected: selectedDates.contains(date),
         entries: snapshot.entriesOn(date),
         compact: compact,
-        dense: boundedHeight != null && (boundedHeight - 32) / 6 < 88,
+        dense: boundedHeight != null && (boundedHeight - 32) / weekRows < 88,
+        tightDenseSpacing: weekRows == 7,
         twelveHourTime: twelveHourTime,
         onActivate: onActivate,
       );
@@ -583,6 +626,7 @@ final class _MonthDayCell extends StatelessWidget {
     required this.entries,
     required this.compact,
     required this.dense,
+    required this.tightDenseSpacing,
     required this.twelveHourTime,
     required this.onActivate,
   });
@@ -594,6 +638,7 @@ final class _MonthDayCell extends StatelessWidget {
   final List<CalendarEntry> entries;
   final bool compact;
   final bool dense;
+  final bool tightDenseSpacing;
   final bool twelveHourTime;
   final _ActivateDate onActivate;
 
@@ -634,12 +679,14 @@ final class _MonthDayCell extends StatelessWidget {
         child: InkWell(
           onTap: () => onActivate(date, entries),
           child: Padding(
-            padding: const EdgeInsets.all(5),
+            padding: dense && tightDenseSpacing
+                ? const EdgeInsets.symmetric(horizontal: 5, vertical: 2)
+                : const EdgeInsets.all(5),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _DayNumber(date: date, today: today, selected: selected),
-                const SizedBox(height: 3),
+                SizedBox(height: dense && tightDenseSpacing ? 0 : 3),
                 if (compact)
                   _CompactMarkers(entries: entries)
                 else if (dense)
@@ -1728,6 +1775,10 @@ bool _usesAdditiveMarks(BuildContext context) {
 }
 
 Color _todayAccent(BuildContext context) {
+  final override = CalendarPeriodViewportPolicy.maybeOf(
+    context,
+  )?.todayAccentOverride;
+  if (override != null) return override;
   final additive = Theme.of(
     context,
   ).extension<ClinicalCalendarAdditiveColors>();
@@ -1740,9 +1791,15 @@ Color _todayAccent(BuildContext context) {
       : context.clinicalColors.urgent;
 }
 
-Color _todayBackground(BuildContext context) => _usesAdditiveMarks(context)
-    ? Theme.of(context).colorScheme.primaryContainer
-    : const Color(0xFF321512);
+Color _todayBackground(BuildContext context) {
+  final override = CalendarPeriodViewportPolicy.maybeOf(
+    context,
+  )?.todayBackgroundOverride;
+  if (override != null) return override;
+  return _usesAdditiveMarks(context)
+      ? Theme.of(context).colorScheme.primaryContainer
+      : const Color(0xFF321512);
+}
 
 Color _todayForeground(BuildContext context) => _usesAdditiveMarks(context)
     ? Theme.of(context).colorScheme.onPrimaryContainer
@@ -1777,11 +1834,15 @@ String _dateSemanticLabel(
   return parts.join(', ');
 }
 
-List<LocalDate> _monthDates(LocalDate anchor, int weekStartsOn) {
+List<LocalDate> _monthDates(
+  LocalDate anchor,
+  int weekStartsOn, {
+  int weekRows = 6,
+}) {
   final first = LocalDate(anchor.year, anchor.month, 1);
   final leading = (first.asUtcCalendarDate.weekday - weekStartsOn + 7) % 7;
   final start = first.addDays(-leading);
-  return List.generate(42, start.addDays, growable: false);
+  return List.generate(weekRows * 7, start.addDays, growable: false);
 }
 
 List<LocalDate> _weekDates(LocalDate anchor, int weekStartsOn) {

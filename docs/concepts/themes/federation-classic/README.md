@@ -47,14 +47,18 @@ viewport; the normalized transparent nine-slice remains the primary frame for
 portrait, compact, and destination surfaces.
 
 The piecewise landscape rails use
-`packages/clinical_calendar_presentation/assets/federation_classic_raster/lcars-rail-nine-slice-v1.png`,
-a deterministic 512 by 512 neutral material tile drawn locally from simple
-rounded geometry. Each independently positioned LCARS rail clips and tints the
-tile, while only its 384 by 384 center and edge seams stretch. SHA-256:
-`b2bba0adc8ef15433b05b127577d39dc4c74e6ff764f7ed184311b36c7879c0c`.
-All four corner alpha values are zero; the tile contains no text, symbols,
-controls, or operational data. No generative model or other theme asset was
-used.
+`packages/clinical_calendar_presentation/assets/federation_classic_raster/lcars-rail-nine-slice-v2.png`,
+a 512 by 512 neutral material tile edited with the built-in image-generation
+workflow from the rejected v1 tile. The edit removed every scratch, band, and
+dark seam while preserving a smooth neutral gradient, rounded silhouette, and
+transparent exterior corners. Each independently positioned LCARS rail clips
+and tints the tile, while only its 384 by 384 center and edge seams stretch.
+SHA-256:
+`7859e0b60dde47fa259c6eafe12b96b5ce59facb39487a5f2e8557c76cc10b77`.
+All four corner alpha values are zero; the center is fully opaque; and the tile
+contains no text, symbols, controls, or operational data. The v1 material is
+excluded from production after its scratches and seams contributed to the
+rejected v4 comparison.
 
 The chassis was generated with the built-in image-generation workflow using
 `calendar-dashboard-concept-v3.png` only as a reference for silhouette,
@@ -71,8 +75,8 @@ Automated validation records:
 - operational text, icons, controls, and data: absent;
 - live-content bays: opaque, near-black, and uninterrupted.
 
-The rejected deterministic v2 and v3 proofs remain under their versioned
+The rejected deterministic v2 through v4 proofs remain under their versioned
 acceptance-proof directories as immutable negative baselines. The replacement
-candidate is under `docs/themes/acceptance/proofs/federation-classic-v4/`.
-All use the approved concept's native 1586 by 992 landscape viewport, but v4
+candidate is under `docs/themes/acceptance/proofs/federation-classic-v5/`.
+All use the approved concept's native 1586 by 992 landscape viewport, but v5
 is the only current review candidate.
