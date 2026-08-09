@@ -71,8 +71,8 @@ Automated validation records:
 - operational text, icons, controls, and data: absent;
 - live-content bays: opaque, near-black, and uninterrupted.
 
-The rejected deterministic v2 proof remains under
-`docs/themes/acceptance/proofs/federation-classic-v2/`. The replacement
-candidate is under `docs/themes/acceptance/proofs/federation-classic-v3/`.
-Both use the approved concept's native 1586 by 992 landscape viewport, but v3
+The rejected deterministic v2 and v3 proofs remain under their versioned
+acceptance-proof directories as immutable negative baselines. The replacement
+candidate is under `docs/themes/acceptance/proofs/federation-classic-v4/`.
+All use the approved concept's native 1586 by 992 landscape viewport, but v4
 is the only current review candidate.

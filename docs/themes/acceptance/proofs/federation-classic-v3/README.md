@@ -1,11 +1,12 @@
-# Federation Classic concept-fidelity candidate v3
+# Federation Classic rejected proof v3
 
 Issue: [#133](https://github.com/mshamblin5150-code/clinical-calendar/issues/133)
 
-Status: **candidate awaiting explicit maintainer visual approval**. This
-package does not claim approval or physical Android-tablet acceptance. The
-rejected v2 proof remains immutable historical evidence and was not used as a
-baseline.
+Status: **REJECTED by the maintainer on 2026-08-08**. The renderer remained an
+approximation rather than a sufficiently close match: rail cutouts, live
+content composition, crown controls, navigation geometry, and information
+density still diverged from the approved concept. This immutable package is a
+negative baseline, not an acceptance target.
 
 The approved issue #113 concept is the independent normative source. The
 landscape runtime uses concept-measured live-region rectangles at the native

@@ -39,7 +39,7 @@ const federationClassicSemanticColors = ClinicalCalendarColors(
   canvas: FederationClassicColors.canvas,
   structure: FederationClassicColors.surface,
   structureRaised: FederationClassicColors.surfaceRaised,
-  insetBorder: FederationClassicColors.outline,
+  insetBorder: FederationClassicColors.outlineVariant,
   primaryText: FederationClassicColors.text,
   secondaryText: FederationClassicColors.textSecondary,
   clinical: FederationClassicColors.clinical,

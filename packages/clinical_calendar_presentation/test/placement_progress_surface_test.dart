@@ -56,6 +56,37 @@ void main() {
     expect(find.text('PEDIATRICS'), findsOneWidget);
   });
 
+  testWidgets('theme policy places progress wheel beside its metric ledger', (
+    tester,
+  ) async {
+    final harness = _Harness();
+    await harness.controller.load();
+    await _pump(
+      tester,
+      InsightRailPresentationPolicy(
+        placementProgressLayout: PlacementProgressRailLayout.sideBySide,
+        child: SizedBox(
+          width: 420,
+          child: PlacementProgressRail(
+            controller: harness.controller,
+            studentId: _studentId,
+          ),
+        ),
+      ),
+      size: const Size(460, 620),
+    );
+
+    final progressWheel = tester.getRect(
+      find.byKey(const Key('placement-progress-wheel')),
+    );
+    final metricLedger = tester.getRect(
+      find.byKey(const Key('placement-metric-ledger')),
+    );
+    expect(progressWheel.right, lessThan(metricLedger.left));
+    expect(progressWheel.center.dy, closeTo(metricLedger.center.dy, 50));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('narrow placement dock wraps full Clinical Placement names', (
     tester,
   ) async {

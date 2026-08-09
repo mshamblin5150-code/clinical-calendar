@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
 import 'federation_classic_frame.dart';
+import 'insight_rail_presentation_policy.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
@@ -152,7 +153,12 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                   accent: _FederationClassicBayAccent.lilac,
                   shape: _FederationClassicBayShape.insight,
                   integrated: true,
-                  child: slots.insightRail,
+                  child: InsightRailPresentationPolicy(
+                    placementProgressLayout:
+                        PlacementProgressRailLayout.sideBySide,
+                    expandedAttentionRows: true,
+                    child: slots.insightRail,
+                  ),
                 ),
               ),
               Positioned.fromRect(
@@ -328,6 +334,7 @@ final class _FederationClassicCalendarViewport extends StatelessWidget {
       final calendar = CalendarPeriodViewportPolicy(
         useBoundedMonthGrid: true,
         scaleDayNumberWithText: true,
+        toolbarLayout: CalendarPeriodToolbarLayout.stackedCentered,
         child: child,
       );
       if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
@@ -520,8 +527,8 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
                         'CLINICAL CALENDAR',
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              fontSize: 28,
+                              color: const Color(0xFFFFE4BE),
+                              fontSize: 30,
                               fontWeight: FontWeight.w800,
                               letterSpacing: .1,
                             ),
@@ -534,22 +541,46 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
             const Spacer(),
             SizedBox(
               width: 170,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  IconButton(
-                    tooltip: 'Add schedule',
-                    onPressed: onAddSchedule,
-                    icon: const Icon(Icons.add, size: 30),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  width: 139,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF02040D),
+                    border: Border.all(
+                      color: context.clinicalColors.scheduled,
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(23),
                   ),
-                  IconButton(
-                    tooltip: 'Help',
-                    onPressed: () =>
-                        onOpenDestination(ClinicalCalendarDestination.help),
-                    icon: const Icon(Icons.help_outline),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      IconButton(
+                        tooltip: 'Add schedule',
+                        onPressed: onAddSchedule,
+                        icon: const Icon(Icons.add, size: 30),
+                      ),
+                      PopupMenuButton<ClinicalCalendarDestination>(
+                        key: const Key('federation-classic-help-menu'),
+                        tooltip: 'Profile and Help',
+                        onSelected: onOpenDestination,
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(
+                            value: ClinicalCalendarDestination.help,
+                            child: Text('Help'),
+                          ),
+                          PopupMenuItem(
+                            value: ClinicalCalendarDestination.studentProfile,
+                            child: Text('Student Profile'),
+                          ),
+                        ],
+                        child: IgnorePointer(child: profileAvatar),
+                      ),
+                    ],
                   ),
-                  profileAvatar,
-                ],
+                ),
               ),
             ),
           ],
@@ -751,6 +782,41 @@ final class _FederationClassicNavigationDeck extends StatelessWidget {
             compact ||
             constraints.maxWidth < (integrated ? 1500 : 900) ||
             MediaQuery.textScalerOf(context).scale(1) > 1.3;
+        if (integrated) {
+          const buttonRects = [
+            Rect.fromLTWH(144, 7, 146, 83),
+            Rect.fromLTWH(355, 7, 289, 83),
+            Rect.fromLTWH(680, 7, 200, 83),
+            Rect.fromLTWH(950, 7, 215, 83),
+            Rect.fromLTWH(1223, 7, 161, 83),
+          ];
+          final scaleX = constraints.maxWidth / 1566;
+          final scaleY = constraints.maxHeight / 97;
+          return SizedBox(
+            key: const Key('federation-classic-bottom-navigation'),
+            child: Stack(
+              children: [
+                for (var index = 0; index < destinations.length; index++)
+                  Positioned.fromRect(
+                    rect: Rect.fromLTWH(
+                      buttonRects[index].left * scaleX,
+                      buttonRects[index].top * scaleY,
+                      buttonRects[index].width * scaleX,
+                      buttonRects[index].height * scaleY,
+                    ),
+                    child: _FederationClassicNavigationButton(
+                      item: destinations[index],
+                      index: index,
+                      selected: index == selectedIndex,
+                      iconsOnly: iconsOnly,
+                      onOpenDestination: onOpenDestination,
+                      onOpenAttention: onOpenAttention,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }
         return Container(
           key: const Key('federation-classic-bottom-navigation'),
           height: vertical ? constraints.maxHeight : (compact ? 68 : 92),
@@ -852,4 +918,73 @@ final class _FederationClassicNavigationDeck extends StatelessWidget {
       },
     );
   }
+}
+
+final class _FederationClassicNavigationButton extends StatelessWidget {
+  const _FederationClassicNavigationButton({
+    required this.item,
+    required this.index,
+    required this.selected,
+    required this.iconsOnly,
+    required this.onOpenDestination,
+    required this.onOpenAttention,
+  });
+
+  final _FederationClassicNavigationItem item;
+  final int index;
+  final bool selected;
+  final bool iconsOnly;
+  final ValueChanged<ClinicalCalendarDestination> onOpenDestination;
+  final VoidCallback onOpenAttention;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: item.label,
+    child: InkWell(
+      key: Key('federation-classic-navigation-$index'),
+      onTap: () => item.activate(onOpenDestination, onOpenAttention),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: selected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(34),
+        ),
+        child: Center(
+          child: iconsOnly
+              ? Icon(
+                  item.icon,
+                  color: selected
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : context.clinicalColors.workMachinery,
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      item.icon,
+                      color: selected
+                          ? Theme.of(context).colorScheme.onPrimary
+                          : context.clinicalColors.workMachinery,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        color: selected
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : context.clinicalColors.workMachinery,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    ),
+  );
 }

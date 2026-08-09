@@ -10,18 +10,22 @@ import '../variant_f_theme.dart';
 import 'calendar_data_source.dart';
 import 'calendar_models.dart';
 
+enum CalendarPeriodToolbarLayout { inline, stackedCentered }
+
 /// Opt-in sizing policy for calendar hosts that intentionally constrain the
 /// month grid to a bounded dashboard bay.
 final class CalendarPeriodViewportPolicy extends InheritedWidget {
   const CalendarPeriodViewportPolicy({
     required this.useBoundedMonthGrid,
     this.scaleDayNumberWithText = false,
+    this.toolbarLayout = CalendarPeriodToolbarLayout.inline,
     required super.child,
     super.key,
   });
 
   final bool useBoundedMonthGrid;
   final bool scaleDayNumberWithText;
+  final CalendarPeriodToolbarLayout toolbarLayout;
 
   static bool usesBoundedMonthGrid(BuildContext context) =>
       context
@@ -35,10 +39,17 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
           ?.scaleDayNumberWithText ??
       false;
 
+  static CalendarPeriodToolbarLayout toolbarLayoutOf(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.toolbarLayout ??
+      CalendarPeriodToolbarLayout.inline;
+
   @override
   bool updateShouldNotify(CalendarPeriodViewportPolicy oldWidget) =>
       useBoundedMonthGrid != oldWidget.useBoundedMonthGrid ||
-      scaleDayNumberWithText != oldWidget.scaleDayNumberWithText;
+      scaleDayNumberWithText != oldWidget.scaleDayNumberWithText ||
+      toolbarLayout != oldWidget.toolbarLayout;
 }
 
 final class CalendarPeriodView extends StatefulWidget {
@@ -314,6 +325,9 @@ final class _CalendarToolbar extends StatelessWidget {
     child: LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 600;
+        final stackedCentered =
+            CalendarPeriodViewportPolicy.toolbarLayoutOf(context) ==
+            CalendarPeriodToolbarLayout.stackedCentered;
         final navigation = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -340,6 +354,7 @@ final class _CalendarToolbar extends StatelessWidget {
             ButtonSegment(value: CalendarPeriod.agenda, label: Text('Agenda')),
           ],
           selected: {period},
+          expandedInsets: stackedCentered ? EdgeInsets.zero : null,
           onSelectionChanged: (selection) => onPeriod(selection.single),
         );
         if (compact) {
@@ -374,6 +389,54 @@ final class _CalendarToolbar extends StatelessWidget {
               const SizedBox(height: 4),
               FittedBox(child: switcher),
             ],
+          );
+        }
+        if (stackedCentered) {
+          return SizedBox(
+            height: 81,
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  right: 0,
+                  height: 44,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        key: const Key('calendar-previous-stacked'),
+                        tooltip: 'Previous period',
+                        onPressed: onPrevious,
+                        icon: const Icon(Icons.chevron_left),
+                      ),
+                      Expanded(
+                        child: Text(
+                          title,
+                          key: const Key('calendar-period-title'),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                      ),
+                      IconButton(
+                        key: const Key('calendar-next-stacked'),
+                        tooltip: 'Next period',
+                        onPressed: onNext,
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  top: 44,
+                  left: (constraints.maxWidth - 356) / 2,
+                  width: 356,
+                  height: 35,
+                  child: switcher,
+                ),
+              ],
+            ),
           );
         }
         return Row(

@@ -889,7 +889,10 @@ void main() {
 
     await tester.tap(find.byTooltip('Open menu'));
     await tester.tap(find.byTooltip('Add schedule'));
-    await tester.tap(find.byTooltip('Help'));
+    await tester.tap(find.byKey(const Key('federation-classic-help-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Help').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('federation-classic-navigation-0')));
     await tester.tap(find.byKey(const Key('federation-classic-navigation-1')));
     await tester.tap(find.byKey(const Key('federation-classic-navigation-2')));

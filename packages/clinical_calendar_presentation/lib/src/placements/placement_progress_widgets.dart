@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../additive_semantic_colors.dart';
+import '../insight_rail_presentation_policy.dart';
 import '../tactical_frame.dart';
 import '../variant_f_theme.dart';
 import '../variant_f_raster_assets.dart';
@@ -164,6 +165,11 @@ final class _PlacementProgressRailState extends State<PlacementProgressRail> {
     animation: widget.controller,
     builder: (context, _) {
       final snapshot = widget.controller.activePlacement;
+      final sideBySide =
+          InsightRailPresentationPolicy.maybeOf(
+            context,
+          )?.placementProgressLayout ==
+          PlacementProgressRailLayout.sideBySide;
       return _TacticalPanel(
         key: const Key('placement-progress-rail'),
         label: snapshot?.placement.name ?? 'Clinical Placement',
@@ -173,17 +179,36 @@ final class _PlacementProgressRailState extends State<PlacementProgressRail> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Align(
-                    child: PlacementProgressWheel(
-                      snapshot: snapshot,
-                      touch: widget.touch,
-                      onCycle: widget.controller.isBusy
-                          ? null
-                          : widget.controller.cyclePlacement,
+                  if (sideBySide)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        PlacementProgressWheel(
+                          snapshot: snapshot,
+                          touch: widget.touch,
+                          onCycle: widget.controller.isBusy
+                              ? null
+                              : widget.controller.cyclePlacement,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: PlacementMetricLedger(snapshot: snapshot),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    Align(
+                      child: PlacementProgressWheel(
+                        snapshot: snapshot,
+                        touch: widget.touch,
+                        onCycle: widget.controller.isBusy
+                            ? null
+                            : widget.controller.cyclePlacement,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  PlacementMetricLedger(snapshot: snapshot),
+                    const SizedBox(height: 12),
+                    PlacementMetricLedger(snapshot: snapshot),
+                  ],
                   const SizedBox(height: 8),
                   TextButton(
                     key: const Key('cycle-placement-action'),

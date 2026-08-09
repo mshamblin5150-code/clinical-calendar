@@ -32,6 +32,7 @@ final class FederationClassicLandscapeChassis extends StatelessWidget {
     children: [
       const CustomPaint(painter: _FederationClassicLandscapePainter()),
       const FederationClassicRasterRails(),
+      const CustomPaint(painter: _FederationClassicLandscapeCutoutPainter()),
       child,
     ],
   );
@@ -125,10 +126,12 @@ final class _FederationClassicRasterRailsPainter extends CustomPainter {
     (Rect.fromLTWH(10, 39, 145, 164), Color(0xFFAF8ED6)),
     (Rect.fromLTWH(474, 53, 629, 42), Color(0xFFAF8ED6)),
     (Rect.fromLTWH(1306, 53, 262, 42), Color(0xFFF5AE25)),
-    (Rect.fromLTWH(10, 761, 186, 112), Color(0xFFFF8057)),
+    (Rect.fromLTWH(10, 732, 186, 141), Color(0xFFFF8057)),
     (Rect.fromLTWH(1376, 830, 201, 40), Color(0xFFFF8057)),
-    (Rect.fromLTWH(18, 896, 155, 79), Color(0xFF65448C)),
-    (Rect.fromLTWH(1385, 896, 183, 79), Color(0xFFFF8057)),
+    (Rect.fromLTWH(18, 895, 155, 74), Color(0xFF65448C)),
+    (Rect.fromLTWH(18, 936, 45, 40), Color(0xFF65448C)),
+    (Rect.fromLTWH(1385, 895, 183, 74), Color(0xFFFF8057)),
+    (Rect.fromLTWH(1520, 936, 39, 40), Color(0xFFFF8057)),
   ];
 
   @override
@@ -177,30 +180,43 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
     if (size.isEmpty) return;
     canvas.save();
     canvas.scale(size.width / 1586, size.height / 992);
-    _rounded(canvas, const Rect.fromLTWH(10, 39, 145, 164), _lilac, 48);
-    canvas.drawRect(
-      const Rect.fromLTWH(90, 105, 65, 98),
-      Paint()..color = _canvas,
-    );
+    final upperElbow = Path()
+      ..moveTo(58, 39)
+      ..lineTo(155, 39)
+      ..lineTo(155, 105)
+      ..lineTo(90, 105)
+      ..lineTo(90, 203)
+      ..lineTo(10, 203)
+      ..lineTo(10, 87)
+      ..cubicTo(10, 61, 31, 39, 58, 39)
+      ..close();
+    canvas.drawPath(upperElbow, Paint()..color = _lilac);
     canvas.drawRect(
       const Rect.fromLTWH(155, 39, 12, 66),
       Paint()..color = _lilac,
     );
-    _segments(
-      canvas,
-      10,
-      211,
-      79,
-      const [88, 52, 113, 184, 105, 151],
-      const [_lilacDark, _salmon, _salmon, _amber, Color(0xFFD56843), _salmon],
-    );
-    _rounded(canvas, const Rect.fromLTWH(10, 761, 186, 112), _salmon, 48);
+    _rectSegments(canvas, const [
+      (Rect.fromLTWH(10, 211, 79, 88), _lilacDark),
+      (Rect.fromLTWH(10, 306, 79, 54), _salmon),
+      (Rect.fromLTWH(10, 362, 79, 57), _salmon),
+      (Rect.fromLTWH(10, 421, 79, 110), _salmon),
+      (Rect.fromLTWH(10, 534, 79, 188), _amber),
+      (Rect.fromLTWH(10, 732, 79, 120), Color(0xFFD56843)),
+    ]);
+    final lowerElbow = Path()
+      ..moveTo(10, 732)
+      ..lineTo(89, 732)
+      ..lineTo(89, 785)
+      ..quadraticBezierTo(89, 813, 117, 813)
+      ..lineTo(150, 813)
+      ..quadraticBezierTo(196, 813, 196, 859)
+      ..lineTo(196, 873)
+      ..lineTo(58, 873)
+      ..quadraticBezierTo(10, 873, 10, 825)
+      ..close();
+    canvas.drawPath(lowerElbow, Paint()..color = _salmon);
     canvas.drawRect(
-      const Rect.fromLTWH(90, 761, 47, 112),
-      Paint()..color = _canvas,
-    );
-    canvas.drawRect(
-      const Rect.fromLTWH(137, 813, 58, 60),
+      const Rect.fromLTWH(137, 813, 59, 60),
       Paint()..color = _amber,
     );
 
@@ -224,14 +240,12 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
     _panel(canvas, FederationClassicLandscapeGeometry.planning);
     _panel(canvas, FederationClassicLandscapeGeometry.insight);
 
-    _segments(
-      canvas,
-      1545,
-      350,
-      32,
-      const [83, 316, 18, 92],
-      const [_salmon, _lilac, _amber, _salmon],
-    );
+    _rectSegments(canvas, const [
+      (Rect.fromLTWH(1545, 350, 32, 82), _salmon),
+      (Rect.fromLTWH(1545, 438, 32, 315), _lilac),
+      (Rect.fromLTWH(1545, 758, 32, 17), _amber),
+      (Rect.fromLTWH(1545, 780, 32, 90), _salmon),
+    ]);
     _rounded(canvas, const Rect.fromLTWH(1376, 830, 201, 40), _salmon, 22);
     canvas.drawRect(
       const Rect.fromLTWH(1441, 830, 5, 40),
@@ -249,16 +263,10 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.4,
     );
-    _rounded(canvas, const Rect.fromLTWH(18, 896, 155, 79), _lilacDark, 38);
-    canvas.drawRect(
-      const Rect.fromLTWH(112, 896, 61, 79),
-      Paint()..color = _canvas,
-    );
-    _rounded(canvas, const Rect.fromLTWH(1385, 896, 183, 79), _salmon, 38);
-    canvas.drawRect(
-      const Rect.fromLTWH(1385, 936, 101, 39),
-      Paint()..color = _canvas,
-    );
+    _rounded(canvas, const Rect.fromLTWH(18, 895, 155, 74), _lilacDark, 37);
+    _rounded(canvas, const Rect.fromLTWH(18, 936, 45, 40), _lilacDark, 20);
+    _rounded(canvas, const Rect.fromLTWH(1385, 895, 183, 74), _salmon, 37);
+    _rounded(canvas, const Rect.fromLTWH(1520, 936, 39, 40), _salmon, 20);
     canvas.restore();
   }
 
@@ -272,21 +280,9 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
     );
   }
 
-  void _segments(
-    Canvas canvas,
-    double x,
-    double y,
-    double width,
-    List<double> heights,
-    List<Color> colors,
-  ) {
-    var top = y;
-    for (var index = 0; index < heights.length; index++) {
-      canvas.drawRect(
-        Rect.fromLTWH(x, top, width, heights[index]),
-        Paint()..color = colors[index],
-      );
-      top += heights[index] + 7;
+  void _rectSegments(Canvas canvas, List<(Rect, Color)> segments) {
+    for (final (rect, color) in segments) {
+      canvas.drawRect(rect, Paint()..color = color);
     }
   }
 
@@ -295,6 +291,27 @@ final class _FederationClassicLandscapePainter extends CustomPainter {
       RRect.fromRectAndRadius(rect, Radius.circular(radius)),
       Paint()..color = color,
     );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+final class _FederationClassicLandscapeCutoutPainter extends CustomPainter {
+  const _FederationClassicLandscapeCutoutPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    canvas.save();
+    canvas.scale(size.width / 1586, size.height / 992);
+    final cutout = Paint()..color = const Color(0xFF02040D);
+    canvas.drawRect(const Rect.fromLTWH(90, 105, 65, 98), cutout);
+    canvas.drawRect(const Rect.fromLTWH(90, 732, 47, 81), cutout);
+    canvas.drawRect(const Rect.fromLTWH(1441, 830, 5, 40), cutout);
+    canvas.drawRect(const Rect.fromLTWH(63, 936, 8, 33), cutout);
+    canvas.drawRect(const Rect.fromLTWH(1520, 936, 18, 33), cutout);
+    canvas.restore();
   }
 
   @override

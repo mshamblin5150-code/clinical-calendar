@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:flutter/material.dart';
 
 import '../responsive_shell.dart';
+import '../insight_rail_presentation_policy.dart';
 import '../theme_contract.dart';
 import '../variant_f_theme.dart';
 import 'evaluation_attention_controller.dart';
@@ -115,6 +116,11 @@ final class AttentionRail extends StatelessWidget {
     animation: controller,
     builder: (context, _) {
       final items = controller.attentionItems;
+      final expandedRows =
+          InsightRailPresentationPolicy.maybeOf(
+            context,
+          )?.expandedAttentionRows ??
+          false;
       return ShellPanel(
         label: 'Needs Attention · ${items.length}',
         accent: items.isEmpty
@@ -135,7 +141,11 @@ final class AttentionRail extends StatelessWidget {
               const Text('No unresolved items need attention.')
             else
               for (final item in items.take(4)) ...[
-                _AttentionRow(item: item, onOpen: () => onOpenAction(item)),
+                _AttentionRow(
+                  item: item,
+                  expanded: expandedRows,
+                  onOpen: () => onOpenAction(item),
+                ),
                 const SizedBox(height: 6),
               ],
             if (items.length > 4 || onOpenAll != null)

@@ -23,11 +23,36 @@ void main() {
     expect(find.text('August 2026'), findsOneWidget);
     expect(find.text('PLANNING'), findsOneWidget);
     expect(find.text('NEEDS ATTENTION'), findsOneWidget);
+    final title = tester.getRect(
+      find.byKey(const Key('calendar-period-title')),
+    );
+    final switcher = tester.getRect(
+      find.byKey(const Key('calendar-period-switcher')),
+    );
+    expect(title.center.dx, closeTo(774, 3));
+    expect(title.center.dy, closeTo(141, 3));
+    expect(switcher.left, closeTo(593, 5));
+    expect(switcher.top, closeTo(162, 3));
+    for (final (index, expectedCenter) in const [
+      (0, 227.0),
+      (1, 510.0),
+      (2, 790.0),
+      (3, 1068.0),
+      (4, 1314.0),
+    ]) {
+      expect(
+        tester
+            .getRect(find.byKey(Key('federation-classic-navigation-$index')))
+            .center
+            .dx,
+        closeTo(expectedCenter, 3),
+      );
+    }
 
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v3/federation_classic_landscape_1586x992.png',
+        'goldens/federation_classic_v4/federation_classic_landscape_1586x992.png',
       ),
     );
   });
@@ -40,7 +65,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v3/federation_classic_portrait_900x1440.png',
+        'goldens/federation_classic_v4/federation_classic_portrait_900x1440.png',
       ),
     );
   });
@@ -75,7 +100,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v3/'
+        'goldens/federation_classic_v4/'
         'federation_classic_portrait_200_percent_900x1440.png',
       ),
     );
@@ -135,7 +160,11 @@ Future<void> _pumpProof(
     mobileAttention: const _AttentionSummaryProof(),
     profileAvatar: const CircleAvatar(
       radius: 18,
-      child: Icon(Icons.person_outline, size: 20),
+      backgroundColor: FederationClassicColors.scheduled,
+      child: Text(
+        'AB',
+        style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800),
+      ),
     ),
   );
   await tester.pumpWidget(
@@ -562,16 +591,19 @@ final class _InsightProof extends StatelessWidget {
     children: [
       const Row(
         children: [
-          _SectionTitle('INTERNAL MEDICINE'),
+          _SectionTitle(
+            'INTERNAL MEDICINE',
+            color: FederationClassicColors.clinical,
+          ),
           SizedBox(width: 10),
           Expanded(child: _AccentRule(FederationClassicColors.clinical)),
         ],
       ),
-      const SizedBox(height: 10),
+      const SizedBox(height: 32),
       const Row(
         children: [
           SizedBox.square(
-            dimension: 136,
+            dimension: 142,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -616,7 +648,7 @@ final class _InsightProof extends StatelessWidget {
           ),
         ],
       ),
-      const SizedBox(height: 6),
+      const SizedBox(height: 24),
       Text(
         'Additional pace required - 21 hr 16 min / week',
         style: Theme.of(context).textTheme.bodySmall,
@@ -631,7 +663,7 @@ final class _InsightProof extends StatelessWidget {
         'SHOW PRECEPTOR BREAKDOWN',
         FederationClassicColors.clinical,
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 15),
       const Row(
         children: [
           _SectionTitle('NEEDS ATTENTION'),
@@ -646,19 +678,23 @@ final class _InsightProof extends StatelessWidget {
       const SizedBox(height: 5),
       const _AttentionCard(
         icon: Icons.assignment_late_outlined,
-        title: 'CLINICAL SESSION\nNEEDS CONFIRMATION',
+        title: 'Clinical Session needs confirmation',
+        subtitle: 'Confirm the actual times and supervisors.',
       ),
       const _AttentionCard(
         icon: Icons.fact_check_outlined,
         title: 'INITIAL SELF-ASSESSMENT',
+        subtitle: 'Acceptance Family Medicine - Due',
+      ),
+      const _AttentionCard(
+        icon: Icons.fact_check_outlined,
+        title: 'INITIAL SELF-ASSESSMENT',
+        subtitle: 'Internal Medicine - Due',
       ),
       const _AttentionCard(
         icon: Icons.warning_amber_outlined,
-        title: 'PLANNING INCOMPLETE',
-      ),
-      const _AttentionCard(
-        icon: Icons.fact_check_outlined,
-        title: 'INITIAL SELF-ASSESSMENT',
+        title: 'Planning Incomplete',
+        subtitle: 'Choose one empty Protected Day',
       ),
       const Spacer(),
       const Row(
@@ -708,15 +744,27 @@ final class _StatusStrip extends StatelessWidget {
 }
 
 final class _AttentionCard extends StatelessWidget {
-  const _AttentionCard({required this.icon, required this.title});
+  const _AttentionCard({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+  });
 
   final IconData icon;
   final String title;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 5),
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+    constraints: BoxConstraints(
+      minHeight: subtitle == null
+          ? 48
+          : title.startsWith('Clinical Session')
+          ? 84
+          : 62,
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
     decoration: BoxDecoration(
       border: Border(
         left: const BorderSide(color: FederationClassicColors.urgent, width: 3),
@@ -730,7 +778,17 @@ final class _AttentionCard extends StatelessWidget {
         Icon(icon, color: FederationClassicColors.clinical, size: 22),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(title, style: Theme.of(context).textTheme.labelSmall),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.labelSmall),
+              if (subtitle case final subtitle?) ...[
+                const SizedBox(height: 3),
+                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ],
+          ),
         ),
         const Icon(Icons.chevron_right, size: 18),
       ],
@@ -776,15 +834,19 @@ final class _AttentionSummaryProof extends StatelessWidget {
 }
 
 final class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.label);
+  const _SectionTitle(
+    this.label, {
+    this.color = FederationClassicColors.workAccent,
+  });
 
   final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) => Text(
     label,
     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-      color: FederationClassicColors.clinical,
+      color: color,
       letterSpacing: 1.7,
       fontWeight: FontWeight.w700,
     ),

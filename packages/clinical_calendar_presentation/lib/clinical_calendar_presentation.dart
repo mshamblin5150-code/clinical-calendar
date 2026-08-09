@@ -32,6 +32,7 @@ export 'src/federation_2399_theme.dart';
 export 'src/graphite_frame.dart';
 export 'src/graphite_shell.dart';
 export 'src/graphite_theme.dart';
+export 'src/insight_rail_presentation_policy.dart';
 export 'src/evaluation_attention/attention_surfaces.dart';
 export 'src/evaluation_attention/evaluation_attention_controller.dart';
 export 'src/evaluation_attention/evaluation_plan_surface.dart';
