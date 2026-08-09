@@ -430,7 +430,16 @@ final class _CalendarToolbar extends StatelessWidget {
                   ),
                 ),
               ),
-              Expanded(child: Center(child: switcher)),
+              Expanded(
+                child: Center(
+                  child: constraints.maxWidth >= 760
+                      ? Transform.translate(
+                          offset: const Offset(70, 0),
+                          child: Transform.scale(scaleX: 1.45, child: switcher),
+                        )
+                      : FittedBox(fit: BoxFit.scaleDown, child: switcher),
+                ),
+              ),
               SizedBox(
                 width: 88,
                 child: Row(

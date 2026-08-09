@@ -15,6 +15,7 @@ abstract final class CoastalLightColors {
   static const onAccent = Color(0xFFFFFFFF);
   static const control = Color(0xFFE6F1F2);
   static const controlActive = Color(0xFFDDEEEA);
+  static const navigationSelected = Color(0xFFA9CDCB);
   static const clinical = Color(0xFF1F6F68);
   static const clinicalFill = Color(0xFFDDEEEA);
   static const work = Color(0xFFDFEBF2);
@@ -211,9 +212,18 @@ ThemeData buildCoastalLightTheme({bool enhancedAccessibility = false}) {
         foregroundColor: WidgetStatePropertyAll(CoastalLightColors.primaryText),
       ),
     ),
-    segmentedButtonTheme: const SegmentedButtonThemeData(
+    segmentedButtonTheme: SegmentedButtonThemeData(
       style: ButtonStyle(
-        foregroundColor: WidgetStatePropertyAll(CoastalLightColors.primaryText),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? CoastalLightColors.onAccent
+              : CoastalLightColors.primaryText,
+        ),
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? CoastalLightColors.accentPrimary
+              : CoastalLightColors.surface,
+        ),
       ),
     ),
     navigationBarTheme: const NavigationBarThemeData(

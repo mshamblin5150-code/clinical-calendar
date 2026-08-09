@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
 import 'coastal_light_frame.dart';
+import 'coastal_light_theme.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
@@ -915,42 +916,53 @@ final class _CoastalLightNavigationDeck extends StatelessWidget {
                     onOpenDestination: onOpenDestination,
                     onOpenAttention: onOpenAttention,
                   ),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: index == selectedIndex
-                          ? context.clinicalColors.clinical.withValues(
-                              alpha: .16,
-                            )
-                          : Colors.transparent,
-                      border: index == selectedIndex
-                          ? Border.all(
-                              color: context.clinicalColors.clinical,
-                              width: 2,
-                            )
-                          : null,
-                      borderRadius: BorderRadius.circular(28),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 7,
                     ),
-                    child: Center(
-                      child: iconsOnly
-                          ? Icon(
-                              destinations[index].icon,
-                              color: index == selectedIndex
-                                  ? context.clinicalColors.workMachinery
-                                  : null,
-                            )
-                          : Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  destinations[index].icon,
-                                  color: index == selectedIndex
-                                      ? context.clinicalColors.workMachinery
-                                      : null,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(destinations[index].label),
-                              ],
-                            ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: index == selectedIndex
+                            ? CoastalLightColors.navigationSelected
+                            : Colors.transparent,
+                        border: index == selectedIndex
+                            ? Border.all(
+                                color: context.clinicalColors.insetBorder,
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Center(
+                        child: iconsOnly
+                            ? Icon(
+                                destinations[index].icon,
+                                size: 28,
+                                color: index == selectedIndex
+                                    ? context.clinicalColors.clinical
+                                    : null,
+                              )
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    destinations[index].icon,
+                                    size: 27,
+                                    color: index == selectedIndex
+                                        ? context.clinicalColors.clinical
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    destinations[index].label,
+                                    style: TextStyle(
+                                      color: context.clinicalColors.primaryText,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
                     ),
                   ),
                 ),

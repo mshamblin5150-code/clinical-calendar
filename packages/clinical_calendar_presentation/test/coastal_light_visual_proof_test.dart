@@ -107,6 +107,11 @@ void main() {
     );
     expect(find.byTooltip('Open menu').hitTestable(), findsOneWidget);
     expect(find.byTooltip('Add schedule').hitTestable(), findsOneWidget);
+    expect(
+      find.byKey(const Key('coastal-calm-navigation-4')).hitTestable(),
+      findsOneWidget,
+      reason: 'Settings must remain reachable at 200 percent text scale.',
+    );
 
     await expectLater(
       find.byKey(const Key('coastal-calm-proof')),
@@ -272,7 +277,7 @@ final class _PlacementsProof extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _SectionTitle('MY PLACEMENTS'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
         const Expanded(
           flex: 47,
           child: _PlacementCard(
@@ -359,8 +364,16 @@ final class _PlacementCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 38),
-        _MetricLine('$scheduled scheduled', CoastalLightColors.scheduled),
-        const _MetricLine('82 hr unscheduled', CoastalLightColors.scheduled),
+        _PlacementMetricLine(
+          icon: Icons.calendar_month_outlined,
+          label: '$scheduled scheduled',
+          color: CoastalLightColors.workMachinery,
+        ),
+        const _PlacementMetricLine(
+          icon: Icons.pending_outlined,
+          label: '82 hr unscheduled',
+          color: CoastalLightColors.scheduled,
+        ),
       ],
     ),
   );
@@ -386,6 +399,32 @@ final class _MetricLine extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 9),
+        Expanded(
+          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ),
+      ],
+    ),
+  );
+}
+
+final class _PlacementMetricLine extends StatelessWidget {
+  const _PlacementMetricLine({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 11),
+    child: Row(
+      children: [
+        Icon(icon, size: 23, color: color),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(label, style: Theme.of(context).textTheme.bodySmall),
         ),
@@ -452,16 +491,48 @@ final class _PlanningProof extends StatelessWidget {
         Row(
           children: [
             const Expanded(child: _SectionTitle('PLANNING')),
-            OutlinedButton.icon(
-              onPressed: _noop,
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('ADD SCHEDULE'),
+            SizedBox(
+              width: 145,
+              height: 42,
+              child: FilledButton(
+                onPressed: _noop,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  textStyle: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                child: const Text('ADD SCHEDULE'),
+              ),
             ),
-            const SizedBox(width: 8),
-            OutlinedButton.icon(
-              onPressed: _noop,
-              icon: const Icon(Icons.warning_amber_outlined, size: 18),
-              label: const Text('PLANNING INCOMPLETE'),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 175,
+              height: 42,
+              child: TextButton(
+                onPressed: _noop,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  foregroundColor: CoastalLightColors.urgent,
+                  textStyle: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                child: const Text('PLANNING INCOMPLETE'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            SizedBox(
+              width: 102,
+              height: 42,
+              child: OutlinedButton(
+                onPressed: _noop,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  textStyle: Theme.of(context).textTheme.labelSmall,
+                ),
+                child: const FittedBox(child: Text('COLLAPSE')),
+              ),
             ),
           ],
         ),
@@ -636,17 +707,17 @@ final class _InsightProof extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Expanded(
-        flex: 65,
+        flex: 63,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const _SectionTitle('INTERNAL MEDICINE'),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
               Center(
                 child: SizedBox.square(
-                  dimension: 112,
+                  dimension: 122,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -656,11 +727,42 @@ final class _InsightProof extends StatelessWidget {
                         color: CoastalLightColors.clinical,
                         backgroundColor: CoastalLightColors.control,
                       ),
-                      Center(
-                        child: Text(
-                          '0 hr\ncompleted',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.titleMedium,
+                      const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  '0',
+                                  style: TextStyle(
+                                    color: CoastalLightColors.primaryText,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'hr',
+                                  style: TextStyle(
+                                    color: CoastalLightColors.primaryText,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              'completed',
+                              style: TextStyle(
+                                color: CoastalLightColors.primaryText,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -668,25 +770,30 @@ final class _InsightProof extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              const _MetricLine(
-                'Target                         90 hr',
-                CoastalLightColors.primaryText,
+              const _ProgressMetricLine(
+                icon: Icons.gps_fixed,
+                label: 'Target',
+                value: '90 hr',
               ),
-              const _MetricLine(
-                'Completed                    0 hr',
-                CoastalLightColors.completed,
+              const _ProgressMetricLine(
+                icon: Icons.check_circle_outline,
+                label: 'Completed',
+                value: '0 hr',
               ),
-              const _MetricLine(
-                'Scheduled                     8 hr',
-                CoastalLightColors.scheduled,
+              const _ProgressMetricLine(
+                icon: Icons.calendar_month_outlined,
+                label: 'Scheduled',
+                value: '8 hr',
               ),
-              const _MetricLine(
-                'Unscheduled                82 hr',
-                CoastalLightColors.unscheduled,
+              const _ProgressMetricLine(
+                icon: Icons.pending_outlined,
+                label: 'Unscheduled',
+                value: '82 hr',
               ),
-              const _MetricLine(
-                'Over-Target                   0 hr',
-                CoastalLightColors.overTarget,
+              const _ProgressMetricLine(
+                icon: Icons.flag_outlined,
+                label: 'Over-Target',
+                value: '0 hr',
               ),
               const SizedBox(height: 10),
               Container(
@@ -705,26 +812,53 @@ final class _InsightProof extends StatelessWidget {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.speed_outlined, size: 18),
-                    SizedBox(width: 8),
-                    Text('Additional pace required\n21 hr 16 min / week'),
+                    Icon(
+                      Icons.speed_outlined,
+                      size: 30,
+                      color: CoastalLightColors.workMachinery,
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Additional pace required\n21 hr 16 min / week',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 8),
               const Row(
                 children: [
-                  Icon(Icons.explore_outlined, size: 17),
+                  Icon(
+                    Icons.explore_outlined,
+                    size: 20,
+                    color: CoastalLightColors.workMachinery,
+                  ),
                   SizedBox(width: 7),
-                  Text('TAP WHEEL TO VIEW NEXT PLACEMENT'),
+                  Text(
+                    'TAP WHEEL TO VIEW NEXT PLACEMENT',
+                    style: TextStyle(
+                      color: CoastalLightColors.workMachinery,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
               const Row(
                 children: [
-                  Icon(Icons.groups_outlined, size: 17),
+                  Icon(
+                    Icons.groups_outlined,
+                    size: 20,
+                    color: CoastalLightColors.workMachinery,
+                  ),
                   SizedBox(width: 7),
-                  Text('SHOW PRECEPTOR BREAKDOWN'),
+                  Text(
+                    'SHOW PRECEPTOR BREAKDOWN',
+                    style: TextStyle(
+                      color: CoastalLightColors.workMachinery,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -733,7 +867,7 @@ final class _InsightProof extends StatelessWidget {
       ),
       const SizedBox(height: 16),
       Expanded(
-        flex: 35,
+        flex: 37,
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -748,7 +882,16 @@ final class _InsightProof extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: _SectionTitle('NEEDS ATTENTION')),
+                  Expanded(
+                    child: Text(
+                      'NEEDS ATTENTION',
+                      style: TextStyle(
+                        color: CoastalLightColors.urgent,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: .5,
+                      ),
+                    ),
+                  ),
                   Text(
                     'ON · 5',
                     style: TextStyle(
@@ -760,20 +903,30 @@ final class _InsightProof extends StatelessWidget {
               ),
               SizedBox(height: 6),
               _AttentionCard(
-                icon: Icons.assignment_late_outlined,
+                icon: Icons.warning_rounded,
                 title: 'CLINICAL SESSION NEEDS CONFIRMATION',
+                description: 'Confirm the actual times and preceptor',
+                urgent: true,
               ),
               _AttentionCard(
-                icon: Icons.fact_check_outlined,
+                icon: Icons.warning_rounded,
                 title: 'INITIAL SELF-ASSESSMENT',
+                description: 'Acceptance Family Medicine',
+                due: true,
+                urgent: true,
               ),
               _AttentionCard(
-                icon: Icons.warning_amber_outlined,
+                icon: Icons.warning_rounded,
                 title: 'INITIAL SELF-ASSESSMENT',
+                description: 'Internal Medicine',
+                due: true,
+                urgent: true,
               ),
               _AttentionCard(
-                icon: Icons.rate_review_outlined,
+                icon: Icons.warning_rounded,
                 title: 'PLANNING INCOMPLETE',
+                description: 'Choose one empty Protected Day',
+                urgent: true,
               ),
             ],
           ),
@@ -783,19 +936,62 @@ final class _InsightProof extends StatelessWidget {
   );
 }
 
+final class _ProgressMetricLine extends StatelessWidget {
+  const _ProgressMetricLine({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(
+      children: [
+        Icon(icon, size: 21, color: CoastalLightColors.workMachinery),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        ),
+        Text(
+          value,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
+      ],
+    ),
+  );
+}
+
 final class _AttentionCard extends StatelessWidget {
-  const _AttentionCard({required this.icon, required this.title});
+  const _AttentionCard({
+    required this.icon,
+    required this.title,
+    this.description,
+    this.due = false,
+    this.urgent = false,
+  });
 
   final IconData icon;
   final String title;
+  final String? description;
+  final bool due;
+  final bool urgent;
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 10),
     decoration: BoxDecoration(
       border: Border(
-        left: const BorderSide(color: CoastalLightColors.urgent, width: 3),
+        left: BorderSide(
+          color: urgent ? CoastalLightColors.urgent : Colors.transparent,
+          width: 3,
+        ),
         bottom: BorderSide(
           color: CoastalLightColors.insetBorder.withValues(alpha: .35),
         ),
@@ -803,12 +999,50 @@ final class _AttentionCard extends StatelessWidget {
     ),
     child: Row(
       children: [
-        Icon(icon, color: CoastalLightColors.clinical, size: 22),
+        Icon(
+          icon,
+          color: urgent
+              ? CoastalLightColors.urgent
+              : CoastalLightColors.clinical,
+          size: urgent ? 28 : 22,
+        ),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(title, style: Theme.of(context).textTheme.labelSmall),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (description != null)
+                Text(
+                  description!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontSize: 11),
+                ),
+            ],
+          ),
         ),
-        const Icon(Icons.chevron_right, size: 18),
+        if (due)
+          const Text(
+            'Due',
+            style: TextStyle(
+              color: CoastalLightColors.urgent,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          )
+        else if (!urgent)
+          const Icon(Icons.chevron_right, size: 18),
       ],
     ),
   );
