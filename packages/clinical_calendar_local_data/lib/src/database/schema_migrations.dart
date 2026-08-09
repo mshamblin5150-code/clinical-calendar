@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 13;
+  static const latestVersion = 14;
 
   final MigrationTestHook? _testHook;
 
@@ -652,5 +652,20 @@ final Map<int, List<String>> _statements = {
         AND json_valid(payload_json)
         AND json_type(payload_json, '\$.value') = 'object'
         AND json_type(payload_json, '\$.value.enhanced_accessibility') IS NULL''',
+  ],
+  14: [
+    '''INSERT INTO settings
+      (id, student_id, revision, created_at_utc, updated_at_utc,
+       deleted_at_utc, week_start, time_display, theme,
+       enhanced_accessibility, synchronization_mode,
+       notification_preferences_json, active_placement_id)
+      SELECT student_id, student_id, 0, created_at_utc, updated_at_utc,
+             NULL, 7, 'military', 'variant-f', 0, 'enabled', '{}', NULL
+      FROM student_profiles AS profile
+      WHERE profile.deleted_at_utc IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM settings
+          WHERE settings.student_id = profile.student_id
+        )''',
   ],
 };

@@ -22,6 +22,7 @@ import 'heritage_field_notes_theme.dart';
 import 'responsive_shell.dart';
 import 'tactical_frame.dart';
 import 'variant_f_theme.dart';
+import 'variant_f_enhanced_catalog_overlay.dart';
 
 const variantFThemeId = 'variant-f';
 const federationClassicThemeId = 'federation-classic';
@@ -80,8 +81,14 @@ final class VariantFVisualTheme implements ClinicalCalendarVisualTheme {
   ClinicalCalendarColors get semanticColors => variantFSemanticColors;
 
   @override
-  ThemeData createThemeData({bool enhancedAccessibility = false}) =>
-      buildVariantFTheme(enhancedAccessibility: enhancedAccessibility);
+  ThemeData createThemeData({bool enhancedAccessibility = false}) {
+    final theme = buildVariantFTheme(
+      enhancedAccessibility: enhancedAccessibility,
+    );
+    return enhancedAccessibility
+        ? applyVariantFEnhancedCatalogOverlay(theme)
+        : theme;
+  }
 }
 
 final class GraphiteVisualTheme implements ClinicalCalendarVisualTheme {
@@ -2360,9 +2367,24 @@ final class ClinicalCalendarThemeBundleRegistry {
 
   final Map<String, ClinicalCalendarThemeBundle> _bundles;
 
-  bool get isSelectableCatalogComplete => false;
+  static const _closedCatalogIds = <String>{
+    variantFThemeId,
+    graphiteThemeId,
+    federationClassicThemeId,
+    federation2399ThemeId,
+    coastalCalmThemeId,
+    botanicalStudyThemeId,
+    heritageFieldNotesThemeId,
+  };
 
-  List<ClinicalCalendarThemeBundle> get selectableBundles => const [];
+  bool get isSelectableCatalogComplete =>
+      _bundles.length == _closedCatalogIds.length &&
+      _closedCatalogIds.every(_bundles.containsKey);
+
+  List<ClinicalCalendarThemeBundle> get selectableBundles =>
+      isSelectableCatalogComplete
+      ? List.unmodifiable(_bundles.values)
+      : const [];
 
   /// Complete bundles that may be inspected before catalog activation.
   /// Inspection does not make a bundle selectable or applied.
@@ -2383,10 +2405,11 @@ final class ClinicalCalendarThemeBundleRegistry {
   }
 
   AppliedThemeResolution resolveApplied(String storedId) {
-    if (storedId == variantFThemeId) {
+    final bundle = isSelectableCatalogComplete ? _bundles[storedId] : null;
+    if (bundle != null) {
       return AppliedThemeResolution(
         storedId: storedId,
-        bundle: _bundles[variantFThemeId]!,
+        bundle: bundle,
         isFallback: false,
       );
     }

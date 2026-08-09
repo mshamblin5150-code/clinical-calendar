@@ -169,10 +169,12 @@ void main() {
     () async {
       final bundles =
           ClinicalCalendarThemeBundleRegistry.standard.galleryBundles;
+      var directedSwapCount = 0;
       for (final source in bundles) {
         for (final candidate in bundles.where(
           (bundle) => bundle.id != source.id,
         )) {
+          directedSwapCount += 1;
           final swap = ThemePreviewController(
             registry: ClinicalCalendarThemeBundleRegistry.standard,
             authoritativeThemeId: source.id,
@@ -190,6 +192,7 @@ void main() {
           swap.dispose();
         }
       }
+      expect(directedSwapCount, 42);
     },
   );
 }

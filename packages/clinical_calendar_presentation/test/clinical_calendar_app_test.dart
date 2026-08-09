@@ -26,7 +26,7 @@ void main() {
     Size(1440, 900),
   ];
 
-  group('accepted pre-catalog Variant F renders', () {
+  group('accepted Variant F and catalog Settings renders', () {
     setUpAll(() async {
       final font = await File(
         '../clinical_calendar_platform/assets/fonts/'
@@ -66,7 +66,11 @@ void main() {
       await _pumpAcceptedRenderAt(tester, const Size(320, 700));
       await tester.tap(find.text('Settings').last);
       await tester.pumpAndSettle();
-      await _expectAppGolden(tester, 'settings-320');
+      await _expectAppGolden(
+        tester,
+        'settings-320',
+        collection: 'catalog_gallery',
+      );
     });
 
     for (final destination in applicationMenuDestinations) {
@@ -78,7 +82,13 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(destination.label), findsWidgets);
-        await _expectAppGolden(tester, 'destination-${destination.name}');
+        await _expectAppGolden(
+          tester,
+          'destination-${destination.name}',
+          collection: destination.name == 'settings'
+              ? 'catalog_gallery'
+              : 'variant_f_renders',
+        );
       });
     }
   });
@@ -841,185 +851,182 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Federation Classic previews and persists behind the partial-catalog fallback',
-    (tester) async {
-      final repositories = _Repositories();
-      final preview = ThemePreviewController(
-        registry: ClinicalCalendarThemeBundleRegistry.standard,
-        authoritativeThemeId: variantFThemeId,
-        initialRevision: 0,
-      );
-      addTearDown(preview.dispose);
-      await _pumpAt(
-        tester,
-        const Size(390, 844),
-        dependencies: _dependencies(repositories: repositories),
-        themePreviewController: preview,
-        candidateThemePreflight: (_) async {},
-      );
+  testWidgets('Federation Classic previews, applies, and survives restart', (
+    tester,
+  ) async {
+    final repositories = _Repositories();
+    final preview = ThemePreviewController(
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      authoritativeThemeId: variantFThemeId,
+      initialRevision: 0,
+    );
+    addTearDown(preview.dispose);
+    await _pumpAt(
+      tester,
+      const Size(390, 844),
+      dependencies: _dependencies(repositories: repositories),
+      themePreviewController: preview,
+      candidateThemePreflight: (_) async {},
+    );
 
-      await preview.preview(federationClassicThemeId, preflight: (_) async {});
-      await tester.pumpAndSettle();
-      expect(find.byType(FederationClassicNineSliceFrame), findsWidgets);
-      expect(find.text('Previewing Federation Classic'), findsOneWidget);
+    await preview.preview(federationClassicThemeId, preflight: (_) async {});
+    await tester.pumpAndSettle();
+    expect(find.byType(FederationClassicNineSliceFrame), findsWidgets);
+    expect(find.text('Previewing Federation Classic'), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('revert-theme-preview')));
-      await tester.pumpAndSettle();
-      expect(preview.effectiveBundle.id, variantFThemeId);
-      expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
+    await tester.tap(find.byKey(const Key('revert-theme-preview')));
+    await tester.pumpAndSettle();
+    expect(preview.effectiveBundle.id, variantFThemeId);
+    expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
 
-      await preview.preview(federationClassicThemeId, preflight: (_) async {});
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('apply-theme-preview')));
-      await tester.pumpAndSettle();
+    await preview.preview(federationClassicThemeId, preflight: (_) async {});
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('apply-theme-preview')));
+    await tester.pumpAndSettle();
 
-      expect(preview.authoritativeThemeId, federationClassicThemeId);
-      expect(
-        repositories.settings.value?.value.themeId,
-        federationClassicThemeId,
-      );
-      expect(preview.effectiveBundle.id, graphiteThemeId);
-      expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
+    expect(preview.authoritativeThemeId, federationClassicThemeId);
+    expect(
+      repositories.settings.value?.value.themeId,
+      federationClassicThemeId,
+    );
+    expect(preview.effectiveBundle.id, federationClassicThemeId);
+    expect(find.byType(FederationClassicNineSliceFrame), findsWidgets);
 
-      final restarted = ThemePreviewController(
-        registry: ClinicalCalendarThemeBundleRegistry.standard,
-        authoritativeThemeId: federationClassicThemeId,
-        initialRevision: preview.authoritativeRevision,
-      );
-      addTearDown(restarted.dispose);
-      await _pumpAt(
-        tester,
-        const Size(390, 844),
-        dependencies: _dependencies(repositories: repositories),
-        themePreviewController: restarted,
-        candidateThemePreflight: (_) async {},
-      );
+    final restarted = ThemePreviewController(
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      authoritativeThemeId: federationClassicThemeId,
+      initialRevision: preview.authoritativeRevision,
+    );
+    addTearDown(restarted.dispose);
+    await _pumpAt(
+      tester,
+      const Size(390, 844),
+      dependencies: _dependencies(repositories: repositories),
+      themePreviewController: restarted,
+      candidateThemePreflight: (_) async {},
+    );
 
-      expect(restarted.authoritativeThemeId, federationClassicThemeId);
-      expect(restarted.effectiveBundle.id, graphiteThemeId);
-      expect(restarted.authoritativeResolution.isFallback, isTrue);
-      expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
-    },
-  );
+    expect(restarted.authoritativeThemeId, federationClassicThemeId);
+    expect(restarted.effectiveBundle.id, federationClassicThemeId);
+    expect(restarted.authoritativeResolution.isFallback, isFalse);
+    expect(find.byType(FederationClassicNineSliceFrame), findsWidgets);
+  });
 
-  testWidgets(
-    'Federation 2399 previews and persists behind the partial-catalog fallback',
-    (tester) async {
-      final repositories = _Repositories();
-      final preview = ThemePreviewController(
-        registry: ClinicalCalendarThemeBundleRegistry.standard,
-        authoritativeThemeId: variantFThemeId,
-        initialRevision: 0,
-      );
-      addTearDown(preview.dispose);
-      await _pumpAt(
-        tester,
-        const Size(390, 844),
-        dependencies: _dependencies(repositories: repositories),
-        themePreviewController: preview,
-        candidateThemePreflight: (_) async {},
-      );
+  testWidgets('Federation 2399 previews, applies, and survives restart', (
+    tester,
+  ) async {
+    final repositories = _Repositories();
+    final preview = ThemePreviewController(
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      authoritativeThemeId: variantFThemeId,
+      initialRevision: 0,
+    );
+    addTearDown(preview.dispose);
+    await _pumpAt(
+      tester,
+      const Size(390, 844),
+      dependencies: _dependencies(repositories: repositories),
+      themePreviewController: preview,
+      candidateThemePreflight: (_) async {},
+    );
 
-      await preview.preview(federation2399ThemeId, preflight: (_) async {});
-      await tester.pumpAndSettle();
-      expect(find.byType(Federation2399NineSliceFrame), findsWidgets);
-      expect(find.text('Previewing Federation 2399'), findsOneWidget);
+    await preview.preview(federation2399ThemeId, preflight: (_) async {});
+    await tester.pumpAndSettle();
+    expect(find.byType(Federation2399NineSliceFrame), findsWidgets);
+    expect(find.text('Previewing Federation 2399'), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('revert-theme-preview')));
-      await tester.pumpAndSettle();
-      expect(preview.effectiveBundle.id, variantFThemeId);
-      expect(find.byType(Federation2399NineSliceFrame), findsNothing);
+    await tester.tap(find.byKey(const Key('revert-theme-preview')));
+    await tester.pumpAndSettle();
+    expect(preview.effectiveBundle.id, variantFThemeId);
+    expect(find.byType(Federation2399NineSliceFrame), findsNothing);
 
-      await preview.preview(federation2399ThemeId, preflight: (_) async {});
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('apply-theme-preview')));
-      await tester.pumpAndSettle();
+    await preview.preview(federation2399ThemeId, preflight: (_) async {});
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('apply-theme-preview')));
+    await tester.pumpAndSettle();
 
-      expect(preview.authoritativeThemeId, federation2399ThemeId);
-      expect(repositories.settings.value?.value.themeId, federation2399ThemeId);
-      expect(preview.effectiveBundle.id, graphiteThemeId);
-      expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
+    expect(preview.authoritativeThemeId, federation2399ThemeId);
+    expect(repositories.settings.value?.value.themeId, federation2399ThemeId);
+    expect(preview.effectiveBundle.id, federation2399ThemeId);
+    expect(find.byType(Federation2399NineSliceFrame), findsWidgets);
 
-      final restarted = ThemePreviewController(
-        registry: ClinicalCalendarThemeBundleRegistry.standard,
-        authoritativeThemeId: federation2399ThemeId,
-        initialRevision: preview.authoritativeRevision,
-      );
-      addTearDown(restarted.dispose);
-      await _pumpAt(
-        tester,
-        const Size(390, 844),
-        dependencies: _dependencies(repositories: repositories),
-        themePreviewController: restarted,
-        candidateThemePreflight: (_) async {},
-      );
+    final restarted = ThemePreviewController(
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      authoritativeThemeId: federation2399ThemeId,
+      initialRevision: preview.authoritativeRevision,
+    );
+    addTearDown(restarted.dispose);
+    await _pumpAt(
+      tester,
+      const Size(390, 844),
+      dependencies: _dependencies(repositories: repositories),
+      themePreviewController: restarted,
+      candidateThemePreflight: (_) async {},
+    );
 
-      expect(restarted.authoritativeThemeId, federation2399ThemeId);
-      expect(restarted.effectiveBundle.id, graphiteThemeId);
-      expect(restarted.authoritativeResolution.isFallback, isTrue);
-      expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
-    },
-  );
+    expect(restarted.authoritativeThemeId, federation2399ThemeId);
+    expect(restarted.effectiveBundle.id, federation2399ThemeId);
+    expect(restarted.authoritativeResolution.isFallback, isFalse);
+    expect(find.byType(Federation2399NineSliceFrame), findsWidgets);
+  });
 
-  testWidgets(
-    'Coastal Light previews and persists behind the partial-catalog fallback',
-    (tester) async {
-      final repositories = _Repositories();
-      final preview = ThemePreviewController(
-        registry: ClinicalCalendarThemeBundleRegistry.standard,
-        authoritativeThemeId: variantFThemeId,
-        initialRevision: 0,
-      );
-      addTearDown(preview.dispose);
-      await _pumpAt(
-        tester,
-        const Size(390, 844),
-        dependencies: _dependencies(repositories: repositories),
-        themePreviewController: preview,
-        candidateThemePreflight: (_) async {},
-      );
+  testWidgets('Coastal Light previews, applies, and survives restart', (
+    tester,
+  ) async {
+    final repositories = _Repositories();
+    final preview = ThemePreviewController(
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      authoritativeThemeId: variantFThemeId,
+      initialRevision: 0,
+    );
+    addTearDown(preview.dispose);
+    await _pumpAt(
+      tester,
+      const Size(390, 844),
+      dependencies: _dependencies(repositories: repositories),
+      themePreviewController: preview,
+      candidateThemePreflight: (_) async {},
+    );
 
-      await preview.preview(coastalCalmThemeId, preflight: (_) async {});
-      await tester.pumpAndSettle();
-      expect(find.byType(CoastalLightNineSliceFrame), findsWidgets);
-      expect(find.text('Previewing Coastal Light'), findsOneWidget);
+    await preview.preview(coastalCalmThemeId, preflight: (_) async {});
+    await tester.pumpAndSettle();
+    expect(find.byType(CoastalLightNineSliceFrame), findsWidgets);
+    expect(find.text('Previewing Coastal Light'), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('revert-theme-preview')));
-      await tester.pumpAndSettle();
-      expect(preview.effectiveBundle.id, variantFThemeId);
-      expect(find.byType(CoastalLightNineSliceFrame), findsNothing);
+    await tester.tap(find.byKey(const Key('revert-theme-preview')));
+    await tester.pumpAndSettle();
+    expect(preview.effectiveBundle.id, variantFThemeId);
+    expect(find.byType(CoastalLightNineSliceFrame), findsNothing);
 
-      await preview.preview(coastalCalmThemeId, preflight: (_) async {});
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('apply-theme-preview')));
-      await tester.pumpAndSettle();
+    await preview.preview(coastalCalmThemeId, preflight: (_) async {});
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('apply-theme-preview')));
+    await tester.pumpAndSettle();
 
-      expect(preview.authoritativeThemeId, coastalCalmThemeId);
-      expect(repositories.settings.value?.value.themeId, coastalCalmThemeId);
-      expect(preview.effectiveBundle.id, graphiteThemeId);
-      expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
+    expect(preview.authoritativeThemeId, coastalCalmThemeId);
+    expect(repositories.settings.value?.value.themeId, coastalCalmThemeId);
+    expect(preview.effectiveBundle.id, coastalCalmThemeId);
+    expect(find.byType(CoastalLightNineSliceFrame), findsWidgets);
 
-      final restarted = ThemePreviewController(
-        registry: ClinicalCalendarThemeBundleRegistry.standard,
-        authoritativeThemeId: coastalCalmThemeId,
-        initialRevision: preview.authoritativeRevision,
-      );
-      addTearDown(restarted.dispose);
-      await _pumpAt(
-        tester,
-        const Size(390, 844),
-        dependencies: _dependencies(repositories: repositories),
-        themePreviewController: restarted,
-        candidateThemePreflight: (_) async {},
-      );
+    final restarted = ThemePreviewController(
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      authoritativeThemeId: coastalCalmThemeId,
+      initialRevision: preview.authoritativeRevision,
+    );
+    addTearDown(restarted.dispose);
+    await _pumpAt(
+      tester,
+      const Size(390, 844),
+      dependencies: _dependencies(repositories: repositories),
+      themePreviewController: restarted,
+      candidateThemePreflight: (_) async {},
+    );
 
-      expect(restarted.authoritativeThemeId, coastalCalmThemeId);
-      expect(restarted.effectiveBundle.id, graphiteThemeId);
-      expect(restarted.authoritativeResolution.isFallback, isTrue);
-      expect(find.byType(GraphiteNineSliceFrame), findsWidgets);
-    },
-  );
+    expect(restarted.authoritativeThemeId, coastalCalmThemeId);
+    expect(restarted.effectiveBundle.id, coastalCalmThemeId);
+    expect(restarted.authoritativeResolution.isFallback, isFalse);
+    expect(find.byType(CoastalLightNineSliceFrame), findsWidgets);
+  });
 
   testWidgets(
     'Botanical Study preview composes the production live application slots',
@@ -1276,12 +1283,16 @@ void main() {
   );
 }
 
-Future<void> _expectAppGolden(WidgetTester tester, String name) async {
+Future<void> _expectAppGolden(
+  WidgetTester tester,
+  String name, {
+  String collection = 'variant_f_renders',
+}) async {
   try {
     await expectLater(
       find.byType(ClinicalCalendarApp),
       matchesGoldenFile(
-        'baselines/variant_f_renders/${_goldenPlatformDirectory()}/$name.png',
+        'baselines/$collection/${_goldenPlatformDirectory()}/$name.png',
       ),
     );
   } finally {
@@ -1299,7 +1310,19 @@ String _goldenPlatformDirectory() {
 
 Future<void> _pumpAcceptedRenderAt(WidgetTester tester, Size size) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.android;
-  await _pumpAt(tester, size);
+  final repositories = _Repositories();
+  repositories.settings.value = StoredDomainRecord(
+    value: StudentSettings(themeId: StudentSettings.variantFThemeId),
+    studentId: studentId,
+    revision: 1,
+    createdAtUtc: DateTime.utc(2026, 8, 1),
+    updatedAtUtc: DateTime.utc(2026, 8, 1),
+  );
+  await _pumpAt(
+    tester,
+    size,
+    dependencies: _dependencies(repositories: repositories),
+  );
 }
 
 Future<void> _pumpAt(
@@ -1957,7 +1980,14 @@ final class _SettingsStore implements StudentSettingsRepository {
 
   @override
   StoredDomainRecord<StudentSettings>? find({required String studentId}) =>
-      value;
+      value ??
+      StoredDomainRecord(
+        value: StudentSettings(themeId: StudentSettings.variantFThemeId),
+        studentId: studentId,
+        revision: 0,
+        createdAtUtc: DateTime.utc(2026, 8, 1),
+        updatedAtUtc: DateTime.utc(2026, 8, 1),
+      );
 
   @override
   MutationReceipt<StudentSettings> put({

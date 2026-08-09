@@ -239,6 +239,7 @@ ThemeData buildCoastalLightTheme({bool enhancedAccessibility = false}) {
 
 ThemeData _applyCoastalLightEnhancedAccessibility(ThemeData standard) {
   const boundary = Color(0xFF7E281F);
+  const enhancedPrimary = Color(0xFF064A46);
   const enhancedColors = ClinicalCalendarColors(
     canvas: CoastalLightColors.surface,
     structure: CoastalLightColors.surface,
@@ -256,9 +257,11 @@ ThemeData _applyCoastalLightEnhancedAccessibility(ThemeData standard) {
   );
   return standard.copyWith(
     colorScheme: standard.colorScheme.copyWith(
-      primary: const Color(0xFF185D57),
+      primary: enhancedPrimary,
       onPrimary: Colors.white,
       secondary: enhancedColors.workMachinery,
+      tertiary: const Color(0xFF15394D),
+      onTertiary: Colors.white,
       error: enhancedColors.urgent,
       onSurface: enhancedColors.primaryText,
       onSurfaceVariant: enhancedColors.secondaryText,
@@ -286,6 +289,16 @@ ThemeData _applyCoastalLightEnhancedAccessibility(ThemeData standard) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: standard.filledButtonTheme.style?.copyWith(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? CoastalLightColors.surfaceRaised
+              : enhancedPrimary,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? enhancedColors.primaryText
+              : Colors.white,
+        ),
         side: WidgetStatePropertyAll(
           BorderSide(color: enhancedColors.insetBorder, width: 1.5),
         ),
@@ -295,6 +308,48 @@ ThemeData _applyCoastalLightEnhancedAccessibility(ThemeData standard) {
       style: standard.outlinedButtonTheme.style?.copyWith(
         side: WidgetStatePropertyAll(
           BorderSide(color: enhancedColors.insetBorder, width: 1.5),
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: standard.textButtonTheme.style?.copyWith(
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? enhancedColors.primaryText
+              : enhancedPrimary,
+        ),
+      ),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: standard.segmentedButtonTheme.style?.copyWith(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? enhancedPrimary
+              : CoastalLightColors.surface,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? Colors.white
+              : enhancedColors.primaryText,
+        ),
+      ),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: standard.iconButtonTheme.style?.copyWith(
+        overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+        side: WidgetStateProperty.resolveWith(
+          (states) => BorderSide(
+            color: states.contains(WidgetState.focused)
+                ? enhancedPrimary
+                : states.contains(WidgetState.pressed)
+                ? boundary
+                : Colors.transparent,
+            width: states.contains(WidgetState.focused)
+                ? 3
+                : states.contains(WidgetState.pressed)
+                ? 2
+                : 1,
+          ),
         ),
       ),
     ),

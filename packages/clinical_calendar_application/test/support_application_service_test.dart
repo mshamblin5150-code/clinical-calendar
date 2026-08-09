@@ -22,6 +22,16 @@ void main() {
   });
 
   test(
+    'new Student settings default to Graphite after catalog migration',
+    () async {
+      final snapshot = await service.load();
+
+      expect(snapshot.settings.value.themeId, 'graphite');
+      expect(snapshot.settings.revision, 0);
+    },
+  );
+
+  test(
     'profile derives initials and defensively copies avatar bytes',
     () async {
       final sourceAvatar = <int>[1, 2, 3, 4];

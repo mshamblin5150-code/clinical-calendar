@@ -375,6 +375,27 @@ void main() {
     await database.close();
   });
 
+  test(
+    'catalog migration creates Variant F settings for a pre-catalog Student',
+    () async {
+      await _createFixture(databasePath, version: 13);
+
+      final database = await ClinicalCalendarDatabase.open(
+        path: databasePath,
+        secureStorage: MemorySecureStorage(_key),
+      );
+      addTearDown(database.close);
+      final settings = database.select(
+        'SELECT student_id, theme FROM settings WHERE student_id = ?',
+        [_studentId],
+      ).single;
+
+      expect(database.schemaVersion, DatabaseMigrationRunner.latestVersion);
+      expect(settings['student_id'], _studentId);
+      expect(settings['theme'], 'variant-f');
+    },
+  );
+
   test('repeated open is idempotent', () async {
     final keys = MemorySecureStorage(_key);
     final first = await ClinicalCalendarDatabase.open(

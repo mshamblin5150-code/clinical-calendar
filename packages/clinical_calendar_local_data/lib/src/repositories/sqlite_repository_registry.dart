@@ -2567,7 +2567,7 @@ final class _ActivePlacementSelectionRepository
         ? 'military'
         : _text(existing, 'time_display');
     final theme = existing == null
-        ? StudentSettings.variantFThemeId
+        ? StudentSettings.graphiteThemeId
         : _normalizeThemeId(_text(existing, 'theme'));
     final enhancedAccessibility = existing == null
         ? 0

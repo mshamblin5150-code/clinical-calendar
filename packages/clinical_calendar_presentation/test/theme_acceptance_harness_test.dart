@@ -93,23 +93,19 @@ void main() {
     for (final bundle
         in ClinicalCalendarThemeBundleRegistry.standard.galleryBundles) {
       for (final mode in ThemeAccessibilityMode.values) {
-        test('${bundle.id} ${mode.name} audits actual runtime state layers', () {
-          final report = ThemeRuntimeTokenAuditor.audit(
-            bundle: bundle,
-            mode: mode,
-          );
+        testWidgets(
+          '${bundle.id} ${mode.name} audits actual runtime state layers',
+          (tester) async {
+            final report = await auditRuntimeBundle(tester, bundle, mode);
 
-          expect(report.themeId, bundle.id);
-          expect(report.mode, mode);
-          expect(
-            report.entries.map((entry) => entry.state).toSet(),
-            containsAll(ThemeTokenState.values),
-          );
-          expect(report.entries.any((entry) => entry.permitted), isTrue);
-          expect(report.entries.any((entry) => !entry.permitted), isTrue);
-          if (bundle.id == federationClassicThemeId ||
-              bundle.id == federation2399ThemeId ||
-              bundle.id == heritageFieldNotesThemeId) {
+            expect(report.themeId, bundle.id);
+            expect(report.mode, mode);
+            expect(
+              report.entries.map((entry) => entry.state).toSet(),
+              containsAll(ThemeTokenState.values),
+            );
+            expect(report.entries.any((entry) => entry.permitted), isTrue);
+            expect(report.entries.any((entry) => !entry.permitted), isTrue);
             expect(
               report.passed,
               isTrue,
@@ -121,17 +117,17 @@ void main() {
                   )
                   .join('\n'),
             );
-          }
-          expect(
-            report.entries.every(
-              (entry) =>
-                  entry.compositedForeground.a == 1 &&
-                  entry.compositedBackground.a == 1,
-            ),
-            isTrue,
-          );
-          expect(report.toJson()['themeId'], bundle.id);
-        });
+            expect(
+              report.entries.every(
+                (entry) =>
+                    entry.compositedForeground.a == 1 &&
+                    entry.compositedBackground.a == 1,
+              ),
+              isTrue,
+            );
+            expect(report.toJson()['themeId'], bundle.id);
+          },
+        );
       }
     }
 
@@ -159,6 +155,90 @@ void main() {
       expect(entry.contrastRatio, greaterThan(1));
       expect(entry.contrastRatio, lessThan(21));
     });
+
+    test('inactive controls are audited without a WCAG contrast floor', () {
+      final report = ThemeRuntimeTokenAuditor.auditPairings(
+        themeId: 'fixture',
+        mode: ThemeAccessibilityMode.standard,
+        pairings: const [
+          ThemeTokenPairing(
+            pairingId: 'disabled-label',
+            state: ThemeTokenState.disabled,
+            contentKind: ThemeContrastContentKind.inactiveControl,
+            foreground: Color(0xFF777777),
+            background: ThemePaintStack(base: Color(0xFF888888)),
+          ),
+        ],
+      );
+
+      expect(report.passed, isTrue);
+      expect(report.entries.single.requiredRatio, 1);
+    });
+
+    test('Botanical Enhanced text actions keep distinct interaction cues', () {
+      final bundle = ClinicalCalendarThemeBundleRegistry.standard.galleryBundles
+          .singleWhere((item) => item.id == botanicalStudyThemeId);
+      final style = bundle.standardPresentation
+          .createThemeData(enhancedAccessibility: true)
+          .textButtonTheme
+          .style!;
+      const defaultState = <WidgetState>{};
+      const focusedState = {WidgetState.focused};
+      const pressedState = {WidgetState.pressed};
+
+      expect(
+        style.overlayColor!.resolve(defaultState),
+        isNot(style.overlayColor!.resolve(focusedState)),
+      );
+      expect(
+        style.overlayColor!.resolve(focusedState),
+        isNot(style.overlayColor!.resolve(pressedState)),
+      );
+      expect(style.side!.resolve(defaultState)!.width, 1);
+      expect(style.side!.resolve(focusedState)!.width, 3);
+      expect(style.side!.resolve(pressedState)!.width, 2);
+    });
+
+    testWidgets(
+      'runtime component states fall through null theme values to Flutter defaults',
+      (tester) async {
+        final bundle = ClinicalCalendarThemeBundleRegistry
+            .standard
+            .galleryBundles
+            .singleWhere((item) => item.id == graphiteThemeId);
+        final base = bundle.standardPresentation.createThemeData();
+        final theme = base.copyWith(
+          filledButtonTheme: FilledButtonThemeData(
+            style: (base.filledButtonTheme.style ?? const ButtonStyle())
+                .copyWith(
+                  overlayColor: WidgetStateProperty.resolveWith(
+                    (states) => states.contains(WidgetState.pressed)
+                        ? Colors.black
+                        : null,
+                  ),
+                ),
+          ),
+        );
+
+        final report = await auditRuntimeThemeData(
+          tester,
+          themeId: bundle.id,
+          theme: theme,
+          mode: ThemeAccessibilityMode.standard,
+        );
+
+        final focused = report.entries.singleWhere(
+          (entry) => entry.pairingId == 'filled-focused',
+        );
+        expect(
+          focused.compositedBackground,
+          Color.alphaBlend(
+            theme.colorScheme.onPrimary.withValues(alpha: 26 / 255),
+            theme.colorScheme.primary,
+          ),
+        );
+      },
+    );
 
     test('resolved pressed overlay participates in the runtime ratio', () {
       final bundle = ClinicalCalendarThemeBundleRegistry.standard.galleryBundles
@@ -449,13 +529,13 @@ void main() {
         : Directory('packages/clinical_calendar_presentation');
     final bundles = ClinicalCalendarThemeBundleRegistry.standard.galleryBundles;
 
-    test('registry audits ownership and remains Pending while partial', () {
+    test('complete registry passes ownership and catalog coverage audit', () {
       final result = ThemeRegistryAcceptanceAuditor.audit(
         ClinicalCalendarThemeBundleRegistry.standard,
       );
 
-      expect(result.passed, isFalse);
-      expect(result.failures, contains(contains('seven')));
+      expect(result.passed, isTrue);
+      expect(result.failures, isEmpty);
       for (final bundle in bundles) {
         expect(result.failures, isNot(contains(contains(bundle.id))));
       }
