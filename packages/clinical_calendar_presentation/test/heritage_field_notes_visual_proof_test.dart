@@ -234,7 +234,7 @@ final class _ProofAssetBundle extends CachingAssetBundle {
 }
 
 Future<void> _loadProofFonts() async {
-  await loadProofFonts();
+  await prepareProofEnvironment();
   var root = Directory.current.absolute;
   File? fieldArchive;
   while (root.parent.path != root.path) {
