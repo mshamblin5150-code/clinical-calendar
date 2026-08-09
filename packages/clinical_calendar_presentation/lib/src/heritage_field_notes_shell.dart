@@ -133,7 +133,7 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
               return Stack(
                 children: [
                   const Positioned.fill(
-                    child: ColoredBox(color: HeritageFieldNotesColors.canvas),
+                    child: ColoredBox(color: HeritageFieldNotesColors.surface),
                   ),
                   Positioned.fromRect(
                     rect: resolveRegion(_heritageFieldNotesCrownRegion),
@@ -182,7 +182,7 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                     rect: resolveRegion(_heritageFieldNotesInsightRegion),
                     child: _HeritageFieldNotesConsoleBay(
                       key: const Key('heritage-field-notes-insight-bay'),
-                      accent: _HeritageFieldNotesBayAccent.brass,
+                      accent: _HeritageFieldNotesBayAccent.forest,
                       shape: _HeritageFieldNotesBayShape.insight,
                       child: slots.insightRail,
                     ),
@@ -383,22 +383,26 @@ final class _HeritageFieldNotesArchiveChassisPainter extends CustomPainter {
         ).createShader(outer),
     );
 
-    canvas.drawRect(
+    final pageWindowRRect = RRect.fromRectAndRadius(
       pageWindow,
+      const Radius.circular(9),
+    );
+    canvas.drawRRect(
+      pageWindowRRect,
       Paint()
         ..color = darkestWalnut
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4,
     );
-    canvas.drawRect(
-      pageWindow.deflate(3),
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(pageWindow.deflate(3), const Radius.circular(7)),
       Paint()
         ..color = agedBrass
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5,
     );
-    canvas.drawRect(
-      pageWindow.deflate(7),
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(pageWindow.deflate(7), const Radius.circular(5)),
       Paint()
         ..color = brassHighlight.withValues(alpha: .72)
         ..style = PaintingStyle.stroke
@@ -517,41 +521,26 @@ final class _HeritageFieldNotesConsoleBay extends StatelessWidget {
         child: child,
       ),
     );
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x2B2B2117),
-            blurRadius: 6,
-            offset: Offset(1, 3),
-          ),
-        ],
+    return CustomPaint(
+      painter: _HeritageFieldNotesConsoleBayPainter(
+        raised: colors.structureRaised,
+        border: colors.insetBorder,
+        accent: accentColor,
+        shape: shape,
       ),
-      child: CustomPaint(
-        painter: _HeritageFieldNotesConsoleBayPainter(
-          surface: colors.structure,
-          raised: colors.structureRaised,
-          border: colors.insetBorder,
-          accent: accentColor,
-          shape: shape,
-        ),
-        child: content,
-      ),
+      child: content,
     );
   }
 }
 
 final class _HeritageFieldNotesConsoleBayPainter extends CustomPainter {
   const _HeritageFieldNotesConsoleBayPainter({
-    required this.surface,
     required this.raised,
     required this.border,
     required this.accent,
     required this.shape,
   });
 
-  final Color surface;
   final Color raised;
   final Color border;
   final Color accent;
@@ -565,18 +554,9 @@ final class _HeritageFieldNotesConsoleBayPainter extends CustomPainter {
     canvas.drawPath(
       outer,
       Paint()
-        ..color = border.withValues(alpha: .72)
+        ..color = border.withValues(alpha: .78)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-    final inner = _heritageFieldNotesBayPath(size, shape, inset: 7);
-    canvas.drawPath(inner, Paint()..color = surface);
-    canvas.drawPath(
-      inner,
-      Paint()
-        ..color = border.withValues(alpha: .32)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2,
+        ..strokeWidth = 1,
     );
     if (shape == _HeritageFieldNotesBayShape.insight) {
       canvas.drawRect(
@@ -584,20 +564,12 @@ final class _HeritageFieldNotesConsoleBayPainter extends CustomPainter {
         Paint()..color = accent,
       );
     }
-    canvas.drawLine(
-      const Offset(22, 11),
-      Offset(size.width - 18, 11),
-      Paint()
-        ..color = border.withValues(alpha: .55)
-        ..strokeWidth = 1,
-    );
   }
 
   @override
   bool shouldRepaint(
     covariant _HeritageFieldNotesConsoleBayPainter oldDelegate,
   ) =>
-      oldDelegate.surface != surface ||
       oldDelegate.raised != raised ||
       oldDelegate.border != border ||
       oldDelegate.accent != accent ||
@@ -627,7 +599,7 @@ final class _HeritageFieldNotesBayClipper extends CustomClipper<Path> {
   final _HeritageFieldNotesBayShape shape;
 
   @override
-  Path getClip(Size size) => _heritageFieldNotesBayPath(size, shape, inset: 10);
+  Path getClip(Size size) => _heritageFieldNotesBayPath(size, shape, inset: 1);
 
   @override
   bool shouldReclip(covariant _HeritageFieldNotesBayClipper oldClipper) =>
@@ -808,9 +780,9 @@ final class _HeritageFieldNotesCrownPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = border.withValues(alpha: .72)
+        ..color = border.withValues(alpha: .82)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+        ..strokeWidth = 1,
     );
     final brassPaint = Paint()
       ..color = brass

@@ -1689,7 +1689,9 @@ final class _DayCellPainter extends CustomPainter {
     final rect = Offset.zero & size;
     final background = Paint()
       ..color = outside
-          ? colors.canvas.withValues(alpha: .62)
+          ? entryChipMode
+                ? colors.structure
+                : colors.canvas.withValues(alpha: .62)
           : entryChipMode
           ? colors.structure
           : protected
@@ -1723,7 +1725,11 @@ final class _DayCellPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = today ? math.max(2, selectionWidth) : 1
-        ..color = today ? todayAccent : colors.insetBorder,
+        ..color = today
+            ? todayAccent
+            : entryChipMode
+            ? colors.insetBorder.withValues(alpha: .52)
+            : colors.insetBorder,
     );
     if (selected) {
       final paint = Paint()

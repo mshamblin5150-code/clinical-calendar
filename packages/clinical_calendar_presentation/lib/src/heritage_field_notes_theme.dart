@@ -8,7 +8,9 @@ abstract final class HeritageFieldNotesColors {
   static const canvas = Color(0xFF2A2118);
   static const surface = Color(0xFFF8F1E4);
   static const surfaceRaised = Color(0xFFFFFAF0);
-  static const insetBorder = Color(0xFF8A6A35);
+  // Interior rules are intentionally quiet parchment separators. Brass is
+  // reserved for the outer book-board chassis and physical hardware.
+  static const insetBorder = Color(0xFFAFA184);
   static const primaryText = Color(0xFF1F231D);
   static const secondaryText = Color(0xFF554C3D);
   static const accentPrimary = Color(0xFF0B5C34);
