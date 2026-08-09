@@ -26,7 +26,7 @@ void main() {
     Size(1440, 900),
   ];
 
-  group('accepted pre-catalog Variant F renders', () {
+  group('accepted Variant F and catalog Settings renders', () {
     setUpAll(() async {
       final font = await File(
         '../clinical_calendar_platform/assets/fonts/'
@@ -66,7 +66,11 @@ void main() {
       await _pumpAcceptedRenderAt(tester, const Size(320, 700));
       await tester.tap(find.text('Settings').last);
       await tester.pumpAndSettle();
-      await _expectAppGolden(tester, 'settings-320');
+      await _expectAppGolden(
+        tester,
+        'settings-320',
+        collection: 'catalog_gallery',
+      );
     });
 
     for (final destination in applicationMenuDestinations) {
@@ -78,7 +82,13 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(destination.label), findsWidgets);
-        await _expectAppGolden(tester, 'destination-${destination.name}');
+        await _expectAppGolden(
+          tester,
+          'destination-${destination.name}',
+          collection: destination.name == 'settings'
+              ? 'catalog_gallery'
+              : 'variant_f_renders',
+        );
       });
     }
   });
@@ -1273,12 +1283,16 @@ void main() {
   );
 }
 
-Future<void> _expectAppGolden(WidgetTester tester, String name) async {
+Future<void> _expectAppGolden(
+  WidgetTester tester,
+  String name, {
+  String collection = 'variant_f_renders',
+}) async {
   try {
     await expectLater(
       find.byType(ClinicalCalendarApp),
       matchesGoldenFile(
-        'baselines/variant_f_renders/${_goldenPlatformDirectory()}/$name.png',
+        'baselines/$collection/${_goldenPlatformDirectory()}/$name.png',
       ),
     );
   } finally {

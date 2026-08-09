@@ -22,7 +22,8 @@ begin
     select * into v_existing
     from clinical_calendar_sync.records
     where entity_type = 'settings'
-      and entity_id = v_student.id;
+      and entity_id = v_student.id
+    for update;
 
     if not found then
       v_revision := 1;
@@ -52,9 +53,20 @@ begin
       ) values (
         'settings', v_student.id, v_student.id, v_revision,
         v_student.created_at, v_student.created_at, null, v_payload
-      );
-      v_emit := true;
-    elsif v_existing.deleted_at_utc is null and (
+      )
+      on conflict (entity_type, entity_id) do nothing;
+      if found then
+        v_emit := true;
+      else
+        select * into strict v_existing
+        from clinical_calendar_sync.records
+        where entity_type = 'settings'
+          and entity_id = v_student.id
+        for update;
+      end if;
+    end if;
+
+    if not v_emit and v_existing.deleted_at_utc is null and (
       v_existing.payload -> 'value' ->> 'theme' = 'borg_tactical'
       or length(trim(coalesce(
         v_existing.payload -> 'value' ->> 'theme', ''
@@ -98,7 +110,11 @@ begin
           updated_at_utc = v_now,
           payload = v_payload
       where entity_type = 'settings'
-        and entity_id = v_student.id;
+        and entity_id = v_student.id
+        and revision = v_existing.revision;
+      if not found then
+        raise exception 'Concurrent settings revision changed during catalog cutover';
+      end if;
       v_emit := true;
     end if;
 

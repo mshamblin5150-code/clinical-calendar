@@ -941,6 +941,13 @@ void main() {
         );
         expect(selected.record.value, fixture.placement.id);
         expect(selected.record.revision, 1);
+        expect(
+          (repositories as SupportLocalWriteRepositories).studentSettings
+              .find(studentId: _studentId)!
+              .value
+              .themeId,
+          StudentSettings.graphiteThemeId,
+        );
       });
 
       final replay = await registry.mutate(
