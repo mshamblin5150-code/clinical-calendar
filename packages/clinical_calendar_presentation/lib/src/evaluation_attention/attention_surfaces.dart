@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:flutter/material.dart';
 
-import '../responsive_shell.dart';
+import '../graphite_instrument_scope.dart';
 import '../insight_rail_presentation_policy.dart';
+import '../responsive_shell.dart';
 import '../theme_contract.dart';
 import '../variant_f_theme.dart';
 import 'evaluation_attention_controller.dart';
@@ -112,53 +115,246 @@ final class AttentionRail extends StatelessWidget {
   final VoidCallback? onOpenAll;
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: controller,
-    builder: (context, _) {
-      final items = controller.attentionItems;
-      final expandedRows =
-          InsightRailPresentationPolicy.maybeOf(
-            context,
-          )?.expandedAttentionRows ??
-          false;
-      return ShellPanel(
-        label: 'Needs Attention · ${items.length}',
-        accent: items.isEmpty
-            ? context.clinicalColors.clinical
-            : context.clinicalColors.urgent,
-        child: Column(
-          key: const Key('attention-rail'),
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (controller.isBusy && controller.snapshot == null)
-              const Center(child: CircularProgressIndicator())
-            else if (controller.error != null && controller.snapshot == null)
-              OutlinedButton(
-                onPressed: controller.load,
-                child: const Text('Retry attention'),
-              )
-            else if (items.isEmpty)
-              const Text('No unresolved items need attention.')
-            else
-              for (final item in items.take(4)) ...[
-                _AttentionRow(
-                  item: item,
-                  expanded: expandedRows,
-                  onOpen: () => onOpenAction(item),
-                ),
-                const SizedBox(height: 6),
-              ],
-            if (items.length > 4 || onOpenAll != null)
-              TextButton(
-                key: const Key('open-attention-center-action'),
-                onPressed: onOpenAll,
-                child: const Text('OPEN ATTENTION CENTER'),
-              ),
-          ],
+  Widget build(BuildContext context) {
+    if (GraphiteInstrumentScope.isActive(context)) {
+      return AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) => _GraphiteAttentionRail(
+          controller: controller,
+          onOpenAction: onOpenAction,
+          onOpenAll: onOpenAll,
         ),
       );
-    },
-  );
+    }
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final items = controller.attentionItems;
+        final expandedRows =
+            InsightRailPresentationPolicy.maybeOf(
+              context,
+            )?.expandedAttentionRows ??
+            false;
+        return ShellPanel(
+          label: 'Needs Attention · ${items.length}',
+          accent: items.isEmpty
+              ? context.clinicalColors.clinical
+              : context.clinicalColors.urgent,
+          child: Column(
+            key: const Key('attention-rail'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (controller.isBusy && controller.snapshot == null)
+                const Center(child: CircularProgressIndicator())
+              else if (controller.error != null && controller.snapshot == null)
+                OutlinedButton(
+                  onPressed: controller.load,
+                  child: const Text('Retry attention'),
+                )
+              else if (items.isEmpty)
+                const Text('No unresolved items need attention.')
+              else
+                for (final item in items.take(4)) ...[
+                  _AttentionRow(
+                    item: item,
+                    expanded: expandedRows,
+                    onOpen: () => onOpenAction(item),
+                  ),
+                  const SizedBox(height: 6),
+                ],
+              if (items.length > 4 || onOpenAll != null)
+                TextButton(
+                  key: const Key('open-attention-center-action'),
+                  onPressed: onOpenAll,
+                  child: const Text('OPEN ATTENTION CENTER'),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+final class _GraphiteAttentionRail extends StatelessWidget {
+  const _GraphiteAttentionRail({
+    required this.controller,
+    required this.onOpenAction,
+    required this.onOpenAll,
+  });
+
+  final EvaluationAttentionController controller;
+  final AttentionAction onOpenAction;
+  final VoidCallback? onOpenAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = controller.attentionItems;
+    return KeyedSubtree(
+      key: const Key('attention-rail'),
+      child: Column(
+        key: const Key('graphite-live-attention-rail'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: context.clinicalColors.secondaryText,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'NEEDS ATTENTION',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              Text(
+                'ON  •  ${items.length}',
+                style: TextStyle(
+                  color: items.isEmpty
+                      ? context.clinicalColors.secondaryText
+                      : context.clinicalColors.urgent,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (controller.isBusy && controller.snapshot == null)
+            const Center(child: CircularProgressIndicator())
+          else if (controller.error != null && controller.snapshot == null)
+            OutlinedButton(
+              onPressed: controller.load,
+              child: const Text('Retry attention'),
+            )
+          else if (items.isEmpty)
+            const Text('No unresolved items need attention.')
+          else
+            for (final item in items.take(4))
+              _GraphiteAttentionRow(
+                item: item,
+                onOpen: () => onOpenAction(item),
+              ),
+          if (items.length > 4 || onOpenAll != null)
+            TextButton(
+              key: const Key('open-attention-center-action'),
+              onPressed: onOpenAll,
+              child: const Text('OPEN ATTENTION CENTER'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _GraphiteAttentionRow extends StatelessWidget {
+  const _GraphiteAttentionRow({required this.item, required this.onOpen});
+
+  final AttentionItem item;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final urgency = _urgencyColor(context, item.urgency);
+    return InkWell(
+      key: Key('attention-item-${item.id}'),
+      onTap: onOpen,
+      child: Container(
+        key: const Key('graphite-live-attention-item'),
+        constraints: const BoxConstraints(minHeight: 58),
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: context.clinicalColors.insetBorder.withValues(alpha: .55),
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            SizedBox.square(
+              dimension: 34,
+              child: CustomPaint(
+                painter: _GraphiteAttentionMarkPainter(color: urgency),
+                child: Icon(_kindIcon(item), size: 18, color: urgency),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    item.title.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: urgency,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.detail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            if (item.urgency == AttentionUrgency.due) ...[
+              const SizedBox(width: 6),
+              Text('Due', style: TextStyle(color: urgency)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final class _GraphiteAttentionMarkPainter extends CustomPainter {
+  const _GraphiteAttentionMarkPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path();
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2 - 2;
+    for (var index = 0; index < 8; index++) {
+      final angle = -math.pi / 8 + index * math.pi / 4;
+      final point = Offset(
+        center.dx + radius * math.cos(angle),
+        center.dy + radius * math.sin(angle),
+      );
+      if (index == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    path.close();
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GraphiteAttentionMarkPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 final class AttentionCenterSurface extends StatelessWidget {
@@ -244,107 +440,82 @@ final class _AttentionRow extends StatelessWidget {
   final bool expanded;
 
   @override
-  Widget build(BuildContext context) {
-    final outlined =
-        InsightRailPresentationPolicy.maybeOf(context)?.outlinedAttentionRows ??
-        false;
-    final outlineColor = outlined
-        ? context.clinicalColors.workMachinery.withValues(alpha: .35)
-        : context.clinicalColors.insetBorder;
-    return Material(
-      color: context.clinicalColors.structureRaised,
-      borderRadius: outlined ? BorderRadius.circular(8) : null,
-      clipBehavior: outlined ? Clip.antiAlias : Clip.none,
-      child: InkWell(
-        key: Key('attention-item-${item.id}'),
-        onTap: onOpen,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 56),
-          decoration: BoxDecoration(
-            border: outlined
-                ? Border.all(color: outlineColor)
-                : Border(
-                    left: BorderSide(
-                      color: _urgencyColor(context, item.urgency),
-                      width: 3,
-                    ),
-                    top: BorderSide(color: outlineColor),
-                    right: BorderSide(color: outlineColor),
-                    bottom: BorderSide(color: outlineColor),
-                  ),
-            borderRadius: outlined ? BorderRadius.circular(8) : null,
-          ),
-          foregroundDecoration: outlined
-              ? BoxDecoration(
-                  border: Border(
-                    left: BorderSide(
-                      color: _urgencyColor(context, item.urgency),
-                      width: 3,
-                    ),
-                  ),
-                )
-              : null,
-          padding: const EdgeInsets.all(9),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if ((ClinicalCalendarSemanticMarkScope.maybeOf(
-                            context,
-                          )?.themeId !=
-                          null &&
-                      ClinicalCalendarSemanticMarkScope.maybeOf(
-                            context,
-                          )?.themeId !=
-                          variantFThemeId) ||
-                  context.accessibilityTokens.enhanced)
-                ThemeSemanticMarkIcon(
-                  role: item.urgency == AttentionUrgency.approaching
-                      ? ThemeSemanticRole.scheduledProgress
-                      : ThemeSemanticRole.urgent,
-                  color: _urgencyColor(context, item.urgency),
-                  size: 20,
-                )
-              else
-                Icon(
-                  _kindIcon(item),
-                  color: _urgencyColor(context, item.urgency),
-                  size: 20,
-                ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      item.title,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text(
-                      item.detail,
-                      maxLines: expanded ? null : 3,
-                      overflow: expanded ? null : TextOverflow.ellipsis,
-                    ),
-                    if (expanded) ...[
-                      const SizedBox(height: 6),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: onOpen,
-                          icon: const Icon(Icons.arrow_forward, size: 18),
-                          label: Text(_actionLabel(item.destination)),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (!expanded) const Icon(Icons.chevron_right, size: 20),
-            ],
+  Widget build(BuildContext context) => Material(
+    color: context.clinicalColors.structureRaised,
+    child: InkWell(
+      key: Key('attention-item-${item.id}'),
+      onTap: onOpen,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 56),
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(
+              color: _urgencyColor(context, item.urgency),
+              width: 3,
+            ),
+            top: BorderSide(color: context.clinicalColors.insetBorder),
+            right: BorderSide(color: context.clinicalColors.insetBorder),
+            bottom: BorderSide(color: context.clinicalColors.insetBorder),
           ),
         ),
+        padding: const EdgeInsets.all(9),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if ((ClinicalCalendarSemanticMarkScope.maybeOf(context)?.themeId !=
+                        null &&
+                    ClinicalCalendarSemanticMarkScope.maybeOf(
+                          context,
+                        )?.themeId !=
+                        variantFThemeId) ||
+                context.accessibilityTokens.enhanced)
+              ThemeSemanticMarkIcon(
+                role: item.urgency == AttentionUrgency.approaching
+                    ? ThemeSemanticRole.scheduledProgress
+                    : ThemeSemanticRole.urgent,
+                color: _urgencyColor(context, item.urgency),
+                size: 20,
+              )
+            else
+              Icon(
+                _kindIcon(item),
+                color: _urgencyColor(context, item.urgency),
+                size: 20,
+              ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    item.title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Text(
+                    item.detail,
+                    maxLines: expanded ? null : 3,
+                    overflow: expanded ? null : TextOverflow.ellipsis,
+                  ),
+                  if (expanded) ...[
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: onOpen,
+                        icon: const Icon(Icons.arrow_forward, size: 18),
+                        label: Text(_actionLabel(item.destination)),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (!expanded) const Icon(Icons.chevron_right, size: 20),
+          ],
+        ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 Color _urgencyColor(BuildContext context, AttentionUrgency urgency) =>
