@@ -97,10 +97,10 @@ final class CoastalLightApplicationShell extends StatelessWidget {
           return Stack(
             children: [
               Positioned(
-                left: width * .018,
-                top: height * .012,
-                width: width * .964,
-                height: height * .064,
+                left: width * .008,
+                top: height * .008,
+                width: width * .984,
+                height: height * .072,
                 child: _CoastalLightCommandCrown(
                   environmentName: environmentName,
                   onOpenMenu: onOpenMenu,
@@ -111,10 +111,10 @@ final class CoastalLightApplicationShell extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: width * .033,
-                top: height * .104,
-                width: width * .18,
-                height: height * .755,
+                left: width * .018,
+                top: height * .095,
+                width: width * .205,
+                height: height * .807,
                 child: _CoastalLightConsoleBay(
                   key: const Key('coastal-calm-placement-bay'),
                   accent: _CoastalLightBayAccent.clearBlue,
@@ -124,10 +124,10 @@ final class CoastalLightApplicationShell extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: width * .244,
-                top: height * .104,
-                width: width * .493,
-                height: height * .49,
+                left: width * .228,
+                top: height * .095,
+                width: width * .519,
+                height: height * .54,
                 child: _CoastalLightConsoleBay(
                   key: const Key('coastal-calm-calendar-bay'),
                   accent: _CoastalLightBayAccent.seaGlass,
@@ -139,10 +139,10 @@ final class CoastalLightApplicationShell extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: width * .244,
-                top: height * .635,
-                width: width * .493,
-                height: height * .215,
+                left: width * .228,
+                top: height * .639,
+                width: width * .519,
+                height: height * .263,
                 child: _CoastalLightConsoleBay(
                   key: const Key('coastal-calm-planning-bay'),
                   accent: _CoastalLightBayAccent.seaGlass,
@@ -155,10 +155,10 @@ final class CoastalLightApplicationShell extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: width * .771,
-                top: height * .104,
-                width: width * .192,
-                height: height * .755,
+                left: width * .755,
+                top: height * .095,
+                width: width * .227,
+                height: height * .807,
                 child: _CoastalLightConsoleBay(
                   key: const Key('coastal-calm-insight-bay'),
                   accent: _CoastalLightBayAccent.clearBlue,
@@ -168,10 +168,10 @@ final class CoastalLightApplicationShell extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: width * .02,
-                top: height * .906,
-                width: width * .96,
-                height: height * .064,
+                left: width * .008,
+                top: height * .912,
+                width: width * .984,
+                height: height * .076,
                 child: _CoastalLightNavigationDeck(
                   selectedIndex: mobileIndex,
                   onOpenDestination: onOpenDestination,
@@ -206,79 +206,84 @@ final class CoastalLightApplicationShell extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final enlargedText =
-                        MediaQuery.textScalerOf(context).scale(1) > 1.3;
-                    return SingleChildScrollView(
-                      key: const Key('coastal-calm-portrait-scroll'),
-                      primary: true,
-                      child: SizedBox(
-                        height: enlargedText
-                            ? constraints.maxHeight * 1.38
-                            : constraints.maxHeight,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 6,
-                              child: _CoastalLightConsoleBay(
-                                key: const Key('coastal-calm-calendar-bay'),
-                                accent: _CoastalLightBayAccent.seaGlass,
-                                shape: _CoastalLightBayShape.calendar,
-                                child: _CoastalLightCalendarViewport(
-                                  child: slots.centralContent,
+                child: ClipRect(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final enlargedText =
+                          MediaQuery.textScalerOf(context).scale(1) > 1.3;
+                      return SingleChildScrollView(
+                        key: const Key('coastal-calm-portrait-scroll'),
+                        primary: true,
+                        child: SizedBox(
+                          height: enlargedText
+                              ? constraints.maxHeight * 1.38
+                              : constraints.maxHeight,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                flex: 6,
+                                child: _CoastalLightConsoleBay(
+                                  key: const Key('coastal-calm-calendar-bay'),
+                                  accent: _CoastalLightBayAccent.seaGlass,
+                                  shape: _CoastalLightBayShape.calendar,
+                                  child: _CoastalLightCalendarViewport(
+                                    child: slots.centralContent,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Expanded(
-                              flex: 3,
-                              child: _CoastalLightConsoleBay(
-                                key: const Key('coastal-calm-planning-bay'),
-                                accent: _CoastalLightBayAccent.seaGlass,
-                                shape: _CoastalLightBayShape.planning,
-                                child: VariantFPlanningBayMode(
-                                  expandedByDefault: false,
-                                  child: slots.planningRegion,
+                              const SizedBox(height: 8),
+                              Expanded(
+                                flex: 3,
+                                child: _CoastalLightConsoleBay(
+                                  key: const Key('coastal-calm-planning-bay'),
+                                  accent: _CoastalLightBayAccent.seaGlass,
+                                  shape: _CoastalLightBayShape.planning,
+                                  child: VariantFPlanningBayMode(
+                                    expandedByDefault: false,
+                                    child: slots.planningRegion,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Expanded(
-                              flex: 3,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Expanded(
-                                    child: _CoastalLightConsoleBay(
-                                      key: const Key(
-                                        'coastal-calm-placement-bay',
+                              const SizedBox(height: 8),
+                              Expanded(
+                                flex: 3,
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      child: _CoastalLightConsoleBay(
+                                        key: const Key(
+                                          'coastal-calm-placement-bay',
+                                        ),
+                                        accent:
+                                            _CoastalLightBayAccent.clearBlue,
+                                        shape: _CoastalLightBayShape.placement,
+                                        child: slots.mobilePlacementSummary,
                                       ),
-                                      accent: _CoastalLightBayAccent.clearBlue,
-                                      shape: _CoastalLightBayShape.placement,
-                                      child: slots.mobilePlacementSummary,
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _CoastalLightConsoleBay(
-                                      key: const Key(
-                                        'coastal-calm-insight-bay',
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _CoastalLightConsoleBay(
+                                        key: const Key(
+                                          'coastal-calm-insight-bay',
+                                        ),
+                                        accent:
+                                            _CoastalLightBayAccent.clearBlue,
+                                        shape: _CoastalLightBayShape.insight,
+                                        child: slots.mobileAttention,
                                       ),
-                                      accent: _CoastalLightBayAccent.clearBlue,
-                                      shape: _CoastalLightBayShape.insight,
-                                      child: slots.mobileAttention,
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -324,12 +329,27 @@ final class _CoastalLightCalendarViewport extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final calendar = CalendarPeriodViewportPolicy(
-        useBoundedMonthGrid: true,
-        scaleDayNumberWithText: true,
-        child: child,
+      final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+      final calendar = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: CalendarPeriodViewportPolicy(
+              useBoundedMonthGrid: true,
+              scaleDayNumberWithText: true,
+              useDenseMonthCards: !enlargedText,
+              useNeutralMonthCells: true,
+              useLeadingTitleCenteredPeriodToolbar: !enlargedText,
+              child: child,
+            ),
+          ),
+          if (!enlargedText) ...[
+            const SizedBox(height: 4),
+            const _CoastalLightCalendarLegend(),
+          ],
+        ],
       );
-      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
+      if (!enlargedText) return calendar;
       return SingleChildScrollView(
         key: const Key('coastal-calm-calendar-horizontal-scroll'),
         scrollDirection: Axis.horizontal,
@@ -340,6 +360,61 @@ final class _CoastalLightCalendarViewport extends StatelessWidget {
         ),
       );
     },
+  );
+}
+
+final class _CoastalLightCalendarLegend extends StatelessWidget {
+  const _CoastalLightCalendarLegend();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 28,
+    child: Row(
+      children: [
+        _legendItem(
+          context,
+          Icons.medical_services,
+          'CLINICAL',
+          context.clinicalColors.clinical,
+        ),
+        const SizedBox(width: 26),
+        _legendItem(
+          context,
+          Icons.work,
+          'WORK',
+          context.clinicalColors.workMachinery,
+        ),
+        const SizedBox(width: 26),
+        _legendItem(
+          context,
+          Icons.shield,
+          'PROTECTED',
+          context.clinicalColors.protectedDayAccent,
+        ),
+      ],
+    ),
+  );
+
+  Widget _legendItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    Color color,
+  ) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 24,
+        height: 22,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Icon(icon, size: 15, color: Colors.white),
+      ),
+      const SizedBox(width: 7),
+      Text(label, style: Theme.of(context).textTheme.labelMedium),
+    ],
   );
 }
 
@@ -368,22 +443,30 @@ final class _CoastalLightConsoleBay extends StatelessWidget {
       clipper: integrated ? null : _CoastalLightBayClipper(shape),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          shape == _CoastalLightBayShape.placement ? 14 : 12,
-          integrated ? 10 : 20,
-          shape == _CoastalLightBayShape.insight ? 14 : 12,
-          integrated ? 10 : 18,
+          integrated
+              ? 22
+              : shape == _CoastalLightBayShape.placement
+              ? 14
+              : 12,
+          integrated
+              ? switch (shape) {
+                  _CoastalLightBayShape.calendar => 4,
+                  _CoastalLightBayShape.planning => 12,
+                  _ => 20,
+                }
+              : 20,
+          integrated
+              ? 22
+              : shape == _CoastalLightBayShape.insight
+              ? 14
+              : 12,
+          18,
         ),
         child: child,
       ),
     );
     if (integrated) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.structure,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: content,
-      );
+      return content;
     }
     if (context.accessibilityTokens.decorationOpacity == 0) {
       return DecoratedBox(
@@ -536,6 +619,86 @@ final class _CoastalLightCommandCrown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    if (integrated) {
+      return SizedBox(
+        key: const Key('coastal-calm-command-crown'),
+        height: 92,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            children: [
+              Expanded(
+                child: Tooltip(
+                  message: 'Open menu',
+                  child: InkWell(
+                    key: const Key('application-menu-action'),
+                    onTap: onOpenMenu,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'CLINICAL CALENDAR',
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              letterSpacing: 1.6,
+                              color: context.clinicalColors.clinical,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              PopupMenuButton<_CoastalLightCrownAction>(
+                key: const Key('coastal-light-crown-actions'),
+                tooltip: 'Coastal Light actions',
+                onSelected: (action) {
+                  switch (action) {
+                    case _CoastalLightCrownAction.addSchedule:
+                      onAddSchedule();
+                    case _CoastalLightCrownAction.help:
+                      onOpenDestination(ClinicalCalendarDestination.help);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: _CoastalLightCrownAction.addSchedule,
+                    child: Text('Add schedule'),
+                  ),
+                  const PopupMenuItem(
+                    value: _CoastalLightCrownAction.help,
+                    child: Text('Help'),
+                  ),
+                  PopupMenuItem(
+                    enabled: false,
+                    child: Row(
+                      children: [
+                        profileAvatar,
+                        const SizedBox(width: 10),
+                        const Text('Profile'),
+                      ],
+                    ),
+                  ),
+                ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 12,
+                  ),
+                  child: Text(
+                    environmentName,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: context.clinicalColors.primaryText,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     final content = SizedBox(
       key: const Key('coastal-calm-command-crown'),
       height: compact ? 72 : 92,
@@ -543,17 +706,6 @@ final class _CoastalLightCommandCrown extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18),
         child: Row(
           children: [
-            IconButton(
-              key: const Key('application-menu-action'),
-              tooltip: 'Open menu',
-              onPressed: onOpenMenu,
-              icon: const Icon(Icons.grid_view_outlined),
-            ),
-            if (!enlargedText) ...[
-              const SizedBox(width: 8),
-              const Icon(Icons.calendar_month_outlined),
-              const SizedBox(width: 10),
-            ],
             Expanded(
               child: enlargedText
                   ? const SizedBox.shrink()
@@ -572,7 +724,7 @@ final class _CoastalLightCommandCrown extends StatelessWidget {
                                             ).textTheme.labelLarge
                                           : Theme.of(
                                               context,
-                                            ).textTheme.titleLarge)
+                                            ).textTheme.headlineMedium)
                                       ?.copyWith(
                                         letterSpacing: compact ? 1.2 : 1.6,
                                         color: context.clinicalColors.clinical,
@@ -581,15 +733,14 @@ final class _CoastalLightCommandCrown extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (!compact && environmentName.trim().isNotEmpty) ...[
-                          const SizedBox(width: 12),
-                          Text(
-                            environmentName,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        ],
                       ],
                     ),
+            ),
+            IconButton(
+              key: const Key('application-menu-action'),
+              tooltip: 'Open menu',
+              onPressed: onOpenMenu,
+              icon: const Icon(Icons.grid_view_outlined),
             ),
             IconButton(
               tooltip: 'Add schedule',
@@ -604,11 +755,21 @@ final class _CoastalLightCommandCrown extends StatelessWidget {
                 icon: const Icon(Icons.help_outline),
               ),
             profileAvatar,
+            if (!compact && environmentName.trim().isNotEmpty) ...[
+              const SizedBox(width: 12),
+              Text(
+                environmentName,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: context.clinicalColors.primaryText,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
-    if (integrated) return content;
     if (context.accessibilityTokens.decorationOpacity == 0) {
       return DecoratedBox(
         key: const Key('coastal-light-enhanced-flat-crown'),
@@ -634,6 +795,8 @@ final class _CoastalLightCommandCrown extends StatelessWidget {
     );
   }
 }
+
+enum _CoastalLightCrownAction { addSchedule, help }
 
 final class _CoastalLightCrownPainter extends CustomPainter {
   const _CoastalLightCrownPainter({
@@ -754,20 +917,18 @@ final class _CoastalLightNavigationDeck extends StatelessWidget {
                   ),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: index == selectedIndex
-                              ? context.clinicalColors.clinical
-                              : Colors.transparent,
-                          width: 4,
-                        ),
-                        right: index < destinations.length - 1
-                            ? BorderSide(
-                                color: context.clinicalColors.insetBorder
-                                    .withValues(alpha: .5),
-                              )
-                            : BorderSide.none,
-                      ),
+                      color: index == selectedIndex
+                          ? context.clinicalColors.clinical.withValues(
+                              alpha: .16,
+                            )
+                          : Colors.transparent,
+                      border: index == selectedIndex
+                          ? Border.all(
+                              color: context.clinicalColors.clinical,
+                              width: 2,
+                            )
+                          : null,
+                      borderRadius: BorderRadius.circular(28),
                     ),
                     child: Center(
                       child: iconsOnly

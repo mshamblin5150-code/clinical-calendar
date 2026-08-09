@@ -1314,17 +1314,19 @@ void main() {
       final navigation = tester.getRect(
         find.byKey(const Key('coastal-calm-bottom-navigation')),
       );
-      expect(crown.height / 992, closeTo(.064, .01));
-      expect(placements.width / 1586, closeTo(.18, .01));
-      expect(insight.width / 1586, closeTo(.192, .01));
-      expect(calendar.width / 1586, closeTo(.493, .01));
+      expect(crown.height / 992, closeTo(.072, .01));
+      expect(placements.width / 1586, closeTo(.205, .01));
+      expect(insight.width / 1586, closeTo(.227, .01));
+      expect(calendar.width / 1586, closeTo(.519, .01));
       expect(placements.right, lessThan(calendar.left));
       expect(calendar.right, lessThan(insight.left));
       expect(planning.top, greaterThan(calendar.top));
       expect(planning.left, calendar.left);
       expect(planning.right, calendar.right);
       expect(navigation.top, greaterThan(planning.bottom));
-      expect(navigation.height / 992, closeTo(.064, .01));
+      expect(calendar.height / 992, closeTo(.54, .01));
+      expect(planning.height / 992, closeTo(.263, .01));
+      expect(navigation.height / 992, closeTo(.076, .01));
       expect(tester.takeException(), isNull);
     },
   );
@@ -1356,8 +1358,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Open menu'));
-    await tester.tap(find.byTooltip('Add schedule'));
-    await tester.tap(find.byTooltip('Help'));
+    await tester.tap(find.byTooltip('Coastal Light actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add schedule'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Coastal Light actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Help'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('coastal-calm-navigation-2')));
     await tester.tap(find.byKey(const Key('coastal-calm-navigation-3')));
     await tester.tap(find.byKey(const Key('coastal-calm-navigation-4')));

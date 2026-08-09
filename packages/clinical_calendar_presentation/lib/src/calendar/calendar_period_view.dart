@@ -16,12 +16,18 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
   const CalendarPeriodViewportPolicy({
     required this.useBoundedMonthGrid,
     this.scaleDayNumberWithText = false,
+    this.useDenseMonthCards = false,
+    this.useNeutralMonthCells = false,
+    this.useLeadingTitleCenteredPeriodToolbar = false,
     required super.child,
     super.key,
   });
 
   final bool useBoundedMonthGrid;
   final bool scaleDayNumberWithText;
+  final bool useDenseMonthCards;
+  final bool useNeutralMonthCells;
+  final bool useLeadingTitleCenteredPeriodToolbar;
 
   static bool usesBoundedMonthGrid(BuildContext context) =>
       context
@@ -35,10 +41,32 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
           ?.scaleDayNumberWithText ??
       false;
 
+  static bool usesDenseMonthCards(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.useDenseMonthCards ??
+      false;
+
+  static bool usesNeutralMonthCells(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.useNeutralMonthCells ??
+      false;
+
+  static bool usesLeadingTitleCenteredPeriodToolbar(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.useLeadingTitleCenteredPeriodToolbar ??
+      false;
+
   @override
   bool updateShouldNotify(CalendarPeriodViewportPolicy oldWidget) =>
       useBoundedMonthGrid != oldWidget.useBoundedMonthGrid ||
-      scaleDayNumberWithText != oldWidget.scaleDayNumberWithText;
+      scaleDayNumberWithText != oldWidget.scaleDayNumberWithText ||
+      useDenseMonthCards != oldWidget.useDenseMonthCards ||
+      useNeutralMonthCells != oldWidget.useNeutralMonthCells ||
+      useLeadingTitleCenteredPeriodToolbar !=
+          oldWidget.useLeadingTitleCenteredPeriodToolbar;
 }
 
 final class CalendarPeriodView extends StatefulWidget {
@@ -376,6 +404,46 @@ final class _CalendarToolbar extends StatelessWidget {
             ],
           );
         }
+        if (CalendarPeriodViewportPolicy.usesLeadingTitleCenteredPeriodToolbar(
+          context,
+        )) {
+          return Row(
+            children: [
+              SizedBox(
+                width: 220,
+                child: Text(
+                  title,
+                  key: const Key('calendar-period-title'),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Expanded(child: Center(child: switcher)),
+              SizedBox(
+                width: 88,
+                child: Row(
+                  children: [
+                    IconButton(
+                      key: const Key('calendar-previous'),
+                      tooltip: 'Previous period',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: onPrevious,
+                      icon: const Icon(Icons.chevron_left),
+                    ),
+                    IconButton(
+                      key: const Key('calendar-next'),
+                      tooltip: 'Next period',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: onNext,
+                      icon: const Icon(Icons.chevron_right),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
         return Row(
           children: [
             navigation,
@@ -549,6 +617,9 @@ final class _MonthDayCell extends StatelessWidget {
       entries: entries,
       twelveHourTime: twelveHourTime,
     );
+    final neutralCells = CalendarPeriodViewportPolicy.usesNeutralMonthCells(
+      context,
+    );
     return Semantics(
       key: Key('calendar-day-$date'),
       button: true,
@@ -560,8 +631,8 @@ final class _MonthDayCell extends StatelessWidget {
         painter: _DayCellPainter(
           colors: context.clinicalColors,
           todayAccent: _todayAccent(context),
-          protected: protected,
-          work: work,
+          protected: neutralCells ? false : protected,
+          work: neutralCells ? false : work,
           today: today,
           selected: selected,
           outside: outside,
@@ -579,6 +650,15 @@ final class _MonthDayCell extends StatelessWidget {
                 const SizedBox(height: 3),
                 if (compact)
                   _CompactMarkers(entries: entries)
+                else if (dense &&
+                    CalendarPeriodViewportPolicy.usesDenseMonthCards(context))
+                  for (final entry in entries.take(1))
+                    _DenseMonthEventCard(
+                      entry: entry,
+                      date: date,
+                      onTap: () =>
+                          onActivate(date, entries, preferredEntry: entry),
+                    )
                 else if (dense)
                   _DenseMonthMarker(entries: entries)
                 else
@@ -607,6 +687,70 @@ final class _MonthDayCell extends StatelessWidget {
                       ),
                     ),
                   ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _DenseMonthEventCard extends StatelessWidget {
+  const _DenseMonthEventCard({
+    required this.entry,
+    required this.date,
+    required this.onTap,
+  });
+
+  final CalendarEntry entry;
+  final LocalDate date;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (entry.kind) {
+      CalendarEntryKind.workShift => 'WORK',
+      CalendarEntryKind.clinicalSession => 'CLINICAL',
+      CalendarEntryKind.protectedDay => 'PROTECTED',
+    };
+    final accent = _entryAccent(context, entry);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: .83,
+          child: Container(
+            key: Key('month-entry-${entry.id}-$date'),
+            height: 24,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Row(
+              children: [
+                ThemeSemanticMarkIcon(
+                  role: _entryRole(entry.kind),
+                  size: 13,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: .3,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

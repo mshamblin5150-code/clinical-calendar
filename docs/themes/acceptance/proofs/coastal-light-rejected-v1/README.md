@@ -1,10 +1,17 @@
-# Coastal Light concept-fidelity proof
+# Coastal Light rejected concept-fidelity proof v1
 
 Issue: [#136](https://github.com/mshamblin5150-code/clinical-calendar/issues/136)
 
-Status: implementation evidence complete. Physical Android-tablet catalog
-acceptance is **Pending** and remains owned by issue #139. These deterministic
-captures are not physical-device photographs.
+Status: **REJECTED by the maintainer on 2026-08-08**. The runtime did not
+match the approved issue #116 concept closely enough. This directory is
+historical evidence only and is not an acceptance baseline. Physical
+Android-tablet catalog acceptance remains **Pending** under issue #139. These
+deterministic captures are not physical-device photographs.
+
+The rejected runtime matched only the coarse three-column arrangement. Its
+right rail grouping, Calendar density, Planning controls, placement cards,
+crown, typography, and navigation treatment diverged materially from the
+normative concept.
 
 ## Evidence
 

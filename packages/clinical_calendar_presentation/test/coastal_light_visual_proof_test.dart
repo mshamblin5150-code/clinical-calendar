@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/proof_fonts.dart';
 
 const _studentId = '00000000-0000-4000-8000-000000000136';
-final _today = LocalDate(2026, 8, 5);
+final _today = LocalDate(2026, 8, 6);
 
 void main() {
   setUpAll(prepareProofEnvironment);
@@ -24,6 +24,45 @@ void main() {
       matchesGoldenFile(
         'goldens/coastal_light/coastal_light_landscape_1586x992.png',
       ),
+    );
+  });
+
+  testWidgets('Coastal Light landscape obeys normative concept geometry', (
+    tester,
+  ) async {
+    await _pumpProof(tester, const Size(1586, 992));
+
+    final placements = tester.getRect(
+      find.byKey(const Key('coastal-calm-placement-bay')),
+    );
+    final calendar = tester.getRect(
+      find.byKey(const Key('coastal-calm-calendar-bay')),
+    );
+    final planning = tester.getRect(
+      find.byKey(const Key('coastal-calm-planning-bay')),
+    );
+    final insight = tester.getRect(
+      find.byKey(const Key('coastal-calm-insight-bay')),
+    );
+    final navigation = tester.getRect(
+      find.byKey(const Key('coastal-calm-bottom-navigation')),
+    );
+
+    expect(placements.width / 1586, closeTo(.205, .006));
+    expect(calendar.width / 1586, closeTo(.519, .006));
+    expect(insight.width / 1586, closeTo(.227, .006));
+    expect(calendar.height / 992, closeTo(.54, .006));
+    expect(planning.height / 992, closeTo(.263, .006));
+    expect(navigation.height / 992, closeTo(.076, .006));
+
+    final visibleEntries = find.byWidgetPredicate((widget) {
+      final key = widget.key;
+      return key is ValueKey<String> && key.value.startsWith('month-entry-');
+    });
+    expect(
+      visibleEntries,
+      findsNWidgets(18),
+      reason: 'The concept month is a populated planning surface.',
     );
   });
 
@@ -54,6 +93,11 @@ void main() {
     expect(navigation.top, greaterThan(1300));
     expect(navigation.bottom, lessThanOrEqualTo(1440));
     expect(
+      find.byKey(const Key('coastal-calm-bottom-navigation')).hitTestable(),
+      findsOneWidget,
+      reason: 'The enlarged content viewport must not paint over navigation.',
+    );
+    expect(
       find.byKey(const Key('coastal-calm-portrait-scroll')),
       findsOneWidget,
     );
@@ -61,8 +105,8 @@ void main() {
       find.byKey(const Key('coastal-calm-calendar-horizontal-scroll')),
       findsOneWidget,
     );
-    expect(find.byTooltip('Open menu'), findsOneWidget);
-    expect(find.byTooltip('Add schedule'), findsOneWidget);
+    expect(find.byTooltip('Open menu').hitTestable(), findsOneWidget);
+    expect(find.byTooltip('Add schedule').hitTestable(), findsOneWidget);
 
     await expectLater(
       find.byKey(const Key('coastal-calm-proof')),
@@ -223,34 +267,34 @@ final class _PlacementsProof extends StatelessWidget {
   const _PlacementsProof();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      const _SectionTitle('MY PLACEMENTS'),
-      const SizedBox(height: 12),
-      const _PlacementCard(
-        name: 'ACCEPTANCE\nFAMILY MEDICINE',
-        accent: CoastalLightColors.clinical,
-        completed: '0 hr',
-        scheduled: '8 hr',
-      ),
-      const SizedBox(height: 12),
-      const _PlacementCard(
-        name: 'INTERNAL MEDICINE',
-        accent: CoastalLightColors.workMachinery,
-        completed: '42 hr',
-        scheduled: '24 hr',
-      ),
-      const Spacer(),
-      Text(
-        'TAP A PLACEMENT FOR DETAILS',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: CoastalLightColors.workMachinery,
-          letterSpacing: 1.1,
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle('MY PLACEMENTS'),
+        const SizedBox(height: 12),
+        const Expanded(
+          flex: 47,
+          child: _PlacementCard(
+            name: 'ACCEPTANCE FAMILY MEDICINE',
+            accent: CoastalLightColors.clinical,
+            completed: '0 hr',
+            scheduled: '8 hr',
+          ),
         ),
-      ),
-    ],
-  );
+        const SizedBox(height: 18),
+        const Expanded(
+          flex: 53,
+          child: _PlacementCard(
+            name: 'INTERNAL MEDICINE',
+            accent: CoastalLightColors.workMachinery,
+            completed: '0 hr',
+            scheduled: '8 hr',
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 final class _PlacementCard extends StatelessWidget {
@@ -268,52 +312,55 @@ final class _PlacementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: CoastalLightColors.canvas.withValues(alpha: .68),
-      border: Border.all(color: accent.withValues(alpha: .8)),
+      color: CoastalLightColors.surface.withValues(alpha: .88),
+      border: Border.all(
+        color: CoastalLightColors.insetBorder.withValues(alpha: .3),
+      ),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                border: Border.all(color: accent),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.medical_services_outlined, color: accent),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                name,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  letterSpacing: 1.1,
-                  height: 1.35,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        _MetricLine('$completed / 90 hr completed', accent),
-        _MetricLine('$scheduled scheduled', CoastalLightColors.scheduled),
-        const _MetricLine('48 hr unscheduled', CoastalLightColors.unscheduled),
-        const SizedBox(height: 26),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            minHeight: 8,
-            value: completed == '0 hr' ? 0 : .47,
-            color: accent,
-            backgroundColor: CoastalLightColors.control,
+        Text(
+          name,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: CoastalLightColors.primaryText,
+            fontWeight: FontWeight.w700,
           ),
         ),
+        const SizedBox(height: 10),
+        Text('$completed / 90 hr completed'),
+        const SizedBox(height: 14),
+        Center(
+          child: SizedBox.square(
+            dimension: 86,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CircularProgressIndicator(
+                  value: completed == '0 hr' ? 0 : .47,
+                  strokeWidth: 9,
+                  color: accent,
+                  backgroundColor: CoastalLightColors.control,
+                ),
+                Center(
+                  child: Text(
+                    completed == '0 hr' ? '0%' : '47%',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: CoastalLightColors.clinical,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 38),
+        _MetricLine('$scheduled scheduled', CoastalLightColors.scheduled),
+        const _MetricLine('82 hr unscheduled', CoastalLightColors.scheduled),
       ],
     ),
   );
@@ -351,74 +398,149 @@ final class _PlanningProof extends StatelessWidget {
   const _PlanningProof();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
+  Widget build(BuildContext context) {
+    if (MediaQuery.textScalerOf(context).scale(1) > 1.3) {
+      return ListView(
         children: [
-          const Expanded(child: _SectionTitle('PLANNING')),
-          OutlinedButton.icon(
-            onPressed: _noop,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('ADD SCHEDULE'),
+          const _SectionTitle('PLANNING'),
+          const SizedBox(height: 12),
+          Text(
+            'Build the monthly plan in this in-flow region.',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-          const SizedBox(width: 8),
-          OutlinedButton.icon(
-            onPressed: _noop,
-            icon: const Icon(Icons.warning_amber_outlined, size: 18),
-            label: const Text('PLANNING INCOMPLETE'),
-          ),
-        ],
-      ),
-      const SizedBox(height: 8),
-      Text(
-        'Build the monthly plan in this in-flow region.',
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-      const SizedBox(height: 12),
-      const Row(
-        children: [
-          _PlanningStep('1', 'TYPE & TIME'),
-          SizedBox(width: 18),
-          Expanded(
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _ChoiceChip('WORK SHIFT', CoastalLightColors.workMachinery),
-                _ChoiceChip('CLINICAL SESSION', CoastalLightColors.clinical),
-                _ChoiceChip(
+          const SizedBox(height: 16),
+          const _PlanningStep('1', 'TYPE & TIME'),
+          const SizedBox(height: 12),
+          const Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              SizedBox(
+                width: 230,
+                child: _ChoiceChip(
+                  'CLINICAL SESSION',
+                  CoastalLightColors.clinical,
+                ),
+              ),
+              SizedBox(
+                width: 190,
+                child: _ChoiceChip(
+                  'WORK SHIFT',
+                  CoastalLightColors.workMachinery,
+                ),
+              ),
+              SizedBox(
+                width: 210,
+                child: _ChoiceChip(
                   'PROTECTED DAY',
                   CoastalLightColors.protectedDayAccent,
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const _FieldProof(
+            label: 'SCHEDULE TEMPLATE',
+            value: 'ENTER TIMES MANUALLY',
           ),
         ],
-      ),
-      const Spacer(),
-      Row(
-        children: [
-          Expanded(
-            child: _FieldProof(
-              label: 'SCHEDULE TEMPLATE',
-              value: 'ENTER TIMES MANUALLY',
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Expanded(child: _SectionTitle('PLANNING')),
+            OutlinedButton.icon(
+              onPressed: _noop,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('ADD SCHEDULE'),
             ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: _noop,
+              icon: const Icon(Icons.warning_amber_outlined, size: 18),
+              label: const Text('PLANNING INCOMPLETE'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Build the monthly plan in this in-flow region.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 10),
+        const SizedBox(
+          height: 72,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: 140,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _PlanningStep('1', 'TYPE & TIME'),
+                    SizedBox(height: 6),
+                    Padding(
+                      padding: EdgeInsets.only(left: 31),
+                      child: Text('0 selected dates'),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: _ChoiceChip(
+                  'CLINICAL SESSION',
+                  CoastalLightColors.clinical,
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: _ChoiceChip(
+                  'WORK SHIFT',
+                  CoastalLightColors.workMachinery,
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: _ChoiceChip(
+                  'PROTECTED DAY',
+                  CoastalLightColors.protectedDayAccent,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          const SizedBox(
-            width: 120,
-            child: _FieldProof(label: 'START', value: '08:00'),
-          ),
-          const SizedBox(width: 10),
-          const SizedBox(
-            width: 120,
-            child: _FieldProof(label: 'END', value: '16:00'),
-          ),
-        ],
-      ),
-    ],
-  );
+        ),
+        const Spacer(),
+        Row(
+          children: [
+            SizedBox(
+              width: 245,
+              child: _FieldProof(
+                label: 'SCHEDULE TEMPLATE',
+                value: 'ENTER TIMES MANUALLY',
+              ),
+            ),
+            const Spacer(),
+            const SizedBox(width: 10),
+            const SizedBox(
+              width: 120,
+              child: _FieldProof(label: 'START', value: '08:00'),
+            ),
+            const SizedBox(width: 10),
+            const SizedBox(
+              width: 120,
+              child: _FieldProof(label: 'END', value: '16:00'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 final class _PlanningStep extends StatelessWidget {
@@ -449,15 +571,36 @@ final class _ChoiceChip extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: .12),
-      border: Border.all(color: color),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Text(label, style: Theme.of(context).textTheme.labelSmall),
-  );
+  Widget build(BuildContext context) {
+    final icon = switch (label) {
+      'CLINICAL SESSION' => Icons.medical_services_outlined,
+      'WORK SHIFT' => Icons.work_outline,
+      _ => Icons.shield_outlined,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 final class _FieldProof extends StatelessWidget {
@@ -492,68 +635,149 @@ final class _InsightProof extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const _SectionTitle('INTERNAL MEDICINE'),
-      const SizedBox(height: 14),
-      Center(
-        child: SizedBox.square(
-          dimension: 126,
-          child: Stack(
-            fit: StackFit.expand,
+      Expanded(
+        flex: 65,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const CircularProgressIndicator(
-                value: .47,
-                strokeWidth: 15,
-                color: CoastalLightColors.clinical,
-                backgroundColor: CoastalLightColors.control,
-              ),
+              const _SectionTitle('INTERNAL MEDICINE'),
+              const SizedBox(height: 12),
               Center(
-                child: Text(
-                  '42 hr\ncompleted',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium,
+                child: SizedBox.square(
+                  dimension: 112,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      const CircularProgressIndicator(
+                        value: 0,
+                        strokeWidth: 12,
+                        color: CoastalLightColors.clinical,
+                        backgroundColor: CoastalLightColors.control,
+                      ),
+                      Center(
+                        child: Text(
+                          '0 hr\ncompleted',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ),
+              const SizedBox(height: 10),
+              const _MetricLine(
+                'Target                         90 hr',
+                CoastalLightColors.primaryText,
+              ),
+              const _MetricLine(
+                'Completed                    0 hr',
+                CoastalLightColors.completed,
+              ),
+              const _MetricLine(
+                'Scheduled                     8 hr',
+                CoastalLightColors.scheduled,
+              ),
+              const _MetricLine(
+                'Unscheduled                82 hr',
+                CoastalLightColors.unscheduled,
+              ),
+              const _MetricLine(
+                'Over-Target                   0 hr',
+                CoastalLightColors.overTarget,
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: CoastalLightColors.control,
+                  border: Border.all(
+                    color: CoastalLightColors.insetBorder.withValues(
+                      alpha: .35,
+                    ),
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.speed_outlined, size: 18),
+                    SizedBox(width: 8),
+                    Text('Additional pace required\n21 hr 16 min / week'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Row(
+                children: [
+                  Icon(Icons.explore_outlined, size: 17),
+                  SizedBox(width: 7),
+                  Text('TAP WHEEL TO VIEW NEXT PLACEMENT'),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Row(
+                children: [
+                  Icon(Icons.groups_outlined, size: 17),
+                  SizedBox(width: 7),
+                  Text('SHOW PRECEPTOR BREAKDOWN'),
+                ],
               ),
             ],
           ),
         ),
       ),
-      const SizedBox(height: 14),
-      const _MetricLine(
-        'Target                 90 hr',
-        CoastalLightColors.primaryText,
-      ),
-      const _MetricLine(
-        'Completed          42 hr',
-        CoastalLightColors.completed,
-      ),
-      const _MetricLine(
-        'Scheduled           24 hr',
-        CoastalLightColors.scheduled,
-      ),
-      const _MetricLine(
-        'Unscheduled       24 hr',
-        CoastalLightColors.unscheduled,
-      ),
-      const SizedBox(height: 18),
-      const Divider(),
-      const SizedBox(height: 10),
-      const _SectionTitle('NEEDS ATTENTION'),
-      const SizedBox(height: 8),
-      const _AttentionCard(
-        icon: Icons.assignment_late_outlined,
-        title: 'CLINICAL SESSION\nNEEDS CONFIRMATION',
-      ),
-      const _AttentionCard(
-        icon: Icons.fact_check_outlined,
-        title: 'INITIAL SELF-ASSESSMENT',
-      ),
-      const _AttentionCard(
-        icon: Icons.warning_amber_outlined,
-        title: 'PLANNING INCOMPLETE',
-      ),
-      const _AttentionCard(
-        icon: Icons.rate_review_outlined,
-        title: 'FINAL SELF-ASSESSMENT',
+      const SizedBox(height: 16),
+      Expanded(
+        flex: 35,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: CoastalLightColors.surface.withValues(alpha: .9),
+            border: Border.all(
+              color: CoastalLightColors.urgent.withValues(alpha: .45),
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: _SectionTitle('NEEDS ATTENTION')),
+                  Text(
+                    'ON · 5',
+                    style: TextStyle(
+                      color: CoastalLightColors.urgent,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 6),
+              _AttentionCard(
+                icon: Icons.assignment_late_outlined,
+                title: 'CLINICAL SESSION NEEDS CONFIRMATION',
+              ),
+              _AttentionCard(
+                icon: Icons.fact_check_outlined,
+                title: 'INITIAL SELF-ASSESSMENT',
+              ),
+              _AttentionCard(
+                icon: Icons.warning_amber_outlined,
+                title: 'INITIAL SELF-ASSESSMENT',
+              ),
+              _AttentionCard(
+                icon: Icons.rate_review_outlined,
+                title: 'PLANNING INCOMPLETE',
+              ),
+            ],
+          ),
+        ),
       ),
     ],
   );
@@ -650,15 +874,16 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
     required LocalDate firstDate,
     required LocalDate lastDate,
   }) async => CalendarSnapshot([
-    CalendarEntry(
-      id: 'protected-19',
-      kind: CalendarEntryKind.protectedDay,
-      startDate: LocalDate(2026, 8, 19),
-      endDate: LocalDate(2026, 8, 19),
-      title: 'Protected Day',
-      statusLabel: 'Protected',
-    ),
-    for (final day in [6, 17, 27])
+    for (final day in [7, 17, 27])
+      CalendarEntry(
+        id: 'protected-$day',
+        kind: CalendarEntryKind.protectedDay,
+        startDate: LocalDate(2026, 8, day),
+        endDate: LocalDate(2026, 8, day),
+        title: 'Protected Day',
+        statusLabel: 'Protected',
+      ),
+    for (final day in [3, 4, 10, 13, 19, 24, 28])
       CalendarEntry(
         id: 'work-$day',
         kind: CalendarEntryKind.workShift,
@@ -669,7 +894,7 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
         title: 'Work Shift',
         statusLabel: 'Scheduled',
       ),
-    for (final day in [5, 13, 24])
+    for (final day in [5, 6, 12, 14, 18, 21, 25, 26])
       CalendarEntry(
         id: 'clinical-$day',
         kind: CalendarEntryKind.clinicalSession,
@@ -679,7 +904,7 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
         endTime: LocalTime(16, 0),
         title: 'Clinical Session',
         assignment: 'Internal Medicine · Jordan Lee',
-        statusLabel: day == 5 ? 'Awaiting Confirmation' : 'Scheduled',
+        statusLabel: day == 6 ? 'Awaiting Confirmation' : 'Scheduled',
       ),
   ]);
 }
