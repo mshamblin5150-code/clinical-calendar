@@ -421,7 +421,13 @@ ThemeData _applyBotanicalStudyEnhancedAccessibility(ThemeData standard) {
               ? enhancedColors.primaryText
               : Colors.white,
         ),
-        overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+        overlayColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.focused)
+              ? Colors.white.withValues(alpha: .14)
+              : states.contains(WidgetState.pressed)
+              ? Colors.white.withValues(alpha: .1)
+              : Colors.transparent,
+        ),
         side: const WidgetStatePropertyAll(
           BorderSide(color: enhancedBoundary, width: 1.5),
         ),
@@ -441,7 +447,27 @@ ThemeData _applyBotanicalStudyEnhancedAccessibility(ThemeData standard) {
               ? enhancedColors.primaryText
               : enhancedPrimary,
         ),
-        overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+        overlayColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.focused)
+              ? enhancedPrimary.withValues(alpha: .12)
+              : states.contains(WidgetState.pressed)
+              ? enhancedPrimary.withValues(alpha: .18)
+              : Colors.transparent,
+        ),
+        side: WidgetStateProperty.resolveWith(
+          (states) => BorderSide(
+            color: states.contains(WidgetState.focused)
+                ? enhancedPrimary
+                : states.contains(WidgetState.pressed)
+                ? enhancedBoundary
+                : Colors.transparent,
+            width: states.contains(WidgetState.focused)
+                ? 3
+                : states.contains(WidgetState.pressed)
+                ? 2
+                : 1,
+          ),
+        ),
       ),
     ),
     extensions: const [

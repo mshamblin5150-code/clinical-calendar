@@ -93,41 +93,41 @@ void main() {
     for (final bundle
         in ClinicalCalendarThemeBundleRegistry.standard.galleryBundles) {
       for (final mode in ThemeAccessibilityMode.values) {
-        test('${bundle.id} ${mode.name} audits actual runtime state layers', () {
-          final report = ThemeRuntimeTokenAuditor.audit(
-            bundle: bundle,
-            mode: mode,
-          );
+        testWidgets(
+          '${bundle.id} ${mode.name} audits actual runtime state layers',
+          (tester) async {
+            final report = await auditRuntimeBundle(tester, bundle, mode);
 
-          expect(report.themeId, bundle.id);
-          expect(report.mode, mode);
-          expect(
-            report.entries.map((entry) => entry.state).toSet(),
-            containsAll(ThemeTokenState.values),
-          );
-          expect(report.entries.any((entry) => entry.permitted), isTrue);
-          expect(report.entries.any((entry) => !entry.permitted), isTrue);
-          expect(
-            report.passed,
-            isTrue,
-            reason: report.entries
-                .where((entry) => !entry.passed)
-                .map(
-                  (entry) =>
-                      '${entry.pairingId}: ${entry.contrastRatio.toStringAsFixed(2)} / ${entry.requiredRatio.toStringAsFixed(2)}',
-                )
-                .join('\n'),
-          );
-          expect(
-            report.entries.every(
-              (entry) =>
-                  entry.compositedForeground.a == 1 &&
-                  entry.compositedBackground.a == 1,
-            ),
-            isTrue,
-          );
-          expect(report.toJson()['themeId'], bundle.id);
-        });
+            expect(report.themeId, bundle.id);
+            expect(report.mode, mode);
+            expect(
+              report.entries.map((entry) => entry.state).toSet(),
+              containsAll(ThemeTokenState.values),
+            );
+            expect(report.entries.any((entry) => entry.permitted), isTrue);
+            expect(report.entries.any((entry) => !entry.permitted), isTrue);
+            expect(
+              report.passed,
+              isTrue,
+              reason: report.entries
+                  .where((entry) => !entry.passed)
+                  .map(
+                    (entry) =>
+                        '${entry.pairingId}: ${entry.contrastRatio.toStringAsFixed(2)} / ${entry.requiredRatio.toStringAsFixed(2)}',
+                  )
+                  .join('\n'),
+            );
+            expect(
+              report.entries.every(
+                (entry) =>
+                    entry.compositedForeground.a == 1 &&
+                    entry.compositedBackground.a == 1,
+              ),
+              isTrue,
+            );
+            expect(report.toJson()['themeId'], bundle.id);
+          },
+        );
       }
     }
 
@@ -173,6 +173,30 @@ void main() {
 
       expect(report.passed, isTrue);
       expect(report.entries.single.requiredRatio, 1);
+    });
+
+    test('Botanical Enhanced text actions keep distinct interaction cues', () {
+      final bundle = ClinicalCalendarThemeBundleRegistry.standard.galleryBundles
+          .singleWhere((item) => item.id == botanicalStudyThemeId);
+      final style = bundle.standardPresentation
+          .createThemeData(enhancedAccessibility: true)
+          .textButtonTheme
+          .style!;
+      const defaultState = <WidgetState>{};
+      const focusedState = {WidgetState.focused};
+      const pressedState = {WidgetState.pressed};
+
+      expect(
+        style.overlayColor!.resolve(defaultState),
+        isNot(style.overlayColor!.resolve(focusedState)),
+      );
+      expect(
+        style.overlayColor!.resolve(focusedState),
+        isNot(style.overlayColor!.resolve(pressedState)),
+      );
+      expect(style.side!.resolve(defaultState)!.width, 1);
+      expect(style.side!.resolve(focusedState)!.width, 3);
+      expect(style.side!.resolve(pressedState)!.width, 2);
     });
 
     test('resolved pressed overlay participates in the runtime ratio', () {

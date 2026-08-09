@@ -22,6 +22,7 @@ import 'heritage_field_notes_theme.dart';
 import 'responsive_shell.dart';
 import 'tactical_frame.dart';
 import 'variant_f_theme.dart';
+import 'variant_f_enhanced_catalog_overlay.dart';
 
 const variantFThemeId = 'variant-f';
 const federationClassicThemeId = 'federation-classic';
@@ -80,8 +81,14 @@ final class VariantFVisualTheme implements ClinicalCalendarVisualTheme {
   ClinicalCalendarColors get semanticColors => variantFSemanticColors;
 
   @override
-  ThemeData createThemeData({bool enhancedAccessibility = false}) =>
-      buildVariantFTheme(enhancedAccessibility: enhancedAccessibility);
+  ThemeData createThemeData({bool enhancedAccessibility = false}) {
+    final theme = buildVariantFTheme(
+      enhancedAccessibility: enhancedAccessibility,
+    );
+    return enhancedAccessibility
+        ? applyVariantFEnhancedCatalogOverlay(theme)
+        : theme;
+  }
 }
 
 final class GraphiteVisualTheme implements ClinicalCalendarVisualTheme {

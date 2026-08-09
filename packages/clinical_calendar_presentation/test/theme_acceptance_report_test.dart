@@ -7,16 +7,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/theme_acceptance_harness.dart';
 
 void main() {
-  test(
+  testWidgets(
     'writes reviewable Pending evidence for every implemented bundle',
-    () async {
+    (tester) async {
       const configuredOutput = String.fromEnvironment(
         'THEME_ACCEPTANCE_OUTPUT_DIR',
       );
       final ownsOutput = configuredOutput.isEmpty;
       final output =
           ownsOutput
-                ? await Directory.systemTemp.createTemp('theme-acceptance-')
+                ? (await tester.runAsync(
+                    () => Directory.systemTemp.createTemp('theme-acceptance-'),
+                  ))!
                 : Directory(configuredOutput)
             ..createSync(recursive: true);
       if (ownsOutput) addTearDown(() => output.deleteSync(recursive: true));
@@ -30,13 +32,15 @@ void main() {
       for (final bundle in registry.galleryBundles) {
         final themeDirectory = Directory('${output.path}/${bundle.id}')
           ..createSync(recursive: true);
-        final standard = ThemeRuntimeTokenAuditor.audit(
-          bundle: bundle,
-          mode: ThemeAccessibilityMode.standard,
+        final standard = await auditRuntimeBundle(
+          tester,
+          bundle,
+          ThemeAccessibilityMode.standard,
         );
-        final enhanced = ThemeRuntimeTokenAuditor.audit(
-          bundle: bundle,
-          mode: ThemeAccessibilityMode.enhanced,
+        final enhanced = await auditRuntimeBundle(
+          tester,
+          bundle,
+          ThemeAccessibilityMode.enhanced,
         );
         final tokenReports = [standard, enhanced];
         for (final report in tokenReports) {
@@ -46,22 +50,24 @@ void main() {
         }
 
         final fixture = themeRasterAcceptanceFixture(bundle.id);
-        final asset = await ThemeAssetAcceptanceAuditor.auditPrimaryFrame(
-          bundle: bundle,
-          bytes: await File(
-            '${packageRoot.path}/${bundle.frame.primaryAsset}',
-          ).readAsBytes(),
-          evidence: ThemeAssetEvidence(
-            assetPath: bundle.frame.primaryAsset,
-            expectedSha256: fixture.expectedSha256,
-            creationRecordUri: fixture.creationRecordUri,
-            comparisonCaptureUri: '',
-            originalityReviewer: '',
-            originalityApprovedAtUtc: DateTime.utc(2026, 8, 8),
-            originalityApproved: false,
-            operationalContentAbsent: false,
+        final asset = (await tester.runAsync(
+          () async => ThemeAssetAcceptanceAuditor.auditPrimaryFrame(
+            bundle: bundle,
+            bytes: await File(
+              '${packageRoot.path}/${bundle.frame.primaryAsset}',
+            ).readAsBytes(),
+            evidence: ThemeAssetEvidence(
+              assetPath: bundle.frame.primaryAsset,
+              expectedSha256: fixture.expectedSha256,
+              creationRecordUri: fixture.creationRecordUri,
+              comparisonCaptureUri: '',
+              originalityReviewer: '',
+              originalityApprovedAtUtc: DateTime.utc(2026, 8, 8),
+              originalityApproved: false,
+              operationalContentAbsent: false,
+            ),
           ),
-        );
+        ))!;
         File(
           '${themeDirectory.path}/primary-frame.json',
         ).writeAsStringSync(_pretty(asset.toJson()));

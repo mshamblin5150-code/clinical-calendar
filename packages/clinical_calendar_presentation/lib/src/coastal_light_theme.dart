@@ -334,6 +334,25 @@ ThemeData _applyCoastalLightEnhancedAccessibility(ThemeData standard) {
         ),
       ),
     ),
+    iconButtonTheme: IconButtonThemeData(
+      style: standard.iconButtonTheme.style?.copyWith(
+        overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+        side: WidgetStateProperty.resolveWith(
+          (states) => BorderSide(
+            color: states.contains(WidgetState.focused)
+                ? enhancedPrimary
+                : states.contains(WidgetState.pressed)
+                ? boundary
+                : Colors.transparent,
+            width: states.contains(WidgetState.focused)
+                ? 3
+                : states.contains(WidgetState.pressed)
+                ? 2
+                : 1,
+          ),
+        ),
+      ),
+    ),
     extensions: const [
       enhancedColors,
       coastalLightEnhancedAdditiveColors,

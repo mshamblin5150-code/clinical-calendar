@@ -452,8 +452,6 @@ ThemeData _applyVariantFEnhancedAccessibility(ThemeData standard) {
     primary: enhancedColors.clinical,
     secondary: enhancedColors.scheduled,
     error: enhancedColors.urgent,
-    errorContainer: const Color(0xFF5A1815),
-    onErrorContainer: Colors.white,
     onSurface: enhancedColors.primaryText,
     outline: enhancedColors.insetBorder,
   );
@@ -521,16 +519,6 @@ ThemeData _applyVariantFEnhancedAccessibility(ThemeData standard) {
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: standard.segmentedButtonTheme.style?.copyWith(
-        backgroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? const Color(0xFF28401F)
-              : VariantFColors.control,
-        ),
-        foregroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? Colors.white
-              : enhancedColors.primaryText,
-        ),
         side: const WidgetStatePropertyAll(
           BorderSide(color: enhancedBoundary, width: 1.5),
         ),
