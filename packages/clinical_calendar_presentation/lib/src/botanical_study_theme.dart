@@ -34,6 +34,8 @@ abstract final class BotanicalStudyColors {
   static const urgent = Color(0xFFA63D4E);
   static const warning = Color(0xFF805B16);
   static const focus = Color(0xFF6B3D67);
+  static const selectedSurface = Color(0xFFE9D8E3);
+  static const selectedFill = Color(0xFF482944);
 }
 
 const botanicalStudySemanticColors = ClinicalCalendarColors(
@@ -64,6 +66,36 @@ const botanicalStudyEnhancedAdditiveColors = ClinicalCalendarAdditiveColors(
   unscheduled: BotanicalStudyColors.unscheduled,
   overTarget: BotanicalStudyColors.overTarget,
   today: BotanicalStudyColors.today,
+);
+
+const botanicalStudyEntryVisuals = ClinicalCalendarPresentationPolicy(
+  clinicalFill: BotanicalStudyColors.clinicalFill,
+  leadingRailWidth: 3,
+  segmentWorkRail: false,
+  protectedDotGridCorner: false,
+  denseMarkerStyle: CalendarDenseMarkerStyle.chip,
+  toolbarStyle: CalendarToolbarStyle.conceptTitle,
+  neutralMonthDayBackgrounds: true,
+  showMonthLegend: true,
+  colorWeekdayHeader: true,
+  monthColumnFlex: CalendarMonthColumnFlex(113, 110, 110, 110, 110, 110, 79),
+  selectedDaySurface: BotanicalStudyColors.selectedSurface,
+  selectedDayBorder: BotanicalStudyColors.focus,
+);
+
+const botanicalStudyEnhancedEntryVisuals = ClinicalCalendarPresentationPolicy(
+  clinicalFill: BotanicalStudyColors.clinicalFill,
+  leadingRailWidth: 3,
+  segmentWorkRail: false,
+  protectedDotGridCorner: false,
+  denseMarkerStyle: CalendarDenseMarkerStyle.chip,
+  toolbarStyle: CalendarToolbarStyle.conceptTitle,
+  neutralMonthDayBackgrounds: true,
+  showMonthLegend: true,
+  colorWeekdayHeader: true,
+  monthColumnFlex: CalendarMonthColumnFlex(113, 110, 110, 110, 110, 110, 79),
+  selectedDaySurface: BotanicalStudyColors.selectedSurface,
+  selectedDayBorder: Color(0xFF4D1F55),
 );
 
 const botanicalStudyStandardAccessibilityTokens =
@@ -134,6 +166,7 @@ ThemeData buildBotanicalStudyTheme({bool enhancedAccessibility = false}) {
     extensions: const [
       botanicalStudySemanticColors,
       botanicalStudyAdditiveColors,
+      botanicalStudyEntryVisuals,
       metrics,
       botanicalStudyStandardAccessibilityTokens,
     ],
@@ -144,9 +177,32 @@ ThemeData buildBotanicalStudyTheme({bool enhancedAccessibility = false}) {
     side: const BorderSide(color: BotanicalStudyColors.outline),
   );
   final standard = base.copyWith(
-    textTheme: base.textTheme.apply(
-      bodyColor: BotanicalStudyColors.text,
-      displayColor: BotanicalStudyColors.text,
+    textTheme: base.textTheme
+        .apply(
+          bodyColor: BotanicalStudyColors.text,
+          displayColor: BotanicalStudyColors.text,
+        )
+        .copyWith(
+          headlineSmall: base.textTheme.headlineSmall?.copyWith(
+            color: BotanicalStudyColors.focus,
+            fontSize: 36,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? BotanicalStudyColors.selectedFill
+              : BotanicalStudyColors.surface,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? BotanicalStudyColors.canvas
+              : BotanicalStudyColors.text,
+        ),
+        minimumSize: const WidgetStatePropertyAll(Size(92, 38)),
+      ),
     ),
     cardTheme: CardThemeData(
       color: BotanicalStudyColors.surfaceRaised,
@@ -230,11 +286,6 @@ ThemeData buildBotanicalStudyTheme({bool enhancedAccessibility = false}) {
           ),
     ),
     iconButtonTheme: IconButtonThemeData(
-      style: ButtonStyle(
-        foregroundColor: _botanicalStudyForeground(BotanicalStudyColors.text),
-      ),
-    ),
-    segmentedButtonTheme: SegmentedButtonThemeData(
       style: ButtonStyle(
         foregroundColor: _botanicalStudyForeground(BotanicalStudyColors.text),
       ),
@@ -337,6 +388,7 @@ ThemeData _applyBotanicalStudyEnhancedAccessibility(ThemeData standard) {
     extensions: const [
       enhancedColors,
       botanicalStudyEnhancedAdditiveColors,
+      botanicalStudyEnhancedEntryVisuals,
       ClinicalCalendarMetrics(
         cornerRadius: 8,
         compactSpacing: 8,
