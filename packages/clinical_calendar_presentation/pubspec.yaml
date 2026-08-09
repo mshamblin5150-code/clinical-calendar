@@ -34,5 +34,13 @@ flutter:
     - assets/coastal_light_raster/
     - assets/federation_classic_raster/
     - assets/graphite_raster/
+    - assets/heritage_field_notes_fonts/OFL.txt
+    - assets/heritage_field_notes_brand/
+    - assets/heritage_field_notes_materials/
+    - assets/heritage_field_notes_raster/
     - assets/placement_icons/
     - assets/variant_f_raster/
+  fonts:
+    - family: FieldArchiveCondensed
+      fonts:
+        - asset: assets/heritage_field_notes_fonts/RobotoCondensed-Variable.ttf
