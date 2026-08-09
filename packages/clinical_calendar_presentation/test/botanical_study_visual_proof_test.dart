@@ -161,6 +161,9 @@ Future<void> _pumpProof(
       'packages/clinical_calendar_presentation/'
       '$botanicalStudyLandscapeChassisAsset',
     ),
+    logoFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/$botanicalStudyAxionLogoAsset',
+    ),
   );
   final preloadKey = GlobalKey();
   await tester.pumpWidget(
@@ -180,6 +183,13 @@ Future<void> _pumpProof(
     await precacheImage(
       const AssetImage(
         botanicalStudyLandscapeChassisAsset,
+        package: 'clinical_calendar_presentation',
+      ),
+      preloadKey.currentContext!,
+    );
+    await precacheImage(
+      const AssetImage(
+        botanicalStudyAxionLogoAsset,
         package: 'clinical_calendar_presentation',
       ),
       preloadKey.currentContext!,
@@ -273,10 +283,15 @@ File _findWorkspaceFile(String relativePath) {
 }
 
 final class _ProofAssetBundle extends CachingAssetBundle {
-  _ProofAssetBundle({required this.frameFile, required this.chassisFile});
+  _ProofAssetBundle({
+    required this.frameFile,
+    required this.chassisFile,
+    required this.logoFile,
+  });
 
   final File frameFile;
   final File chassisFile;
+  final File logoFile;
 
   @override
   Future<ByteData> load(String key) async {
@@ -291,6 +306,12 @@ final class _ProofAssetBundle extends CachingAssetBundle {
             '$botanicalStudyLandscapeChassisAsset') {
       return ByteData.sublistView(
         Uint8List.fromList(await chassisFile.readAsBytes()),
+      );
+    }
+    if (key ==
+        'packages/clinical_calendar_presentation/$botanicalStudyAxionLogoAsset') {
+      return ByteData.sublistView(
+        Uint8List.fromList(await logoFile.readAsBytes()),
       );
     }
     return rootBundle.load(key);
