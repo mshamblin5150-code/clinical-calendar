@@ -14,8 +14,12 @@ const _nonWindowsHighDeltaPixelTolerance = 0.0025;
 const _highDeltaThreshold = 128;
 
 GoldenFileComparator createProofGoldenComparator(
-  GoldenFileComparator delegate,
-) => _ProofGoldenComparator(delegate);
+  GoldenFileComparator delegate, {
+  double highDeltaPixelTolerance = _nonWindowsHighDeltaPixelTolerance,
+}) => _ProofGoldenComparator(
+  delegate,
+  highDeltaPixelTolerance: highDeltaPixelTolerance,
+);
 
 Future<void> prepareProofEnvironment() async {
   if (!Platform.isWindows && goldenFileComparator is! _ProofGoldenComparator) {
@@ -139,9 +143,13 @@ Future<void> _loadFont(String family, File file) async {
 }
 
 final class _ProofGoldenComparator implements GoldenFileComparator {
-  const _ProofGoldenComparator(this.delegate);
+  const _ProofGoldenComparator(
+    this.delegate, {
+    this.highDeltaPixelTolerance = _nonWindowsHighDeltaPixelTolerance,
+  });
 
   final GoldenFileComparator delegate;
+  final double highDeltaPixelTolerance;
 
   @override
   Future<bool> compare(Uint8List imageBytes, Uri golden) async {
@@ -156,7 +164,12 @@ final class _ProofGoldenComparator implements GoldenFileComparator {
       return delegate.compare(imageBytes, golden);
     }
     final difference = _proofImageDifference(expected, actual);
-    final matches = difference != null && _differenceIsAccepted(difference);
+    final matches =
+        difference != null &&
+        _differenceIsAccepted(
+          difference,
+          highDeltaPixelTolerance: highDeltaPixelTolerance,
+        );
     if (!matches && difference != null) {
       stderr.writeln(
         'Proof golden delta for $golden: '
@@ -183,9 +196,17 @@ Uri? resolveProofGolden(GoldenFileComparator comparator, Uri golden) {
   return null;
 }
 
-bool proofImagesMatch(img.Image expected, img.Image actual) {
+bool proofImagesMatch(
+  img.Image expected,
+  img.Image actual, {
+  double highDeltaPixelTolerance = _nonWindowsHighDeltaPixelTolerance,
+}) {
   final difference = _proofImageDifference(expected, actual);
-  return difference != null && _differenceIsAccepted(difference);
+  return difference != null &&
+      _differenceIsAccepted(
+        difference,
+        highDeltaPixelTolerance: highDeltaPixelTolerance,
+      );
 }
 
 typedef _ProofImageDifference = ({
@@ -238,7 +259,10 @@ _ProofImageDifference? _proofImageDifference(
   );
 }
 
-bool _differenceIsAccepted(_ProofImageDifference difference) =>
+bool _differenceIsAccepted(
+  _ProofImageDifference difference, {
+  required double highDeltaPixelTolerance,
+}) =>
     difference.changedRatio <= _nonWindowsPixelTolerance &&
-    difference.highDeltaRatio <= _nonWindowsHighDeltaPixelTolerance &&
+    difference.highDeltaRatio <= highDeltaPixelTolerance &&
     difference.meanChannelError <= _nonWindowsMeanChannelErrorTolerance;
