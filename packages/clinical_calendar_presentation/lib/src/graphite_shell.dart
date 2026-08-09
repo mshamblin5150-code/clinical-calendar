@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
 import 'graphite_frame.dart';
+import 'graphite_instrument_scope.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
@@ -125,7 +126,7 @@ final class GraphiteApplicationShell extends StatelessWidget {
                     safeInsets: graphitePlacementsSafeInsets,
                     accent: _GraphiteAccent.emerald,
                     integrated: true,
-                    child: slots.placementDock,
+                    child: GraphiteInstrumentScope(child: slots.placementDock),
                   ),
                 ),
                 Positioned(
@@ -170,7 +171,7 @@ final class GraphiteApplicationShell extends StatelessWidget {
                     safeInsets: graphiteStatusSafeInsets,
                     accent: _GraphiteAccent.coral,
                     integrated: true,
-                    child: slots.insightRail,
+                    child: GraphiteInstrumentScope(child: slots.insightRail),
                   ),
                 ),
                 Positioned(
@@ -265,7 +266,9 @@ final class GraphiteApplicationShell extends StatelessWidget {
                                     key: const Key('graphite-placement-bay'),
                                     safeInsets: graphitePlacementsSafeInsets,
                                     accent: _GraphiteAccent.emerald,
-                                    child: slots.mobilePlacementSummary,
+                                    child: GraphiteInstrumentScope(
+                                      child: slots.mobilePlacementSummary,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -274,7 +277,9 @@ final class GraphiteApplicationShell extends StatelessWidget {
                                     key: const Key('graphite-insight-bay'),
                                     safeInsets: graphiteStatusSafeInsets,
                                     accent: _GraphiteAccent.coral,
-                                    child: slots.mobileAttention,
+                                    child: GraphiteInstrumentScope(
+                                      child: slots.mobileAttention,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -348,7 +353,13 @@ final class _GraphiteLandscapeRailsPainter extends CustomPainter {
         size.width * .757,
         size.height * .085,
         size.width * .243,
-        size.height * .82,
+        size.height * .475,
+      ),
+      Rect.fromLTWH(
+        size.width * .757,
+        size.height * .569,
+        size.width * .243,
+        size.height * .336,
       ),
       Rect.fromLTWH(0, size.height * .914, size.width, size.height * .086),
     ];

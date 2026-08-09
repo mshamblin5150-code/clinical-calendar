@@ -670,7 +670,9 @@ final class _MonthDayCell extends StatelessWidget {
       child: CustomPaint(
         painter: _DayCellPainter(
           colors: context.clinicalColors,
-          todayAccent: _todayAccent(context),
+          todayAccent: instrumentChrome
+              ? Theme.of(context).colorScheme.primary
+              : _todayAccent(context),
           protected: protected,
           work: work,
           today: today,
@@ -688,8 +690,10 @@ final class _MonthDayCell extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _DayNumber(date: date, today: today, selected: selected),
-                const SizedBox(height: 3),
-                if (compact)
+                if (!(instrumentChrome && today)) const SizedBox(height: 3),
+                if (instrumentChrome && today)
+                  const SizedBox.shrink()
+                else if (compact)
                   _CompactMarkers(entries: entries)
                 else if (dense)
                   _DenseMonthMarker(
@@ -833,6 +837,56 @@ final class _DayNumber extends StatelessWidget {
         : 23.0;
     final usesThemeTodayMark =
         _usesAdditiveMarks(context) || context.accessibilityTokens.enhanced;
+    final instrumentChrome = CalendarPeriodViewportPolicy.usesInstrumentChrome(
+      context,
+    );
+    if (instrumentChrome && today) {
+      final accent = Theme.of(context).colorScheme.primary;
+      final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+      final label = Text(
+        'TODAY',
+        key: const Key('calendar-today-label'),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: accent,
+          fontWeight: FontWeight.w700,
+          letterSpacing: .7,
+        ),
+      );
+      final number = Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: .15),
+          shape: BoxShape.circle,
+          border: Border.all(color: accent, width: 2),
+          boxShadow: [
+            BoxShadow(color: accent.withValues(alpha: .22), blurRadius: 5),
+          ],
+        ),
+        child: Text(
+          '${date.day}',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: accent,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+      return SizedBox(
+        height: 51,
+        child: Center(
+          child: enlargedText
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [label, const SizedBox(width: 5), number],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [label, const SizedBox(height: 1), number],
+                ),
+        ),
+      );
+    }
     return Row(
       children: [
         DecoratedBox(

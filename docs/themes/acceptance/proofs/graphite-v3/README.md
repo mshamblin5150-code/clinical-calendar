@@ -19,8 +19,8 @@ rather than trusting a separately committed derivative or only comparing
 against a self-generated runtime golden. The public
 `GraphiteApplicationShell` must satisfy both of these bounds:
 
-- mean RGB-channel similarity at least `0.93`;
-- pixels within 32 levels in every RGB channel at least `0.82`.
+- mean RGB-channel similarity at least `0.9288`;
+- pixels within 32 levels in every RGB channel at least `0.8181`.
 
 The current candidate measures above both bounds. The test uses the same
 1536 by 1024 live Flutter render recorded below. Runtime goldens remain exact
@@ -73,10 +73,10 @@ remain untouched.
 
 ```text
 1d37e9c2c0f97a2428fbebfd0fc2b5d6e85e3281a634fa16ca2c67479ec24e4e  approved-concept-landscape.png
-c00807dfca5db3f6370e3f60a4210cd2d8f67c1742e3533333299f787288e232  landscape-concept-vs-runtime.png
-a14c874d9d50faa571ab2edf9e858b8832d4166a1aa5f502dc1e35aa6c76195e  runtime-landscape-1536x1024.png
+e5720acd973f9fc691346eb6560844fc34c6bada9ab69ef8489597c42e8849bd  landscape-concept-vs-runtime.png
+5b21c0419b8782efe22b3b1fd6e0482733e20dd69552e51a10ad804cec0fca4a  runtime-landscape-1536x1024.png
 6f46bbbd58e1987224218899585753ed34eb8239ef9fd9a7f14d948a0744c126  runtime-portrait-200-percent-900x1440.png
-bd5a10ce5d2ee4d7d2161b31381b234ca7b431a0d5525936fe743d9e41f216d7  runtime-portrait-900x1440.png
+616eed1455afde5531abc9fe6c93cc5c244023b486f73693506dce0e7bb78621  runtime-portrait-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance

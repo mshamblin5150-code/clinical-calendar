@@ -4,12 +4,39 @@ import 'package:clinical_calendar_presentation/src/evaluation_attention/attentio
 import 'package:clinical_calendar_presentation/src/evaluation_attention/evaluation_attention_controller.dart';
 import 'package:clinical_calendar_presentation/src/evaluation_attention/evaluation_plan_surface.dart';
 import 'package:clinical_calendar_presentation/src/graphite_theme.dart';
+import 'package:clinical_calendar_presentation/src/graphite_instrument_scope.dart';
 import 'package:clinical_calendar_presentation/src/theme_contract.dart';
 import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('Graphite live Attention rail uses concept hierarchy', (
+    tester,
+  ) async {
+    final harness = _Harness(withEveryAttentionFamily: true);
+    await harness.controller.load();
+    await _pump(
+      tester,
+      GraphiteInstrumentScope(
+        child: AttentionRail(
+          controller: harness.controller,
+          onOpenAction: (_) {},
+        ),
+      ),
+      const Size(380, 620),
+      graphite: true,
+    );
+
+    expect(
+      find.byKey(const Key('graphite-live-attention-rail')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('graphite-live-attention-item')), findsWidgets);
+    expect(find.text('NEEDS ATTENTION'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'checklist shows every state and documents with Medatrax default',
     (tester) async {
