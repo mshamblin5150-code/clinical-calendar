@@ -546,68 +546,62 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
             SizedBox(
               width: 170,
               child: Align(
-                alignment: const Alignment(-1, .62),
-                child: Container(
+                alignment: Alignment.bottomLeft,
+                child: SizedBox(
                   width: 139,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF02040D),
-                    border: Border.all(
-                      color: context.clinicalColors.scheduled,
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(23),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  height: 44,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      SizedBox(
-                        width: 48,
+                      Container(
+                        width: 139,
                         height: 36,
-                        child: OverflowBox(
-                          minWidth: 48,
-                          maxWidth: 48,
-                          minHeight: 44,
-                          maxHeight: 44,
-                          child: IconButton(
-                            tooltip: 'Add schedule',
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints.tightFor(
-                              width: 48,
-                              height: 44,
-                            ),
-                            onPressed: onAddSchedule,
-                            icon: const Icon(Icons.add, size: 30),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF02040D),
+                          border: Border.all(
+                            color: context.clinicalColors.scheduled,
+                            width: 2,
                           ),
+                          borderRadius: BorderRadius.circular(23),
                         ),
                       ),
-                      SizedBox.square(
-                        dimension: 36,
-                        child: OverflowBox(
-                          minWidth: 44,
-                          maxWidth: 44,
-                          minHeight: 44,
-                          maxHeight: 44,
-                          child: PopupMenuButton<ClinicalCalendarDestination>(
-                            key: const Key('federation-classic-help-menu'),
-                            tooltip: 'Profile and Help',
-                            onSelected: onOpenDestination,
-                            itemBuilder: (context) => const [
-                              PopupMenuItem(
-                                value: ClinicalCalendarDestination.help,
-                                child: Text('Help'),
-                              ),
-                              PopupMenuItem(
-                                value:
-                                    ClinicalCalendarDestination.studentProfile,
-                                child: Text('Student Profile'),
-                              ),
-                            ],
-                            child: Center(
-                              child: SizedBox.square(
-                                dimension: 36,
-                                child: IgnorePointer(child: profileAvatar),
-                              ),
+                      Positioned(
+                        left: 18,
+                        width: 48,
+                        height: 44,
+                        child: IconButton(
+                          tooltip: 'Add schedule',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints.tightFor(
+                            width: 48,
+                            height: 44,
+                          ),
+                          onPressed: onAddSchedule,
+                          icon: const Icon(Icons.add, size: 30),
+                        ),
+                      ),
+                      Positioned(
+                        left: 81,
+                        width: 44,
+                        height: 44,
+                        child: PopupMenuButton<ClinicalCalendarDestination>(
+                          key: const Key('federation-classic-help-menu'),
+                          tooltip: 'Profile and Help',
+                          onSelected: onOpenDestination,
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: ClinicalCalendarDestination.help,
+                              child: Text('Help'),
+                            ),
+                            PopupMenuItem(
+                              value: ClinicalCalendarDestination.studentProfile,
+                              child: Text('Student Profile'),
+                            ),
+                          ],
+                          child: Center(
+                            child: SizedBox.square(
+                              dimension: 36,
+                              child: IgnorePointer(child: profileAvatar),
                             ),
                           ),
                         ),
