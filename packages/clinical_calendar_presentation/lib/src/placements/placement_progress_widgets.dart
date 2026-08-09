@@ -92,6 +92,7 @@ final class PlacementProgressWheel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = snapshot.progress;
+    final fractions = _progressWheelFractions(progress);
     final touchWording = _usesTouchWording(touch);
     final semantics =
         '${snapshot.placement.name}, ${_minutes(progress.completedMinutes)} '
@@ -109,14 +110,11 @@ final class PlacementProgressWheel extends StatelessWidget {
         customBorder: const CircleBorder(),
         child: SizedBox.square(
           dimension: diameter,
-          child: CustomPaint(
-            painter: _ProgressWheelPainter(
-              progress: progress,
-              colors: context.clinicalColors,
-              additiveColors: Theme.of(
-                context,
-              ).extension<ClinicalCalendarAdditiveColors>(),
-            ),
+          child: PlacementProgressWheelGraphic(
+            completedFraction: fractions.completed,
+            scheduledFraction: fractions.scheduled,
+            unscheduledFraction: fractions.unscheduled,
+            overTargetFraction: fractions.overTarget,
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -139,6 +137,40 @@ final class PlacementProgressWheel extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Shared production wheel graphic used by the live progress surface and
+/// deterministic concept evidence. Fractions are normalized to the target.
+final class PlacementProgressWheelGraphic extends StatelessWidget {
+  const PlacementProgressWheelGraphic({
+    required this.completedFraction,
+    required this.scheduledFraction,
+    required this.unscheduledFraction,
+    this.overTargetFraction = 0,
+    required this.child,
+    super.key,
+  });
+
+  final double completedFraction;
+  final double scheduledFraction;
+  final double unscheduledFraction;
+  final double overTargetFraction;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _ProgressWheelPainter(
+      completedFraction: completedFraction,
+      scheduledFraction: scheduledFraction,
+      unscheduledFraction: unscheduledFraction,
+      overTargetFraction: overTargetFraction,
+      colors: context.clinicalColors,
+      additiveColors: Theme.of(
+        context,
+      ).extension<ClinicalCalendarAdditiveColors>(),
+    ),
+    child: child,
+  );
 }
 
 final class PlacementProgressRail extends StatefulWidget {
@@ -590,11 +622,17 @@ final class _ProgressSegment extends StatelessWidget {
 
 final class _ProgressWheelPainter extends CustomPainter {
   const _ProgressWheelPainter({
-    required this.progress,
+    required this.completedFraction,
+    required this.scheduledFraction,
+    required this.unscheduledFraction,
+    required this.overTargetFraction,
     required this.colors,
     required this.additiveColors,
   });
-  final ClinicalPlacementProgress progress;
+  final double completedFraction;
+  final double scheduledFraction;
+  final double unscheduledFraction;
+  final double overTargetFraction;
   final ClinicalCalendarColors colors;
   final ClinicalCalendarAdditiveColors? additiveColors;
 
@@ -609,29 +647,17 @@ final class _ProgressWheelPainter extends CustomPainter {
       ..strokeWidth = stroke
       ..color = colors.insetBorder;
     canvas.drawArc(rect, -math.pi / 2, math.pi * 2, false, background);
-    final target = progress.targetMinutes;
-    if (target <= 0) return;
-    final completed = math.min(progress.completedMinutes, target) / target;
-    final scheduled =
-        math.min(
-          progress.scheduledMinutes,
-          math.max(target - progress.completedMinutes, 0),
-        ) /
-        target;
-    final unscheduled =
-        math.min(
-          progress.unscheduledMinutes,
-          math.max(
-            target - progress.completedMinutes - progress.scheduledMinutes,
-            0,
-          ),
-        ) /
-        target;
     var start = -math.pi / 2;
     for (final segment in [
-      (completed, additiveColors?.completed ?? colors.clinical),
-      (scheduled, colors.scheduled),
-      (unscheduled, additiveColors?.unscheduled ?? colors.urgent),
+      (
+        completedFraction.clamp(0.0, 1.0),
+        additiveColors?.completed ?? colors.clinical,
+      ),
+      (scheduledFraction.clamp(0.0, 1.0), colors.scheduled),
+      (
+        unscheduledFraction.clamp(0.0, 1.0),
+        additiveColors?.unscheduled ?? colors.urgent,
+      ),
     ]) {
       if (segment.$1 <= 0) continue;
       final paint = Paint()
@@ -643,8 +669,7 @@ final class _ProgressWheelPainter extends CustomPainter {
       canvas.drawArc(rect, start, sweep, false, paint);
       start += sweep;
     }
-    if (progress.overTargetMinutes > 0) {
-      final overTarget = math.min(progress.overTargetMinutes / target, 1.0);
+    if (overTargetFraction > 0) {
       final overTargetPaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = math.max(stroke * .18, 2)
@@ -653,7 +678,7 @@ final class _ProgressWheelPainter extends CustomPainter {
       canvas.drawArc(
         rect.inflate(stroke * .38),
         -math.pi / 2,
-        math.pi * 2 * overTarget,
+        math.pi * 2 * overTargetFraction.clamp(0.0, 1.0),
         false,
         overTargetPaint,
       );
@@ -662,9 +687,43 @@ final class _ProgressWheelPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ProgressWheelPainter oldDelegate) =>
-      oldDelegate.progress != progress ||
+      oldDelegate.completedFraction != completedFraction ||
+      oldDelegate.scheduledFraction != scheduledFraction ||
+      oldDelegate.unscheduledFraction != unscheduledFraction ||
+      oldDelegate.overTargetFraction != overTargetFraction ||
       oldDelegate.colors != colors ||
       oldDelegate.additiveColors != additiveColors;
+}
+
+({double completed, double scheduled, double unscheduled, double overTarget})
+_progressWheelFractions(ClinicalPlacementProgress progress) {
+  final target = progress.targetMinutes;
+  if (target <= 0) {
+    return (completed: 0, scheduled: 0, unscheduled: 0, overTarget: 0);
+  }
+  final completed = math.min(progress.completedMinutes, target) / target;
+  final scheduled =
+      math.min(
+        progress.scheduledMinutes,
+        math.max(target - progress.completedMinutes, 0),
+      ) /
+      target;
+  final unscheduled =
+      math.min(
+        progress.unscheduledMinutes,
+        math.max(
+          target - progress.completedMinutes - progress.scheduledMinutes,
+          0,
+        ),
+      ) /
+      target;
+  final overTarget = math.min(progress.overTargetMinutes / target, 1.0);
+  return (
+    completed: completed,
+    scheduled: scheduled,
+    unscheduled: unscheduled,
+    overTarget: overTarget,
+  );
 }
 
 Color _completedColor(BuildContext context) =>

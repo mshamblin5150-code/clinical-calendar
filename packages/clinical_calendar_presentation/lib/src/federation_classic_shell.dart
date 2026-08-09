@@ -104,7 +104,6 @@ final class FederationClassicApplicationShell extends StatelessWidget {
               Positioned.fromRect(
                 rect: rect(FederationClassicLandscapeGeometry.crown),
                 child: _FederationClassicCommandCrown(
-                  environmentName: environmentName,
                   onOpenMenu: onOpenMenu,
                   onAddSchedule: onAddSchedule,
                   onOpenDestination: onOpenDestination,
@@ -190,7 +189,6 @@ final class FederationClassicApplicationShell extends StatelessWidget {
           child: Column(
             children: [
               _FederationClassicCommandCrown(
-                environmentName: environmentName,
                 onOpenMenu: onOpenMenu,
                 onAddSchedule: onAddSchedule,
                 onOpenDestination: onOpenDestination,
@@ -493,7 +491,6 @@ final class _FederationClassicConsoleBayPainter extends CustomPainter {
 
 final class _FederationClassicCommandCrown extends StatelessWidget {
   const _FederationClassicCommandCrown({
-    required this.environmentName,
     required this.onOpenMenu,
     required this.onAddSchedule,
     required this.onOpenDestination,
@@ -502,7 +499,6 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
     this.integrated = false,
   });
 
-  final String environmentName;
   final VoidCallback onOpenMenu;
   final VoidCallback onAddSchedule;
   final ValueChanged<ClinicalCalendarDestination> onOpenDestination;
@@ -512,7 +508,6 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     if (integrated) {
       return SizedBox(
         key: const Key('federation-classic-command-crown'),
@@ -528,23 +523,7 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Transform.scale(
-                      scaleX: .88,
-                      alignment: Alignment.centerLeft,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          'CLINICAL CALENDAR',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(
-                                color: const Color(0xFFFFE4BE),
-                                fontSize: 30,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: .1,
-                              ),
-                        ),
-                      ),
-                    ),
+                    child: const _FederationClassicAxionDeltaMark(size: 48),
                   ),
                 ),
               ),
@@ -605,48 +584,19 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18),
         child: Row(
           children: [
-            IconButton(
-              key: const Key('application-menu-action'),
-              tooltip: 'Open menu',
-              onPressed: onOpenMenu,
-              icon: const Icon(Icons.grid_view_outlined),
+            Tooltip(
+              message: 'Open menu',
+              child: InkWell(
+                key: const Key('application-menu-action'),
+                onTap: onOpenMenu,
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: _FederationClassicAxionDeltaMark(size: 48),
+                ),
+              ),
             ),
-            if (!enlargedText) ...[
-              const SizedBox(width: 8),
-              const Icon(Icons.calendar_month_outlined),
-              const SizedBox(width: 10),
-            ],
-            Expanded(
-              child: enlargedText
-                  ? const SizedBox.shrink()
-                  : Row(
-                      children: [
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              compact
-                                  ? 'CLINICAL CALENDAR'
-                                  : 'C L I N I C A L   C A L E N D A R',
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(
-                                    letterSpacing: compact ? 1.2 : 2.1,
-                                    color: context.clinicalColors.clinical,
-                                  ),
-                            ),
-                          ),
-                        ),
-                        if (!compact && environmentName.trim().isNotEmpty) ...[
-                          const SizedBox(width: 12),
-                          Text(
-                            environmentName,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        ],
-                      ],
-                    ),
-            ),
+            const Spacer(),
             IconButton(
               tooltip: 'Add schedule',
               onPressed: onAddSchedule,
@@ -674,6 +624,25 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
       child: content,
     );
   }
+}
+
+final class _FederationClassicAxionDeltaMark extends StatelessWidget {
+  const _FederationClassicAxionDeltaMark({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Image.asset(
+      federationClassicAxionDeltaAsset,
+      package: 'clinical_calendar_presentation',
+      key: const Key('federation-classic-axion-delta'),
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+    ),
+  );
 }
 
 enum _FederationClassicNavigationItem {

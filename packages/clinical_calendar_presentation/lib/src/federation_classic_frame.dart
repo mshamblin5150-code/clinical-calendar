@@ -8,6 +8,8 @@ const federationClassicFrameAsset =
     'assets/federation_classic_raster/panel-nine-slice-v1.png';
 const federationClassicRailNineSliceAsset =
     'assets/federation_classic_raster/lcars-rail-nine-slice-v2.png';
+const federationClassicAxionDeltaAsset =
+    'assets/federation_classic_raster/axion-delta-v1.png';
 const federationClassicCalendarSafeInsets = EdgeInsets.fromLTRB(38, 46, 38, 46);
 const federationClassicPlacementsSafeInsets = EdgeInsets.fromLTRB(
   30,
@@ -123,7 +125,6 @@ final class _FederationClassicRasterRailsPainter extends CustomPainter {
   final ui.Image image;
 
   static const _rails = <(Rect, Color, double)>[
-    (Rect.fromLTWH(10, 39, 145, 164), Color(0xFFAF8ED6), 48),
     (Rect.fromLTWH(474, 53, 629, 42), Color(0xFFAF8ED6), 22),
     (Rect.fromLTWH(1306, 53, 262, 42), Color(0xFFF5AE25), 22),
     (Rect.fromLTWH(1376, 830, 201, 40), Color(0xFFFF8057), 22),
@@ -148,7 +149,7 @@ final class _FederationClassicRasterRailsPainter extends CustomPainter {
         FederationClassicRasterRails.centerSlice,
         destination,
         Paint()
-          ..colorFilter = ColorFilter.mode(color, BlendMode.modulate)
+          ..colorFilter = ColorFilter.mode(color, BlendMode.srcIn)
           ..filterQuality = FilterQuality.high,
       );
       canvas.restore();

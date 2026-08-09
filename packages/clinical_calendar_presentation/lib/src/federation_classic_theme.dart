@@ -27,8 +27,10 @@ abstract final class FederationClassicColors {
   static const protectedDayAccent = Color(0xFFFFE09A);
   static const completed = Color(0xFFA9D47A);
   static const scheduled = Color(0xFFF6B44B);
-  static const unscheduled = Color(0xFFB6A8BE);
-  static const overTarget = Color(0xFFE980A4);
+  // The Classic concept uses the dominant LCARS salmon for work that still
+  // needs scheduling and reserves lavender for time beyond the target.
+  static const unscheduled = clinical;
+  static const overTarget = Color(0xFFB6A8BE);
   static const today = Color(0xFF8DCAE8);
   static const urgent = Color(0xFFFF7777);
   static const warning = Color(0xFFFFD166);
@@ -60,8 +62,8 @@ const federationClassicAdditiveColors = ClinicalCalendarAdditiveColors(
 
 const federationClassicEnhancedAdditiveColors = ClinicalCalendarAdditiveColors(
   completed: Color(0xFFC1E797),
-  unscheduled: Color(0xFFD4C9DB),
-  overTarget: Color(0xFFF39BBA),
+  unscheduled: Color(0xFFFFA07A),
+  overTarget: Color(0xFFD4C9DB),
   today: Color(0xFFA9DCF3),
 );
 

@@ -23,6 +23,11 @@ void main() {
     expect(find.text('AUGUST 2026'), findsOneWidget);
     expect(find.text('PLANNING'), findsOneWidget);
     expect(find.text('NEEDS ATTENTION'), findsOneWidget);
+    expect(
+      find.byKey(const Key('federation-classic-axion-delta')),
+      findsOneWidget,
+    );
+    expect(find.text('CLINICAL CALENDAR'), findsNothing);
     final title = tester.getRect(
       find.byKey(const Key('calendar-period-title')),
     );
@@ -71,7 +76,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v6/federation_classic_landscape_1586x992.png',
+        'goldens/federation_classic_v7/federation_classic_landscape_1586x992.png',
       ),
     );
   });
@@ -84,7 +89,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v6/federation_classic_portrait_900x1440.png',
+        'goldens/federation_classic_v7/federation_classic_portrait_900x1440.png',
       ),
     );
   });
@@ -119,7 +124,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v6/'
+        'goldens/federation_classic_v7/'
         'federation_classic_portrait_200_percent_900x1440.png',
       ),
     );
@@ -149,6 +154,7 @@ Future<void> _pumpProof(
     for (final asset in const [
       federationClassicFrameAsset,
       federationClassicRailNineSliceAsset,
+      federationClassicAxionDeltaAsset,
     ]) {
       await precacheImage(
         AssetImage(asset, package: 'clinical_calendar_presentation'),
@@ -418,10 +424,11 @@ final class _PlacementCard extends StatelessWidget {
 }
 
 final class _MetricLine extends StatelessWidget {
-  const _MetricLine(this.label, this.color);
+  const _MetricLine(this.label, this.color, {this.filledMarker = false});
 
   final String label;
   final Color color;
+  final bool filledMarker;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -429,11 +436,12 @@ final class _MetricLine extends StatelessWidget {
     child: Row(
       children: [
         Container(
-          width: 7,
-          height: 7,
+          width: filledMarker ? 14 : 7,
+          height: filledMarker ? 14 : 7,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: color),
+            color: filledMarker ? color : null,
+            border: filledMarker ? null : Border.all(color: color),
           ),
         ),
         const SizedBox(width: 9),
@@ -688,24 +696,18 @@ final class _InsightProof extends StatelessWidget {
           Expanded(child: _AccentRule(FederationClassicColors.clinical)),
         ],
       ),
-      const SizedBox(height: 32),
+      const SizedBox(height: 22),
       const Row(
         children: [
           SizedBox.square(
             dimension: 142,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CircularProgressIndicator(
-                  value: .09,
-                  strokeWidth: 17,
-                  color: FederationClassicColors.clinical,
-                  backgroundColor: FederationClassicColors.surfaceHigh,
-                ),
-                Center(
-                  child: Text('0 hr\ncompleted', textAlign: TextAlign.center),
-                ),
-              ],
+            child: PlacementProgressWheelGraphic(
+              completedFraction: 0,
+              scheduledFraction: 8 / 90,
+              unscheduledFraction: 82 / 90,
+              child: Center(
+                child: Text('0 hr\ncompleted', textAlign: TextAlign.center),
+              ),
             ),
           ),
           SizedBox(width: 14),
@@ -714,23 +716,28 @@ final class _InsightProof extends StatelessWidget {
               children: [
                 _MetricLine(
                   'Target                 90 hr',
-                  FederationClassicColors.text,
+                  FederationClassicColors.workAccent,
+                  filledMarker: true,
                 ),
                 _MetricLine(
                   'Completed            0 hr',
                   FederationClassicColors.completed,
+                  filledMarker: true,
                 ),
                 _MetricLine(
                   'Scheduled             8 hr',
                   FederationClassicColors.scheduled,
+                  filledMarker: true,
                 ),
                 _MetricLine(
                   'Unscheduled       82 hr',
                   FederationClassicColors.unscheduled,
+                  filledMarker: true,
                 ),
                 _MetricLine(
                   'Over-Target          0 hr',
                   FederationClassicColors.workAccent,
+                  filledMarker: true,
                 ),
               ],
             ),

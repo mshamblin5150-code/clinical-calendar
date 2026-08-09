@@ -52,7 +52,9 @@ a 512 by 512 neutral material tile edited with the built-in image-generation
 workflow from the rejected v1 tile. The edit removed every scratch, band, and
 dark seam while preserving a smooth neutral gradient, rounded silhouette, and
 transparent exterior corners. Each independently positioned LCARS rail clips
-and tints the tile, while only its 384 by 384 center and edge seams stretch.
+the tile and uses its alpha as the silhouette (`srcIn`); the neutral source
+luminance is discarded so it cannot appear as a translucent overlay on the
+flat LCARS colors. Only its 384 by 384 center and edge seams stretch.
 SHA-256:
 `7859e0b60dde47fa259c6eafe12b96b5ce59facb39487a5f2e8557c76cc10b77`.
 All four corner alpha values are zero; the center is fully opaque; and the tile
@@ -75,8 +77,20 @@ Automated validation records:
 - operational text, icons, controls, and data: absent;
 - live-content bays: opaque, near-black, and uninterrupted.
 
-The rejected deterministic v2 through v5 proofs remain under their versioned
+The rejected deterministic v2 through v6 proofs remain under their versioned
 acceptance-proof directories as immutable negative baselines. The replacement
-candidate is under `docs/themes/acceptance/proofs/federation-classic-v6/`.
-All use the approved concept's native 1586 by 992 landscape viewport, but v6
+candidate is under `docs/themes/acceptance/proofs/federation-classic-v7/`.
+All use the approved concept's native 1586 by 992 landscape viewport, but v7
 is the only current review candidate.
+
+## Axion identity mark
+
+The command crown uses the maintainer-supplied Axion delta-and-orbit identity
+without the `AXION` wordmark and without the former `CLINICAL CALENDAR` text.
+The built-in image-generation precise-object-edit workflow removed the
+wordmark and background while preserving the supplied polished-silver mark;
+the chroma helper then produced
+`packages/clinical_calendar_presentation/assets/federation_classic_raster/axion-delta-v1.png`.
+The 1115 by 1410 PNG has transparent exterior corners, contains no text, and
+has SHA-256
+`78e758d0ea67e14be15ba63c22ba9510147d4bfa6dc9c696df43fa66a2346c1b`.

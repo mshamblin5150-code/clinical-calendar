@@ -2,9 +2,11 @@
 
 Issue: [#133](https://github.com/mshamblin5150-code/clinical-calendar/issues/133)
 
-Status: **candidate awaiting explicit maintainer visual approval**. This
-package does not claim approval or physical Android-tablet acceptance. The
-rejected v2 through v5 proofs remain immutable negative baselines.
+Status: **REJECTED by the maintainer on 2026-08-09**. V6 corrected the outer
+panel silhouettes, but the progress wheel still used a generic partial-ring
+facsimile and the raster rails retained visible luminance bands that read as
+an overlay. The text crown also did not carry the maintainer's Axion delta
+identity. This package is retained only as a negative baseline.
 
 The approved issue #113 concept is the independent normative source. V6 keeps
 v5's seven-row Calendar, compact weekday labels, amber period state, stacked

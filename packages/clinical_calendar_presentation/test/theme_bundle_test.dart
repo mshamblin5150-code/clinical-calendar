@@ -108,6 +108,7 @@ void main() {
       containsAll([
         federationClassicFrameAsset,
         federationClassicRailNineSliceAsset,
+        federationClassicAxionDeltaAsset,
       ]),
     );
     expect(federationClassic.gallery.swatches, hasLength(5));

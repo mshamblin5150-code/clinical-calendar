@@ -6,13 +6,13 @@ import 'package:image/image.dart' as img;
 void main() {
   final concept = img.decodePng(
     File(
-      '../../docs/themes/acceptance/proofs/federation-classic-v6/'
+      '../../docs/themes/acceptance/proofs/federation-classic-v7/'
       'approved-concept-landscape.png',
     ).readAsBytesSync(),
   )!;
   final runtime = img.decodePng(
     File(
-      'test/goldens/federation_classic_v6/'
+      'test/goldens/federation_classic_v7/'
       'federation_classic_landscape_1586x992.png',
     ).readAsBytesSync(),
   )!;
@@ -22,8 +22,10 @@ void main() {
 
   final regions = <String, ({int left, int top, int width, int height})>{
     'crown': (left: 0, top: 32, width: 1586, height: 72),
-    'left-rails': (left: 0, top: 96, width: 210, height: 780),
-    'right-rails': (left: 1370, top: 96, width: 216, height: 780),
+    // Keep the rail checks on the theme-owned chassis. Including bay content
+    // makes a semantic color correction look like a frame regression.
+    'left-rails': (left: 0, top: 195, width: 96, height: 545),
+    'right-rails': (left: 1535, top: 330, width: 51, height: 550),
     'navigation': (left: 0, top: 875, width: 1586, height: 117),
   };
 
@@ -31,8 +33,8 @@ void main() {
   // left rails 0.9087, right rails 0.7329, and navigation 0.6987.
   const minimumSimilarity = <String, double>{
     'crown': .87,
-    'left-rails': .90,
-    'right-rails': .735,
+    'left-rails': .95,
+    'right-rails': .95,
     'navigation': .71,
   };
   const panelRegions = <String, ({int left, int top, int width, int height})>{
@@ -58,7 +60,42 @@ void main() {
     stdout.writeln('${entry.key}-boundary: ${score.toStringAsFixed(4)}');
     if (score < minimumPanelBoundarySimilarity) failed = true;
   }
+  // Isolate the ring itself; the adjacent metric ledger is not wheel chrome.
+  const wheelRegion = (left: 1162, top: 162, width: 146, height: 146);
+  final wheelScore = _iou(concept, runtime, wheelRegion);
+  stdout.writeln('progress-wheel: ${wheelScore.toStringAsFixed(4)}');
+  if (wheelScore < .80) failed = true;
+
+  const crownMaterial = (left: 500, top: 57, width: 550, height: 34);
+  final conceptBanding = _rowLuminanceRange(concept, crownMaterial);
+  final runtimeBanding = _rowLuminanceRange(runtime, crownMaterial);
+  stdout.writeln(
+    'crown-material-banding: concept=${conceptBanding.toStringAsFixed(4)} '
+    'runtime=${runtimeBanding.toStringAsFixed(4)}',
+  );
+  if (runtimeBanding > conceptBanding + .025) failed = true;
   if (failed) exitCode = 1;
+}
+
+double _rowLuminanceRange(
+  img.Image image,
+  ({int left, int top, int width, int height}) region,
+) {
+  final rows = <double>[];
+  for (var y = region.top; y < region.top + region.height; y++) {
+    var total = 0.0;
+    for (var x = region.left; x < region.left + region.width; x++) {
+      final pixel = image.getPixel(x, y);
+      total +=
+          .2126 * pixel.rNormalized +
+          .7152 * pixel.gNormalized +
+          .0722 * pixel.bNormalized;
+    }
+    rows.add(total / region.width);
+  }
+  final minimum = rows.reduce((a, b) => a < b ? a : b);
+  final maximum = rows.reduce((a, b) => a > b ? a : b);
+  return maximum - minimum;
 }
 
 double _boundaryF1(
