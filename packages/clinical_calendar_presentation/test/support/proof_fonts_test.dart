@@ -28,7 +28,7 @@ void main() {
       final actual = img.Image.from(expected);
       final changedPositions = <int>{};
 
-      for (var index = 0; index < 240; index++) {
+      for (var index = 0; index < 390; index++) {
         final position = (index * 37) % (actual.width * actual.height);
         changedPositions.add(position);
         final x = position % actual.width;
@@ -36,10 +36,29 @@ void main() {
         actual.setPixelRgb(x, y, 48, 48, 48);
       }
 
-      expect(changedPositions, hasLength(240));
+      expect(changedPositions, hasLength(390));
       expect(proofImagesMatch(expected, actual), isTrue);
     },
   );
+
+  test('proof comparison rejects low-delta noise above its ceiling', () {
+    final expected = img.Image(width: 100, height: 100)
+      ..clear(img.ColorRgb8(40, 40, 40));
+    final actual = img.Image.from(expected);
+
+    for (var index = 0; index < 410; index++) {
+      final position = (index * 37) % (actual.width * actual.height);
+      actual.setPixelRgb(
+        position % actual.width,
+        position ~/ actual.width,
+        48,
+        48,
+        48,
+      );
+    }
+
+    expect(proofImagesMatch(expected, actual), isFalse);
+  });
 
   test('proof comparison rejects a localized high-contrast deletion', () {
     final expected = img.Image(width: 100, height: 100)

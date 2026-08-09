@@ -29,10 +29,20 @@ flutter:
   assets:
     - assets/botanical_study_raster/
     - assets/botanical_study_raster/dashboard-chassis-landscape-v2.png
+    - assets/botanical_study_raster/axion-delta-mark-v2.png
     - assets/federation_2399_raster/panel-nine-slice-v1.png
     - assets/federation_2399_raster/dashboard-chassis-landscape-v1.png
+    - assets/federation_2399_raster/axion-delta-mark-v1.png
     - assets/coastal_light_raster/
     - assets/federation_classic_raster/
     - assets/graphite_raster/
+    - assets/heritage_field_notes_fonts/OFL.txt
+    - assets/heritage_field_notes_brand/
+    - assets/heritage_field_notes_materials/
+    - assets/heritage_field_notes_raster/
     - assets/placement_icons/
     - assets/variant_f_raster/
+  fonts:
+    - family: FieldArchiveCondensed
+      fonts:
+        - asset: assets/heritage_field_notes_fonts/RobotoCondensed-Variable.ttf

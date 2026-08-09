@@ -36,7 +36,7 @@ Android-tablet acceptance remains pending under #139.
 
 ```text
 50d4f44923d6710d9bcea35c82027c6dce20d14f08fa5ff993b7ad1e151d9741  approved-concept-landscape.png
-9e60480ce2415f5b0163bfa4ae2c6797238f877ab4b0b4bdbdb34e6cbf0d7076  landscape-concept-vs-runtime.png
+a47dd3641adae164e6f1885230f18ff64cd46db1bfaffd210c18b9c854e9c4f2  landscape-concept-vs-runtime.png
 a1644b8f8e7fc631bb87158c466d9f9c076f450fda5e29b282da7d46255294fd  runtime-landscape-1586x992.png
 161f0e87dcd68c751675542a8d6872075850df14d64f243ede711e3ba622b279  runtime-portrait-200-percent-900x1440.png
 639bea9d9ed951ec2b12b3c1877bfab5fb62d5564ce7b6ea0c0127f14f27acda  runtime-portrait-900x1440.png

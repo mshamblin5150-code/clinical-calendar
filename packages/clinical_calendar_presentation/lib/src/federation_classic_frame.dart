@@ -6,8 +6,10 @@ import 'graphite_frame.dart';
 
 const federationClassicFrameAsset =
     'assets/federation_classic_raster/panel-nine-slice-v1.png';
-const federationClassicLandscapeChassisAsset =
-    'assets/federation_classic_raster/dashboard-chassis-landscape-v1.png';
+const federationClassicRailNineSliceAsset =
+    'assets/federation_classic_raster/lcars-rail-nine-slice-v2.png';
+const federationClassicAxionDeltaAsset =
+    'assets/federation_classic_raster/axion-delta-v1.png';
 const federationClassicCalendarSafeInsets = EdgeInsets.fromLTRB(38, 46, 38, 46);
 const federationClassicPlacementsSafeInsets = EdgeInsets.fromLTRB(
   30,
@@ -18,9 +20,9 @@ const federationClassicPlacementsSafeInsets = EdgeInsets.fromLTRB(
 const federationClassicPlanningSafeInsets = EdgeInsets.fromLTRB(34, 46, 34, 42);
 const federationClassicStatusSafeInsets = EdgeInsets.fromLTRB(30, 44, 34, 44);
 
-/// Fixed golden-exemplar chassis derived from the approved issue #113
-/// composition. The raster contains decoration only; [child] owns all live
-/// content, semantics, focus, and callbacks.
+/// Piecewise golden-exemplar chassis measured from the approved issue #113
+/// composition. It renders the major rails as independent nine-slice raster
+/// pieces instead of stretching a complete dashboard bitmap.
 final class FederationClassicLandscapeChassis extends StatelessWidget {
   const FederationClassicLandscapeChassis({required this.child, super.key});
 
@@ -30,26 +32,328 @@ final class FederationClassicLandscapeChassis extends StatelessWidget {
   Widget build(BuildContext context) => Stack(
     fit: StackFit.expand,
     children: [
-      ExcludeSemantics(
-        child: Image.asset(
-          federationClassicLandscapeChassisAsset,
-          package: 'clinical_calendar_presentation',
-          fit: BoxFit.fill,
-          filterQuality: FilterQuality.high,
-          errorBuilder: (context, error, stackTrace) {
-            GraphitePresentationFailureBoundary.report(
-              context,
-              error,
-              themeId: 'federation-classic',
-              isGraphite: false,
-            );
-            return const ColoredBox(color: Color(0xFF09070C));
-          },
-        ),
-      ),
+      const CustomPaint(painter: _FederationClassicLandscapePainter()),
+      const FederationClassicRasterRails(),
+      const CustomPaint(painter: _FederationClassicLandscapeCutoutPainter()),
       child,
     ],
   );
+}
+
+final class FederationClassicLandscapeGeometry {
+  const FederationClassicLandscapeGeometry._();
+
+  static const exemplar = Size(1586, 992);
+  static const crown = Rect.fromLTWH(194, 39, 1374, 57);
+  static const placements = Rect.fromLTWH(90, 112, 306, 702);
+  static const calendar = Rect.fromLTWH(406, 112, 736, 473);
+  static const planning = Rect.fromLTWH(406, 591, 736, 276);
+  static const insight = Rect.fromLTWH(1162, 112, 367, 702);
+  static const navigation = Rect.fromLTWH(10, 887, 1566, 97);
+
+  static Rect scale(Rect rect, Size size) => Rect.fromLTWH(
+    rect.left * size.width / exemplar.width,
+    rect.top * size.height / exemplar.height,
+    rect.width * size.width / exemplar.width,
+    rect.height * size.height / exemplar.height,
+  );
+}
+
+/// Loads one neutral rail material and renders each chassis rail separately
+/// with [Canvas.drawImageNine]. Only the center and edge seams stretch.
+final class FederationClassicRasterRails extends StatefulWidget {
+  const FederationClassicRasterRails({super.key});
+
+  static const centerSlice = Rect.fromLTRB(64, 64, 448, 448);
+
+  @override
+  State<FederationClassicRasterRails> createState() =>
+      _FederationClassicRasterRailsState();
+}
+
+final class _FederationClassicRasterRailsState
+    extends State<FederationClassicRasterRails> {
+  ImageStream? _stream;
+  ImageInfo? _image;
+  late final ImageStreamListener _listener = ImageStreamListener(
+    (image, _) {
+      if (mounted) setState(() => _image = image);
+    },
+    onError: (Object error, StackTrace? stackTrace) {
+      if (!mounted) return;
+      GraphitePresentationFailureBoundary.report(
+        context,
+        error,
+        themeId: 'federation-classic',
+        isGraphite: false,
+      );
+    },
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = const AssetImage(
+      federationClassicRailNineSliceAsset,
+      package: 'clinical_calendar_presentation',
+    ).resolve(createLocalImageConfiguration(context));
+    if (next.key == _stream?.key) return;
+    _stream?.removeListener(_listener);
+    _image?.dispose();
+    _image = null;
+    _stream = next..addListener(_listener);
+  }
+
+  @override
+  void dispose() {
+    _stream?.removeListener(_listener);
+    _image?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _image == null
+        ? null
+        : _FederationClassicRasterRailsPainter(_image!.image),
+  );
+}
+
+final class _FederationClassicRasterRailsPainter extends CustomPainter {
+  const _FederationClassicRasterRailsPainter(this.image);
+
+  final ui.Image image;
+
+  static const _rails = <(Rect, Color, double)>[
+    (Rect.fromLTWH(474, 53, 629, 42), Color(0xFFAF8ED6), 22),
+    (Rect.fromLTWH(1306, 53, 262, 42), Color(0xFFF5AE25), 22),
+    (Rect.fromLTWH(1376, 830, 201, 40), Color(0xFFFF8057), 22),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final (conceptRect, color, conceptRadius) in _rails) {
+      final destination = FederationClassicLandscapeGeometry.scale(
+        conceptRect,
+        size,
+      );
+      canvas.save();
+      canvas.clipRRect(
+        RRect.fromRectAndRadius(
+          destination,
+          Radius.circular(conceptRadius * size.width / 1586),
+        ),
+      );
+      canvas.drawImageNine(
+        image,
+        FederationClassicRasterRails.centerSlice,
+        destination,
+        Paint()
+          ..colorFilter = ColorFilter.mode(color, BlendMode.srcIn)
+          ..filterQuality = FilterQuality.high,
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FederationClassicRasterRailsPainter oldDelegate) =>
+      oldDelegate.image != image;
+}
+
+final class _FederationClassicLandscapePainter extends CustomPainter {
+  const _FederationClassicLandscapePainter();
+
+  static const _canvas = Color(0xFF02040D);
+  static const _lilac = Color(0xFFAF8ED6);
+  static const _lilacDark = Color(0xFF65448C);
+  static const _salmon = Color(0xFFFF8057);
+  static const _amber = Color(0xFFF5AE25);
+  static const _outline = Color(0xFF3A3148);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    canvas.save();
+    canvas.scale(size.width / 1586, size.height / 992);
+    final upperElbow = Path()
+      ..moveTo(58, 39)
+      ..lineTo(155, 39)
+      ..lineTo(155, 105)
+      ..lineTo(90, 105)
+      ..lineTo(90, 203)
+      ..lineTo(10, 203)
+      ..lineTo(10, 87)
+      ..cubicTo(10, 61, 31, 39, 58, 39)
+      ..close();
+    canvas.drawPath(upperElbow, Paint()..color = _lilac);
+    canvas.drawRect(
+      const Rect.fromLTWH(164, 39, 11, 66),
+      Paint()..color = _lilac,
+    );
+    _rectSegments(canvas, const [
+      (Rect.fromLTWH(10, 211, 79, 88), _lilacDark),
+      (Rect.fromLTWH(10, 306, 79, 54), _salmon),
+      (Rect.fromLTWH(10, 362, 79, 57), _salmon),
+      (Rect.fromLTWH(10, 421, 79, 110), _salmon),
+      (Rect.fromLTWH(10, 534, 79, 188), _amber),
+    ]);
+    final lowerElbow = Path()
+      ..moveTo(10, 732)
+      ..lineTo(89, 732)
+      ..lineTo(89, 785)
+      ..quadraticBezierTo(89, 813, 117, 813)
+      ..lineTo(150, 813)
+      ..quadraticBezierTo(196, 813, 196, 859)
+      ..lineTo(196, 873)
+      ..lineTo(58, 873)
+      ..quadraticBezierTo(10, 873, 10, 825)
+      ..close();
+    canvas.drawPath(lowerElbow, Paint()..color = const Color(0xFFD56843));
+    final lowerAmberCap = Path()
+      ..moveTo(143, 813)
+      ..lineTo(150, 813)
+      ..quadraticBezierTo(196, 813, 196, 859)
+      ..lineTo(196, 873)
+      ..lineTo(143, 873)
+      ..close();
+    canvas.drawPath(lowerAmberCap, Paint()..color = _amber);
+
+    _rounded(canvas, const Rect.fromLTWH(474, 53, 629, 42), _lilac, 22);
+    canvas.drawRect(
+      const Rect.fromLTWH(1080, 53, 23, 42),
+      Paint()..color = _lilac,
+    );
+    canvas.drawRect(
+      const Rect.fromLTWH(1107, 53, 195, 25),
+      Paint()..color = _lilacDark,
+    );
+    canvas.drawRect(
+      const Rect.fromLTWH(1107, 82, 195, 13),
+      Paint()..color = _lilacDark,
+    );
+    _rounded(canvas, const Rect.fromLTWH(1306, 53, 262, 42), _amber, 22);
+
+    _panel(canvas, FederationClassicLandscapeGeometry.placements);
+    _panel(canvas, FederationClassicLandscapeGeometry.calendar);
+    _panel(canvas, FederationClassicLandscapeGeometry.planning);
+    _panel(canvas, FederationClassicLandscapeGeometry.insight);
+
+    _rectSegments(canvas, const [
+      (Rect.fromLTWH(1545, 350, 32, 82), _salmon),
+      (Rect.fromLTWH(1545, 438, 32, 315), _lilac),
+      (Rect.fromLTWH(1545, 758, 32, 17), _amber),
+      (Rect.fromLTWH(1545, 780, 32, 90), _salmon),
+    ]);
+    _rounded(canvas, const Rect.fromLTWH(1376, 830, 201, 40), _salmon, 22);
+    canvas.drawRect(
+      const Rect.fromLTWH(1441, 830, 5, 40),
+      Paint()..color = _canvas,
+    );
+
+    final nav = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(10, 887, 1566, 97),
+      const Radius.circular(46),
+    );
+    canvas.drawRRect(
+      nav,
+      Paint()
+        ..color = _amber
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4,
+    );
+    final navigationLeftElbow = Path()
+      ..moveTo(55, 895)
+      ..lineTo(173, 895)
+      ..lineTo(173, 936)
+      ..lineTo(83, 936)
+      ..quadraticBezierTo(63, 936, 63, 956)
+      ..lineTo(63, 969)
+      ..lineTo(55, 969)
+      ..quadraticBezierTo(18, 969, 18, 932)
+      ..quadraticBezierTo(18, 895, 55, 895)
+      ..close();
+    canvas.drawPath(navigationLeftElbow, Paint()..color = _lilacDark);
+    final navigationLeftBranch = Path()
+      ..moveTo(82, 946)
+      ..lineTo(173, 946)
+      ..lineTo(173, 969)
+      ..lineTo(82, 969)
+      ..quadraticBezierTo(70, 969, 70, 957.5)
+      ..quadraticBezierTo(70, 946, 82, 946)
+      ..close();
+    canvas.drawPath(navigationLeftBranch, Paint()..color = _lilacDark);
+
+    final navigationRightElbow = Path()
+      ..moveTo(1385, 895)
+      ..lineTo(1531, 895)
+      ..quadraticBezierTo(1568, 895, 1568, 932)
+      ..lineTo(1568, 946)
+      ..quadraticBezierTo(1568, 969, 1545, 969)
+      ..lineTo(1538, 969)
+      ..lineTo(1538, 956)
+      ..quadraticBezierTo(1538, 936, 1518, 936)
+      ..lineTo(1385, 936)
+      ..close();
+    canvas.drawPath(navigationRightElbow, Paint()..color = _salmon);
+    final navigationRightBranch = Path()
+      ..moveTo(1385, 946)
+      ..lineTo(1508, 946)
+      ..quadraticBezierTo(1520, 946, 1520, 957.5)
+      ..quadraticBezierTo(1520, 969, 1508, 969)
+      ..lineTo(1385, 969)
+      ..close();
+    canvas.drawPath(navigationRightBranch, Paint()..color = _salmon);
+    canvas.restore();
+  }
+
+  void _panel(Canvas canvas, Rect rect) {
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(12)),
+      Paint()
+        ..color = _outline.withValues(alpha: .78)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2,
+    );
+  }
+
+  void _rectSegments(Canvas canvas, List<(Rect, Color)> segments) {
+    for (final (rect, color) in segments) {
+      canvas.drawRect(rect, Paint()..color = color);
+    }
+  }
+
+  void _rounded(Canvas canvas, Rect rect, Color color, double radius) {
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, Radius.circular(radius)),
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+final class _FederationClassicLandscapeCutoutPainter extends CustomPainter {
+  const _FederationClassicLandscapeCutoutPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    canvas.save();
+    canvas.scale(size.width / 1586, size.height / 992);
+    final cutout = Paint()..color = const Color(0xFF02040D);
+    canvas.drawRect(const Rect.fromLTWH(90, 105, 65, 98), cutout);
+    canvas.drawRect(const Rect.fromLTWH(90, 732, 47, 81), cutout);
+    canvas.drawRect(const Rect.fromLTWH(137, 813, 6, 60), cutout);
+    canvas.drawRect(const Rect.fromLTWH(1441, 830, 5, 40), cutout);
+    canvas.drawRect(const Rect.fromLTWH(63, 936, 8, 33), cutout);
+    canvas.drawRect(const Rect.fromLTWH(1520, 936, 18, 33), cutout);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Original Federation Classic housing. Only center and edge seams stretch.

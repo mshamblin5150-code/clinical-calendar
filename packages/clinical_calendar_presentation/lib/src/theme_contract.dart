@@ -16,6 +16,9 @@ import 'federation_2399_theme.dart';
 import 'graphite_frame.dart';
 import 'graphite_shell.dart';
 import 'graphite_theme.dart';
+import 'heritage_field_notes_frame.dart';
+import 'heritage_field_notes_shell.dart';
+import 'heritage_field_notes_theme.dart';
 import 'responsive_shell.dart';
 import 'tactical_frame.dart';
 import 'variant_f_theme.dart';
@@ -26,6 +29,7 @@ const federation2399ThemeId = 'federation-2399';
 const coastalCalmThemeId = 'coastal-calm';
 const botanicalStudyThemeId = 'botanical-study';
 const graphiteThemeId = 'graphite';
+const heritageFieldNotesThemeId = 'heritage-field-notes';
 const themeGalleryFixtureId = 'theme-gallery-android-tablet-calendar-v1';
 const themeGalleryViewport = Size(1280, 800);
 
@@ -130,6 +134,26 @@ final class Federation2399VisualTheme implements ClinicalCalendarVisualTheme {
   @override
   ThemeData createThemeData({bool enhancedAccessibility = false}) =>
       buildFederation2399Theme(enhancedAccessibility: enhancedAccessibility);
+}
+
+final class HeritageFieldNotesVisualTheme
+    implements ClinicalCalendarVisualTheme {
+  const HeritageFieldNotesVisualTheme();
+
+  @override
+  String get id => heritageFieldNotesThemeId;
+
+  @override
+  String get themeId => id;
+
+  @override
+  ClinicalCalendarColors get semanticColors => heritageFieldNotesSemanticColors;
+
+  @override
+  ThemeData createThemeData({bool enhancedAccessibility = false}) =>
+      buildHeritageFieldNotesTheme(
+        enhancedAccessibility: enhancedAccessibility,
+      );
 }
 
 final class CoastalLightVisualTheme implements ClinicalCalendarVisualTheme {
@@ -250,7 +274,7 @@ final class GraphiteShellRenderer implements ClinicalCalendarShellRenderer {
   String get themeId => graphiteThemeId;
 
   @override
-  String get rendererId => 'graphite-owned-responsive-instrument-v2';
+  String get rendererId => 'graphite-owned-responsive-instrument-v3';
 
   @override
   Widget build({
@@ -302,7 +326,7 @@ final class FederationClassicShellRenderer
   String get themeId => federationClassicThemeId;
 
   @override
-  String get rendererId => 'federation-classic-owned-responsive-console-v2';
+  String get rendererId => 'federation-classic-owned-responsive-console-v8';
 
   @override
   Widget build({
@@ -354,7 +378,7 @@ final class Federation2399ShellRenderer
   String get themeId => federation2399ThemeId;
 
   @override
-  String get rendererId => 'federation-2399-owned-responsive-console-v3';
+  String get rendererId => 'federation-2399-owned-responsive-console-v4';
 
   @override
   Widget build({
@@ -391,6 +415,59 @@ final class Federation2399ShellRenderer
     required VoidCallback onExit,
     required Widget child,
   }) => Federation2399DestinationSurface(
+    destination: destination,
+    entry: entry,
+    onExit: onExit,
+    child: child,
+  );
+}
+
+final class HeritageFieldNotesShellRenderer
+    implements ClinicalCalendarShellRenderer {
+  const HeritageFieldNotesShellRenderer();
+
+  @override
+  String get themeId => heritageFieldNotesThemeId;
+
+  @override
+  String get rendererId => 'heritage-field-notes-owned-archive-v1';
+
+  @override
+  Widget build({
+    required ResponsiveShellSlots slots,
+    required String environmentName,
+    required VoidCallback onOpenMenu,
+    required ValueChanged<ClinicalCalendarDestination> onOpenDestination,
+    required VoidCallback onOpenAttention,
+    required VoidCallback onAddSchedule,
+    int mobileIndex = 1,
+    Key? key,
+  }) => HeritageFieldNotesApplicationShell(
+    key: key,
+    slots: slots,
+    environmentName: environmentName,
+    onOpenMenu: onOpenMenu,
+    onOpenDestination: onOpenDestination,
+    onOpenAttention: onOpenAttention,
+    onAddSchedule: onAddSchedule,
+    mobileIndex: mobileIndex,
+  );
+
+  @override
+  Widget buildFrame({required Widget child}) =>
+      HeritageFieldNotesNineSliceFrame(
+        chromeInsets: heritageFieldNotesStatusSafeInsets,
+        contentPadding: const EdgeInsets.all(8),
+        child: AdditiveThemePanelInterior(child: child),
+      );
+
+  @override
+  Widget buildDestination({
+    required ClinicalCalendarDestination destination,
+    required DestinationEntry entry,
+    required VoidCallback onExit,
+    required Widget child,
+  }) => HeritageFieldNotesDestinationSurface(
     destination: destination,
     entry: entry,
     onExit: onExit,
@@ -930,6 +1007,64 @@ final class Federation2399HelpGuide implements ThemeHelpGuide {
   ];
 }
 
+final class HeritageFieldNotesHelpGuide implements ThemeHelpGuide {
+  const HeritageFieldNotesHelpGuide();
+
+  @override
+  String get themeId => heritageFieldNotesThemeId;
+
+  @override
+  String get title => 'Field Archive calendar states';
+
+  @override
+  List<CalendarStateGuide> get calendarStates => const [
+    CalendarStateGuide(
+      role: ThemeSemanticRole.clinicalSession,
+      label: 'Clinical Session',
+      description: 'Forest ink identifies clinical activity.',
+      color: HeritageFieldNotesColors.clinical,
+      nonColorCue: 'Medical cross, CLINICAL label, and solid leading rule.',
+      enhancedBehavior: 'The mark, label, and boundary become more prominent.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.workShift,
+      label: 'Work Shift',
+      description: 'Oxblood identifies employment activity.',
+      color: HeritageFieldNotesColors.workMachinery,
+      nonColorCue: 'Briefcase mark, WORK label, and paired diagonal stripes.',
+      enhancedBehavior: 'The stripes, label, and boundary become stronger.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.protectedDay,
+      label: 'Protected Day',
+      description: 'Muted brass identifies protected time.',
+      color: HeritageFieldNotesColors.protectedDayAccent,
+      nonColorCue:
+          'Shield mark, PROTECTED label, and dotted registration ring.',
+      enhancedBehavior:
+          'The shield, label, dots, and boundary become stronger.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.scheduledProgress,
+      label: 'Scheduled progress',
+      description: 'Blue-gray identifies hours already scheduled.',
+      color: HeritageFieldNotesColors.scheduled,
+      nonColorCue: 'Clock mark and explicit Scheduled Hours label.',
+      enhancedBehavior:
+          'The clock, label, and progress boundary become stronger.',
+    ),
+    CalendarStateGuide(
+      role: ThemeSemanticRole.today,
+      label: 'Today or urgent',
+      description: 'Teal marks Today; oxblood-red marks urgent attention.',
+      color: HeritageFieldNotesColors.today,
+      nonColorCue: 'TODAY label and dot, or explicit urgent warning mark.',
+      enhancedBehavior:
+          'The dot, warning outline, and status text become stronger.',
+    ),
+  ];
+}
+
 final class CoastalLightHelpGuide implements ThemeHelpGuide {
   const CoastalLightHelpGuide();
 
@@ -1256,7 +1391,7 @@ final class GraphiteThemeBundle implements ClinicalCalendarThemeBundle {
   @override
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: graphiteThemeId,
-    rendererId: 'graphite-owned-responsive-instrument-v2',
+    rendererId: 'graphite-owned-responsive-instrument-v3',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [
@@ -1392,7 +1527,8 @@ final class FederationClassicThemeBundle
     primaryAsset: federationClassicFrameAsset,
     assetPaths: [
       federationClassicFrameAsset,
-      federationClassicLandscapeChassisAsset,
+      federationClassicRailNineSliceAsset,
+      federationClassicAxionDeltaAsset,
     ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
@@ -1407,7 +1543,7 @@ final class FederationClassicThemeBundle
   @override
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: federationClassicThemeId,
-    rendererId: 'federation-classic-owned-responsive-console-v2',
+    rendererId: 'federation-classic-owned-responsive-console-v8',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [
@@ -1541,7 +1677,11 @@ final class Federation2399ThemeBundle implements ClinicalCalendarThemeBundle {
     themeId: federation2399ThemeId,
     assetPackage: 'clinical_calendar_presentation',
     primaryAsset: federation2399FrameAsset,
-    assetPaths: [federation2399FrameAsset, federation2399LandscapeChassisAsset],
+    assetPaths: [
+      federation2399FrameAsset,
+      federation2399LandscapeChassisAsset,
+      federation2399DeltaAsset,
+    ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
     safeInsets: {
@@ -1555,7 +1695,7 @@ final class Federation2399ThemeBundle implements ClinicalCalendarThemeBundle {
   @override
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: federation2399ThemeId,
-    rendererId: 'federation-2399-owned-responsive-console-v3',
+    rendererId: 'federation-2399-owned-responsive-console-v4',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [
@@ -1658,6 +1798,158 @@ final class Federation2399ThemeBundle implements ClinicalCalendarThemeBundle {
 
   @override
   ThemeHelpGuide get helpGuide => const Federation2399HelpGuide();
+}
+
+final class HeritageFieldNotesThemeBundle
+    implements ClinicalCalendarThemeBundle {
+  const HeritageFieldNotesThemeBundle();
+
+  @override
+  String get id => heritageFieldNotesThemeId;
+
+  @override
+  ThemeBundleOrigin get origin => ThemeBundleOrigin.compiled;
+
+  @override
+  ThemeCatalogMetadata get metadata => const ThemeCatalogMetadata(
+    themeId: heritageFieldNotesThemeId,
+    displayName: 'Field Archive',
+    personality:
+        'Flat parchment records held in leather-bound book-board with forest ink, dimensional brass, and oxblood indexing.',
+  );
+
+  @override
+  ClinicalCalendarStandardPresentation get standardPresentation =>
+      const HeritageFieldNotesVisualTheme();
+
+  @override
+  ClinicalCalendarShellRenderer get shellRenderer =>
+      const HeritageFieldNotesShellRenderer();
+
+  @override
+  ThemeFrameDescriptor get frame => const ThemeFrameDescriptor(
+    themeId: heritageFieldNotesThemeId,
+    assetPackage: 'clinical_calendar_presentation',
+    primaryAsset: heritageFieldNotesFrameAsset,
+    assetPaths: [
+      heritageFieldNotesFrameAsset,
+      heritageFieldNotesAxionDeltaAsset,
+      heritageFieldNotesMaterialChassisAsset,
+    ],
+    sourceSize: Size(1536, 1024),
+    sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
+    safeInsets: {
+      ThemeFrameRegion.calendar: heritageFieldNotesCalendarSafeInsets,
+      ThemeFrameRegion.placements: heritageFieldNotesPlacementsSafeInsets,
+      ThemeFrameRegion.planning: heritageFieldNotesPlanningSafeInsets,
+      ThemeFrameRegion.status: heritageFieldNotesStatusSafeInsets,
+    },
+  );
+
+  @override
+  ThemeGalleryData get gallery => const ThemeGalleryData(
+    themeId: heritageFieldNotesThemeId,
+    rendererId: 'heritage-field-notes-owned-archive-v1',
+    thumbnailFixtureId: themeGalleryFixtureId,
+    thumbnailViewport: themeGalleryViewport,
+    swatches: [
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.canvas,
+        label: 'Canvas',
+        colorName: 'archive leather',
+        color: HeritageFieldNotesColors.canvas,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.structure,
+        label: 'Structure',
+        colorName: 'flat parchment',
+        color: HeritageFieldNotesColors.surface,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.clinicalSession,
+        label: 'Clinical Session',
+        colorName: 'forest green',
+        color: HeritageFieldNotesColors.clinical,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.workShift,
+        label: 'Work Shift',
+        colorName: 'oxblood red',
+        color: HeritageFieldNotesColors.workMachinery,
+      ),
+      ThemeGallerySwatch(
+        role: ThemeGallerySwatchRole.urgent,
+        label: 'Urgent',
+        colorName: 'archive red',
+        color: HeritageFieldNotesColors.urgent,
+      ),
+    ],
+  );
+
+  @override
+  ClinicalCalendarSemanticMarks get marks =>
+      const ClinicalCalendarSemanticMarks(
+        themeId: heritageFieldNotesThemeId,
+        marks: [
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.clinicalSession,
+            markId: 'clinical-cross-solid-rule',
+            icon: Icons.medical_services_outlined,
+            description: 'Medical cross, CLINICAL label, and solid rule',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.workShift,
+            markId: 'work-oxblood-diagonal-stripes',
+            icon: Icons.work_outline,
+            description: 'Briefcase, WORK label, and paired diagonal stripes',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.protectedDay,
+            markId: 'protected-brass-shield',
+            icon: Icons.shield_outlined,
+            description: 'Shield, PROTECTED label, and brass dotted ring',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.scheduledProgress,
+            markId: 'scheduled-blue-gray-clock',
+            icon: Icons.schedule_outlined,
+            description: 'Clock and explicit Scheduled Hours label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.completedSession,
+            markId: 'completed-forest-check',
+            icon: Icons.check_circle_outline,
+            description: 'Forest check circle and COMPLETED label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.cancelledSession,
+            markId: 'cancelled-archive-slash',
+            icon: Icons.block_outlined,
+            description: 'Diagonal slash and CANCELLED label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.missedSession,
+            markId: 'missed-archive-cross',
+            icon: Icons.highlight_off_outlined,
+            description: 'Cross ring and MISSED label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.today,
+            markId: 'today-teal-registration-dot',
+            icon: Icons.today_outlined,
+            description: 'Teal outline, registration dot, and TODAY label',
+          ),
+          ThemeSemanticMark(
+            role: ThemeSemanticRole.urgent,
+            markId: 'urgent-archive-warning',
+            icon: Icons.warning_amber_outlined,
+            description: 'Archive-red warning outline and explicit status',
+          ),
+        ],
+      );
+
+  @override
+  ThemeHelpGuide get helpGuide => const HeritageFieldNotesHelpGuide();
 }
 
 final class CoastalLightThemeBundle implements ClinicalCalendarThemeBundle {
@@ -1839,7 +2131,11 @@ final class BotanicalStudyThemeBundle implements ClinicalCalendarThemeBundle {
     themeId: botanicalStudyThemeId,
     assetPackage: 'clinical_calendar_presentation',
     primaryAsset: botanicalStudyFrameAsset,
-    assetPaths: [botanicalStudyFrameAsset, botanicalStudyLandscapeChassisAsset],
+    assetPaths: [
+      botanicalStudyFrameAsset,
+      botanicalStudyLandscapeChassisAsset,
+      botanicalStudyAxionLogoAsset,
+    ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
     safeInsets: {
@@ -2059,6 +2355,7 @@ final class ClinicalCalendarThemeBundleRegistry {
     federation2399ThemeId: const Federation2399ThemeBundle(),
     coastalCalmThemeId: const CoastalLightThemeBundle(),
     botanicalStudyThemeId: const BotanicalStudyThemeBundle(),
+    heritageFieldNotesThemeId: const HeritageFieldNotesThemeBundle(),
   });
 
   final Map<String, ClinicalCalendarThemeBundle> _bundles;

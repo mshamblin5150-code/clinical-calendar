@@ -1240,6 +1240,40 @@ void main() {
     expect(metrics.cornerRadius, lessThanOrEqualTo(4));
     expect(metrics.minimumTouchTarget, 44);
   });
+
+  testWidgets(
+    'Federation Classic production shell consumes every live application slot',
+    (tester) async {
+      final repositories = _Repositories(seedLifecycle: true);
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: variantFThemeId,
+        initialRevision: 1,
+      );
+      addTearDown(preview.dispose);
+
+      await _pumpAt(
+        tester,
+        const Size(1586, 992),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: preview,
+      );
+      await preview.preview(federationClassicThemeId, preflight: (_) async {});
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('federation-classic-landscape-shell')),
+        findsOneWidget,
+      );
+      expect(find.byType(CalendarPeriodView), findsOneWidget);
+      expect(find.byType(PlacementDock), findsOneWidget);
+      expect(find.byType(PlacementProgressRail), findsOneWidget);
+      expect(find.byType(AttentionRail), findsOneWidget);
+      expect(find.byKey(const Key('live-planning-region')), findsOneWidget);
+      expect(find.byKey(const Key('primary-planning-action')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Future<void> _expectAppGolden(WidgetTester tester, String name) async {

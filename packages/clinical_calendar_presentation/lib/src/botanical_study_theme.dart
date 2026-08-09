@@ -81,6 +81,22 @@ const botanicalStudyEntryVisuals = ClinicalCalendarPresentationPolicy(
   monthColumnFlex: CalendarMonthColumnFlex(113, 110, 110, 110, 110, 110, 79),
   selectedDaySurface: BotanicalStudyColors.selectedSurface,
   selectedDayBorder: BotanicalStudyColors.focus,
+  monthCellMetrics: CalendarMonthCellMetrics(
+    weekdayHeaderHeight: 38,
+    weekdayLabelFontSize: 13,
+    weekdayLabelFontWeight: FontWeight.w500,
+    cellPadding: EdgeInsets.fromLTRB(9, 6, 6, 5),
+    markerHeight: 29,
+    markerHorizontalPadding: 6,
+    markerIconSize: 18,
+    markerGap: 6,
+    markerFontSize: 12,
+    dayNumberFontSize: 15,
+    showTodayLabel: true,
+    gridStrokeWidth: .5,
+    gridOpacity: .52,
+    roundedSelection: true,
+  ),
 );
 
 const botanicalStudyEnhancedEntryVisuals = ClinicalCalendarPresentationPolicy(
@@ -96,6 +112,22 @@ const botanicalStudyEnhancedEntryVisuals = ClinicalCalendarPresentationPolicy(
   monthColumnFlex: CalendarMonthColumnFlex(113, 110, 110, 110, 110, 110, 79),
   selectedDaySurface: BotanicalStudyColors.selectedSurface,
   selectedDayBorder: Color(0xFF4D1F55),
+  monthCellMetrics: CalendarMonthCellMetrics(
+    weekdayHeaderHeight: 38,
+    weekdayLabelFontSize: 13,
+    weekdayLabelFontWeight: FontWeight.w500,
+    cellPadding: EdgeInsets.fromLTRB(9, 6, 6, 5),
+    markerHeight: 29,
+    markerHorizontalPadding: 6,
+    markerIconSize: 18,
+    markerGap: 6,
+    markerFontSize: 12,
+    dayNumberFontSize: 15,
+    showTodayLabel: true,
+    gridStrokeWidth: .5,
+    gridOpacity: .52,
+    roundedSelection: true,
+  ),
 );
 
 const botanicalStudyStandardAccessibilityTokens =

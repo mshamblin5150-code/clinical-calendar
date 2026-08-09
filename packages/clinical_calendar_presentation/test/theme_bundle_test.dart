@@ -107,7 +107,8 @@ void main() {
       federationClassic.frame.assetPaths,
       containsAll([
         federationClassicFrameAsset,
-        federationClassicLandscapeChassisAsset,
+        federationClassicRailNineSliceAsset,
+        federationClassicAxionDeltaAsset,
       ]),
     );
     expect(federationClassic.gallery.swatches, hasLength(5));
@@ -160,6 +161,7 @@ void main() {
       containsAll([
         federation2399FrameAsset,
         federation2399LandscapeChassisAsset,
+        federation2399DeltaAsset,
       ]),
     );
     expect(federation2399.gallery.swatches, hasLength(5));
@@ -226,12 +228,12 @@ void main() {
         ),
         (
           graphite,
-          'graphite-owned-responsive-instrument-v2',
+          'graphite-owned-responsive-instrument-v3',
           GraphiteApplicationShell,
         ),
         (
           federation2399,
-          'federation-2399-owned-responsive-console-v3',
+          'federation-2399-owned-responsive-console-v4',
           Federation2399ApplicationShell,
         ),
       ];
@@ -256,6 +258,40 @@ void main() {
     },
   );
 
+  test('Field Archive is a complete independently owned bundle', () {
+    const fieldArchive = HeritageFieldNotesThemeBundle();
+
+    ClinicalCalendarThemeBundleValidator.validate(const [fieldArchive]);
+    expect(fieldArchive.id, heritageFieldNotesThemeId);
+    expect(fieldArchive.metadata.displayName, 'Field Archive');
+    expect(
+      fieldArchive.standardPresentation,
+      isA<HeritageFieldNotesVisualTheme>(),
+    );
+    expect(fieldArchive.shellRenderer, isA<HeritageFieldNotesShellRenderer>());
+    expect(fieldArchive.frame.assetPaths, const [
+      heritageFieldNotesFrameAsset,
+      heritageFieldNotesAxionDeltaAsset,
+      heritageFieldNotesMaterialChassisAsset,
+    ]);
+    expect(fieldArchive.gallery.swatches, hasLength(5));
+    expect(fieldArchive.marks.marks, hasLength(9));
+    expect(fieldArchive.helpGuide.calendarStates, hasLength(5));
+    expect(
+      fieldArchive.standardPresentation
+          .createThemeData()
+          .extension<ClinicalCalendarPresentationPolicy>()
+          ?.denseMarkerStyle,
+      CalendarDenseMarkerStyle.chip,
+    );
+    expect(
+      ClinicalCalendarThemeBundleRegistry.standard.resolveRoot(
+        heritageFieldNotesThemeId,
+      ),
+      same(fieldArchive),
+    );
+  });
+
   test(
     'Enhanced is an overlay and Standard round trips exactly for registered bundles',
     () {
@@ -265,6 +301,7 @@ void main() {
         FederationClassicThemeBundle(),
         Federation2399ThemeBundle(),
         CoastalLightThemeBundle(),
+        HeritageFieldNotesThemeBundle(),
       ]) {
         final standard = themedBundle.standardPresentation.createThemeData();
         final enhanced = themedBundle.standardPresentation.createThemeData(
@@ -758,6 +795,11 @@ void main() {
 
       expect(find.byType(FederationClassicLandscapeChassis), findsOneWidget);
       expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
+      expect(find.byType(FederationClassicRasterRails), findsOneWidget);
+      expect(
+        FederationClassicRasterRails.centerSlice,
+        const Rect.fromLTRB(64, 64, 448, 448),
+      );
       expect(find.byType(GraphiteNineSliceFrame), findsNothing);
       expect(find.byType(VariantFNineSliceFrame), findsNothing);
       expect(tester.takeException(), isNull);
@@ -838,9 +880,14 @@ void main() {
       final navigation = tester.getRect(
         find.byKey(const Key('federation-classic-bottom-navigation')),
       );
-      expect(placements.width / 1586, closeTo(.19, .015));
-      expect(calendar.width / 1586, closeTo(.47, .015));
-      expect(insight.width / 1586, closeTo(.225, .015));
+      // Independent literals measured from the approved #113 concept at its
+      // native 1586x992 exemplar. These are intentionally not derived from
+      // the renderer or from a runtime-generated golden.
+      _expectRectNear(placements, const Rect.fromLTWH(90, 112, 306, 702));
+      _expectRectNear(calendar, const Rect.fromLTWH(406, 112, 736, 473));
+      _expectRectNear(planning, const Rect.fromLTWH(406, 591, 736, 276));
+      _expectRectNear(insight, const Rect.fromLTWH(1162, 112, 367, 702));
+      _expectRectNear(navigation, const Rect.fromLTWH(10, 887, 1566, 97));
       expect(placements.right, lessThan(calendar.left));
       expect(calendar.right, lessThan(insight.left));
       expect(planning.top, greaterThan(calendar.top));
@@ -879,7 +926,10 @@ void main() {
 
     await tester.tap(find.byTooltip('Open menu'));
     await tester.tap(find.byTooltip('Add schedule'));
-    await tester.tap(find.byTooltip('Help'));
+    await tester.tap(find.byKey(const Key('federation-classic-help-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Help').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('federation-classic-navigation-0')));
     await tester.tap(find.byKey(const Key('federation-classic-navigation-1')));
     await tester.tap(find.byKey(const Key('federation-classic-navigation-2')));
@@ -941,12 +991,12 @@ void main() {
     final navigation = tester.getRect(
       find.byKey(const Key('federation-classic-bottom-navigation')),
     );
-    expect(calendar.top, lessThan(placements.top));
-    expect(placements.top, insight.top);
-    expect(placements.right, lessThan(insight.left));
-    expect(placements.top, lessThan(planning.top));
+    expect(navigation.right, lessThan(calendar.left));
+    expect(calendar.top, lessThan(planning.top));
+    expect(planning.top, lessThan(placements.top));
+    expect(placements.top, lessThan(insight.top));
     expect(navigation.bottom, lessThanOrEqualTo(1440));
-    expect(navigation.top, greaterThan(calendar.top));
+    expect(navigation.top, lessThanOrEqualTo(calendar.top));
     expect(
       find.byKey(const Key('federation-classic-portrait-scroll')),
       findsOneWidget,
@@ -1042,17 +1092,20 @@ void main() {
       final navigation = tester.getRect(
         find.byKey(const Key('federation-2399-bottom-navigation')),
       );
-      expect(crown.height / 1024, closeTo(.074, .01));
-      expect(placements.width / 1536, closeTo(.17, .01));
-      expect(insight.width / 1536, closeTo(.225, .01));
-      expect(calendar.width / 1536, closeTo(.478, .01));
+      // Absolute 1536 x 1024 coordinates measured from the approved #114
+      // concept, not ratios copied from the renderer implementation.
+      _expectRectCloseTo(crown, const Rect.fromLTWH(40, 45, 1044, 76));
+      _expectRectCloseTo(placements, const Rect.fromLTWH(54, 131, 261, 748));
+      _expectRectCloseTo(calendar, const Rect.fromLTWH(361, 133, 734, 458));
+      _expectRectCloseTo(planning, const Rect.fromLTWH(361, 625, 734, 251));
+      _expectRectCloseTo(insight, const Rect.fromLTWH(1158, 85, 346, 791));
+      _expectRectCloseTo(navigation, const Rect.fromLTWH(86, 916, 1364, 70));
       expect(placements.right, lessThan(calendar.left));
       expect(calendar.right, lessThan(insight.left));
       expect(planning.top, greaterThan(calendar.top));
       expect(planning.left, calendar.left);
       expect(planning.right, calendar.right);
       expect(navigation.top, greaterThan(planning.bottom));
-      expect(navigation.height / 1024, closeTo(.068, .01));
       expect(tester.takeException(), isNull);
     },
   );
@@ -1788,6 +1841,14 @@ Future<ui.Image> _capture(GlobalKey key) =>
     (key.currentContext!.findRenderObject()! as RenderRepaintBoundary)
         .toImage();
 
+void _expectRectNear(Rect actual, Rect expected) {
+  const tolerance = 3.0;
+  expect(actual.left, closeTo(expected.left, tolerance));
+  expect(actual.top, closeTo(expected.top, tolerance));
+  expect(actual.width, closeTo(expected.width, tolerance));
+  expect(actual.height, closeTo(expected.height, tolerance));
+}
+
 const _slots = ResponsiveShellSlots(
   centralContent: Center(child: Text('Calendar fixture')),
   planningRegion: Text('Planning fixture'),
@@ -1801,6 +1862,13 @@ const _slots = ResponsiveShellSlots(
 void _noop() {}
 
 void _ignoreDestination(ClinicalCalendarDestination _) {}
+
+void _expectRectCloseTo(Rect actual, Rect expected) {
+  expect(actual.left, closeTo(expected.left, 3));
+  expect(actual.top, closeTo(expected.top, 3));
+  expect(actual.width, closeTo(expected.width, 3));
+  expect(actual.height, closeTo(expected.height, 3));
+}
 
 final class _TestBundle implements ClinicalCalendarThemeBundle {
   const _TestBundle({

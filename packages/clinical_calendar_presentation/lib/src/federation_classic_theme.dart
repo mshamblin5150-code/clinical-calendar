@@ -18,7 +18,7 @@ abstract final class FederationClassicColors {
   static const outlineVariant = Color(0xFF3B2750);
   static const primary = Color(0xFFF6B44B);
   static const onPrimary = Color(0xFF1A0E06);
-  static const primaryContainer = Color(0xFF3B2750);
+  static const primaryContainer = Color(0xFF160F1D);
   static const clinical = Color(0xFFF29A72);
   static const clinicalFill = Color(0xFF44251F);
   static const work = Color(0xFF3B2A4D);
@@ -27,8 +27,10 @@ abstract final class FederationClassicColors {
   static const protectedDayAccent = Color(0xFFFFE09A);
   static const completed = Color(0xFFA9D47A);
   static const scheduled = Color(0xFFF6B44B);
-  static const unscheduled = Color(0xFFB6A8BE);
-  static const overTarget = Color(0xFFE980A4);
+  // The Classic concept uses the dominant LCARS salmon for work that still
+  // needs scheduling and reserves lavender for time beyond the target.
+  static const unscheduled = clinical;
+  static const overTarget = Color(0xFFB6A8BE);
   static const today = Color(0xFF8DCAE8);
   static const urgent = Color(0xFFFF7777);
   static const warning = Color(0xFFFFD166);
@@ -39,13 +41,13 @@ const federationClassicSemanticColors = ClinicalCalendarColors(
   canvas: FederationClassicColors.canvas,
   structure: FederationClassicColors.surface,
   structureRaised: FederationClassicColors.surfaceRaised,
-  insetBorder: FederationClassicColors.outline,
+  insetBorder: FederationClassicColors.outlineVariant,
   primaryText: FederationClassicColors.text,
   secondaryText: FederationClassicColors.textSecondary,
   clinical: FederationClassicColors.clinical,
-  work: FederationClassicColors.work,
+  work: FederationClassicColors.surface,
   workMachinery: FederationClassicColors.workAccent,
-  protectedDay: FederationClassicColors.protectedDay,
+  protectedDay: FederationClassicColors.surface,
   protectedDayAccent: FederationClassicColors.protectedDayAccent,
   scheduled: FederationClassicColors.scheduled,
   urgent: FederationClassicColors.urgent,
@@ -60,8 +62,8 @@ const federationClassicAdditiveColors = ClinicalCalendarAdditiveColors(
 
 const federationClassicEnhancedAdditiveColors = ClinicalCalendarAdditiveColors(
   completed: Color(0xFFC1E797),
-  unscheduled: Color(0xFFD4C9DB),
-  overTarget: Color(0xFFF39BBA),
+  unscheduled: Color(0xFFFFA07A),
+  overTarget: Color(0xFFD4C9DB),
   today: Color(0xFFA9DCF3),
 );
 
@@ -73,7 +75,7 @@ const federationClassicStandardAccessibilityTokens =
       focusWidth: 3,
       selectionWidth: 1,
       persistentExpandedLegend: false,
-      decorationOpacity: 1,
+      decorationOpacity: 0,
     );
 
 ThemeData buildFederationClassicTheme({bool enhancedAccessibility = false}) {
@@ -131,11 +133,31 @@ ThemeData buildFederationClassicTheme({bool enhancedAccessibility = false}) {
     borderRadius: BorderRadius.circular(8),
     side: const BorderSide(color: FederationClassicColors.outline),
   );
+  final classicTextTheme = base.textTheme
+      .copyWith(
+        headlineSmall: base.textTheme.headlineSmall?.copyWith(
+          fontSize: 25,
+          fontWeight: FontWeight.w700,
+        ),
+        titleLarge: base.textTheme.titleLarge?.copyWith(
+          fontSize: 23,
+          fontWeight: FontWeight.w700,
+        ),
+        titleMedium: base.textTheme.titleMedium?.copyWith(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+        titleSmall: base.textTheme.titleSmall?.copyWith(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+      )
+      .apply(
+        bodyColor: FederationClassicColors.text,
+        displayColor: FederationClassicColors.text,
+      );
   final standard = base.copyWith(
-    textTheme: base.textTheme.apply(
-      bodyColor: FederationClassicColors.text,
-      displayColor: FederationClassicColors.text,
-    ),
+    textTheme: classicTextTheme,
     cardTheme: CardThemeData(
       color: FederationClassicColors.surfaceRaised,
       surfaceTintColor: Colors.transparent,
@@ -228,8 +250,18 @@ ThemeData buildFederationClassicTheme({bool enhancedAccessibility = false}) {
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: ButtonStyle(
-        foregroundColor: _federationClassicForeground(
-          FederationClassicColors.text,
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? FederationClassicColors.onPrimary
+              : FederationClassicColors.textSecondary,
+        ),
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? FederationClassicColors.primary
+              : FederationClassicColors.canvas,
+        ),
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: FederationClassicColors.outline),
         ),
       ),
     ),

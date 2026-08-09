@@ -52,6 +52,41 @@ enum CalendarDenseMarkerStyle { rail, chip }
 enum CalendarToolbarStyle { standard, conceptTitle }
 
 @immutable
+final class CalendarMonthCellMetrics {
+  const CalendarMonthCellMetrics({
+    this.weekdayHeaderHeight = 32,
+    this.weekdayLabelFontSize,
+    this.weekdayLabelFontWeight,
+    this.cellPadding = const EdgeInsets.all(5),
+    this.markerHeight = 28,
+    this.markerHorizontalPadding = 7,
+    this.markerIconSize = 16,
+    this.markerGap = 7,
+    this.markerFontSize = 11,
+    this.dayNumberFontSize,
+    this.showTodayLabel = false,
+    this.gridStrokeWidth = 1,
+    this.gridOpacity = 1,
+    this.roundedSelection = false,
+  });
+
+  final double weekdayHeaderHeight;
+  final double? weekdayLabelFontSize;
+  final FontWeight? weekdayLabelFontWeight;
+  final EdgeInsets cellPadding;
+  final double markerHeight;
+  final double markerHorizontalPadding;
+  final double markerIconSize;
+  final double markerGap;
+  final double markerFontSize;
+  final double? dayNumberFontSize;
+  final bool showTodayLabel;
+  final double gridStrokeWidth;
+  final double gridOpacity;
+  final bool roundedSelection;
+}
+
+@immutable
 final class CalendarMonthColumnFlex {
   const CalendarMonthColumnFlex(
     this.sunday,
@@ -128,6 +163,7 @@ final class ClinicalCalendarPresentationPolicy
     this.monthColumnFlex,
     this.selectedDaySurface,
     this.selectedDayBorder,
+    this.monthCellMetrics = const CalendarMonthCellMetrics(),
   });
 
   final Color clinicalFill;
@@ -142,6 +178,7 @@ final class ClinicalCalendarPresentationPolicy
   final CalendarMonthColumnFlex? monthColumnFlex;
   final Color? selectedDaySurface;
   final Color? selectedDayBorder;
+  final CalendarMonthCellMetrics monthCellMetrics;
 
   @override
   ClinicalCalendarPresentationPolicy copyWith({
@@ -157,6 +194,7 @@ final class ClinicalCalendarPresentationPolicy
     CalendarMonthColumnFlex? monthColumnFlex,
     Color? selectedDaySurface,
     Color? selectedDayBorder,
+    CalendarMonthCellMetrics? monthCellMetrics,
   }) => ClinicalCalendarPresentationPolicy(
     clinicalFill: clinicalFill ?? this.clinicalFill,
     leadingRailWidth: leadingRailWidth ?? this.leadingRailWidth,
@@ -172,6 +210,7 @@ final class ClinicalCalendarPresentationPolicy
     monthColumnFlex: monthColumnFlex ?? this.monthColumnFlex,
     selectedDaySurface: selectedDaySurface ?? this.selectedDaySurface,
     selectedDayBorder: selectedDayBorder ?? this.selectedDayBorder,
+    monthCellMetrics: monthCellMetrics ?? this.monthCellMetrics,
   );
 
   @override
@@ -208,6 +247,7 @@ final class ClinicalCalendarPresentationPolicy
         other.selectedDayBorder,
         t,
       ),
+      monthCellMetrics: t < .5 ? monthCellMetrics : other.monthCellMetrics,
     );
   }
 }
