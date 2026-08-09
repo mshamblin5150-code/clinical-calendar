@@ -29,6 +29,7 @@ flutter:
   assets:
     - assets/botanical_study_raster/
     - assets/botanical_study_raster/dashboard-chassis-landscape-v2.png
+    - assets/botanical_study_raster/axion-delta-mark-v2.png
     - assets/federation_2399_raster/panel-nine-slice-v1.png
     - assets/federation_2399_raster/dashboard-chassis-landscape-v1.png
     - assets/coastal_light_raster/

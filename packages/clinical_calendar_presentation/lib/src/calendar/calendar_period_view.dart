@@ -343,138 +343,145 @@ final class _CalendarToolbar extends StatelessWidget {
   final ValueChanged<CalendarPeriod> onPeriod;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
-    child: LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 600;
-        final conceptHeader =
-            Theme.of(
-              context,
-            ).extension<ClinicalCalendarPresentationPolicy>()?.toolbarStyle ==
-            CalendarToolbarStyle.conceptTitle;
-        final navigation = Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              key: const Key('calendar-previous'),
-              tooltip: 'Previous period',
-              onPressed: onPrevious,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            IconButton(
-              key: const Key('calendar-next'),
-              tooltip: 'Next period',
-              onPressed: onNext,
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ],
-        );
-        final switcher = SegmentedButton<CalendarPeriod>(
-          key: const Key('calendar-period-switcher'),
-          showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: CalendarPeriod.month, label: Text('Month')),
-            ButtonSegment(value: CalendarPeriod.week, label: Text('Week')),
-            ButtonSegment(value: CalendarPeriod.agenda, label: Text('Agenda')),
-          ],
-          selected: {period},
-          onSelectionChanged: (selection) => onPeriod(selection.single),
-        );
-        if (compact) {
-          return Column(
+  Widget build(BuildContext context) {
+    final conceptHeader =
+        Theme.of(
+          context,
+        ).extension<ClinicalCalendarPresentationPolicy>()?.toolbarStyle ==
+        CalendarToolbarStyle.conceptTitle;
+    return Padding(
+      padding: conceptHeader
+          ? const EdgeInsets.fromLTRB(6, 5, 6, 5)
+          : const EdgeInsets.fromLTRB(6, 6, 6, 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 600;
+          final navigation = Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  IconButton(
-                    key: const Key('calendar-previous-compact'),
-                    tooltip: 'Previous period',
-                    onPressed: onPrevious,
-                    icon: const Icon(Icons.chevron_left),
-                  ),
-                  Expanded(
-                    child: Text(
-                      title,
-                      key: const Key('calendar-period-title'),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  IconButton(
-                    key: const Key('calendar-next-compact'),
-                    tooltip: 'Next period',
-                    onPressed: onNext,
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-                ],
+              IconButton(
+                key: const Key('calendar-previous'),
+                tooltip: 'Previous period',
+                onPressed: onPrevious,
+                icon: const Icon(Icons.chevron_left),
               ),
-              const SizedBox(height: 4),
-              FittedBox(child: switcher),
+              IconButton(
+                key: const Key('calendar-next'),
+                tooltip: 'Next period',
+                onPressed: onNext,
+                icon: const Icon(Icons.chevron_right),
+              ),
             ],
           );
-        }
-        if (CalendarPeriodViewportPolicy.usesLeadingTitleCenteredPeriodToolbar(
-          context,
-        )) {
-          return Row(
-            children: [
-              SizedBox(
-                width: 220,
-                child: Text(
-                  title,
-                  key: const Key('calendar-period-title'),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+          final switcher = SegmentedButton<CalendarPeriod>(
+            key: const Key('calendar-period-switcher'),
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: CalendarPeriod.month, label: Text('Month')),
+              ButtonSegment(value: CalendarPeriod.week, label: Text('Week')),
+              ButtonSegment(
+                value: CalendarPeriod.agenda,
+                label: Text('Agenda'),
               ),
-              Expanded(child: Center(child: switcher)),
-              SizedBox(
-                width: 88,
-                child: Row(
+            ],
+            selected: {period},
+            onSelectionChanged: (selection) => onPeriod(selection.single),
+          );
+          if (compact) {
+            return Column(
+              children: [
+                Row(
                   children: [
                     IconButton(
-                      key: const Key('calendar-previous'),
+                      key: const Key('calendar-previous-compact'),
                       tooltip: 'Previous period',
-                      visualDensity: VisualDensity.compact,
                       onPressed: onPrevious,
                       icon: const Icon(Icons.chevron_left),
                     ),
+                    Expanded(
+                      child: Text(
+                        title,
+                        key: const Key('calendar-period-title'),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
                     IconButton(
-                      key: const Key('calendar-next'),
+                      key: const Key('calendar-next-compact'),
                       tooltip: 'Next period',
-                      visualDensity: VisualDensity.compact,
                       onPressed: onNext,
                       icon: const Icon(Icons.chevron_right),
                     ),
                   ],
                 ),
+                const SizedBox(height: 4),
+                FittedBox(child: switcher),
+              ],
+            );
+          }
+          if (CalendarPeriodViewportPolicy.usesLeadingTitleCenteredPeriodToolbar(
+            context,
+          )) {
+            return Row(
+              children: [
+                SizedBox(
+                  width: 220,
+                  child: Text(
+                    title,
+                    key: const Key('calendar-period-title'),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Expanded(child: Center(child: switcher)),
+                SizedBox(
+                  width: 88,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        key: const Key('calendar-previous'),
+                        tooltip: 'Previous period',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: onPrevious,
+                        icon: const Icon(Icons.chevron_left),
+                      ),
+                      IconButton(
+                        key: const Key('calendar-next'),
+                        tooltip: 'Next period',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: onNext,
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              if (!conceptHeader) navigation else const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  title,
+                  key: const Key('calendar-period-title'),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
               ),
+              if (conceptHeader) navigation,
+              if (conceptHeader)
+                SizedBox(width: 280, child: switcher)
+              else
+                switcher,
             ],
           );
-        }
-        return Row(
-          children: [
-            if (!conceptHeader) navigation else const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                title,
-                key: const Key('calendar-period-title'),
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-            ),
-            if (conceptHeader) navigation,
-            if (conceptHeader)
-              SizedBox(width: 280, child: switcher)
-            else
-              switcher,
-          ],
-        );
-      },
-    ),
-  );
+        },
+      ),
+    );
+  }
 }
 
 final class _MonthView extends StatelessWidget {
@@ -509,6 +516,8 @@ final class _MonthView extends StatelessWidget {
           context,
         ).extension<ClinicalCalendarPresentationPolicy>()?.showMonthLegend ??
         false;
+    final monthCellMetrics = _monthCellMetrics(context);
+    final weekdayHeaderHeight = monthCellMetrics.weekdayHeaderHeight;
     if (!useBoundedGrid) {
       return _buildMonthGrid(context, dates, weekdayLabels, null);
     }
@@ -519,6 +528,7 @@ final class _MonthView extends StatelessWidget {
           _weekdayHeader(
             context,
             weekdayLabels,
+            height: weekdayHeaderHeight,
             colored:
                 Theme.of(context)
                     .extension<ClinicalCalendarPresentationPolicy>()
@@ -529,6 +539,7 @@ final class _MonthView extends StatelessWidget {
             context,
             dates,
             constraints.maxHeight - (showLegend ? 38 : 0),
+            weekdayHeaderHeight,
           ),
           if (showLegend) const _BotanicalMonthLegend(),
         ],
@@ -547,23 +558,30 @@ final class _MonthView extends StatelessWidget {
       _weekdayHeader(
         context,
         weekdayLabels,
+        height: _monthCellMetrics(context).weekdayHeaderHeight,
         colored:
             Theme.of(context)
                 .extension<ClinicalCalendarPresentationPolicy>()
                 ?.colorWeekdayHeader ??
             false,
       ),
-      _monthGrid(context, dates, boundedHeight),
+      _monthGrid(
+        context,
+        dates,
+        boundedHeight,
+        _monthCellMetrics(context).weekdayHeaderHeight,
+      ),
     ],
   );
 
   Widget _weekdayHeader(
     BuildContext context,
     List<String> weekdayLabels, {
+    required double height,
     required bool colored,
   }) {
     final header = SizedBox(
-      height: 32,
+      height: height,
       child: Row(
         children: [
           for (final label in weekdayLabels)
@@ -571,7 +589,12 @@ final class _MonthView extends StatelessWidget {
               child: Center(
                 child: Text(
                   label.toUpperCase(),
-                  style: Theme.of(context).textTheme.labelMedium,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontSize: _monthCellMetrics(context).weekdayLabelFontSize,
+                    fontWeight: _monthCellMetrics(
+                      context,
+                    ).weekdayLabelFontWeight,
+                  ),
                 ),
               ),
             ),
@@ -587,6 +610,7 @@ final class _MonthView extends StatelessWidget {
     BuildContext context,
     List<LocalDate> dates,
     double? boundedHeight,
+    double weekdayHeaderHeight,
   ) {
     Widget dayCell(int index) {
       final date = dates[index];
@@ -597,7 +621,9 @@ final class _MonthView extends StatelessWidget {
         selected: selectedDates.contains(date),
         entries: snapshot.entriesOn(date),
         compact: compact,
-        dense: boundedHeight != null && (boundedHeight - 32) / 6 < 88,
+        dense:
+            boundedHeight != null &&
+            (boundedHeight - weekdayHeaderHeight) / 6 < 88,
         twelveHourTime: twelveHourTime,
         onActivate: onActivate,
       );
@@ -607,7 +633,9 @@ final class _MonthView extends StatelessWidget {
       context,
     ).extension<ClinicalCalendarPresentationPolicy>()?.monthColumnFlex;
     if (columnFlex != null && boundedHeight != null) {
-      final rowHeight = math.max(44, (boundedHeight - 32) / 6).toDouble();
+      final rowHeight = math
+          .max(44, (boundedHeight - weekdayHeaderHeight) / 6)
+          .toDouble();
       return SizedBox(
         height: rowHeight * 6,
         child: Column(
@@ -718,6 +746,7 @@ final class _MonthDayCell extends StatelessWidget {
     final neutralCells = CalendarPeriodViewportPolicy.usesNeutralMonthCells(
       context,
     );
+    final monthCellMetrics = _monthCellMetrics(context);
     return Semantics(
       key: Key('calendar-day-$date'),
       button: true,
@@ -747,11 +776,12 @@ final class _MonthDayCell extends StatelessWidget {
           ).extension<ClinicalCalendarPresentationPolicy>()?.selectedDayBorder,
           selectionWidth: context.accessibilityTokens.selectionWidth,
           decorationOpacity: context.accessibilityTokens.decorationOpacity,
+          monthCellMetrics: monthCellMetrics,
         ),
         child: InkWell(
           onTap: () => onActivate(date, entries),
           child: Padding(
-            padding: const EdgeInsets.all(5),
+            padding: monthCellMetrics.cellPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -896,9 +926,12 @@ final class _DenseMonthMarker extends StatelessWidget {
             CalendarDenseMarkerStyle.chip &&
         MediaQuery.textScalerOf(context).scale(1) <= 1.3;
     if (asChip) {
+      final monthCellMetrics = _monthCellMetrics(context);
       return Container(
-        height: 28,
-        padding: const EdgeInsets.symmetric(horizontal: 7),
+        height: monthCellMetrics.markerHeight,
+        padding: EdgeInsets.symmetric(
+          horizontal: monthCellMetrics.markerHorizontalPadding,
+        ),
         decoration: _entryDecoration(context, entry).copyWith(
           border: Border.all(
             color: _entryAccent(context, entry).withValues(alpha: .18),
@@ -909,10 +942,10 @@ final class _DenseMonthMarker extends StatelessWidget {
           children: [
             ThemeSemanticMarkIcon(
               role: _entryRole(entry.kind),
-              size: 16,
+              size: monthCellMetrics.markerIconSize,
               color: _entryAccent(context, entry),
             ),
-            const SizedBox(width: 7),
+            SizedBox(width: monthCellMetrics.markerGap),
             Expanded(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -921,7 +954,7 @@ final class _DenseMonthMarker extends StatelessWidget {
                   label,
                   maxLines: 1,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: monthCellMetrics.markerFontSize,
                     fontWeight: FontWeight.w600,
                     color: _entryAccent(context, entry),
                   ),
@@ -983,6 +1016,12 @@ final class _DayNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final monthCellMetrics = _monthCellMetrics(context);
+    final conceptAccent =
+        Theme.of(
+          context,
+        ).extension<ClinicalCalendarPresentationPolicy>()?.selectedDayBorder ??
+        _todayAccent(context);
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final scalesDayNumber =
         CalendarPeriodViewportPolicy.scalesDayNumberWithText(context);
@@ -994,6 +1033,32 @@ final class _DayNumber extends StatelessWidget {
         : 23.0;
     final usesThemeTodayMark =
         _usesAdditiveMarks(context) || context.accessibilityTokens.enhanced;
+    if (monthCellMetrics.showTodayLabel) {
+      return Row(
+        children: [
+          Text(
+            '${date.day}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: monthCellMetrics.dayNumberFontSize,
+              fontWeight: today ? FontWeight.w700 : FontWeight.w500,
+              color: today ? conceptAccent : null,
+            ),
+          ),
+          if (today) ...[
+            const SizedBox(width: 10),
+            Text(
+              'TODAY',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: conceptAccent,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: .5,
+              ),
+            ),
+          ],
+        ],
+      );
+    }
     return Row(
       children: [
         DecoratedBox(
@@ -1705,6 +1770,7 @@ final class _DayCellPainter extends CustomPainter {
     required this.selectedBorder,
     required this.selectionWidth,
     required this.decorationOpacity,
+    required this.monthCellMetrics,
   });
 
   final ClinicalCalendarColors colors;
@@ -1719,6 +1785,7 @@ final class _DayCellPainter extends CustomPainter {
   final Color? selectedBorder;
   final double selectionWidth;
   final double decorationOpacity;
+  final CalendarMonthCellMetrics monthCellMetrics;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1760,15 +1827,39 @@ final class _DayCellPainter extends CustomPainter {
       rect.deflate(.5),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = today ? math.max(2, selectionWidth) : 1
-        ..color = today ? todayAccent : colors.insetBorder,
+        ..strokeWidth = monthCellMetrics.roundedSelection
+            ? monthCellMetrics.gridStrokeWidth
+            : today
+            ? math.max(2, selectionWidth)
+            : monthCellMetrics.gridStrokeWidth
+        ..color = monthCellMetrics.roundedSelection
+            ? colors.insetBorder.withValues(alpha: monthCellMetrics.gridOpacity)
+            : today
+            ? todayAccent
+            : colors.insetBorder,
     );
+    if (monthCellMetrics.roundedSelection && today && !selected) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect.deflate(3), const Radius.circular(7)),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = selectionWidth
+          ..color = selectedBorder ?? todayAccent,
+      );
+    }
     if (selected) {
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = selectionWidth
         ..color = selectedBorder ?? colors.clinical;
       final selectedRect = rect.deflate(3);
+      if (monthCellMetrics.roundedSelection) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(selectedRect, const Radius.circular(7)),
+          paint,
+        );
+        return;
+      }
       const dash = 5.0;
       const gap = 3.0;
       for (
@@ -1819,8 +1910,15 @@ final class _DayCellPainter extends CustomPainter {
       selectedSurface != oldDelegate.selectedSurface ||
       selectedBorder != oldDelegate.selectedBorder ||
       selectionWidth != oldDelegate.selectionWidth ||
-      decorationOpacity != oldDelegate.decorationOpacity;
+      decorationOpacity != oldDelegate.decorationOpacity ||
+      monthCellMetrics != oldDelegate.monthCellMetrics;
 }
+
+CalendarMonthCellMetrics _monthCellMetrics(BuildContext context) =>
+    Theme.of(
+      context,
+    ).extension<ClinicalCalendarPresentationPolicy>()?.monthCellMetrics ??
+    const CalendarMonthCellMetrics();
 
 final class _AgendaBackgroundPainter extends CustomPainter {
   const _AgendaBackgroundPainter({
