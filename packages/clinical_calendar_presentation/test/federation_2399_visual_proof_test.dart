@@ -69,6 +69,18 @@ void main() {
     expect(find.byKey(const Key('toggle-preceptor-breakdown')), findsOneWidget);
     expect(find.text('TAP WHEEL TO VIEW NEXT PLACEMENT'), findsOneWidget);
     expect(find.text('SHOW PRECEPTOR BREAKDOWN'), findsOneWidget);
+    expect(find.textContaining('Additional pace required'), findsOneWidget);
+    final projection = tester.getRect(
+      find.byKey(const Key('placement-projection')),
+    );
+    final cycleLabel = tester.getRect(
+      find.byKey(const Key('cycle-placement-label')),
+    );
+    expect(
+      projection.bottom,
+      lessThan(cycleLabel.top),
+      reason: 'The domain-derived pace requirement belongs above the action.',
+    );
     expect(find.text('0%'), findsNWidgets(2));
     expect(
       find.descendant(

@@ -20,6 +20,9 @@ transparent copy as `axion-delta-mark-v1.png`; the runtime displays the
 metallic raster directly without a flattening tint. The Planning proof also
 shortens the schedule-template row and enforces at least 48 pixels between the
 END field and the planning-bay boundary so `16:00` cannot overlap the chrome.
+The production progress ledger presents its domain-derived **Additional pace
+required** value immediately above the wheel action; an ordering regression
+prevents that calculation from disappearing or moving below the action rail.
 
 ## Evidence
 
@@ -61,8 +64,8 @@ comparison with runtime. Integer bounds use a 3 px rendering tolerance:
 
 ```text
 a96da3c7cd060348aded17ec783c093128ef1e6ed3b31f53d1a3ec7793913cc8  approved-concept-landscape.png
-138f08a371680cf2e8de22e91451e62152eb8f06be98eacb3410ca6768358eb1  landscape-concept-vs-runtime.png
-3d8c2c8408d13066457750b7060e9f96f62dc876202120a54fc4e1f2561356e4  runtime-landscape-1536x1024.png
+b5248059a3fdca882e4eb9a9fda1a6f088d321c951af886943d126b2695e757b  landscape-concept-vs-runtime.png
+24bf1dee9e41e42bc44f5f21630a0a50e5d0d8b4fb9ade6ea38c15210edf8d7f  runtime-landscape-1536x1024.png
 60240ecef08de85a752f0f3918470c2aac68ab85d28b1586da2af0a40828bd9d  runtime-portrait-200-percent-900x1440.png
 804a4af74ae713d795dc1ff869ab2893712b86949e5b291ecd53fe577bbcfb93  runtime-portrait-200-percent-scrolled-900x1440.png
 723ed49228f7e388fbc0a14f5c60f306128e9587288b9e55a7cf9b0db8d86d51  runtime-portrait-900x1440.png

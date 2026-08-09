@@ -359,8 +359,9 @@ final class PlacementMetricLedger extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = snapshot.progress;
-    final compact =
-        PlacementProgressPanelPolicy.maybeOf(context)?.compactLedger ?? false;
+    final policy = PlacementProgressPanelPolicy.maybeOf(context);
+    final compact = policy?.compactLedger ?? false;
+    final emphasizeProjection = policy?.conceptActionRail ?? false;
     final metrics = <(String, int, Color?)>[
       ('Target', progress.targetMinutes, null),
       ('Completed', progress.completedMinutes, _completedColor(context)),
@@ -408,7 +409,13 @@ final class PlacementMetricLedger extends StatelessWidget {
           child: Text(
             _projectionText(progress),
             key: const Key('placement-projection'),
-            style: Theme.of(context).textTheme.bodySmall,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: emphasizeProjection
+                  ? context.clinicalColors.primaryText
+                  : null,
+              fontSize: emphasizeProjection ? 11 : null,
+              fontWeight: emphasizeProjection ? FontWeight.w600 : null,
+            ),
           ),
         ),
       ],
