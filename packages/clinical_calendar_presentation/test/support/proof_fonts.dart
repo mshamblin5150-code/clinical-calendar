@@ -148,7 +148,17 @@ final class _ProofGoldenComparator implements GoldenFileComparator {
     if (expected == null || actual == null) {
       return delegate.compare(imageBytes, golden);
     }
-    return proofImagesMatch(expected, actual);
+    final difference = _proofImageDifference(expected, actual);
+    final matches = difference != null && _differenceIsAccepted(difference);
+    if (!matches && difference != null) {
+      stderr.writeln(
+        'Proof golden delta for $golden: '
+        'changed=${difference.changedRatio}, '
+        'highDelta=${difference.highDeltaRatio}, '
+        'meanChannelError=${difference.meanChannelError}',
+      );
+    }
+    return matches;
   }
 
   @override
@@ -167,8 +177,22 @@ Uri? resolveProofGolden(GoldenFileComparator comparator, Uri golden) {
 }
 
 bool proofImagesMatch(img.Image expected, img.Image actual) {
+  final difference = _proofImageDifference(expected, actual);
+  return difference != null && _differenceIsAccepted(difference);
+}
+
+typedef _ProofImageDifference = ({
+  double changedRatio,
+  double highDeltaRatio,
+  double meanChannelError,
+});
+
+_ProofImageDifference? _proofImageDifference(
+  img.Image expected,
+  img.Image actual,
+) {
   if (expected.width != actual.width || expected.height != actual.height) {
-    return false;
+    return null;
   }
 
   var changedPixels = 0;
@@ -200,7 +224,14 @@ bool proofImagesMatch(img.Image expected, img.Image actual) {
   final changedRatio = changedPixels / pixelCount;
   final highDeltaRatio = highDeltaPixels / pixelCount;
   final meanChannelError = totalChannelError / (pixelCount * 4 * 255);
-  return changedRatio <= _nonWindowsPixelTolerance &&
-      highDeltaRatio <= _nonWindowsHighDeltaPixelTolerance &&
-      meanChannelError <= _nonWindowsMeanChannelErrorTolerance;
+  return (
+    changedRatio: changedRatio,
+    highDeltaRatio: highDeltaRatio,
+    meanChannelError: meanChannelError,
+  );
 }
+
+bool _differenceIsAccepted(_ProofImageDifference difference) =>
+    difference.changedRatio <= _nonWindowsPixelTolerance &&
+    difference.highDeltaRatio <= _nonWindowsHighDeltaPixelTolerance &&
+    difference.meanChannelError <= _nonWindowsMeanChannelErrorTolerance;
