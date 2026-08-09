@@ -1,12 +1,63 @@
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_presentation/src/graphite_instrument_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _studentId = '10000000-0000-4000-8000-000000000001';
 
 void main() {
+  testWidgets('Graphite uses live concept-shaped placement instruments', (
+    tester,
+  ) async {
+    final harness = _Harness(familyName: 'Acceptance Family Medicine');
+    await harness.controller.load();
+    await _pump(
+      tester,
+      GraphiteInstrumentScope(
+        child: Row(
+          children: [
+            SizedBox(
+              width: 290,
+              child: PlacementDock(
+                controller: harness.controller,
+                studentId: _studentId,
+              ),
+            ),
+            SizedBox(
+              width: 300,
+              child: PlacementProgressRail(
+                controller: harness.controller,
+                studentId: _studentId,
+              ),
+            ),
+          ],
+        ),
+      ),
+      size: const Size(620, 820),
+    );
+
+    expect(
+      find.byKey(const Key('graphite-live-placement-card')),
+      findsNWidgets(2),
+    );
+    expect(
+      find.byKey(const Key('graphite-live-placement-wheel')),
+      findsNWidgets(2),
+    );
+    expect(
+      find.byKey(const Key('graphite-live-detailed-wheel')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('graphite-live-placement-dependencies')),
+      findsNWidgets(2),
+    );
+    expect(find.byKey(const Key('placement-metric-ledger')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('dock, wheel, and durable selection stay synchronized', (
     tester,
   ) async {

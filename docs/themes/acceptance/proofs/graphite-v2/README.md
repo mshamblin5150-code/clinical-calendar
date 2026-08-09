@@ -1,11 +1,15 @@
-# Graphite concept-fidelity candidate v2
+# Graphite concept-fidelity candidate v2 — REJECTED
 
 Issue: [#128](https://github.com/mshamblin5150-code/clinical-calendar/issues/128)
 
-Status: deterministic concept-fidelity candidate. The approved #117 concept
-remains the normative visual reference. Physical Android-tablet acceptance is
-**Pending** under #139; no deterministic render is presented as a device
-capture.
+Status: **REJECTED by maintainer review on 2026-08-08.** This package is
+retained as historical evidence only and is not an acceptance baseline. Its
+runtime preserves broad structure but does not reproduce the approved
+Graphite crown, event treatment, control geometry, material depth,
+iconography, typography, density, or relative visual weight closely enough.
+The approved #117 concept remains the normative visual reference. Physical
+Android-tablet acceptance is **Pending** under #139; no deterministic render
+is presented as a device capture.
 
 Graphite declares **1536 by 1024** as its exact landscape golden viewport.
 The renderer uses the Graphite-owned precision-instrument composition and

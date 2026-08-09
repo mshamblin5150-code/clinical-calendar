@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/proof_fonts.dart';
+
 const _studentId = '00000000-0000-4000-8000-000000000137';
 final _today = LocalDate(2026, 8, 6);
 
@@ -232,9 +234,9 @@ final class _ProofAssetBundle extends CachingAssetBundle {
 }
 
 Future<void> _loadProofFonts() async {
+  await prepareProofEnvironment();
   var root = Directory.current.absolute;
   File? fieldArchive;
-  File? materialIcons;
   while (root.parent.path != root.path) {
     final fieldArchiveCandidate = File(
       '${root.path}${Platform.pathSeparator}packages'
@@ -243,32 +245,16 @@ Future<void> _loadProofFonts() async {
       'heritage_field_notes_fonts${Platform.pathSeparator}'
       'RobotoCondensed-Variable.ttf',
     );
-    final fontDirectory = Directory(
-      '${root.path}${Platform.pathSeparator}.tooling${Platform.pathSeparator}'
-      'flutter${Platform.pathSeparator}bin${Platform.pathSeparator}cache'
-      '${Platform.pathSeparator}artifacts${Platform.pathSeparator}'
-      'material_fonts',
-    );
-    final candidateIcons = File(
-      '${fontDirectory.path}${Platform.pathSeparator}'
-      'materialicons-regular.otf',
-    );
     if (fieldArchiveCandidate.existsSync()) {
       fieldArchive = fieldArchiveCandidate;
     }
-    if (candidateIcons.existsSync()) {
-      materialIcons = candidateIcons;
-    }
-    if (fieldArchive != null && materialIcons != null) {
-      break;
-    }
+    if (fieldArchive != null) break;
     root = root.parent;
   }
-  if (fieldArchive == null || materialIcons == null) {
-    throw StateError('Bundled Flutter proof fonts were not found.');
+  if (fieldArchive == null) {
+    throw StateError('Field Archive proof font was not found.');
   }
   await _loadFont('FieldArchiveCondensed', fieldArchive);
-  await _loadFont('MaterialIcons', materialIcons);
 }
 
 Future<void> _loadFont(String family, File file) async {
