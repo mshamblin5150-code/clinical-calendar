@@ -606,19 +606,7 @@ final class _BotanicalStudyCommandCrown extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              SizedBox.square(
-                dimension: 34,
-                child: ExcludeSemantics(
-                  child: Image.asset(
-                    botanicalStudyAxionLogoAsset,
-                    package: 'clinical_calendar_presentation',
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                    color: BotanicalStudyColors.focus.withValues(alpha: .82),
-                    colorBlendMode: BlendMode.srcIn,
-                  ),
-                ),
-              ),
+              const _BotanicalStudyAxionDeltaMark(size: 42),
               const Spacer(),
               if (!enlargedText)
                 Column(
@@ -685,6 +673,8 @@ final class _BotanicalStudyCommandCrown extends StatelessWidget {
               onPressed: onOpenMenu,
               icon: const Icon(Icons.grid_view_outlined),
             ),
+            const SizedBox(width: 6),
+            _BotanicalStudyAxionDeltaMark(size: compact ? 36 : 42),
             if (!enlargedText) ...[
               const SizedBox(width: 8),
               const Icon(Icons.calendar_month_outlined),
@@ -748,6 +738,27 @@ final class _BotanicalStudyCommandCrown extends StatelessWidget {
       child: content,
     );
   }
+}
+
+final class _BotanicalStudyAxionDeltaMark extends StatelessWidget {
+  const _BotanicalStudyAxionDeltaMark({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: SizedBox.square(
+      key: const Key('botanical-study-axion-delta'),
+      dimension: size,
+      child: Image.asset(
+        botanicalStudyAxionLogoAsset,
+        key: const Key('botanical-study-axion-delta-image'),
+        package: 'clinical_calendar_presentation',
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+      ),
+    ),
+  );
 }
 
 final class _BotanicalStudyScale extends StatelessWidget {
