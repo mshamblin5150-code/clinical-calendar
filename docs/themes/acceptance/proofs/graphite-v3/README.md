@@ -37,13 +37,9 @@ The concept shows two Protected Days in several calendar weeks. The runtime
 deliberately keeps one per calendar week because Student data and domain
 invariants remain normative even when a concept fixture conflicts with them.
 
-The crown uses `axion-delta-mark-v2.png`, a delta-only derivative of the Axion
-reference supplied by the maintainer on 2026-08-09. The built-in image editor
-removed the `AXION` wordmark and gray backdrop while preserving the polished
-silver delta-and-orbit identity on a flat magenta key. The standard chroma-key
-helper then produced a transparent 1254 by 1254 PNG with four alpha-zero
-corners. The runtime displays that metallic raster directly, without a tint;
-the code-painted delta remains only as an asset-load failure fallback.
+The crown uses Graphite's renderer-owned metallic calendar mark. Its paths,
+material highlights, and orbit geometry are authored in the Graphite renderer
+and do not borrow another theme's artwork or identity.
 
 The Planning evidence also reserves at least 48 pixels between the END field
 and the outer planning-bay boundary. The current 1536 by 1024 proof measures
@@ -73,10 +69,10 @@ remain untouched.
 
 ```text
 1d37e9c2c0f97a2428fbebfd0fc2b5d6e85e3281a634fa16ca2c67479ec24e4e  approved-concept-landscape.png
-e5720acd973f9fc691346eb6560844fc34c6bada9ab69ef8489597c42e8849bd  landscape-concept-vs-runtime.png
-5b21c0419b8782efe22b3b1fd6e0482733e20dd69552e51a10ad804cec0fca4a  runtime-landscape-1536x1024.png
-6f46bbbd58e1987224218899585753ed34eb8239ef9fd9a7f14d948a0744c126  runtime-portrait-200-percent-900x1440.png
-616eed1455afde5531abc9fe6c93cc5c244023b486f73693506dce0e7bb78621  runtime-portrait-900x1440.png
+113104279883024219543d6ac3a984cb5fe4994f1d837bd71fe51f680fe1de9e  landscape-concept-vs-runtime.png
+a786556d37077f0786c9adac55c643114d588640015d5d7f71a5c96cf62c5a89  runtime-landscape-1536x1024.png
+0e600e4c0ea01adbca01fb4c9df7a318ac1568a6c41203e2598eb349bccd1648  runtime-portrait-200-percent-900x1440.png
+d17be3bd6bfce66b6f009fcffd3e4dedf8b49ccdf4f5c78c04f5e1e985dfd751  runtime-portrait-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance

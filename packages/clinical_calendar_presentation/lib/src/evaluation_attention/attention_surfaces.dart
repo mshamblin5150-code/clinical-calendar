@@ -121,6 +121,7 @@ final class AttentionRail extends StatelessWidget {
         builder: (context, _) => _GraphiteAttentionRail(
           controller: controller,
           onOpenAction: onOpenAction,
+          onOpenAll: onOpenAll,
         ),
       );
     }
@@ -169,10 +170,12 @@ final class _GraphiteAttentionRail extends StatelessWidget {
   const _GraphiteAttentionRail({
     required this.controller,
     required this.onOpenAction,
+    required this.onOpenAll,
   });
 
   final EvaluationAttentionController controller;
   final AttentionAction onOpenAction;
+  final VoidCallback? onOpenAll;
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +218,10 @@ final class _GraphiteAttentionRail extends StatelessWidget {
           if (controller.isBusy && controller.snapshot == null)
             const Center(child: CircularProgressIndicator())
           else if (controller.error != null && controller.snapshot == null)
-            const Text('Attention is temporarily unavailable.')
+            OutlinedButton(
+              onPressed: controller.load,
+              child: const Text('Retry attention'),
+            )
           else if (items.isEmpty)
             const Text('No unresolved items need attention.')
           else
@@ -224,6 +230,12 @@ final class _GraphiteAttentionRail extends StatelessWidget {
                 item: item,
                 onOpen: () => onOpenAction(item),
               ),
+          if (items.length > 4 || onOpenAll != null)
+            TextButton(
+              key: const Key('open-attention-center-action'),
+              onPressed: onOpenAll,
+              child: const Text('OPEN ATTENTION CENTER'),
+            ),
         ],
       ),
     );

@@ -38,17 +38,7 @@ void main() {
       reason: 'The END field must clear the planning bay chrome.',
     );
 
-    final delta = tester.widget<Image>(
-      find.descendant(
-        of: find.byKey(const Key('graphite-command-crown')),
-        matching: find.byType(Image),
-      ),
-    );
-    expect(
-      delta.color,
-      isNull,
-      reason: 'Preserve the supplied metallic delta.',
-    );
+    expect(find.bySemanticsLabel('Graphite calendar mark'), findsOneWidget);
 
     await expectLater(
       find.byKey(const Key('graphite-proof')),
@@ -110,26 +100,6 @@ void main() {
     expect(comparison.meanChannelSimilarity, lessThan(.9288));
     expect(comparison.closePixelRatio, lessThan(.8181));
   });
-
-  test(
-    'Graphite delta is a transparent emblem rather than a tinted rectangle',
-    () {
-      final deltaFile = _findWorkspaceFile(
-        'packages/clinical_calendar_presentation/$graphiteDeltaAsset',
-      );
-      final delta = img.decodePng(deltaFile.readAsBytesSync());
-      expect(delta, isNotNull);
-      var visiblePixels = 0;
-      for (final pixel in delta!) {
-        if (pixel.a > 0) visiblePixels++;
-      }
-      expect(delta.getPixel(0, 0).a, 0);
-      expect(delta.getPixel(delta.width - 1, 0).a, 0);
-      expect(delta.getPixel(0, delta.height - 1).a, 0);
-      expect(delta.getPixel(delta.width - 1, delta.height - 1).a, 0);
-      expect(visiblePixels / (delta.width * delta.height), lessThan(.45));
-    },
-  );
 
   testWidgets('Graphite portrait is an intentional ordered recomposition', (
     tester,
@@ -247,9 +217,6 @@ Future<void> _pumpProof(
     frameFile: _findWorkspaceFile(
       'packages/clinical_calendar_presentation/$graphiteFrameAsset',
     ),
-    deltaFile: _findWorkspaceFile(
-      'packages/clinical_calendar_presentation/$graphiteDeltaAsset',
-    ),
   );
   final preloadKey = GlobalKey();
   await tester.pumpWidget(
@@ -262,13 +229,6 @@ Future<void> _pumpProof(
     await precacheImage(
       const AssetImage(
         graphiteFrameAsset,
-        package: 'clinical_calendar_presentation',
-      ),
-      preloadKey.currentContext!,
-    );
-    await precacheImage(
-      const AssetImage(
-        graphiteDeltaAsset,
         package: 'clinical_calendar_presentation',
       ),
       preloadKey.currentContext!,
@@ -1194,18 +1154,14 @@ File _findWorkspaceFile(String relativePath) {
 }
 
 final class _ProofAssetBundle extends CachingAssetBundle {
-  _ProofAssetBundle({required this.frameFile, required this.deltaFile});
+  _ProofAssetBundle({required this.frameFile});
 
   final File frameFile;
-  final File deltaFile;
 
   @override
   Future<ByteData> load(String key) async {
     if (key == 'packages/clinical_calendar_presentation/$graphiteFrameAsset') {
       return ByteData.sublistView(await frameFile.readAsBytes());
-    }
-    if (key == 'packages/clinical_calendar_presentation/$graphiteDeltaAsset') {
-      return ByteData.sublistView(await deltaFile.readAsBytes());
     }
     return rootBundle.load(key);
   }

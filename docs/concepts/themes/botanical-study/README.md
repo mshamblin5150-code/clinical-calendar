@@ -2,7 +2,7 @@
 
 Status: dashboard direction, Botanical Study display name, and matching Theme
 Gallery surface approved by the maintainer in GitHub issue #115. The production
-renderer declares the concept's native **1600 x 1000** landscape viewport as
+renderer declares the concept's native **1586 x 992** landscape viewport as
 its golden exemplar.
 
 This concept is grounded in direct inspection of digitized Smithsonian

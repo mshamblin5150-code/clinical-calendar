@@ -8,7 +8,6 @@ import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
 const graphiteCompactDestinationInsets = EdgeInsets.fromLTRB(18, 20, 18, 22);
-const graphiteDeltaAsset = 'assets/graphite_raster/axion-delta-mark-v2.png';
 
 Widget _buildGraphiteFrame(
   Widget child,
@@ -810,14 +809,12 @@ final class _GraphiteCommandCrown extends StatelessWidget {
         children: [
           SizedBox.square(
             dimension: compact ? 40 : 50,
-            child: Image.asset(
-              graphiteDeltaAsset,
-              package: 'clinical_calendar_presentation',
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-              semanticLabel: 'Axion delta',
-              errorBuilder: (context, error, stackTrace) =>
-                  const CustomPaint(painter: _GraphiteLogoPainter()),
+            child: Semantics(
+              label: 'Graphite calendar mark',
+              image: true,
+              child: const ExcludeSemantics(
+                child: CustomPaint(painter: _GraphiteLogoPainter()),
+              ),
             ),
           ),
           SizedBox(width: compact ? 8 : 12),

@@ -14,6 +14,7 @@ void main() {
   testWidgets('Graphite live Attention rail uses concept hierarchy', (
     tester,
   ) async {
+    var openedAll = 0;
     final harness = _Harness(withEveryAttentionFamily: true);
     await harness.controller.load();
     await _pump(
@@ -22,6 +23,7 @@ void main() {
         child: AttentionRail(
           controller: harness.controller,
           onOpenAction: (_) {},
+          onOpenAll: () => openedAll++,
         ),
       ),
       const Size(380, 620),
@@ -34,6 +36,8 @@ void main() {
     );
     expect(find.byKey(const Key('graphite-live-attention-item')), findsWidgets);
     expect(find.text('NEEDS ATTENTION'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('open-attention-center-action')));
+    expect(openedAll, 1);
     expect(tester.takeException(), isNull);
   });
 

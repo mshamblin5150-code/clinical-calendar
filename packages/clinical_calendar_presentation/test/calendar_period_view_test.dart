@@ -260,7 +260,7 @@ void main() {
     );
     final visuals = Theme.of(
       tester.element(work),
-    ).extension<ClinicalCalendarEntryVisuals>()!;
+    ).extension<ClinicalCalendarPresentationPolicy>()!;
     expect(visuals.clinicalFill, Federation2399Colors.clinicalFill);
     expect(visuals.leadingRailWidth, 4);
     expect(visuals.segmentWorkRail, isTrue);
@@ -354,6 +354,22 @@ void main() {
     }
   });
 
+  testWidgets('concept toolbar reflows safely near its wide breakpoint', (
+    tester,
+  ) async {
+    await _pumpCalendar(
+      tester,
+      source: _MemoryCalendarDataSource(_snapshot()),
+      surfaceSize: const Size(620, 900),
+      bounded: true,
+      leadingConceptToolbar: true,
+    );
+
+    expect(find.byKey(const Key('calendar-period-switcher')), findsOneWidget);
+    expect(find.byKey(const Key('calendar-next')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('query bounds include six-week Month and cross-month Week', (
     tester,
   ) async {
@@ -387,6 +403,7 @@ Future<void> _pumpCalendar(
   bool federationClassic = false,
   bool federation2399 = false,
   bool enhancedAccessibility = false,
+  bool leadingConceptToolbar = false,
   TextScaler textScaler = TextScaler.noScaling,
 }) async {
   tester.view.physicalSize = surfaceSize;
@@ -407,6 +424,13 @@ Future<void> _pumpCalendar(
     onSelectionChanged: onSelectionChanged,
     onOpenItem: onOpenItem,
   );
+  final calendarHost = leadingConceptToolbar
+      ? CalendarPeriodViewportPolicy(
+          useBoundedMonthGrid: bounded,
+          useLeadingTitleCenteredPeriodToolbar: true,
+          child: calendar,
+        )
+      : calendar;
   await tester.pumpWidget(
     ClinicalCalendarSemanticMarkScope(
       marks: federationClassic
@@ -434,8 +458,8 @@ Future<void> _pumpCalendar(
         ),
         home: Scaffold(
           body: bounded
-              ? SizedBox.expand(child: calendar)
-              : SingleChildScrollView(child: calendar),
+              ? SizedBox.expand(child: calendarHost)
+              : SingleChildScrollView(child: calendarHost),
         ),
       ),
     ),
