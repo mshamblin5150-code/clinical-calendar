@@ -16,26 +16,30 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
   const CalendarPeriodViewportPolicy({
     required this.useBoundedMonthGrid,
     this.scaleDayNumberWithText = false,
+    this.useDenseMonthCards = false,
+    this.useNeutralMonthCells = false,
+    this.useLeadingTitleCenteredPeriodToolbar = false,
+    this.useArchiveEntryVisuals = false,
+    this.showArchiveMonthLegend = false,
     this.centerPeriodHeader = false,
     this.useConceptMonthMarks = false,
     this.suppressProtectedHatch = false,
     this.clipDayDecoration = false,
-    this.useDenseMonthCards = false,
-    this.useNeutralMonthCells = false,
-    this.useLeadingTitleCenteredPeriodToolbar = false,
     required super.child,
     super.key,
   });
 
   final bool useBoundedMonthGrid;
   final bool scaleDayNumberWithText;
+  final bool useDenseMonthCards;
+  final bool useNeutralMonthCells;
+  final bool useLeadingTitleCenteredPeriodToolbar;
+  final bool useArchiveEntryVisuals;
+  final bool showArchiveMonthLegend;
   final bool centerPeriodHeader;
   final bool useConceptMonthMarks;
   final bool suppressProtectedHatch;
   final bool clipDayDecoration;
-  final bool useDenseMonthCards;
-  final bool useNeutralMonthCells;
-  final bool useLeadingTitleCenteredPeriodToolbar;
 
   static bool usesBoundedMonthGrid(BuildContext context) =>
       context
@@ -47,6 +51,36 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
       context
           .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
           ?.scaleDayNumberWithText ??
+      false;
+
+  static bool usesDenseMonthCards(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.useDenseMonthCards ??
+      false;
+
+  static bool usesNeutralMonthCells(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.useNeutralMonthCells ??
+      false;
+
+  static bool usesLeadingTitleCenteredPeriodToolbar(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.useLeadingTitleCenteredPeriodToolbar ??
+      false;
+
+  static bool showsArchiveMonthLegend(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.showArchiveMonthLegend ??
+      false;
+
+  static bool usesArchiveEntryVisuals(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.useArchiveEntryVisuals ??
       false;
 
   static bool centersPeriodHeader(BuildContext context) =>
@@ -73,36 +107,20 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
           ?.clipDayDecoration ??
       false;
 
-  static bool usesDenseMonthCards(BuildContext context) =>
-      context
-          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
-          ?.useDenseMonthCards ??
-      false;
-
-  static bool usesNeutralMonthCells(BuildContext context) =>
-      context
-          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
-          ?.useNeutralMonthCells ??
-      false;
-
-  static bool usesLeadingTitleCenteredPeriodToolbar(BuildContext context) =>
-      context
-          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
-          ?.useLeadingTitleCenteredPeriodToolbar ??
-      false;
-
   @override
   bool updateShouldNotify(CalendarPeriodViewportPolicy oldWidget) =>
       useBoundedMonthGrid != oldWidget.useBoundedMonthGrid ||
       scaleDayNumberWithText != oldWidget.scaleDayNumberWithText ||
-      centerPeriodHeader != oldWidget.centerPeriodHeader ||
-      useConceptMonthMarks != oldWidget.useConceptMonthMarks ||
-      suppressProtectedHatch != oldWidget.suppressProtectedHatch ||
-      clipDayDecoration != oldWidget.clipDayDecoration ||
       useDenseMonthCards != oldWidget.useDenseMonthCards ||
       useNeutralMonthCells != oldWidget.useNeutralMonthCells ||
       useLeadingTitleCenteredPeriodToolbar !=
-          oldWidget.useLeadingTitleCenteredPeriodToolbar;
+          oldWidget.useLeadingTitleCenteredPeriodToolbar ||
+      useArchiveEntryVisuals != oldWidget.useArchiveEntryVisuals ||
+      showArchiveMonthLegend != oldWidget.showArchiveMonthLegend ||
+      centerPeriodHeader != oldWidget.centerPeriodHeader ||
+      useConceptMonthMarks != oldWidget.useConceptMonthMarks ||
+      suppressProtectedHatch != oldWidget.suppressProtectedHatch ||
+      clipDayDecoration != oldWidget.clipDayDecoration;
 }
 
 final class CalendarPeriodView extends StatefulWidget {
@@ -242,6 +260,9 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
         builder: (context, outerConstraints) {
           final useBoundedMonthGrid =
               CalendarPeriodViewportPolicy.usesBoundedMonthGrid(context);
+          final showArchiveMonthLegend =
+              CalendarPeriodViewportPolicy.showsArchiveMonthLegend(context) &&
+              _period == CalendarPeriod.month;
           final periodView = LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 600;
@@ -312,6 +333,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                           onPrevious: () => _navigate(-1),
                           onNext: () => _navigate(1),
                           onPeriod: _changePeriod,
+                          archiveTreatment: showArchiveMonthLegend,
                         ),
                         const _EnhancedCalendarLegend(),
                         SizedBox(
@@ -337,6 +359,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                         onPrevious: () => _navigate(-1),
                         onNext: () => _navigate(1),
                         onPeriod: _changePeriod,
+                        archiveTreatment: showArchiveMonthLegend,
                       ),
                       if (context.accessibilityTokens.persistentExpandedLegend)
                         const _EnhancedCalendarLegend(),
@@ -347,6 +370,8 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                         Expanded(child: periodView)
                       else
                         periodView,
+                      if (showArchiveMonthLegend)
+                        const _ArchiveCalendarLegend(),
                     ],
                   ),
           );
@@ -370,6 +395,7 @@ final class _CalendarToolbar extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.onPeriod,
+    this.archiveTreatment = false,
   });
 
   final CalendarPeriod period;
@@ -377,221 +403,341 @@ final class _CalendarToolbar extends StatelessWidget {
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final ValueChanged<CalendarPeriod> onPeriod;
+  final bool archiveTreatment;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
-    child: LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 600;
-        final conceptHeader =
-            Theme.of(
-              context,
-            ).extension<ClinicalCalendarPresentationPolicy>()?.toolbarStyle ==
-            CalendarToolbarStyle.conceptTitle;
-        final navigation = Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              key: const Key('calendar-previous'),
-              tooltip: 'Previous period',
-              onPressed: onPrevious,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            IconButton(
-              key: const Key('calendar-next'),
-              tooltip: 'Next period',
-              onPressed: onNext,
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ],
-        );
-        final switcher = SegmentedButton<CalendarPeriod>(
-          key: const Key('calendar-period-switcher'),
-          showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: CalendarPeriod.month, label: Text('Month')),
-            ButtonSegment(value: CalendarPeriod.week, label: Text('Week')),
-            ButtonSegment(value: CalendarPeriod.agenda, label: Text('Agenda')),
-          ],
-          selected: {period},
-          onSelectionChanged: (selection) => onPeriod(selection.single),
-        );
-        if (!compact &&
-            CalendarPeriodViewportPolicy.centersPeriodHeader(context)) {
-          final conceptArrowStyle = IconButton.styleFrom(
-            minimumSize: const Size.square(48),
-            padding: EdgeInsets.zero,
+  Widget build(BuildContext context) {
+    final conceptHeader =
+        Theme.of(
+          context,
+        ).extension<ClinicalCalendarPresentationPolicy>()?.toolbarStyle ==
+        CalendarToolbarStyle.conceptTitle;
+    return Padding(
+      padding: archiveTreatment
+          ? EdgeInsets.zero
+          : conceptHeader
+          ? const EdgeInsets.fromLTRB(6, 5, 6, 5)
+          : const EdgeInsets.fromLTRB(6, 6, 6, 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 600;
+          final navigation = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                key: const Key('calendar-previous'),
+                tooltip: 'Previous period',
+                onPressed: onPrevious,
+                icon: const Icon(Icons.chevron_left),
+              ),
+              IconButton(
+                key: const Key('calendar-next'),
+                tooltip: 'Next period',
+                onPressed: onNext,
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
           );
-          final conceptSwitcher = SegmentedButton<CalendarPeriod>(
+          final switcher = SegmentedButton<CalendarPeriod>(
             key: const Key('calendar-period-switcher'),
             showSelectedIcon: false,
-            style: const ButtonStyle(
-              minimumSize: WidgetStatePropertyAll(Size(0, 48)),
-            ),
-            segments: const [
-              ButtonSegment(value: CalendarPeriod.month, label: Text('Month')),
-              ButtonSegment(value: CalendarPeriod.week, label: Text('Week')),
+            style: archiveTreatment
+                ? ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith(
+                      (states) => states.contains(WidgetState.selected)
+                          ? context.clinicalColors.clinical
+                          : context.clinicalColors.structureRaised,
+                    ),
+                    foregroundColor: WidgetStateProperty.resolveWith(
+                      (states) => states.contains(WidgetState.selected)
+                          ? context.clinicalColors.structureRaised
+                          : context.clinicalColors.primaryText,
+                    ),
+                    textStyle: WidgetStatePropertyAll(
+                      Theme.of(context).textTheme.labelMedium?.copyWith(
+                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  )
+                : null,
+            segments: [
+              ButtonSegment(
+                value: CalendarPeriod.month,
+                label: Text(archiveTreatment ? 'MONTH' : 'Month'),
+              ),
+              ButtonSegment(
+                value: CalendarPeriod.week,
+                label: Text(archiveTreatment ? 'WEEK' : 'Week'),
+              ),
               ButtonSegment(
                 value: CalendarPeriod.agenda,
-                label: Text('Agenda'),
+                label: Text(archiveTreatment ? 'AGENDA' : 'Agenda'),
               ),
             ],
             selected: {period},
             onSelectionChanged: (selection) => onPeriod(selection.single),
           );
-          return SizedBox(
-            height: 80,
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  right: 0,
-                  height: 48,
-                  child: Row(
-                    children: [
-                      IconButton(
-                        key: const Key('calendar-previous'),
-                        tooltip: 'Previous period',
-                        onPressed: onPrevious,
-                        style: conceptArrowStyle,
-                        icon: const Icon(Icons.chevron_left),
-                      ),
-                      Expanded(
-                        child: Text(
-                          title,
-                          key: const Key('calendar-period-title'),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                      IconButton(
-                        key: const Key('calendar-next'),
-                        tooltip: 'Next period',
-                        onPressed: onNext,
-                        style: conceptArrowStyle,
-                        icon: const Icon(Icons.chevron_right),
-                      ),
-                    ],
-                  ),
+          if (!compact &&
+              CalendarPeriodViewportPolicy.centersPeriodHeader(context)) {
+            final conceptArrowStyle = IconButton.styleFrom(
+              minimumSize: const Size.square(48),
+              padding: EdgeInsets.zero,
+            );
+            final conceptSwitcher = SegmentedButton<CalendarPeriod>(
+              key: const Key('calendar-period-switcher'),
+              showSelectedIcon: false,
+              style: const ButtonStyle(
+                minimumSize: WidgetStatePropertyAll(Size(0, 48)),
+              ),
+              segments: const [
+                ButtonSegment(
+                  value: CalendarPeriod.month,
+                  label: Text('Month'),
                 ),
-                Positioned(
-                  left: 0,
-                  top: 32,
-                  right: 0,
-                  height: 48,
-                  child: Center(child: conceptSwitcher),
+                ButtonSegment(value: CalendarPeriod.week, label: Text('Week')),
+                ButtonSegment(
+                  value: CalendarPeriod.agenda,
+                  label: Text('Agenda'),
                 ),
               ],
-            ),
-          );
-        }
-        if (compact) {
-          return Column(
-            children: [
-              Row(
+              selected: {period},
+              onSelectionChanged: (selection) => onPeriod(selection.single),
+            );
+            return SizedBox(
+              height: 80,
+              child: Stack(
                 children: [
-                  IconButton(
-                    key: const Key('calendar-previous-compact'),
-                    tooltip: 'Previous period',
-                    onPressed: onPrevious,
-                    icon: const Icon(Icons.chevron_left),
-                  ),
-                  Expanded(
-                    child: Text(
-                      title,
-                      key: const Key('calendar-period-title'),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge,
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    right: 0,
+                    height: 48,
+                    child: Row(
+                      children: [
+                        IconButton(
+                          key: const Key('calendar-previous'),
+                          tooltip: 'Previous period',
+                          onPressed: onPrevious,
+                          style: conceptArrowStyle,
+                          icon: const Icon(Icons.chevron_left),
+                        ),
+                        Expanded(
+                          child: Text(
+                            title,
+                            key: const Key('calendar-period-title'),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        IconButton(
+                          key: const Key('calendar-next'),
+                          tooltip: 'Next period',
+                          onPressed: onNext,
+                          style: conceptArrowStyle,
+                          icon: const Icon(Icons.chevron_right),
+                        ),
+                      ],
                     ),
                   ),
-                  IconButton(
-                    key: const Key('calendar-next-compact'),
-                    tooltip: 'Next period',
-                    onPressed: onNext,
-                    icon: const Icon(Icons.chevron_right),
+                  Positioned(
+                    left: 0,
+                    top: 32,
+                    right: 0,
+                    height: 48,
+                    child: Center(child: conceptSwitcher),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              FittedBox(child: switcher),
-            ],
-          );
-        }
-        if (CalendarPeriodViewportPolicy.usesLeadingTitleCenteredPeriodToolbar(
-          context,
-        )) {
-          return Row(
-            children: [
-              SizedBox(
-                width: 220,
-                child: Text(
-                  title,
-                  key: const Key('calendar-period-title'),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: constraints.maxWidth >= 760
-                      ? Transform.translate(
-                          offset: const Offset(70, 0),
-                          child: Transform.scale(scaleX: 1.45, child: switcher),
-                        )
-                      : FittedBox(fit: BoxFit.scaleDown, child: switcher),
-                ),
-              ),
-              SizedBox(
-                width: 88,
-                child: Row(
+            );
+          }
+          if (compact) {
+            return Column(
+              children: [
+                Row(
                   children: [
                     IconButton(
-                      key: const Key('calendar-previous'),
+                      key: const Key('calendar-previous-compact'),
                       tooltip: 'Previous period',
-                      visualDensity: VisualDensity.compact,
                       onPressed: onPrevious,
                       icon: const Icon(Icons.chevron_left),
                     ),
+                    Expanded(
+                      child: Text(
+                        title,
+                        key: const Key('calendar-period-title'),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
                     IconButton(
-                      key: const Key('calendar-next'),
+                      key: const Key('calendar-next-compact'),
                       tooltip: 'Next period',
-                      visualDensity: VisualDensity.compact,
                       onPressed: onNext,
                       icon: const Icon(Icons.chevron_right),
                     ),
                   ],
                 ),
+                const SizedBox(height: 4),
+                FittedBox(child: switcher),
+              ],
+            );
+          }
+          if (archiveTreatment) {
+            return SizedBox(
+              height: 48,
+              child: Row(
+                children: [
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      title.toUpperCase(),
+                      key: const Key('calendar-period-title'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: SizedBox(width: 336, height: 38, child: switcher),
+                  ),
+                ],
               ),
+            );
+          }
+          if (CalendarPeriodViewportPolicy.usesLeadingTitleCenteredPeriodToolbar(
+            context,
+          )) {
+            return Row(
+              children: [
+                SizedBox(
+                  width: 220,
+                  child: Text(
+                    title,
+                    key: const Key('calendar-period-title'),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: constraints.maxWidth >= 760
+                        ? Transform.translate(
+                            offset: const Offset(70, 0),
+                            child: Transform.scale(
+                              scaleX: 1.45,
+                              child: switcher,
+                            ),
+                          )
+                        : FittedBox(fit: BoxFit.scaleDown, child: switcher),
+                  ),
+                ),
+                SizedBox(
+                  width: 88,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        key: const Key('calendar-previous'),
+                        tooltip: 'Previous period',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: onPrevious,
+                        icon: const Icon(Icons.chevron_left),
+                      ),
+                      IconButton(
+                        key: const Key('calendar-next'),
+                        tooltip: 'Next period',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: onNext,
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              if (!conceptHeader) navigation else const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  title,
+                  key: const Key('calendar-period-title'),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+              ),
+              if (conceptHeader) navigation,
+              if (conceptHeader)
+                SizedBox(width: 280, child: switcher)
+              else
+                switcher,
             ],
           );
-        }
-        return Row(
-          children: [
-            if (!conceptHeader) navigation else const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                title,
-                key: const Key('calendar-period-title'),
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-            ),
-            if (conceptHeader) navigation,
-            if (conceptHeader)
-              SizedBox(width: 280, child: switcher)
-            else
-              switcher,
-          ],
-        );
-      },
+        },
+      ),
+    );
+  }
+}
+
+final class _ArchiveCalendarLegend extends StatelessWidget {
+  const _ArchiveCalendarLegend();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('field-archive-calendar-legend'),
+    height: 42,
+    margin: const EdgeInsets.fromLTRB(0, 6, 0, 0),
+    padding: const EdgeInsets.symmetric(horizontal: 14),
+    decoration: BoxDecoration(
+      color: context.clinicalColors.structureRaised,
+      border: Border.all(color: context.clinicalColors.insetBorder),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: const Row(
+      children: [
+        _ArchiveLegendItem(CalendarEntryKind.clinicalSession),
+        SizedBox(width: 38),
+        _ArchiveLegendItem(CalendarEntryKind.workShift),
+        SizedBox(width: 38),
+        _ArchiveLegendItem(CalendarEntryKind.protectedDay),
+      ],
     ),
   );
+}
+
+final class _ArchiveLegendItem extends StatelessWidget {
+  const _ArchiveLegendItem(this.kind);
+
+  final CalendarEntryKind kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = kind.archiveColor(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ArchiveEntryMark(kind: kind, size: 22, color: color),
+        const SizedBox(width: 8),
+        Text(
+          kind.archiveLabel,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 final class _MonthView extends StatelessWidget {
@@ -620,12 +766,19 @@ final class _MonthView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dates = _monthDates(anchor, weekStartsOn);
-    final weekdayLabels = _weekdayLabels(weekStartsOn, compact: compact);
+    final archiveTreatment =
+        CalendarPeriodViewportPolicy.showsArchiveMonthLegend(context);
+    final weekdayLabels = _weekdayLabels(
+      weekStartsOn,
+      compact: compact && !archiveTreatment,
+    ).map((label) => archiveTreatment ? label.substring(0, 3) : label).toList();
     final showLegend =
         Theme.of(
           context,
         ).extension<ClinicalCalendarPresentationPolicy>()?.showMonthLegend ??
         false;
+    final monthCellMetrics = _monthCellMetrics(context);
+    final weekdayHeaderHeight = monthCellMetrics.weekdayHeaderHeight;
     if (!useBoundedGrid) {
       return _buildMonthGrid(context, dates, weekdayLabels, null);
     }
@@ -636,6 +789,7 @@ final class _MonthView extends StatelessWidget {
           _weekdayHeader(
             context,
             weekdayLabels,
+            height: weekdayHeaderHeight,
             colored:
                 Theme.of(context)
                     .extension<ClinicalCalendarPresentationPolicy>()
@@ -646,6 +800,7 @@ final class _MonthView extends StatelessWidget {
             context,
             dates,
             constraints.maxHeight - (showLegend ? 38 : 0),
+            weekdayHeaderHeight,
           ),
           if (showLegend) const _BotanicalMonthLegend(),
         ],
@@ -664,23 +819,30 @@ final class _MonthView extends StatelessWidget {
       _weekdayHeader(
         context,
         weekdayLabels,
+        height: _monthCellMetrics(context).weekdayHeaderHeight,
         colored:
             Theme.of(context)
                 .extension<ClinicalCalendarPresentationPolicy>()
                 ?.colorWeekdayHeader ??
             false,
       ),
-      _monthGrid(context, dates, boundedHeight),
+      _monthGrid(
+        context,
+        dates,
+        boundedHeight,
+        _monthCellMetrics(context).weekdayHeaderHeight,
+      ),
     ],
   );
 
   Widget _weekdayHeader(
     BuildContext context,
     List<String> weekdayLabels, {
+    required double height,
     required bool colored,
   }) {
     final header = SizedBox(
-      height: 32,
+      height: height,
       child: Row(
         children: [
           for (final label in weekdayLabels)
@@ -688,7 +850,12 @@ final class _MonthView extends StatelessWidget {
               child: Center(
                 child: Text(
                   label.toUpperCase(),
-                  style: Theme.of(context).textTheme.labelMedium,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontSize: _monthCellMetrics(context).weekdayLabelFontSize,
+                    fontWeight: _monthCellMetrics(
+                      context,
+                    ).weekdayLabelFontWeight,
+                  ),
                 ),
               ),
             ),
@@ -704,6 +871,7 @@ final class _MonthView extends StatelessWidget {
     BuildContext context,
     List<LocalDate> dates,
     double? boundedHeight,
+    double weekdayHeaderHeight,
   ) {
     Widget dayCell(int index) {
       final date = dates[index];
@@ -714,7 +882,9 @@ final class _MonthView extends StatelessWidget {
         selected: selectedDates.contains(date),
         entries: snapshot.entriesOn(date),
         compact: compact,
-        dense: boundedHeight != null && (boundedHeight - 32) / 6 < 88,
+        dense:
+            boundedHeight != null &&
+            (boundedHeight - weekdayHeaderHeight) / 6 < 88,
         twelveHourTime: twelveHourTime,
         onActivate: onActivate,
       );
@@ -724,7 +894,9 @@ final class _MonthView extends StatelessWidget {
       context,
     ).extension<ClinicalCalendarPresentationPolicy>()?.monthColumnFlex;
     if (columnFlex != null && boundedHeight != null) {
-      final rowHeight = math.max(44, (boundedHeight - 32) / 6).toDouble();
+      final rowHeight = math
+          .max(44, (boundedHeight - weekdayHeaderHeight) / 6)
+          .toDouble();
       return SizedBox(
         height: rowHeight * 6,
         child: Column(
@@ -839,6 +1011,9 @@ final class _MonthDayCell extends StatelessWidget {
     final neutralCells = CalendarPeriodViewportPolicy.usesNeutralMonthCells(
       context,
     );
+    final monthCellMetrics = _monthCellMetrics(context);
+    final archiveEntryVisuals =
+        CalendarPeriodViewportPolicy.usesArchiveEntryVisuals(context);
     return Semantics(
       key: Key('calendar-day-$date'),
       button: true,
@@ -850,13 +1025,14 @@ final class _MonthDayCell extends StatelessWidget {
         painter: _DayCellPainter(
           colors: context.clinicalColors,
           todayAccent: _todayAccent(context),
-          protected: neutralCells ? false : protected,
+          archiveTreatment: archiveEntryVisuals,
+          protected: neutralCells || archiveEntryVisuals ? false : protected,
           protectedHatch:
               !CalendarPeriodViewportPolicy.suppressesProtectedHatch(context),
           clipDecoration: CalendarPeriodViewportPolicy.clipsDayDecoration(
             context,
           ),
-          work: neutralCells ? false : work,
+          work: neutralCells || archiveEntryVisuals ? false : work,
           today: today,
           selected: selected,
           outside: outside,
@@ -873,11 +1049,14 @@ final class _MonthDayCell extends StatelessWidget {
           ).extension<ClinicalCalendarPresentationPolicy>()?.selectedDayBorder,
           selectionWidth: context.accessibilityTokens.selectionWidth,
           decorationOpacity: context.accessibilityTokens.decorationOpacity,
+          monthCellMetrics: monthCellMetrics,
         ),
         child: InkWell(
           onTap: () => onActivate(date, entries),
           child: Padding(
-            padding: EdgeInsets.all(conceptDensity ? 3 : 5),
+            padding: conceptDensity
+                ? const EdgeInsets.all(3)
+                : monthCellMetrics.cellPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -885,7 +1064,8 @@ final class _MonthDayCell extends StatelessWidget {
                 SizedBox(height: conceptDensity ? 1 : 3),
                 if (compact ||
                     (conceptDensity && enlargedText) ||
-                    (Theme.of(context)
+                    (!archiveEntryVisuals &&
+                        Theme.of(context)
                                 .extension<ClinicalCalendarPresentationPolicy>()
                                 ?.denseMarkerStyle ==
                             CalendarDenseMarkerStyle.chip &&
@@ -950,11 +1130,7 @@ final class _DenseMonthEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = switch (entry.kind) {
-      CalendarEntryKind.workShift => 'WORK',
-      CalendarEntryKind.clinicalSession => 'CLINICAL',
-      CalendarEntryKind.protectedDay => 'PROTECTED',
-    };
+    final label = entry.kind.archiveLabel;
     final accent = _entryAccent(context, entry);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -1013,12 +1189,45 @@ final class _DenseMonthMarker extends StatelessWidget {
     final conceptMarks = CalendarPeriodViewportPolicy.usesConceptMonthMarks(
       context,
     );
-    final label = switch (entry.kind) {
-      CalendarEntryKind.workShift => 'WORK',
-      CalendarEntryKind.clinicalSession => 'CLINICAL',
-      CalendarEntryKind.protectedDay => 'PROTECTED',
-    };
+    final label = entry.kind.archiveLabel;
     final additionalCount = entries.length - 1;
+    final archiveTreatment =
+        CalendarPeriodViewportPolicy.usesArchiveEntryVisuals(context);
+    if (archiveTreatment) {
+      final accent = _entryAccent(context, entry);
+      return Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 5),
+        decoration: BoxDecoration(
+          color: accent,
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Row(
+          children: [
+            _ArchiveEntryMark(kind: entry.kind, size: 15, color: Colors.white),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.clip,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: .35,
+                ),
+              ),
+            ),
+            if (additionalCount > 0)
+              Text(
+                '+$additionalCount',
+                style: const TextStyle(fontSize: 11, color: Colors.white),
+              ),
+          ],
+        ),
+      );
+    }
     final asChip =
         Theme.of(context)
                 .extension<ClinicalCalendarPresentationPolicy>()
@@ -1026,9 +1235,12 @@ final class _DenseMonthMarker extends StatelessWidget {
             CalendarDenseMarkerStyle.chip &&
         MediaQuery.textScalerOf(context).scale(1) <= 1.3;
     if (asChip) {
+      final monthCellMetrics = _monthCellMetrics(context);
       return Container(
-        height: 28,
-        padding: const EdgeInsets.symmetric(horizontal: 7),
+        height: monthCellMetrics.markerHeight,
+        padding: EdgeInsets.symmetric(
+          horizontal: monthCellMetrics.markerHorizontalPadding,
+        ),
         decoration: _entryDecoration(context, entry).copyWith(
           border: Border.all(
             color: _entryAccent(context, entry).withValues(alpha: .18),
@@ -1039,10 +1251,10 @@ final class _DenseMonthMarker extends StatelessWidget {
           children: [
             ThemeSemanticMarkIcon(
               role: _entryRole(entry.kind),
-              size: 16,
+              size: monthCellMetrics.markerIconSize,
               color: _entryAccent(context, entry),
             ),
-            const SizedBox(width: 7),
+            SizedBox(width: monthCellMetrics.markerGap),
             Expanded(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -1051,7 +1263,7 @@ final class _DenseMonthMarker extends StatelessWidget {
                   label,
                   maxLines: 1,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: monthCellMetrics.markerFontSize,
                     fontWeight: FontWeight.w600,
                     color: _entryAccent(context, entry),
                   ),
@@ -1128,6 +1340,64 @@ final class _ProtectedDotGrid extends StatelessWidget {
   );
 }
 
+final class _ArchiveEntryMark extends StatelessWidget {
+  const _ArchiveEntryMark({
+    required this.kind,
+    required this.size,
+    required this.color,
+  });
+
+  final CalendarEntryKind kind;
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => switch (kind) {
+    CalendarEntryKind.workShift => SizedBox.square(
+      dimension: size,
+      child: CustomPaint(painter: _ArchiveWorkStripePainter(color)),
+    ),
+    CalendarEntryKind.protectedDay => Icon(
+      Icons.shield,
+      size: size,
+      color: color,
+    ),
+    CalendarEntryKind.clinicalSession => Icon(
+      Icons.add,
+      size: size,
+      color: color,
+    ),
+  };
+}
+
+final class _ArchiveWorkStripePainter extends CustomPainter {
+  const _ArchiveWorkStripePainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = size.width * .18
+      ..strokeCap = StrokeCap.square;
+    canvas.drawLine(
+      Offset(size.width * .08, size.height * .72),
+      Offset(size.width * .56, size.height * .18),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width * .42, size.height * .82),
+      Offset(size.width * .90, size.height * .28),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArchiveWorkStripePainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
 final class _DayNumber extends StatelessWidget {
   const _DayNumber({
     required this.date,
@@ -1141,9 +1411,17 @@ final class _DayNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final monthCellMetrics = _monthCellMetrics(context);
+    final conceptAccent =
+        Theme.of(
+          context,
+        ).extension<ClinicalCalendarPresentationPolicy>()?.selectedDayBorder ??
+        _todayAccent(context);
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final scalesDayNumber =
         CalendarPeriodViewportPolicy.scalesDayNumberWithText(context);
+    final archiveTreatment =
+        CalendarPeriodViewportPolicy.showsArchiveMonthLegend(context);
     final dayNumberWidth = scalesDayNumber
         ? 23.0 * textScale.clamp(1.0, 2.0)
         : 23.0;
@@ -1155,6 +1433,67 @@ final class _DayNumber extends StatelessWidget {
     final conceptMarks = CalendarPeriodViewportPolicy.usesConceptMonthMarks(
       context,
     );
+    if (archiveTreatment && today) {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'TODAY',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: context.clinicalColors.clinical,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: context.clinicalColors.clinical,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${date.day}',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    if (monthCellMetrics.showTodayLabel) {
+      return Row(
+        children: [
+          Text(
+            '${date.day}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: monthCellMetrics.dayNumberFontSize,
+              fontWeight: today ? FontWeight.w700 : FontWeight.w500,
+              color: today ? conceptAccent : null,
+            ),
+          ),
+          if (today) ...[
+            const SizedBox(width: 10),
+            Text(
+              'TODAY',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: conceptAccent,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: .5,
+              ),
+            ),
+          ],
+        ],
+      );
+    }
     return Row(
       children: [
         DecoratedBox(
@@ -1186,6 +1525,7 @@ final class _DayNumber extends StatelessWidget {
                       ? _todayForeground(context)
                       : null,
                   fontWeight: today ? FontWeight.w700 : null,
+                  fontSize: archiveTreatment ? 16 : null,
                 ),
               ),
             ),
@@ -1869,6 +2209,7 @@ final class _DayCellPainter extends CustomPainter {
   const _DayCellPainter({
     required this.colors,
     required this.todayAccent,
+    required this.archiveTreatment,
     required this.protected,
     required this.protectedHatch,
     required this.clipDecoration,
@@ -1881,10 +2222,12 @@ final class _DayCellPainter extends CustomPainter {
     required this.selectedBorder,
     required this.selectionWidth,
     required this.decorationOpacity,
+    required this.monthCellMetrics,
   });
 
   final ClinicalCalendarColors colors;
   final Color todayAccent;
+  final bool archiveTreatment;
   final bool protected;
   final bool protectedHatch;
   final bool clipDecoration;
@@ -1897,6 +2240,7 @@ final class _DayCellPainter extends CustomPainter {
   final Color? selectedBorder;
   final double selectionWidth;
   final double decorationOpacity;
+  final CalendarMonthCellMetrics monthCellMetrics;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1904,7 +2248,9 @@ final class _DayCellPainter extends CustomPainter {
     if (clipDecoration) canvas.clipRect(rect);
     final background = Paint()
       ..color = outside
-          ? colors.canvas.withValues(alpha: .62)
+          ? archiveTreatment
+                ? colors.structure
+                : colors.canvas.withValues(alpha: .62)
           : selected && selectedSurface != null
           ? selectedSurface!
           : neutralEntryBackground
@@ -1939,15 +2285,41 @@ final class _DayCellPainter extends CustomPainter {
       rect.deflate(.5),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = today ? math.max(2, selectionWidth) : 1
-        ..color = today ? todayAccent : colors.insetBorder,
+        ..strokeWidth = monthCellMetrics.roundedSelection
+            ? monthCellMetrics.gridStrokeWidth
+            : today
+            ? math.max(2, selectionWidth)
+            : monthCellMetrics.gridStrokeWidth
+        ..color = monthCellMetrics.roundedSelection
+            ? colors.insetBorder.withValues(alpha: monthCellMetrics.gridOpacity)
+            : today
+            ? todayAccent
+            : archiveTreatment
+            ? colors.insetBorder.withValues(alpha: .52)
+            : colors.insetBorder,
     );
+    if (monthCellMetrics.roundedSelection && today && !selected) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect.deflate(3), const Radius.circular(7)),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = selectionWidth
+          ..color = selectedBorder ?? todayAccent,
+      );
+    }
     if (selected) {
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = selectionWidth
         ..color = selectedBorder ?? colors.clinical;
       final selectedRect = rect.deflate(3);
+      if (monthCellMetrics.roundedSelection) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(selectedRect, const Radius.circular(7)),
+          paint,
+        );
+        return;
+      }
       const dash = 5.0;
       const gap = 3.0;
       for (
@@ -1989,6 +2361,7 @@ final class _DayCellPainter extends CustomPainter {
   bool shouldRepaint(_DayCellPainter oldDelegate) =>
       colors != oldDelegate.colors ||
       todayAccent != oldDelegate.todayAccent ||
+      archiveTreatment != oldDelegate.archiveTreatment ||
       protected != oldDelegate.protected ||
       protectedHatch != oldDelegate.protectedHatch ||
       clipDecoration != oldDelegate.clipDecoration ||
@@ -2000,8 +2373,15 @@ final class _DayCellPainter extends CustomPainter {
       selectedSurface != oldDelegate.selectedSurface ||
       selectedBorder != oldDelegate.selectedBorder ||
       selectionWidth != oldDelegate.selectionWidth ||
-      decorationOpacity != oldDelegate.decorationOpacity;
+      decorationOpacity != oldDelegate.decorationOpacity ||
+      monthCellMetrics != oldDelegate.monthCellMetrics;
 }
+
+CalendarMonthCellMetrics _monthCellMetrics(BuildContext context) =>
+    Theme.of(
+      context,
+    ).extension<ClinicalCalendarPresentationPolicy>()?.monthCellMetrics ??
+    const CalendarMonthCellMetrics();
 
 final class _AgendaBackgroundPainter extends CustomPainter {
   const _AgendaBackgroundPainter({
@@ -2152,6 +2532,20 @@ ThemeSemanticRole _entryRole(CalendarEntryKind kind) => switch (kind) {
   CalendarEntryKind.clinicalSession => ThemeSemanticRole.clinicalSession,
   CalendarEntryKind.protectedDay => ThemeSemanticRole.protectedDay,
 };
+
+extension _ArchiveCalendarEntryKind on CalendarEntryKind {
+  String get archiveLabel => switch (this) {
+    CalendarEntryKind.workShift => 'WORK',
+    CalendarEntryKind.clinicalSession => 'CLINICAL',
+    CalendarEntryKind.protectedDay => 'PROTECTED',
+  };
+
+  Color archiveColor(BuildContext context) => switch (this) {
+    CalendarEntryKind.workShift => context.clinicalColors.workMachinery,
+    CalendarEntryKind.clinicalSession => context.clinicalColors.clinical,
+    CalendarEntryKind.protectedDay => context.clinicalColors.protectedDayAccent,
+  };
+}
 
 IconData _variantEntryIcon(CalendarEntryKind kind) => switch (kind) {
   CalendarEntryKind.workShift => Icons.work_outline,

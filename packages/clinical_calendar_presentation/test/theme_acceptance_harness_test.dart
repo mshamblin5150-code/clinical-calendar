@@ -108,7 +108,8 @@ void main() {
           expect(report.entries.any((entry) => entry.permitted), isTrue);
           expect(report.entries.any((entry) => !entry.permitted), isTrue);
           if (bundle.id == federationClassicThemeId ||
-              bundle.id == federation2399ThemeId) {
+              bundle.id == federation2399ThemeId ||
+              bundle.id == heritageFieldNotesThemeId) {
             expect(
               report.passed,
               isTrue,

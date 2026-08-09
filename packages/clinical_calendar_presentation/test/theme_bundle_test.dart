@@ -257,6 +257,40 @@ void main() {
     },
   );
 
+  test('Field Archive is a complete independently owned bundle', () {
+    const fieldArchive = HeritageFieldNotesThemeBundle();
+
+    ClinicalCalendarThemeBundleValidator.validate(const [fieldArchive]);
+    expect(fieldArchive.id, heritageFieldNotesThemeId);
+    expect(fieldArchive.metadata.displayName, 'Field Archive');
+    expect(
+      fieldArchive.standardPresentation,
+      isA<HeritageFieldNotesVisualTheme>(),
+    );
+    expect(fieldArchive.shellRenderer, isA<HeritageFieldNotesShellRenderer>());
+    expect(fieldArchive.frame.assetPaths, const [
+      heritageFieldNotesFrameAsset,
+      heritageFieldNotesAxionDeltaAsset,
+      heritageFieldNotesMaterialChassisAsset,
+    ]);
+    expect(fieldArchive.gallery.swatches, hasLength(5));
+    expect(fieldArchive.marks.marks, hasLength(9));
+    expect(fieldArchive.helpGuide.calendarStates, hasLength(5));
+    expect(
+      fieldArchive.standardPresentation
+          .createThemeData()
+          .extension<ClinicalCalendarPresentationPolicy>()
+          ?.denseMarkerStyle,
+      CalendarDenseMarkerStyle.chip,
+    );
+    expect(
+      ClinicalCalendarThemeBundleRegistry.standard.resolveRoot(
+        heritageFieldNotesThemeId,
+      ),
+      same(fieldArchive),
+    );
+  });
+
   test(
     'Enhanced is an overlay and Standard round trips exactly for registered bundles',
     () {
@@ -266,6 +300,7 @@ void main() {
         FederationClassicThemeBundle(),
         Federation2399ThemeBundle(),
         CoastalLightThemeBundle(),
+        HeritageFieldNotesThemeBundle(),
       ]) {
         final standard = themedBundle.standardPresentation.createThemeData();
         final enhanced = themedBundle.standardPresentation.createThemeData(

@@ -22,6 +22,7 @@ void main() {
     expect(botanical.frame.assetPaths, [
       botanicalStudyFrameAsset,
       botanicalStudyLandscapeChassisAsset,
+      botanicalStudyAxionLogoAsset,
     ]);
     expect(botanical.gallery.swatches, hasLength(5));
     expect(botanical.marks.marks, hasLength(9));
@@ -119,6 +120,18 @@ void main() {
           );
     expect(file.existsSync(), isTrue);
     expect(file.lengthSync(), greaterThan(100000));
+  });
+
+  test('Botanical Study crown ships the Axion company mark', () {
+    final packageRelative = File(botanicalStudyAxionLogoAsset);
+    final file = packageRelative.existsSync()
+        ? packageRelative
+        : File(
+            'packages/clinical_calendar_presentation/'
+            '$botanicalStudyAxionLogoAsset',
+          );
+    expect(file.existsSync(), isTrue);
+    expect(file.lengthSync(), greaterThan(500));
   });
 
   testWidgets('Botanical Study owns landscape composition and callbacks', (
