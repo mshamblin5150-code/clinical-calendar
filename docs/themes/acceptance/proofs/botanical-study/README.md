@@ -1,8 +1,11 @@
-# Botanical Study concept-fidelity candidate
+# Botanical Study rejected proof (historical)
 
 Issue: [#135](https://github.com/mshamblin5150-code/clinical-calendar/issues/135)
 
-Status: **candidate awaiting explicit maintainer visual approval**. Physical
+Status: **rejected as a fidelity baseline**. This package records the earlier
+1600 x 1000 sparse-shell candidate and must not be used for acceptance or
+golden approval. The replacement candidate is in `../botanical-study-v2/`.
+Physical
 Android-tablet acceptance is **pending** and remains part of final catalog
 device acceptance in #139. Passing automation and this proof package do not
 approve the theme.

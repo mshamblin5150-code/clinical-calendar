@@ -1033,7 +1033,7 @@ void main() {
       addTearDown(preview.dispose);
       await _pumpAt(
         tester,
-        const Size(1600, 1000),
+        const Size(1586, 992),
         dependencies: _dependencies(repositories: repositories),
         themePreviewController: preview,
         candidateThemePreflight: (_) async {},

@@ -2,7 +2,7 @@
 
 Status: dashboard direction, Botanical Study display name, and matching Theme
 Gallery surface approved by the maintainer in GitHub issue #115. The production
-renderer declares the concept's native **1600 x 1000** landscape viewport as
+renderer declares the concept's native **1586 x 992** landscape viewport as
 its golden exemplar.
 
 This concept is grounded in direct inspection of digitized Smithsonian
@@ -66,3 +66,7 @@ copy or color measurements.
 Production Flutter, final nine-slice artwork, and deterministic implementation
 evidence are owned by issue #135. Physical Android acceptance remains pending
 in catalog device-acceptance issue #139.
+
+The latest production candidate and side-by-side evidence are recorded in
+`docs/themes/acceptance/proofs/botanical-study-v3/`. That package remains a
+candidate until the maintainer explicitly approves it on issue #135.
