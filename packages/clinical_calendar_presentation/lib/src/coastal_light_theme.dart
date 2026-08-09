@@ -62,7 +62,7 @@ const coastalLightEnhancedAdditiveColors = ClinicalCalendarAdditiveColors(
   today: Color(0xFF214F6A),
 );
 
-const coastalLightEntryVisuals = ClinicalCalendarEntryVisuals(
+const coastalLightEntryVisuals = ClinicalCalendarPresentationPolicy(
   clinicalFill: CoastalLightColors.clinicalFill,
   leadingRailWidth: 4,
   segmentWorkRail: true,
