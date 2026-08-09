@@ -1,11 +1,12 @@
-# Field Archive concept-fidelity candidate
+# Field Archive approved concept-fidelity proof
 
 Issue: [#137](https://github.com/mshamblin5150-code/clinical-calendar/issues/137)
 
-Status: **candidate awaiting explicit maintainer visual approval**. Physical
-Android-tablet acceptance is **pending** and remains part of catalog device
-acceptance in #139. Passing automation and this proof package do not approve
-the runtime composition.
+Status: **maintainer approved on 2026-08-09** in the implementation task, as
+recorded in the [#137 completion comment](https://github.com/mshamblin5150-code/clinical-calendar/issues/137#issuecomment-5232111332).
+Physical Android-tablet acceptance is **pending** and remains part of catalog
+device acceptance in #139. The approval applies to this exact proof package;
+future visual changes require refreshed evidence and approval.
 
 The approved issue #118 concept is copied byte-for-byte and remains the
 normative landscape reference. Every runtime capture uses fictional data.

@@ -594,35 +594,31 @@ final class _ArchiveCalendarLegend extends StatelessWidget {
     ),
     child: const Row(
       children: [
-        _ArchiveLegendItem('CLINICAL'),
+        _ArchiveLegendItem(CalendarEntryKind.clinicalSession),
         SizedBox(width: 38),
-        _ArchiveLegendItem('WORK'),
+        _ArchiveLegendItem(CalendarEntryKind.workShift),
         SizedBox(width: 38),
-        _ArchiveLegendItem('PROTECTED'),
+        _ArchiveLegendItem(CalendarEntryKind.protectedDay),
       ],
     ),
   );
 }
 
 final class _ArchiveLegendItem extends StatelessWidget {
-  const _ArchiveLegendItem(this.label);
+  const _ArchiveLegendItem(this.kind);
 
-  final String label;
+  final CalendarEntryKind kind;
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (label) {
-      'CLINICAL' => context.clinicalColors.clinical,
-      'WORK' => context.clinicalColors.workMachinery,
-      _ => context.clinicalColors.protectedDayAccent,
-    };
+    final color = kind.archiveColor(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _ArchiveEntryMark(label: label, size: 22, color: color),
+        _ArchiveEntryMark(kind: kind, size: 22, color: color),
         const SizedBox(width: 8),
         Text(
-          label,
+          kind.archiveLabel,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
             color: color,
             fontWeight: FontWeight.w700,
@@ -1011,11 +1007,7 @@ final class _DenseMonthEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = switch (entry.kind) {
-      CalendarEntryKind.workShift => 'WORK',
-      CalendarEntryKind.clinicalSession => 'CLINICAL',
-      CalendarEntryKind.protectedDay => 'PROTECTED',
-    };
+    final label = entry.kind.archiveLabel;
     final accent = _entryAccent(context, entry);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -1071,11 +1063,7 @@ final class _DenseMonthMarker extends StatelessWidget {
   Widget build(BuildContext context) {
     if (entries.isEmpty) return const SizedBox.shrink();
     final entry = entries.first;
-    final label = switch (entry.kind) {
-      CalendarEntryKind.workShift => 'WORK',
-      CalendarEntryKind.clinicalSession => 'CLINICAL',
-      CalendarEntryKind.protectedDay => 'PROTECTED',
-    };
+    final label = entry.kind.archiveLabel;
     final additionalCount = entries.length - 1;
     final archiveTreatment =
         CalendarPeriodViewportPolicy.usesArchiveEntryVisuals(context);
@@ -1090,7 +1078,7 @@ final class _DenseMonthMarker extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _ArchiveEntryMark(label: label, size: 15, color: Colors.white),
+            _ArchiveEntryMark(kind: entry.kind, size: 15, color: Colors.white),
             const SizedBox(width: 4),
             Expanded(
               child: Text(
@@ -1200,24 +1188,31 @@ final class _DenseMonthMarker extends StatelessWidget {
 
 final class _ArchiveEntryMark extends StatelessWidget {
   const _ArchiveEntryMark({
-    required this.label,
+    required this.kind,
     required this.size,
     required this.color,
   });
 
-  final String label;
+  final CalendarEntryKind kind;
   final double size;
   final Color color;
 
   @override
-  Widget build(BuildContext context) => switch (label) {
-    'WORK' || 'WORK SHIFT' => SizedBox.square(
+  Widget build(BuildContext context) => switch (kind) {
+    CalendarEntryKind.workShift => SizedBox.square(
       dimension: size,
       child: CustomPaint(painter: _ArchiveWorkStripePainter(color)),
     ),
-    'PROTECTED' ||
-    'PROTECTED DAY' => Icon(Icons.shield, size: size, color: color),
-    _ => Icon(Icons.add, size: size, color: color),
+    CalendarEntryKind.protectedDay => Icon(
+      Icons.shield,
+      size: size,
+      color: color,
+    ),
+    CalendarEntryKind.clinicalSession => Icon(
+      Icons.add,
+      size: size,
+      color: color,
+    ),
   };
 }
 
@@ -2360,6 +2355,20 @@ ThemeSemanticRole _entryRole(CalendarEntryKind kind) => switch (kind) {
   CalendarEntryKind.clinicalSession => ThemeSemanticRole.clinicalSession,
   CalendarEntryKind.protectedDay => ThemeSemanticRole.protectedDay,
 };
+
+extension _ArchiveCalendarEntryKind on CalendarEntryKind {
+  String get archiveLabel => switch (this) {
+    CalendarEntryKind.workShift => 'WORK',
+    CalendarEntryKind.clinicalSession => 'CLINICAL',
+    CalendarEntryKind.protectedDay => 'PROTECTED',
+  };
+
+  Color archiveColor(BuildContext context) => switch (this) {
+    CalendarEntryKind.workShift => context.clinicalColors.workMachinery,
+    CalendarEntryKind.clinicalSession => context.clinicalColors.clinical,
+    CalendarEntryKind.protectedDay => context.clinicalColors.protectedDayAccent,
+  };
+}
 
 IconData _variantEntryIcon(CalendarEntryKind kind) => switch (kind) {
   CalendarEntryKind.workShift => Icons.work_outline,
