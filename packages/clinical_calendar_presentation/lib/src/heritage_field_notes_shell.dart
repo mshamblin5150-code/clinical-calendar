@@ -14,16 +14,16 @@ const heritageFieldNotesCompactDestinationInsets = EdgeInsets.fromLTRB(
   22,
 );
 
-const _heritageFieldNotesCrownRegion = Rect.fromLTWH(.036, .057, .935, .073);
+const _heritageFieldNotesCrownRegion = Rect.fromLTWH(.045, .012, .925, .075);
 const _heritageFieldNotesPlacementsRegion = Rect.fromLTWH(
-  .036,
-  .139,
-  .188,
-  .756,
+  .045,
+  .095,
+  .178,
+  .798,
 );
-const _heritageFieldNotesCalendarRegion = Rect.fromLTWH(.229, .139, .514, .535);
-const _heritageFieldNotesPlanningRegion = Rect.fromLTWH(.229, .683, .514, .211);
-const _heritageFieldNotesInsightRegion = Rect.fromLTWH(.749, .139, .222, .756);
+const _heritageFieldNotesCalendarRegion = Rect.fromLTWH(.229, .095, .519, .566);
+const _heritageFieldNotesPlanningRegion = Rect.fromLTWH(.229, .663, .519, .230);
+const _heritageFieldNotesInsightRegion = Rect.fromLTWH(.753, .095, .217, .798);
 const _heritageFieldNotesNavigationRegion = Rect.fromLTWH(
   .036,
   .903,
@@ -111,17 +111,17 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         HeritageFieldNotesNineSliceFrame(
-          chromeInsets: const EdgeInsets.fromLTRB(46, 46, 46, 10),
+          chromeInsets: const EdgeInsets.fromLTRB(54, 10, 46, 16),
           child: LayoutBuilder(
             builder: (context, constraints) {
               // Concept #118 is 1536 by 1024. Resolve every dominant region
               // from those normalized outer-viewport coordinates so the
               // runtime retains the approved book-board composition at other
               // landscape tablet sizes without uniformly scaling its text.
-              final outerWidth = constraints.maxWidth + 92;
-              final outerHeight = constraints.maxHeight + 56;
-              double x(double fraction) => outerWidth * fraction - 46;
-              double y(double fraction) => outerHeight * fraction - 46;
+              final outerWidth = constraints.maxWidth + 100;
+              final outerHeight = constraints.maxHeight + 26;
+              double x(double fraction) => outerWidth * fraction - 54;
+              double y(double fraction) => outerHeight * fraction - 10;
               double w(double fraction) => outerWidth * fraction;
               double h(double fraction) => outerHeight * fraction;
               Rect resolveRegion(Rect normalized) => Rect.fromLTWH(
@@ -161,6 +161,7 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                       accent: _HeritageFieldNotesBayAccent.forest,
                       shape: _HeritageFieldNotesBayShape.calendar,
                       child: _HeritageFieldNotesCalendarViewport(
+                        showArchiveMonthLegend: true,
                         child: slots.centralContent,
                       ),
                     ),
@@ -210,8 +211,8 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
         ),
         const Positioned(
           right: 0,
-          top: 112,
-          bottom: 112,
+          top: 94,
+          bottom: 94,
           width: 34,
           child: _HeritageFieldNotesIndexTabs(),
         ),
@@ -366,7 +367,7 @@ final class _HeritageFieldNotesArchiveChassisPainter extends CustomPainter {
     const brassHighlight = Color(0xFFE0BD68);
 
     final outer = Offset.zero & size;
-    final pageWindow = Rect.fromLTRB(46, 46, size.width - 46, size.height - 10);
+    final pageWindow = Rect.fromLTRB(54, 10, size.width - 46, size.height - 16);
     final board = Path()
       ..fillType = PathFillType.evenOdd
       ..addRect(outer)
@@ -387,17 +388,17 @@ final class _HeritageFieldNotesArchiveChassisPainter extends CustomPainter {
       Paint()
         ..color = darkestWalnut
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 18,
+        ..strokeWidth = 4,
     );
     canvas.drawRect(
-      pageWindow.deflate(5),
+      pageWindow.deflate(3),
       Paint()
         ..color = agedBrass
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5,
     );
     canvas.drawRect(
-      pageWindow.deflate(9),
+      pageWindow.deflate(7),
       Paint()
         ..color = brassHighlight.withValues(alpha: .72)
         ..style = PaintingStyle.stroke
@@ -411,8 +412,8 @@ final class _HeritageFieldNotesArchiveChassisPainter extends CustomPainter {
       const Alignment(1, 1),
     ]) {
       final center = Offset(
-        corner.x < 0 ? 36 : size.width - 36,
-        corner.y < 0 ? 36 : size.height - 28,
+        corner.x < 0 ? 30 : size.width - 30,
+        corner.y < 0 ? 24 : size.height - 24,
       );
       final plate = Rect.fromCenter(center: center, width: 34, height: 34);
       canvas.drawRRect(
@@ -446,9 +447,13 @@ enum _HeritageFieldNotesBayAccent { forest, brass }
 enum _HeritageFieldNotesBayShape { placement, calendar, planning, insight }
 
 final class _HeritageFieldNotesCalendarViewport extends StatelessWidget {
-  const _HeritageFieldNotesCalendarViewport({required this.child});
+  const _HeritageFieldNotesCalendarViewport({
+    required this.child,
+    this.showArchiveMonthLegend = false,
+  });
 
   final Widget child;
+  final bool showArchiveMonthLegend;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -456,6 +461,7 @@ final class _HeritageFieldNotesCalendarViewport extends StatelessWidget {
       final calendar = CalendarPeriodViewportPolicy(
         useBoundedMonthGrid: true,
         scaleDayNumberWithText: true,
+        showArchiveMonthLegend: showArchiveMonthLegend,
         child: child,
       );
       if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
@@ -496,9 +502,9 @@ final class _HeritageFieldNotesConsoleBay extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           shape == _HeritageFieldNotesBayShape.placement ? 14 : 12,
-          20,
+          shape == _HeritageFieldNotesBayShape.calendar ? 10 : 20,
           shape == _HeritageFieldNotesBayShape.insight ? 14 : 12,
-          18,
+          shape == _HeritageFieldNotesBayShape.calendar ? 8 : 18,
         ),
         child: child,
       ),
@@ -689,17 +695,27 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                       ],
                     ),
             ),
-            IconButton(
-              tooltip: 'Add schedule',
-              onPressed: onAddSchedule,
-              icon: const Icon(Icons.add_box_outlined),
-            ),
-            if (!compact)
+            if (compact)
               IconButton(
-                tooltip: 'Help',
-                onPressed: () =>
-                    onOpenDestination(ClinicalCalendarDestination.help),
-                icon: const Icon(Icons.help_outline),
+                tooltip: 'Add schedule',
+                onPressed: onAddSchedule,
+                icon: const Icon(Icons.add_box_outlined),
+              )
+            else
+              PopupMenuButton<String>(
+                tooltip: 'Archive actions',
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) {
+                  if (value == 'add') {
+                    onAddSchedule();
+                  } else {
+                    onOpenDestination(ClinicalCalendarDestination.help);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'add', child: Text('Add schedule')),
+                  PopupMenuItem(value: 'help', child: Text('Help')),
+                ],
               ),
             if (!compact && !enlargedText && environmentName.trim().isNotEmpty)
               Container(
@@ -721,7 +737,7 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                   ),
                 ),
               ),
-            profileAvatar,
+            if (compact) profileAvatar,
           ],
         ),
       ),
@@ -811,8 +827,8 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
     const destinations = [
       (Icons.today_outlined, 'TODAY'),
       (Icons.calendar_month_outlined, 'CALENDAR'),
-      (Icons.track_changes_outlined, 'PLACEMENTS'),
-      (Icons.notifications_outlined, 'ATTENTION'),
+      (Icons.business_center_outlined, 'PLACEMENTS'),
+      (Icons.report_gmailerrorred_outlined, 'ATTENTION'),
       (Icons.settings_outlined, 'SETTINGS'),
     ];
     final iconsOnly =
@@ -872,6 +888,7 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
                       child: iconsOnly
                           ? Icon(
                               destinations[index].$1,
+                              size: compact ? 24 : 32,
                               color: index == selectedIndex
                                   ? context.clinicalColors.clinical
                                   : null,
@@ -881,6 +898,7 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
                               children: [
                                 Icon(
                                   destinations[index].$1,
+                                  size: 32,
                                   color: index == selectedIndex
                                       ? context.clinicalColors.clinical
                                       : null,
@@ -888,8 +906,8 @@ final class _HeritageFieldNotesNavigationDeck extends StatelessWidget {
                                 const SizedBox(height: 5),
                                 Text(
                                   destinations[index].$2,
-                                  style: Theme.of(context).textTheme.labelSmall
-                                      ?.copyWith(letterSpacing: .8),
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(letterSpacing: .7),
                                 ),
                               ],
                             ),

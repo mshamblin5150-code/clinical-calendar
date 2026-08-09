@@ -907,26 +907,26 @@ void main() {
     // Approved concept #118 is the independent source of truth for the
     // landscape exemplar geometry. These coordinates describe its inner
     // book-board composition at 1536 by 1024.
-    expect(crown.left / 1536, closeTo(.036, .006));
-    expect(crown.top / 1024, closeTo(.057, .006));
-    expect(crown.width / 1536, closeTo(.935, .008));
-    expect(crown.height / 1024, closeTo(.073, .008));
-    expect(placements.left / 1536, closeTo(.036, .006));
-    expect(placements.top / 1024, closeTo(.139, .006));
-    expect(placements.width / 1536, closeTo(.188, .008));
-    expect(placements.height / 1024, closeTo(.756, .008));
+    expect(crown.left / 1536, closeTo(.045, .006));
+    expect(crown.top / 1024, closeTo(.012, .006));
+    expect(crown.width / 1536, closeTo(.925, .008));
+    expect(crown.height / 1024, closeTo(.075, .008));
+    expect(placements.left / 1536, closeTo(.045, .006));
+    expect(placements.top / 1024, closeTo(.095, .006));
+    expect(placements.width / 1536, closeTo(.178, .008));
+    expect(placements.height / 1024, closeTo(.798, .008));
     expect(calendar.left / 1536, closeTo(.229, .006));
-    expect(calendar.top / 1024, closeTo(.139, .006));
-    expect(calendar.width / 1536, closeTo(.514, .008));
-    expect(calendar.height / 1024, closeTo(.535, .008));
+    expect(calendar.top / 1024, closeTo(.095, .006));
+    expect(calendar.width / 1536, closeTo(.519, .008));
+    expect(calendar.height / 1024, closeTo(.566, .008));
     expect(planning.left / 1536, closeTo(.229, .006));
-    expect(planning.top / 1024, closeTo(.683, .006));
-    expect(planning.width / 1536, closeTo(.514, .008));
-    expect(planning.height / 1024, closeTo(.211, .008));
-    expect(insight.left / 1536, closeTo(.749, .006));
-    expect(insight.top / 1024, closeTo(.139, .006));
-    expect(insight.width / 1536, closeTo(.222, .008));
-    expect(insight.height / 1024, closeTo(.756, .008));
+    expect(planning.top / 1024, closeTo(.663, .006));
+    expect(planning.width / 1536, closeTo(.519, .008));
+    expect(planning.height / 1024, closeTo(.230, .008));
+    expect(insight.left / 1536, closeTo(.753, .006));
+    expect(insight.top / 1024, closeTo(.095, .006));
+    expect(insight.width / 1536, closeTo(.217, .008));
+    expect(insight.height / 1024, closeTo(.798, .008));
     expect(navigation.left / 1536, closeTo(.036, .006));
     expect(navigation.top / 1024, closeTo(.903, .006));
     expect(navigation.width / 1536, closeTo(.935, .008));
@@ -967,8 +967,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Open menu'));
-    await tester.tap(find.byTooltip('Add schedule'));
-    await tester.tap(find.byTooltip('Help'));
+    await tester.tap(find.byTooltip('Archive actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add schedule'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Archive actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Help'));
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const Key('heritage-field-notes-navigation-2')),
     );

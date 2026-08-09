@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
@@ -60,7 +61,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.byTooltip('Open menu'), findsOneWidget);
-    expect(find.byTooltip('Add schedule'), findsOneWidget);
+    expect(find.byTooltip('Add schedule'), findsWidgets);
 
     await expectLater(
       find.byKey(const Key('heritage-field-notes-proof')),
@@ -256,7 +257,7 @@ final class _PlacementsProof extends StatelessWidget {
       const SizedBox(height: 12),
       const _PlacementCard(
         name: 'INTERNAL MEDICINE',
-        accent: HeritageFieldNotesColors.workMachinery,
+        accent: HeritageFieldNotesColors.clinical,
         completed: '0 hr',
         scheduled: '8 hr',
         unscheduled: '82 hr',
@@ -291,42 +292,36 @@ final class _PlacementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     height: 290,
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.fromLTRB(24, 18, 16, 16),
     decoration: BoxDecoration(
       color: HeritageFieldNotesColors.surfaceRaised,
-      border: Border.all(color: accent.withValues(alpha: .8)),
-      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: HeritageFieldNotesColors.insetBorder),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    foregroundDecoration: BoxDecoration(
+      border: Border(left: BorderSide(color: accent, width: 7)),
+      borderRadius: BorderRadius.circular(8),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                border: Border.all(color: accent),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.medical_services_outlined, color: accent),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                name,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  letterSpacing: 1.1,
-                  height: 1.35,
-                ),
-              ),
-            ),
-          ],
+        Text(
+          name,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            letterSpacing: .5,
+            height: 1.25,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          '$completed / 90 hr completed',
+          style: Theme.of(context).textTheme.bodySmall,
         ),
         const Spacer(),
         Center(
           child: SizedBox.square(
-            dimension: 92,
+            dimension: 110,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -350,11 +345,15 @@ final class _PlacementCard extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        _MetricLine('$completed / 90 hr completed', accent),
-        _MetricLine('$scheduled scheduled', HeritageFieldNotesColors.scheduled),
+        _MetricLine(
+          '$scheduled scheduled',
+          HeritageFieldNotesColors.scheduled,
+          icon: Icons.schedule,
+        ),
         _MetricLine(
           '$unscheduled unscheduled',
           HeritageFieldNotesColors.unscheduled,
+          icon: Icons.circle_outlined,
         ),
       ],
     ),
@@ -362,24 +361,18 @@ final class _PlacementCard extends StatelessWidget {
 }
 
 final class _MetricLine extends StatelessWidget {
-  const _MetricLine(this.label, this.color);
+  const _MetricLine(this.label, this.color, {this.icon});
 
   final String label;
   final Color color;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(top: 7),
     child: Row(
       children: [
-        Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: color),
-          ),
-        ),
+        Icon(icon ?? Icons.circle_outlined, color: color, size: 20),
         const SizedBox(width: 9),
         Expanded(
           child: Text(label, style: Theme.of(context).textTheme.bodySmall),
@@ -393,80 +386,131 @@ final class _PlanningProof extends StatelessWidget {
   const _PlanningProof();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
-        children: [
-          const Expanded(child: _SectionTitle('PLANNING')),
-          OutlinedButton.icon(
-            onPressed: _noop,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('ADD SCHEDULE'),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton.icon(
-            onPressed: _noop,
-            icon: const Icon(Icons.warning_amber_outlined, size: 18),
-            label: const Text('PLANNING INCOMPLETE'),
-          ),
-        ],
-      ),
-      const SizedBox(height: 8),
-      Text(
-        'Build the monthly plan in this in-flow region.',
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-      const SizedBox(height: 12),
-      const Row(
-        children: [
-          _PlanningStep('1', 'TYPE & TIME'),
-          SizedBox(width: 18),
-          Expanded(
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _ChoiceChip(
-                  'WORK SHIFT',
-                  HeritageFieldNotesColors.workMachinery,
+  Widget build(BuildContext context) {
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            if (enlargedText) ...[
+              const Expanded(child: _SectionTitle('PLANNING')),
+              IconButton(
+                tooltip: 'Add schedule',
+                onPressed: _noop,
+                icon: const Icon(Icons.add),
+              ),
+              IconButton(
+                tooltip: 'Planning incomplete',
+                onPressed: _noop,
+                icon: const Icon(Icons.warning_amber_outlined),
+              ),
+            ] else ...[
+              const _SectionTitle('PLANNING'),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Text(
+                  'Build the monthly plan in this in-flow region.',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
-                _ChoiceChip(
-                  'CLINICAL SESSION',
-                  HeritageFieldNotesColors.clinical,
-                ),
-                _ChoiceChip(
-                  'PROTECTED DAY',
-                  HeritageFieldNotesColors.protectedDayAccent,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      const Spacer(),
-      Row(
-        children: [
-          Expanded(
-            child: _FieldProof(
-              label: 'SCHEDULE TEMPLATE',
-              value: 'ENTER TIMES MANUALLY',
-            ),
-          ),
-          const SizedBox(width: 10),
+              ),
+              const _PlanningAction(
+                label: 'ADD SCHEDULE',
+                width: 108,
+                tooltip: 'Add schedule',
+              ),
+              const SizedBox(width: 8),
+              const _PlanningAction(
+                label: 'PLANNING INCOMPLETE',
+                width: 150,
+                urgent: true,
+              ),
+              const SizedBox(width: 8),
+              const _PlanningAction(label: 'COLLAPSE', width: 96),
+            ],
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (enlargedText)
           const SizedBox(
-            width: 120,
-            child: _FieldProof(label: 'START', value: '08:00'),
+            height: 92,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _PlanningStep('1', 'TYPE & TIME'),
+                  SizedBox(width: 18),
+                  _ChoiceChip(
+                    'WORK SHIFT',
+                    HeritageFieldNotesColors.workMachinery,
+                  ),
+                  SizedBox(width: 8),
+                  _ChoiceChip(
+                    'CLINICAL SESSION',
+                    HeritageFieldNotesColors.clinical,
+                  ),
+                  SizedBox(width: 8),
+                  _ChoiceChip(
+                    'PROTECTED DAY',
+                    HeritageFieldNotesColors.protectedDayAccent,
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          const Row(
+            children: [
+              _PlanningStep('1', 'TYPE & TIME'),
+              SizedBox(width: 18),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _ChoiceChip(
+                      'WORK SHIFT',
+                      HeritageFieldNotesColors.workMachinery,
+                    ),
+                    _ChoiceChip(
+                      'CLINICAL SESSION',
+                      HeritageFieldNotesColors.clinical,
+                    ),
+                    _ChoiceChip(
+                      'PROTECTED DAY',
+                      HeritageFieldNotesColors.protectedDayAccent,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          const SizedBox(
-            width: 120,
-            child: _FieldProof(label: 'END', value: '16:00'),
-          ),
-        ],
-      ),
-    ],
-  );
+        const Spacer(),
+        Row(
+          children: [
+            Expanded(
+              child: _FieldProof(
+                label: 'SCHEDULE TEMPLATE',
+                value: 'ENTER TIMES MANUALLY',
+              ),
+            ),
+            const SizedBox(width: 10),
+            const SizedBox(
+              width: 120,
+              child: _FieldProof(label: 'START', value: '08:00'),
+            ),
+            const SizedBox(width: 10),
+            const SizedBox(
+              width: 120,
+              child: _FieldProof(label: 'END', value: '16:00'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 final class _PlanningStep extends StatelessWidget {
@@ -476,21 +520,68 @@ final class _PlanningStep extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      CircleAvatar(
-        radius: 12,
-        backgroundColor: Colors.transparent,
-        foregroundColor: HeritageFieldNotesColors.clinical,
-        child: Text(number),
+  Widget build(BuildContext context) => Container(
+    width: MediaQuery.textScalerOf(context).scale(1) > 1.3 ? 250 : 180,
+    padding: const EdgeInsets.only(right: 18),
+    decoration: const BoxDecoration(
+      border: Border(
+        right: BorderSide(color: HeritageFieldNotesColors.insetBorder),
       ),
-      const SizedBox(width: 7),
-      Text(
-        label,
-        style: const TextStyle(color: HeritageFieldNotesColors.clinical),
-      ),
-    ],
+    ),
+    child: Row(
+      children: [
+        CircleAvatar(
+          radius: 17,
+          backgroundColor: HeritageFieldNotesColors.clinical,
+          foregroundColor: Colors.white,
+          child: Text(number),
+        ),
+        const SizedBox(width: 12),
+        Text(label, style: Theme.of(context).textTheme.labelMedium),
+      ],
+    ),
   );
+}
+
+final class _PlanningAction extends StatelessWidget {
+  const _PlanningAction({
+    required this.label,
+    required this.width,
+    this.tooltip,
+    this.urgent = false,
+  });
+
+  final String label;
+  final double width;
+  final String? tooltip;
+  final bool urgent;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = SizedBox(
+      width: width,
+      height: 38,
+      child: OutlinedButton(
+        onPressed: _noop,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          foregroundColor: urgent
+              ? HeritageFieldNotesColors.urgent
+              : HeritageFieldNotesColors.primaryText,
+          side: BorderSide(
+            color: urgent
+                ? HeritageFieldNotesColors.urgent
+                : HeritageFieldNotesColors.insetBorder,
+          ),
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+        ),
+      ),
+    );
+    return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
+  }
 }
 
 final class _ChoiceChip extends StatelessWidget {
@@ -500,15 +591,29 @@ final class _ChoiceChip extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: .12),
-      border: Border.all(color: color),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Text(label, style: Theme.of(context).textTheme.labelSmall),
-  );
+  Widget build(BuildContext context) {
+    final icon = switch (label) {
+      'WORK SHIFT' => Icons.work_outline,
+      'CLINICAL SESSION' => Icons.medical_services,
+      _ => Icons.shield_outlined,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 8),
+          Text(label, style: Theme.of(context).textTheme.labelMedium),
+        ],
+      ),
+    );
+  }
 }
 
 final class _FieldProof extends StatelessWidget {
@@ -551,12 +656,7 @@ final class _InsightProof extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              const CircularProgressIndicator(
-                value: 0,
-                strokeWidth: 15,
-                color: HeritageFieldNotesColors.clinical,
-                backgroundColor: HeritageFieldNotesColors.control,
-              ),
+              const CustomPaint(painter: _ArchiveProgressDialPainter()),
               Center(
                 child: Text(
                   '0 hr\ncompleted',
@@ -572,18 +672,27 @@ final class _InsightProof extends StatelessWidget {
       const _MetricLine(
         'Target                 90 hr',
         HeritageFieldNotesColors.primaryText,
+        icon: Icons.gps_fixed,
       ),
       const _MetricLine(
         'Completed            0 hr',
         HeritageFieldNotesColors.completed,
+        icon: Icons.check_circle_outline,
       ),
       const _MetricLine(
         'Scheduled             8 hr',
         HeritageFieldNotesColors.scheduled,
+        icon: Icons.schedule,
       ),
       const _MetricLine(
         'Unscheduled       82 hr',
         HeritageFieldNotesColors.unscheduled,
+        icon: Icons.circle_outlined,
+      ),
+      const _MetricLine(
+        'Over-Target          0 hr',
+        HeritageFieldNotesColors.primaryText,
+        icon: Icons.keyboard_double_arrow_up,
       ),
       const SizedBox(height: 10),
       const Divider(),
@@ -617,33 +726,70 @@ final class _InsightProof extends StatelessWidget {
       const SizedBox(height: 6),
       const Divider(),
       const SizedBox(height: 10),
-      const _SectionTitle('NEEDS ATTENTION'),
+      Row(
+        children: [
+          Container(
+            width: 6,
+            height: 28,
+            color: HeritageFieldNotesColors.insetBorder,
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'NEEDS ATTENTION',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: .8,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            '5',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: HeritageFieldNotesColors.urgent,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
       const SizedBox(height: 8),
       const _AttentionCard(
         icon: Icons.assignment_late_outlined,
-        title: 'CLINICAL SESSION\nNEEDS CONFIRMATION',
+        title: 'CLINICAL SESSION NEEDS CONFIRMATION',
+        subtitle: 'Confirm the actual times and supervisor',
       ),
       const _AttentionCard(
         icon: Icons.fact_check_outlined,
-        title: 'INITIAL SELF-ASSESSMENT\nACCEPTANCE FAMILY MEDICINE',
+        title: 'INITIAL SELF-ASSESSMENT',
+        subtitle: 'Acceptance Family Medicine',
+        trailing: 'Due',
       ),
       const _AttentionCard(
         icon: Icons.fact_check_outlined,
-        title: 'INITIAL SELF-ASSESSMENT\nINTERNAL MEDICINE',
+        title: 'INITIAL SELF-ASSESSMENT',
+        subtitle: 'Internal Medicine',
+        trailing: 'Due',
       ),
       const _AttentionCard(
         icon: Icons.warning_amber_outlined,
         title: 'PLANNING INCOMPLETE',
+        subtitle: 'Choose one empty Protected Day',
       ),
     ],
   );
 }
 
 final class _AttentionCard extends StatelessWidget {
-  const _AttentionCard({required this.icon, required this.title});
+  const _AttentionCard({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+  });
 
   final IconData icon;
   final String title;
+  final String? subtitle;
+  final String? trailing;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -662,12 +808,41 @@ final class _AttentionCard extends StatelessWidget {
     ),
     child: Row(
       children: [
-        Icon(icon, color: HeritageFieldNotesColors.clinical, size: 22),
+        Icon(icon, color: HeritageFieldNotesColors.urgent, size: 24),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(title, style: Theme.of(context).textTheme.labelSmall),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: HeritageFieldNotesColors.urgent,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (subtitle != null)
+                Text(
+                  subtitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+            ],
+          ),
         ),
-        const Icon(Icons.chevron_right, size: 18),
+        if (trailing != null)
+          Text(
+            trailing!,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: HeritageFieldNotesColors.urgent,
+              fontWeight: FontWeight.w700,
+            ),
+          )
+        else
+          const Icon(Icons.chevron_right, size: 18),
       ],
     ),
   );
@@ -719,11 +894,42 @@ final class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) => Text(
     label,
     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-      color: HeritageFieldNotesColors.clinical,
+      color: HeritageFieldNotesColors.primaryText,
       letterSpacing: 1.7,
       fontWeight: FontWeight.w700,
     ),
   );
+}
+
+final class _ArchiveProgressDialPainter extends CustomPainter {
+  const _ArchiveProgressDialPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2 - 5;
+    final paint = Paint()
+      ..color = HeritageFieldNotesColors.primaryText
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    const marks = 56;
+    for (var index = 0; index < marks; index++) {
+      final angle = index * math.pi * 2 / marks;
+      final outside = Offset(
+        center.dx + math.cos(angle) * radius,
+        center.dy + math.sin(angle) * radius,
+      );
+      final inside = Offset(
+        center.dx + math.cos(angle) * (radius - 2),
+        center.dy + math.sin(angle) * (radius - 2),
+      );
+      canvas.drawLine(inside, outside, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArchiveProgressDialPainter oldDelegate) =>
+      false;
 }
 
 final class _ProofCalendarDataSource implements CalendarDataSource {
@@ -753,7 +959,7 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
         title: 'Work Shift',
         statusLabel: 'Scheduled',
       ),
-    for (final day in [3, 6, 10, 13, 20, 24, 27])
+    for (final day in [3, 10, 13, 20, 24, 27])
       CalendarEntry(
         id: 'clinical-$day',
         kind: CalendarEntryKind.clinicalSession,

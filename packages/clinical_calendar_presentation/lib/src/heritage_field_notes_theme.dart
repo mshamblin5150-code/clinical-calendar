@@ -147,11 +147,21 @@ ThemeData buildHeritageFieldNotesTheme({bool enhancedAccessibility = false}) {
     borderRadius: BorderRadius.circular(10),
     side: const BorderSide(color: HeritageFieldNotesColors.insetBorder),
   );
+  final fieldArchiveTextTheme = base.textTheme
+      .copyWith(
+        bodySmall: base.textTheme.bodySmall?.copyWith(fontSize: 13),
+        labelSmall: base.textTheme.labelSmall?.copyWith(fontSize: 12),
+        labelMedium: base.textTheme.labelMedium?.copyWith(fontSize: 14),
+        titleSmall: base.textTheme.titleSmall?.copyWith(fontSize: 17),
+        titleMedium: base.textTheme.titleMedium?.copyWith(fontSize: 19),
+        titleLarge: base.textTheme.titleLarge?.copyWith(fontSize: 24),
+      )
+      .apply(
+        bodyColor: HeritageFieldNotesColors.primaryText,
+        displayColor: HeritageFieldNotesColors.primaryText,
+      );
   final standard = base.copyWith(
-    textTheme: base.textTheme.apply(
-      bodyColor: HeritageFieldNotesColors.primaryText,
-      displayColor: HeritageFieldNotesColors.primaryText,
-    ),
+    textTheme: fieldArchiveTextTheme,
     cardTheme: CardThemeData(
       color: HeritageFieldNotesColors.surfaceRaised,
       surfaceTintColor: Colors.transparent,

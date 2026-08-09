@@ -16,12 +16,14 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
   const CalendarPeriodViewportPolicy({
     required this.useBoundedMonthGrid,
     this.scaleDayNumberWithText = false,
+    this.showArchiveMonthLegend = false,
     required super.child,
     super.key,
   });
 
   final bool useBoundedMonthGrid;
   final bool scaleDayNumberWithText;
+  final bool showArchiveMonthLegend;
 
   static bool usesBoundedMonthGrid(BuildContext context) =>
       context
@@ -35,10 +37,17 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
           ?.scaleDayNumberWithText ??
       false;
 
+  static bool showsArchiveMonthLegend(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.showArchiveMonthLegend ??
+      false;
+
   @override
   bool updateShouldNotify(CalendarPeriodViewportPolicy oldWidget) =>
       useBoundedMonthGrid != oldWidget.useBoundedMonthGrid ||
-      scaleDayNumberWithText != oldWidget.scaleDayNumberWithText;
+      scaleDayNumberWithText != oldWidget.scaleDayNumberWithText ||
+      showArchiveMonthLegend != oldWidget.showArchiveMonthLegend;
 }
 
 final class CalendarPeriodView extends StatefulWidget {
@@ -178,6 +187,9 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
         builder: (context, outerConstraints) {
           final useBoundedMonthGrid =
               CalendarPeriodViewportPolicy.usesBoundedMonthGrid(context);
+          final showArchiveMonthLegend =
+              CalendarPeriodViewportPolicy.showsArchiveMonthLegend(context) &&
+              _period == CalendarPeriod.month;
           final periodView = LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 600;
@@ -242,6 +254,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                           onPrevious: () => _navigate(-1),
                           onNext: () => _navigate(1),
                           onPeriod: _changePeriod,
+                          archiveTreatment: showArchiveMonthLegend,
                         ),
                         const _EnhancedCalendarLegend(),
                         SizedBox(
@@ -267,6 +280,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                         onPrevious: () => _navigate(-1),
                         onNext: () => _navigate(1),
                         onPeriod: _changePeriod,
+                        archiveTreatment: showArchiveMonthLegend,
                       ),
                       if (context.accessibilityTokens.persistentExpandedLegend)
                         const _EnhancedCalendarLegend(),
@@ -277,6 +291,8 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                         Expanded(child: periodView)
                       else
                         periodView,
+                      if (showArchiveMonthLegend)
+                        const _ArchiveCalendarLegend(),
                     ],
                   ),
           );
@@ -300,6 +316,7 @@ final class _CalendarToolbar extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.onPeriod,
+    this.archiveTreatment = false,
   });
 
   final CalendarPeriod period;
@@ -307,6 +324,7 @@ final class _CalendarToolbar extends StatelessWidget {
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final ValueChanged<CalendarPeriod> onPeriod;
+  final bool archiveTreatment;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -334,10 +352,39 @@ final class _CalendarToolbar extends StatelessWidget {
         final switcher = SegmentedButton<CalendarPeriod>(
           key: const Key('calendar-period-switcher'),
           showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: CalendarPeriod.month, label: Text('Month')),
-            ButtonSegment(value: CalendarPeriod.week, label: Text('Week')),
-            ButtonSegment(value: CalendarPeriod.agenda, label: Text('Agenda')),
+          style: archiveTreatment
+              ? ButtonStyle(
+                  backgroundColor: WidgetStateProperty.resolveWith(
+                    (states) => states.contains(WidgetState.selected)
+                        ? context.clinicalColors.clinical
+                        : context.clinicalColors.structureRaised,
+                  ),
+                  foregroundColor: WidgetStateProperty.resolveWith(
+                    (states) => states.contains(WidgetState.selected)
+                        ? context.clinicalColors.structureRaised
+                        : context.clinicalColors.primaryText,
+                  ),
+                  textStyle: WidgetStatePropertyAll(
+                    Theme.of(context).textTheme.labelMedium?.copyWith(
+                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                )
+              : null,
+          segments: [
+            ButtonSegment(
+              value: CalendarPeriod.month,
+              label: Text(archiveTreatment ? 'MONTH' : 'Month'),
+            ),
+            ButtonSegment(
+              value: CalendarPeriod.week,
+              label: Text(archiveTreatment ? 'WEEK' : 'Week'),
+            ),
+            ButtonSegment(
+              value: CalendarPeriod.agenda,
+              label: Text(archiveTreatment ? 'AGENDA' : 'Agenda'),
+            ),
           ],
           selected: {period},
           onSelectionChanged: (selection) => onPeriod(selection.single),
@@ -376,6 +423,29 @@ final class _CalendarToolbar extends StatelessWidget {
             ],
           );
         }
+        if (archiveTreatment) {
+          return SizedBox(
+            height: 48,
+            child: Row(
+              children: [
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title.toUpperCase(),
+                    key: const Key('calendar-period-title'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 336, height: 38, child: switcher),
+              ],
+            ),
+          );
+        }
         return Row(
           children: [
             navigation,
@@ -392,6 +462,62 @@ final class _CalendarToolbar extends StatelessWidget {
       },
     ),
   );
+}
+
+final class _ArchiveCalendarLegend extends StatelessWidget {
+  const _ArchiveCalendarLegend();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('field-archive-calendar-legend'),
+    height: 42,
+    margin: const EdgeInsets.fromLTRB(0, 6, 0, 0),
+    padding: const EdgeInsets.symmetric(horizontal: 14),
+    decoration: BoxDecoration(
+      color: context.clinicalColors.structureRaised,
+      border: Border.all(color: context.clinicalColors.insetBorder),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Row(
+      children: const [
+        _ArchiveLegendItem(Icons.medical_services, 'CLINICAL'),
+        SizedBox(width: 38),
+        _ArchiveLegendItem(Icons.work, 'WORK'),
+        SizedBox(width: 38),
+        _ArchiveLegendItem(Icons.shield, 'PROTECTED'),
+      ],
+    ),
+  );
+}
+
+final class _ArchiveLegendItem extends StatelessWidget {
+  const _ArchiveLegendItem(this.icon, this.label);
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (label) {
+      'CLINICAL' => context.clinicalColors.clinical,
+      'WORK' => context.clinicalColors.workMachinery,
+      _ => context.clinicalColors.protectedDayAccent,
+    };
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 22, color: color),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 final class _MonthView extends StatelessWidget {
@@ -420,7 +546,12 @@ final class _MonthView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dates = _monthDates(anchor, weekStartsOn);
-    final weekdayLabels = _weekdayLabels(weekStartsOn, compact: compact);
+    final archiveTreatment =
+        CalendarPeriodViewportPolicy.showsArchiveMonthLegend(context);
+    final weekdayLabels = _weekdayLabels(
+      weekStartsOn,
+      compact: compact && !archiveTreatment,
+    ).map((label) => archiveTreatment ? label.substring(0, 3) : label).toList();
     if (!useBoundedGrid) {
       return _buildMonthGrid(context, dates, weekdayLabels, null);
     }
@@ -642,7 +773,7 @@ final class _DenseMonthMarker extends StatelessWidget {
     if (entryVisuals?.denseMonthChip ?? false) {
       final accent = _entryAccent(context, entry);
       return Container(
-        height: 22,
+        height: 30,
         padding: const EdgeInsets.symmetric(horizontal: 5),
         decoration: BoxDecoration(
           color: accent,
@@ -652,7 +783,7 @@ final class _DenseMonthMarker extends StatelessWidget {
           children: [
             ThemeSemanticMarkIcon(
               role: _entryRole(entry.kind),
-              size: 11,
+              size: 15,
               color: Colors.white,
             ),
             const SizedBox(width: 4),
@@ -662,7 +793,7 @@ final class _DenseMonthMarker extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.clip,
                 style: const TextStyle(
-                  fontSize: 9,
+                  fontSize: 11,
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
                   letterSpacing: .35,
@@ -672,7 +803,7 @@ final class _DenseMonthMarker extends StatelessWidget {
             if (additionalCount > 0)
               Text(
                 '+$additionalCount',
-                style: const TextStyle(fontSize: 9, color: Colors.white),
+                style: const TextStyle(fontSize: 11, color: Colors.white),
               ),
           ],
         ),
@@ -766,6 +897,12 @@ final class _DayNumber extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: today ? _todayForeground(context) : null,
                   fontWeight: today ? FontWeight.w700 : null,
+                  fontSize:
+                      CalendarPeriodViewportPolicy.showsArchiveMonthLegend(
+                        context,
+                      )
+                      ? 16
+                      : null,
                 ),
               ),
             ),
