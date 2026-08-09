@@ -1541,7 +1541,11 @@ final class Federation2399ThemeBundle implements ClinicalCalendarThemeBundle {
     themeId: federation2399ThemeId,
     assetPackage: 'clinical_calendar_presentation',
     primaryAsset: federation2399FrameAsset,
-    assetPaths: [federation2399FrameAsset, federation2399LandscapeChassisAsset],
+    assetPaths: [
+      federation2399FrameAsset,
+      federation2399LandscapeChassisAsset,
+      federation2399DeltaAsset,
+    ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
     safeInsets: {

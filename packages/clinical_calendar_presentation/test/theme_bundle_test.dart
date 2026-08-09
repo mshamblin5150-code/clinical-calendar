@@ -160,6 +160,7 @@ void main() {
       containsAll([
         federation2399FrameAsset,
         federation2399LandscapeChassisAsset,
+        federation2399DeltaAsset,
       ]),
     );
     expect(federation2399.gallery.swatches, hasLength(5));

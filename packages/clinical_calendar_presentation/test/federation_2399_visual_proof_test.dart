@@ -6,6 +6,7 @@ import 'package:clinical_calendar_presentation/clinical_calendar_presentation.da
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 
 import 'support/proof_fonts.dart';
 
@@ -20,12 +21,42 @@ void main() {
   ) async {
     await _pumpProof(tester, const Size(1536, 1024));
 
+    final planningBay = tester.getRect(
+      find.byKey(const Key('federation-2399-planning-bay')),
+    );
+    final endField = tester.getRect(
+      find.byKey(const Key('federation-2399-planning-field-END')),
+    );
+    expect(
+      planningBay.right - endField.right,
+      greaterThanOrEqualTo(48),
+      reason: 'The END field must clear the Federation planning chrome.',
+    );
+    expect(find.bySemanticsLabel('Axion delta'), findsOneWidget);
+
     await expectLater(
       find.byKey(const Key('federation-2399-proof')),
       matchesGoldenFile(
         'goldens/federation_2399/federation_2399_landscape_1536x1024.png',
       ),
     );
+  });
+
+  test('Federation crown delta has a transparent exterior', () {
+    final deltaFile = _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/$federation2399DeltaAsset',
+    );
+    final delta = img.decodePng(deltaFile.readAsBytesSync());
+    expect(delta, isNotNull);
+    var visiblePixels = 0;
+    for (final pixel in delta!) {
+      if (pixel.a > 0) visiblePixels++;
+    }
+    expect(delta.getPixel(0, 0).a, 0);
+    expect(delta.getPixel(delta.width - 1, 0).a, 0);
+    expect(delta.getPixel(0, delta.height - 1).a, 0);
+    expect(delta.getPixel(delta.width - 1, delta.height - 1).a, 0);
+    expect(visiblePixels / (delta.width * delta.height), lessThan(.45));
   });
 
   testWidgets('Federation 2399 proof uses the live progress-wheel actions', (
@@ -203,6 +234,9 @@ Future<void> _pumpProof(
       'packages/clinical_calendar_presentation/'
       '$federation2399LandscapeChassisAsset',
     ),
+    deltaFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/$federation2399DeltaAsset',
+    ),
   );
   final preloadKey = GlobalKey();
   await tester.pumpWidget(
@@ -215,6 +249,13 @@ Future<void> _pumpProof(
     await precacheImage(
       const AssetImage(
         federation2399FrameAsset,
+        package: 'clinical_calendar_presentation',
+      ),
+      preloadKey.currentContext!,
+    );
+    await precacheImage(
+      const AssetImage(
+        federation2399DeltaAsset,
         package: 'clinical_calendar_presentation',
       ),
       preloadKey.currentContext!,
@@ -312,10 +353,15 @@ File _findWorkspaceFile(String relativePath) {
 }
 
 final class _ProofAssetBundle extends CachingAssetBundle {
-  _ProofAssetBundle({required this.frameFile, required this.chassisFile});
+  _ProofAssetBundle({
+    required this.frameFile,
+    required this.chassisFile,
+    required this.deltaFile,
+  });
 
   final File frameFile;
   final File chassisFile;
+  final File deltaFile;
 
   @override
   Future<ByteData> load(String key) async {
@@ -330,6 +376,12 @@ final class _ProofAssetBundle extends CachingAssetBundle {
             '$federation2399LandscapeChassisAsset') {
       return ByteData.sublistView(
         Uint8List.fromList(await chassisFile.readAsBytes()),
+      );
+    }
+    if (key ==
+        'packages/clinical_calendar_presentation/$federation2399DeltaAsset') {
+      return ByteData.sublistView(
+        Uint8List.fromList(await deltaFile.readAsBytes()),
       );
     }
     return rootBundle.load(key);
@@ -508,25 +560,31 @@ final class _PlanningProof extends StatelessWidget {
         ],
       ),
       const Spacer(),
-      Row(
-        children: [
-          Expanded(
-            child: _FieldProof(
-              label: 'SCHEDULE TEMPLATE',
-              value: 'ENTER TIMES MANUALLY',
-            ),
+      const Align(
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: .94,
+          child: Row(
+            children: [
+              Expanded(
+                child: _FieldProof(
+                  label: 'SCHEDULE TEMPLATE',
+                  value: 'ENTER TIMES MANUALLY',
+                ),
+              ),
+              SizedBox(width: 10),
+              SizedBox(
+                width: 112,
+                child: _FieldProof(label: 'START', value: '08:00'),
+              ),
+              SizedBox(width: 10),
+              SizedBox(
+                width: 112,
+                child: _FieldProof(label: 'END', value: '16:00'),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          const SizedBox(
-            width: 120,
-            child: _FieldProof(label: 'START', value: '08:00'),
-          ),
-          const SizedBox(width: 10),
-          const SizedBox(
-            width: 120,
-            child: _FieldProof(label: 'END', value: '16:00'),
-          ),
-        ],
+        ),
       ),
     ],
   );
@@ -579,6 +637,7 @@ final class _FieldProof extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
+    key: Key('federation-2399-planning-field-$label'),
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
       color: Federation2399Colors.control,

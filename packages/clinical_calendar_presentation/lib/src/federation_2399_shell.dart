@@ -7,6 +7,9 @@ import 'placements/placement_progress_widgets.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
+const federation2399DeltaAsset =
+    'assets/federation_2399_raster/axion-delta-mark-v1.png';
+
 const federation2399CompactDestinationInsets = EdgeInsets.fromLTRB(
   18,
   20,
@@ -566,7 +569,16 @@ final class _Federation2399CommandCrown extends StatelessWidget {
             ),
             if (!enlargedText) ...[
               const SizedBox(width: 8),
-              const Icon(Icons.calendar_month_outlined),
+              SizedBox.square(
+                dimension: compact ? 34 : 42,
+                child: Image.asset(
+                  federation2399DeltaAsset,
+                  package: 'clinical_calendar_presentation',
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  semanticLabel: 'Axion delta',
+                ),
+              ),
               const SizedBox(width: 10),
             ],
             Expanded(

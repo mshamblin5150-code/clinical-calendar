@@ -14,6 +14,13 @@ actions, restoring the approved 0/8/82-hour state and coral/amber wheel, and
 measuring the wheel, action rail, and Calendar header against the approved
 issue #114 concept.
 
+The 2026-08-09 maintainer amendment adds the supplied Axion delta to the
+command crown without the `AXION` wordmark. The Federation bundle owns its
+transparent copy as `axion-delta-mark-v1.png`; the runtime displays the
+metallic raster directly without a flattening tint. The Planning proof also
+shortens the schedule-template row and enforces at least 48 pixels between the
+END field and the planning-bay boundary so `16:00` cannot overlap the chrome.
+
 ## Evidence
 
 - `approved-concept-landscape.png`: untouched approved issue #114 concept.
@@ -54,11 +61,11 @@ comparison with runtime. Integer bounds use a 3 px rendering tolerance:
 
 ```text
 a96da3c7cd060348aded17ec783c093128ef1e6ed3b31f53d1a3ec7793913cc8  approved-concept-landscape.png
-495f91a78ff365377a269d6337be4e0bf14c8b22040c2f0d95b936cda3305d23  landscape-concept-vs-runtime.png
-937dc02adccf49b3f776108d257468d497053b4e54e5fb8987fc03903a8dc410  runtime-landscape-1536x1024.png
-9c8b312e8a2554db822d85dba2fe04e938c6231af539fb679af3cae5b6326277  runtime-portrait-200-percent-900x1440.png
-1c33f32e6854e1a908d5d15797b076b1c02969eeae8029fbbebfb9825c498757  runtime-portrait-200-percent-scrolled-900x1440.png
-3c5ac2b95c8f6a161fc18b0ffbcc6ea46e00e0102c37c6379a5cf9708ac4e26d  runtime-portrait-900x1440.png
+138f08a371680cf2e8de22e91451e62152eb8f06be98eacb3410ca6768358eb1  landscape-concept-vs-runtime.png
+3d8c2c8408d13066457750b7060e9f96f62dc876202120a54fc4e1f2561356e4  runtime-landscape-1536x1024.png
+60240ecef08de85a752f0f3918470c2aac68ab85d28b1586da2af0a40828bd9d  runtime-portrait-200-percent-900x1440.png
+804a4af74ae713d795dc1ff869ab2893712b86949e5b291ecd53fe577bbcfb93  runtime-portrait-200-percent-scrolled-900x1440.png
+723ed49228f7e388fbc0a14f5c60f306128e9587288b9e55a7cf9b0db8d86d51  runtime-portrait-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance
