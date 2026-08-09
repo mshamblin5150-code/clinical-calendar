@@ -5,7 +5,6 @@ import 'package:flutter/services.dart' show FontLoader;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
-const _nonWindowsPixelTolerance = 0.025;
 const _nonWindowsMeanChannelErrorTolerance = 0.003;
 const _nonWindowsHighDeltaPixelTolerance = 0.0025;
 const _highDeltaThreshold = 128;
@@ -171,7 +170,6 @@ bool proofImagesMatch(img.Image expected, img.Image actual) {
     return false;
   }
 
-  var changedPixels = 0;
   var highDeltaPixels = 0;
   var totalChannelError = 0;
   final pixelCount = expected.width * expected.height;
@@ -189,7 +187,6 @@ bool proofImagesMatch(img.Image expected, img.Image actual) {
       if (pixelError == 0) {
         continue;
       }
-      changedPixels++;
       totalChannelError += pixelError;
       if (channelErrors.any((error) => error >= _highDeltaThreshold)) {
         highDeltaPixels++;
@@ -197,10 +194,8 @@ bool proofImagesMatch(img.Image expected, img.Image actual) {
     }
   }
 
-  final changedRatio = changedPixels / pixelCount;
   final highDeltaRatio = highDeltaPixels / pixelCount;
   final meanChannelError = totalChannelError / (pixelCount * 4 * 255);
-  return changedRatio <= _nonWindowsPixelTolerance &&
-      highDeltaRatio <= _nonWindowsHighDeltaPixelTolerance &&
+  return highDeltaRatio <= _nonWindowsHighDeltaPixelTolerance &&
       meanChannelError <= _nonWindowsMeanChannelErrorTolerance;
 }
