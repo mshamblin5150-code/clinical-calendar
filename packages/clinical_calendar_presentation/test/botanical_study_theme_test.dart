@@ -19,19 +19,59 @@ void main() {
       botanical.frame.sourceCuts,
       const EdgeInsets.fromLTRB(120, 145, 120, 170),
     );
-    expect(botanical.frame.assetPaths, [botanicalStudyFrameAsset]);
+    expect(botanical.frame.assetPaths, [
+      botanicalStudyFrameAsset,
+      botanicalStudyLandscapeChassisAsset,
+    ]);
     expect(botanical.gallery.swatches, hasLength(5));
     expect(botanical.marks.marks, hasLength(9));
     expect(botanical.helpGuide.calendarStates, hasLength(5));
     final standardTokens = botanical.standardPresentation
         .createThemeData()
         .extension<ClinicalCalendarAccessibilityTokens>()!;
+    final calendarVisuals = botanical.standardPresentation
+        .createThemeData()
+        .extension<ClinicalCalendarPresentationPolicy>()!;
     final enhancedTokens = botanical.standardPresentation
         .createThemeData(enhancedAccessibility: true)
         .extension<ClinicalCalendarAccessibilityTokens>()!;
+    final enhancedCalendarVisuals = botanical.standardPresentation
+        .createThemeData(enhancedAccessibility: true)
+        .extension<ClinicalCalendarPresentationPolicy>()!;
     expect(standardTokens.selectionWidth, 2);
     expect(enhancedTokens.focusOuterColor, const Color(0xFF4D1F55));
     expect(enhancedTokens.selectionWidth, 3);
+    expect(enhancedCalendarVisuals.selectedDayBorder, const Color(0xFF4D1F55));
+    expect(calendarVisuals.denseMarkerStyle, CalendarDenseMarkerStyle.chip);
+    expect(calendarVisuals.toolbarStyle, CalendarToolbarStyle.conceptTitle);
+    expect(calendarVisuals.neutralMonthDayBackgrounds, isTrue);
+    expect(calendarVisuals.showMonthLegend, isTrue);
+    expect(calendarVisuals.colorWeekdayHeader, isTrue);
+    expect(calendarVisuals.monthColumnFlex?.values, [
+      113,
+      110,
+      110,
+      110,
+      110,
+      110,
+      79,
+    ]);
+    expect(
+      calendarVisuals.monthColumnFlex?.forDisplayColumn(
+        displayColumn: 0,
+        weekStartsOn: DateTime.monday,
+      ),
+      110,
+    );
+    expect(
+      calendarVisuals.monthColumnFlex?.forDisplayColumn(
+        displayColumn: 6,
+        weekStartsOn: DateTime.monday,
+      ),
+      113,
+    );
+    expect(calendarVisuals.selectedDaySurface, const Color(0xFFE9D8E3));
+    expect(calendarVisuals.selectedDayBorder, BotanicalStudyColors.focus);
     expect(
       ClinicalCalendarThemeBundleRegistry.standard.resolveRoot(
         botanicalStudyThemeId,
@@ -84,7 +124,7 @@ void main() {
   testWidgets('Botanical Study owns landscape composition and callbacks', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1600, 1000));
+    await tester.binding.setSurfaceSize(const Size(1586, 992));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     var menuCount = 0;
     var addCount = 0;
@@ -110,7 +150,7 @@ void main() {
       find.byKey(const Key('botanical-study-landscape-shell')),
       findsOneWidget,
     );
-    expect(find.byType(BotanicalStudyNineSliceFrame), findsWidgets);
+    expect(find.byType(BotanicalStudyLandscapeChassis), findsOneWidget);
     expect(find.byType(VariantFNineSliceFrame), findsNothing);
     final placements = tester.getRect(
       find.byKey(const Key('botanical-study-placement-bay')),
@@ -124,9 +164,18 @@ void main() {
     final insight = tester.getRect(
       find.byKey(const Key('botanical-study-insight-bay')),
     );
-    expect(placements.right, lessThan(calendar.left));
-    expect(calendar.right, lessThan(insight.left));
-    expect(planning.top, greaterThan(calendar.top));
+    final crown = tester.getRect(
+      find.byKey(const Key('botanical-study-command-crown')),
+    );
+    final navigation = tester.getRect(
+      find.byKey(const Key('botanical-study-bottom-navigation')),
+    );
+    _expectRectClose(crown, const Rect.fromLTWH(61, 0, 1494, 65));
+    _expectRectClose(placements, const Rect.fromLTWH(61, 66, 307, 834));
+    _expectRectClose(calendar, const Rect.fromLTWH(378, 66, 767, 561));
+    _expectRectClose(planning, const Rect.fromLTWH(378, 638, 767, 262));
+    _expectRectClose(insight, const Rect.fromLTWH(1154, 66, 401, 834));
+    _expectRectClose(navigation, const Rect.fromLTWH(0, 912, 1586, 80));
 
     await tester.tap(find.byTooltip('Open menu'));
     await tester.tap(find.byTooltip('Add schedule'));
@@ -199,3 +248,11 @@ const _slots = ResponsiveShellSlots(
 void _noop() {}
 
 void _ignoreDestination(ClinicalCalendarDestination _) {}
+
+void _expectRectClose(Rect actual, Rect expected) {
+  const tolerance = 12.0;
+  expect(actual.left, closeTo(expected.left, tolerance));
+  expect(actual.top, closeTo(expected.top, tolerance));
+  expect(actual.width, closeTo(expected.width, tolerance));
+  expect(actual.height, closeTo(expected.height, tolerance));
+}

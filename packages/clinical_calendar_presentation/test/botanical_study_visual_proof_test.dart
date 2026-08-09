@@ -1,28 +1,53 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 
 import 'support/proof_fonts.dart';
 
 const _studentId = '00000000-0000-4000-8000-000000000239';
-final _today = LocalDate(2026, 8, 5);
+final _today = LocalDate(2026, 8, 6);
 
 void main() {
   setUpAll(prepareProofEnvironment);
 
+  test('committed landscape proof retains approved concept structure', () {
+    final concept = img.decodePng(
+      _findWorkspaceFile(
+        'docs/concepts/themes/botanical-study/'
+        'calendar-dashboard-concept-v1.png',
+      ).readAsBytesSync(),
+    )!;
+    final runtime = img.decodePng(
+      _findWorkspaceFile(
+        'packages/clinical_calendar_presentation/test/goldens/'
+        'botanical_study/botanical_study_landscape_1586x992.png',
+      ).readAsBytesSync(),
+    )!;
+
+    expect(concept.width, 1586);
+    expect(concept.height, 992);
+    expect(runtime.width, concept.width);
+    expect(runtime.height, concept.height);
+    expect(
+      _downsampledColorSimilarity(concept, runtime),
+      greaterThanOrEqualTo(.94),
+    );
+  });
+
   testWidgets('Botanical Study landscape matches its approved composition', (
     tester,
   ) async {
-    await _pumpProof(tester, const Size(1600, 1000));
+    await _pumpProof(tester, const Size(1586, 992));
 
     await expectLater(
       find.byKey(const Key('botanical-study-proof')),
       matchesGoldenFile(
-        'goldens/botanical_study/botanical_study_landscape_1600x1000.png',
+        'goldens/botanical_study/botanical_study_landscape_1586x992.png',
       ),
     );
   });
@@ -79,7 +104,7 @@ void main() {
     await _pumpProof(
       tester,
       themeGalleryViewport,
-      renderSize: const Size(1600, 1000),
+      renderSize: const Size(1586, 992),
     );
 
     await expectLater(
@@ -101,6 +126,10 @@ Future<void> _pumpProof(
     frameFile: _findWorkspaceFile(
       'packages/clinical_calendar_presentation/$botanicalStudyFrameAsset',
     ),
+    chassisFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/'
+      '$botanicalStudyLandscapeChassisAsset',
+    ),
   );
   final preloadKey = GlobalKey();
   await tester.pumpWidget(
@@ -113,6 +142,13 @@ Future<void> _pumpProof(
     await precacheImage(
       const AssetImage(
         botanicalStudyFrameAsset,
+        package: 'clinical_calendar_presentation',
+      ),
+      preloadKey.currentContext!,
+    );
+    await precacheImage(
+      const AssetImage(
+        botanicalStudyLandscapeChassisAsset,
         package: 'clinical_calendar_presentation',
       ),
       preloadKey.currentContext!,
@@ -206,9 +242,10 @@ File _findWorkspaceFile(String relativePath) {
 }
 
 final class _ProofAssetBundle extends CachingAssetBundle {
-  _ProofAssetBundle({required this.frameFile});
+  _ProofAssetBundle({required this.frameFile, required this.chassisFile});
 
   final File frameFile;
+  final File chassisFile;
 
   @override
   Future<ByteData> load(String key) async {
@@ -216,6 +253,13 @@ final class _ProofAssetBundle extends CachingAssetBundle {
         'packages/clinical_calendar_presentation/$botanicalStudyFrameAsset') {
       return ByteData.sublistView(
         Uint8List.fromList(await frameFile.readAsBytes()),
+      );
+    }
+    if (key ==
+        'packages/clinical_calendar_presentation/'
+            '$botanicalStudyLandscapeChassisAsset') {
+      return ByteData.sublistView(
+        Uint8List.fromList(await chassisFile.readAsBytes()),
       );
     }
     return rootBundle.load(key);
@@ -231,27 +275,28 @@ final class _PlacementsProof extends StatelessWidget {
     children: [
       const _SectionTitle('MY PLACEMENTS'),
       const SizedBox(height: 12),
-      const _PlacementCard(
-        name: 'ACCEPTANCE\nFAMILY MEDICINE',
-        accent: BotanicalStudyColors.clinical,
-        completed: '0 hr',
-        scheduled: '8 hr',
-      ),
-      const SizedBox(height: 12),
-      const _PlacementCard(
-        name: 'INTERNAL MEDICINE',
-        accent: BotanicalStudyColors.workAccent,
-        completed: '42 hr',
-        scheduled: '24 hr',
-      ),
-      const Spacer(),
-      Text(
-        'TAP A PLACEMENT FOR DETAILS',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: BotanicalStudyColors.workAccent,
-          letterSpacing: 1.1,
+      const SizedBox(
+        height: 292,
+        child: _PlacementCard(
+          name: 'ACCEPTANCE FAMILY MEDICINE',
+          accent: BotanicalStudyColors.clinical,
+          completed: '0 hr',
+          scheduled: '8 hr',
+          unscheduled: '82 hr',
         ),
       ),
+      const SizedBox(height: 12),
+      const SizedBox(
+        height: 292,
+        child: _PlacementCard(
+          name: 'INTERNAL MEDICINE',
+          accent: BotanicalStudyColors.workAccent,
+          completed: '0 hr',
+          scheduled: '8 hr',
+          unscheduled: '82 hr',
+        ),
+      ),
+      const Spacer(),
     ],
   );
 }
@@ -262,52 +307,80 @@ final class _PlacementCard extends StatelessWidget {
     required this.accent,
     required this.completed,
     required this.scheduled,
+    required this.unscheduled,
   });
 
   final String name;
   final Color accent;
   final String completed;
   final String scheduled;
+  final String unscheduled;
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.fromLTRB(18, 15, 16, 14),
     decoration: BoxDecoration(
-      color: BotanicalStudyColors.canvas.withValues(alpha: .68),
-      border: Border.all(color: accent.withValues(alpha: .8)),
-      borderRadius: BorderRadius.circular(12),
+      color: BotanicalStudyColors.canvas.withValues(alpha: .42),
+      border: Border(
+        left: BorderSide(color: accent, width: 8),
+        top: BorderSide(
+          color: BotanicalStudyColors.outline.withValues(alpha: .5),
+        ),
+        right: BorderSide(
+          color: BotanicalStudyColors.outline.withValues(alpha: .5),
+        ),
+        bottom: BorderSide(
+          color: BotanicalStudyColors.outline.withValues(alpha: .5),
+        ),
+      ),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                border: Border.all(color: accent),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.medical_services_outlined, color: accent),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                name,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  letterSpacing: 1.1,
-                  height: 1.35,
-                ),
-              ),
-            ),
-          ],
+        Text(
+          name,
+          maxLines: 1,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: BotanicalStudyColors.clinical,
+            fontWeight: FontWeight.w700,
+            letterSpacing: .2,
+          ),
         ),
-        const SizedBox(height: 14),
-        _MetricLine('$completed / 90 hr completed', accent),
+        const SizedBox(height: 12),
+        Text('$completed / 90 hr completed'),
+        const Spacer(),
+        Center(
+          child: SizedBox.square(
+            dimension: 98,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CircularProgressIndicator(
+                  value: 0,
+                  strokeWidth: 8,
+                  color: accent,
+                  backgroundColor: BotanicalStudyColors.outline.withValues(
+                    alpha: .32,
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    '0%',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: BotanicalStudyColors.clinical,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const Spacer(),
+        const Divider(),
         _MetricLine('$scheduled scheduled', BotanicalStudyColors.scheduled),
-        const _MetricLine(
-          '48 hr unscheduled',
+        _MetricLine(
+          '$unscheduled unscheduled',
           BotanicalStudyColors.unscheduled,
         ),
       ],
@@ -352,47 +425,97 @@ final class _PlanningProof extends StatelessWidget {
     children: [
       Row(
         children: [
-          const Expanded(child: _SectionTitle('PLANNING')),
-          OutlinedButton.icon(
-            onPressed: _noop,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('ADD SCHEDULE'),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton.icon(
-            onPressed: _noop,
-            icon: const Icon(Icons.warning_amber_outlined, size: 18),
-            label: const Text('PLANNING INCOMPLETE'),
-          ),
-        ],
-      ),
-      const SizedBox(height: 8),
-      Text(
-        'Build the monthly plan in this in-flow region.',
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-      const SizedBox(height: 12),
-      const Row(
-        children: [
-          _PlanningStep('1', 'TYPE & TIME'),
-          SizedBox(width: 18),
           Expanded(
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ChoiceChip('WORK SHIFT', BotanicalStudyColors.workAccent),
-                _ChoiceChip('CLINICAL SESSION', BotanicalStudyColors.clinical),
-                _ChoiceChip(
-                  'PROTECTED DAY',
-                  BotanicalStudyColors.protectedDayAccent,
+                const _SectionTitle('PLANNING'),
+                const SizedBox(height: 2),
+                Text(
+                  'Build the monthly plan in this in-flow region.',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),
           ),
+          SizedBox(
+            width: 122,
+            child: OutlinedButton(
+              onPressed: _noop,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                backgroundColor: BotanicalStudyColors.clinical,
+                foregroundColor: BotanicalStudyColors.canvas,
+              ),
+              child: const Text('ADD SCHEDULE'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 176,
+            child: OutlinedButton(
+              onPressed: _noop,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                foregroundColor: BotanicalStudyColors.urgent,
+                side: const BorderSide(color: BotanicalStudyColors.urgent),
+              ),
+              child: const Text('PLANNING INCOMPLETE'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 80,
+            child: OutlinedButton(
+              onPressed: _noop,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+              ),
+              child: const Text('COLLAPSE'),
+            ),
+          ),
         ],
       ),
-      const Spacer(),
+      const SizedBox(height: 8),
+      const Row(
+        children: [
+          _PlanningStep('1', 'TYPE & TIME'),
+          SizedBox(width: 22),
+          Text('0 selected dates'),
+        ],
+      ),
+      const SizedBox(height: 12),
+      const Expanded(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _ChoiceChip(
+                'CLINICAL SESSION',
+                BotanicalStudyColors.clinical,
+                icon: Icons.local_hospital_outlined,
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: _ChoiceChip(
+                'WORK SHIFT',
+                BotanicalStudyColors.workAccent,
+                icon: Icons.work_outline,
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: _ChoiceChip(
+                'PROTECTED DAY',
+                BotanicalStudyColors.protectedDayAccent,
+                icon: Icons.shield_outlined,
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 10),
       Row(
         children: [
           Expanded(
@@ -439,20 +562,35 @@ final class _PlanningStep extends StatelessWidget {
 }
 
 final class _ChoiceChip extends StatelessWidget {
-  const _ChoiceChip(this.label, this.color);
+  const _ChoiceChip(this.label, this.color, {required this.icon});
 
   final String label;
   final Color color;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
     decoration: BoxDecoration(
       color: color.withValues(alpha: .12),
       border: Border.all(color: color),
       borderRadius: BorderRadius.circular(8),
     ),
-    child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+    child: Row(
+      children: [
+        Icon(icon, color: color, size: 34),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }
 
@@ -488,52 +626,107 @@ final class _InsightProof extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const _SectionTitle('INTERNAL MEDICINE'),
-      const SizedBox(height: 14),
-      Center(
-        child: SizedBox.square(
-          dimension: 126,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              const CircularProgressIndicator(
-                value: .47,
-                strokeWidth: 15,
-                color: BotanicalStudyColors.clinical,
-                backgroundColor: BotanicalStudyColors.surfaceRaised,
-              ),
-              Center(
-                child: Text(
-                  '42 hr\ncompleted',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium,
+      SizedBox(
+        height: 488,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _SectionTitle('INTERNAL MEDICINE'),
+            const SizedBox(height: 20),
+            Center(
+              child: SizedBox.square(
+                dimension: 126,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: 0,
+                      strokeWidth: 9,
+                      color: BotanicalStudyColors.clinical,
+                      backgroundColor: BotanicalStudyColors.outline.withValues(
+                        alpha: .28,
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        '0 hr\ncompleted',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 10),
+            const _MetricLine(
+              'Target                              90 hr',
+              BotanicalStudyColors.text,
+            ),
+            const _MetricLine(
+              'Completed                         0 hr',
+              BotanicalStudyColors.completed,
+            ),
+            const _MetricLine(
+              'Scheduled                          8 hr',
+              BotanicalStudyColors.scheduled,
+            ),
+            const _MetricLine(
+              'Unscheduled                    82 hr',
+              BotanicalStudyColors.unscheduled,
+            ),
+            const Divider(height: 20),
+            Row(
+              children: [
+                const Icon(
+                  Icons.speed_outlined,
+                  color: BotanicalStudyColors.clinical,
+                  size: 34,
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Additional pace required',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const Text(
+                      '21 hr 16 min / week',
+                      style: TextStyle(
+                        color: BotanicalStudyColors.urgent,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            const Text('  ›   TAP WHEEL TO VIEW NEXT PLACEMENT'),
+            const SizedBox(height: 12),
+            const Text('  ♧   SHOW PRECEPTOR BREAKDOWN'),
+          ],
         ),
       ),
-      const SizedBox(height: 14),
-      const _MetricLine(
-        'Target                 90 hr',
-        BotanicalStudyColors.text,
+      const Divider(height: 1),
+      const SizedBox(height: 12),
+      Row(
+        children: [
+          const Expanded(
+            child: _SectionTitle(
+              'NEEDS ATTENTION',
+              color: BotanicalStudyColors.urgent,
+            ),
+          ),
+          Text(
+            'ON · 5',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: BotanicalStudyColors.urgent,
+            ),
+          ),
+        ],
       ),
-      const _MetricLine(
-        'Completed          42 hr',
-        BotanicalStudyColors.completed,
-      ),
-      const _MetricLine(
-        'Scheduled           24 hr',
-        BotanicalStudyColors.scheduled,
-      ),
-      const _MetricLine(
-        'Unscheduled       24 hr',
-        BotanicalStudyColors.unscheduled,
-      ),
-      const SizedBox(height: 18),
-      const Divider(),
-      const SizedBox(height: 10),
-      const _SectionTitle('NEEDS ATTENTION'),
       const SizedBox(height: 8),
       const _AttentionCard(
         icon: Icons.assignment_late_outlined,
@@ -541,11 +734,15 @@ final class _InsightProof extends StatelessWidget {
       ),
       const _AttentionCard(
         icon: Icons.fact_check_outlined,
-        title: 'INITIAL SELF-ASSESSMENT',
+        title: 'INITIAL SELF-ASSESSMENT\nACCEPTANCE FAMILY MEDICINE',
+      ),
+      const _AttentionCard(
+        icon: Icons.fact_check_outlined,
+        title: 'INITIAL SELF-ASSESSMENT\nINTERNAL MEDICINE',
       ),
       const _AttentionCard(
         icon: Icons.warning_amber_outlined,
-        title: 'PLANNING INCOMPLETE',
+        title: 'PLANNING INCOMPLETE\nChoose one empty Protected Day',
       ),
     ],
   );
@@ -560,7 +757,7 @@ final class _AttentionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
     decoration: BoxDecoration(
       border: Border(
         left: const BorderSide(color: BotanicalStudyColors.urgent, width: 3),
@@ -620,15 +817,16 @@ final class _AttentionSummaryProof extends StatelessWidget {
 }
 
 final class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.label);
+  const _SectionTitle(this.label, {this.color});
 
   final String label;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => Text(
     label,
     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-      color: BotanicalStudyColors.clinical,
+      color: color ?? BotanicalStudyColors.clinical,
       letterSpacing: 1.7,
       fontWeight: FontWeight.w700,
     ),
@@ -642,15 +840,16 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
     required LocalDate firstDate,
     required LocalDate lastDate,
   }) async => CalendarSnapshot([
-    CalendarEntry(
-      id: 'protected-19',
-      kind: CalendarEntryKind.protectedDay,
-      startDate: LocalDate(2026, 8, 19),
-      endDate: LocalDate(2026, 8, 19),
-      title: 'Protected Day',
-      statusLabel: 'Protected',
-    ),
-    for (final day in [6, 17, 27])
+    for (final day in [8, 15, 20, 29])
+      CalendarEntry(
+        id: 'protected-$day',
+        kind: CalendarEntryKind.protectedDay,
+        startDate: LocalDate(2026, 8, day),
+        endDate: LocalDate(2026, 8, day),
+        title: 'Protected Day',
+        statusLabel: 'Protected',
+      ),
+    for (final day in [4, 6, 10, 13, 18, 22, 25, 27])
       CalendarEntry(
         id: 'work-$day',
         kind: CalendarEntryKind.workShift,
@@ -661,7 +860,7 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
         title: 'Work Shift',
         statusLabel: 'Scheduled',
       ),
-    for (final day in [5, 13, 24])
+    for (final day in [3, 5, 7, 11, 12, 14, 17, 19, 21, 24, 26, 28])
       CalendarEntry(
         id: 'clinical-$day',
         kind: CalendarEntryKind.clinicalSession,
@@ -671,7 +870,7 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
         endTime: LocalTime(16, 0),
         title: 'Clinical Session',
         assignment: 'Internal Medicine - Jordan Lee',
-        statusLabel: day == 5 ? 'Awaiting Confirmation' : 'Scheduled',
+        statusLabel: 'Scheduled',
       ),
   ]);
 }
@@ -679,3 +878,19 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
 void _noop() {}
 
 void _ignoreDestination(ClinicalCalendarDestination _) {}
+
+double _downsampledColorSimilarity(img.Image concept, img.Image runtime) {
+  final expected = img.copyResize(concept, width: 96, height: 60);
+  final actual = img.copyResize(runtime, width: 96, height: 60);
+  var channelError = 0.0;
+  for (var y = 0; y < expected.height; y++) {
+    for (var x = 0; x < expected.width; x++) {
+      final left = expected.getPixel(x, y);
+      final right = actual.getPixel(x, y);
+      channelError += (left.r - right.r).abs();
+      channelError += (left.g - right.g).abs();
+      channelError += (left.b - right.b).abs();
+    }
+  }
+  return 1 - channelError / (expected.width * expected.height * 3 * 255);
+}

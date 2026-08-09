@@ -260,7 +260,7 @@ void main() {
     );
     final visuals = Theme.of(
       tester.element(work),
-    ).extension<ClinicalCalendarEntryVisuals>()!;
+    ).extension<ClinicalCalendarPresentationPolicy>()!;
     expect(visuals.clinicalFill, Federation2399Colors.clinicalFill);
     expect(visuals.leadingRailWidth, 4);
     expect(visuals.segmentWorkRail, isTrue);
