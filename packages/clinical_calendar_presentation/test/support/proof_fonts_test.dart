@@ -76,4 +76,30 @@ void main() {
 
     expect(proofImagesMatch(expected, actual), isFalse);
   });
+
+  test(
+    'catalog proof allowance does not weaken the default high-delta bound',
+    () {
+      final expected = img.Image(width: 100, height: 100)
+        ..clear(img.ColorRgb8(245, 245, 245));
+      final actual = img.Image.from(expected);
+
+      for (var index = 0; index < 40; index++) {
+        final position = (index * 37) % (actual.width * actual.height);
+        actual.setPixelRgb(
+          position % actual.width,
+          position ~/ actual.width,
+          20,
+          20,
+          20,
+        );
+      }
+
+      expect(proofImagesMatch(expected, actual), isFalse);
+      expect(
+        proofImagesMatch(expected, actual, highDeltaPixelTolerance: .0045),
+        isTrue,
+      );
+    },
+  );
 }
