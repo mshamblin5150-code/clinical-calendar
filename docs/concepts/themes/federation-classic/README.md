@@ -39,9 +39,11 @@ fictional Android-tablet fixture rather than using either concept image.
 ## Concept-fidelity landscape chassis
 
 `packages/clinical_calendar_presentation/assets/federation_classic_raster/dashboard-chassis-landscape-v1.png`
-is a secondary fixed landscape composition asset. The normalized transparent
-nine-slice above remains the primary frame and is still used for portrait,
-compact, and destination surfaces.
+is retained as rejected v2 provenance only. Production no longer stretches
+this complete dashboard bitmap. Landscape uses piecewise Flutter-painted
+rails and seams measured at the approved concept's native 1586 by 992
+viewport; the normalized transparent nine-slice remains the primary frame for
+portrait, compact, and destination surfaces.
 
 The chassis was generated with the built-in image-generation workflow using
 `calendar-dashboard-concept-v3.png` only as a reference for silhouette,
@@ -58,6 +60,8 @@ Automated validation records:
 - operational text, icons, controls, and data: absent;
 - live-content bays: opaque, near-black, and uninterrupted.
 
-The deterministic runtime proof package is under
-`docs/themes/acceptance/proofs/federation-classic-v2/`. Its exact landscape
-exemplar is the approved concept's native 1586 by 992 viewport.
+The rejected deterministic v2 proof remains under
+`docs/themes/acceptance/proofs/federation-classic-v2/`. The replacement
+candidate is under `docs/themes/acceptance/proofs/federation-classic-v3/`.
+Both use the approved concept's native 1586 by 992 landscape viewport, but v3
+is the only current review candidate.

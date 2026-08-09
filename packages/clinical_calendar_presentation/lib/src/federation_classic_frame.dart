@@ -18,38 +18,174 @@ const federationClassicPlacementsSafeInsets = EdgeInsets.fromLTRB(
 const federationClassicPlanningSafeInsets = EdgeInsets.fromLTRB(34, 46, 34, 42);
 const federationClassicStatusSafeInsets = EdgeInsets.fromLTRB(30, 44, 34, 44);
 
-/// Fixed golden-exemplar chassis derived from the approved issue #113
-/// composition. The raster contains decoration only; [child] owns all live
-/// content, semantics, focus, and callbacks.
+/// Piecewise golden-exemplar chassis measured from the approved issue #113
+/// composition. It deliberately paints independent rails and seams instead of
+/// stretching a complete dashboard bitmap.
 final class FederationClassicLandscapeChassis extends StatelessWidget {
   const FederationClassicLandscapeChassis({required this.child, super.key});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Stack(
-    fit: StackFit.expand,
-    children: [
-      ExcludeSemantics(
-        child: Image.asset(
-          federationClassicLandscapeChassisAsset,
-          package: 'clinical_calendar_presentation',
-          fit: BoxFit.fill,
-          filterQuality: FilterQuality.high,
-          errorBuilder: (context, error, stackTrace) {
-            GraphitePresentationFailureBoundary.report(
-              context,
-              error,
-              themeId: 'federation-classic',
-              isGraphite: false,
-            );
-            return const ColoredBox(color: Color(0xFF09070C));
-          },
-        ),
-      ),
-      child,
-    ],
+  Widget build(BuildContext context) => CustomPaint(
+    painter: const _FederationClassicLandscapePainter(),
+    child: child,
   );
+}
+
+final class _FederationClassicLandscapePainter extends CustomPainter {
+  const _FederationClassicLandscapePainter();
+
+  static const _canvas = Color(0xFF02040D);
+  static const _lilac = Color(0xFFAF8ED6);
+  static const _lilacDark = Color(0xFF65448C);
+  static const _salmon = Color(0xFFFF8057);
+  static const _amber = Color(0xFFF5AE25);
+  static const _outline = Color(0xFF3A3148);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    canvas.save();
+    canvas.scale(size.width / 1586, size.height / 992);
+    _rounded(canvas, const Rect.fromLTWH(10, 39, 145, 164), _lilac, 48);
+    canvas.drawRect(
+      const Rect.fromLTWH(90, 105, 65, 98),
+      Paint()..color = _canvas,
+    );
+    canvas.drawRect(
+      const Rect.fromLTWH(155, 39, 12, 66),
+      Paint()..color = _lilac,
+    );
+    _segments(
+      canvas,
+      10,
+      211,
+      79,
+      const [88, 52, 113, 184, 105, 151],
+      const [_lilacDark, _salmon, _salmon, _amber, Color(0xFFD56843), _salmon],
+    );
+    _rounded(canvas, const Rect.fromLTWH(10, 761, 186, 112), _salmon, 48);
+    canvas.drawRect(
+      const Rect.fromLTWH(90, 761, 47, 112),
+      Paint()..color = _canvas,
+    );
+    canvas.drawRect(
+      const Rect.fromLTWH(137, 813, 58, 60),
+      Paint()..color = _amber,
+    );
+
+    _rounded(canvas, const Rect.fromLTWH(474, 53, 629, 42), _lilac, 22);
+    canvas.drawRect(
+      const Rect.fromLTWH(1080, 53, 23, 42),
+      Paint()..color = _lilac,
+    );
+    canvas.drawRect(
+      const Rect.fromLTWH(1107, 53, 195, 25),
+      Paint()..color = _lilacDark,
+    );
+    canvas.drawRect(
+      const Rect.fromLTWH(1107, 82, 195, 13),
+      Paint()..color = _lilacDark,
+    );
+    _rounded(canvas, const Rect.fromLTWH(1306, 53, 262, 42), _amber, 22);
+
+    _panel(
+      canvas,
+      const Rect.fromLTWH(90, 112, 306, 702),
+      const Radius.circular(12),
+    );
+    _panel(
+      canvas,
+      const Rect.fromLTWH(406, 112, 736, 473),
+      const Radius.circular(12),
+    );
+    _panel(
+      canvas,
+      const Rect.fromLTWH(406, 591, 736, 276),
+      const Radius.circular(12),
+    );
+    _panel(
+      canvas,
+      const Rect.fromLTWH(1162, 112, 367, 702),
+      const Radius.circular(12),
+    );
+
+    _segments(
+      canvas,
+      1545,
+      350,
+      32,
+      const [83, 316, 18, 92],
+      const [_salmon, _lilac, _amber, _salmon],
+    );
+    _rounded(canvas, const Rect.fromLTWH(1376, 830, 201, 40), _salmon, 22);
+    canvas.drawRect(
+      const Rect.fromLTWH(1441, 830, 5, 40),
+      Paint()..color = _canvas,
+    );
+
+    final nav = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(10, 887, 1566, 97),
+      const Radius.circular(46),
+    );
+    canvas.drawRRect(
+      nav,
+      Paint()
+        ..color = _amber
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4,
+    );
+    _rounded(canvas, const Rect.fromLTWH(18, 896, 155, 79), _lilacDark, 38);
+    canvas.drawRect(
+      const Rect.fromLTWH(112, 896, 61, 79),
+      Paint()..color = _canvas,
+    );
+    _rounded(canvas, const Rect.fromLTWH(1385, 896, 183, 79), _salmon, 38);
+    canvas.drawRect(
+      const Rect.fromLTWH(1385, 936, 101, 39),
+      Paint()..color = _canvas,
+    );
+    canvas.restore();
+  }
+
+  void _panel(Canvas canvas, Rect rect, Radius radius) {
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, radius),
+      Paint()
+        ..color = _outline.withValues(alpha: .78)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2,
+    );
+  }
+
+  void _segments(
+    Canvas canvas,
+    double x,
+    double y,
+    double width,
+    List<double> heights,
+    List<Color> colors,
+  ) {
+    var top = y;
+    for (var index = 0; index < heights.length; index++) {
+      canvas.drawRect(
+        Rect.fromLTWH(x, top, width, heights[index]),
+        Paint()..color = colors[index],
+      );
+      top += heights[index] + 7;
+    }
+  }
+
+  void _rounded(Canvas canvas, Rect rect, Color color, double radius) {
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, Radius.circular(radius)),
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Original Federation Classic housing. Only center and edge seams stretch.

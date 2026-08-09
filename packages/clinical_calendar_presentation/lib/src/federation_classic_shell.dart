@@ -88,7 +88,7 @@ final class FederationClassicApplicationShell extends StatelessWidget {
 
   Widget _landscape() => Scaffold(
     key: const Key('federation-classic-landscape-shell'),
-    backgroundColor: const Color(0xFF09070C),
+    backgroundColor: const Color(0xFF02040D),
     body: FederationClassicLandscapeChassis(
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -97,10 +97,10 @@ final class FederationClassicApplicationShell extends StatelessWidget {
           return Stack(
             children: [
               Positioned(
-                left: width * .105,
-                top: height * .025,
-                width: width * .88,
-                height: height * .065,
+                left: width * (194 / 1586),
+                top: height * (39 / 992),
+                width: width * (1374 / 1586),
+                height: height * (57 / 992),
                 child: _FederationClassicCommandCrown(
                   environmentName: environmentName,
                   onOpenMenu: onOpenMenu,
@@ -111,10 +111,10 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: width * .065,
-                top: height * .098,
-                width: width * .19,
-                height: height * .67,
+                left: width * (90 / 1586),
+                top: height * (112 / 992),
+                width: width * (306 / 1586),
+                height: height * (702 / 992),
                 child: _FederationClassicConsoleBay(
                   key: const Key('federation-classic-placement-bay'),
                   accent: _FederationClassicBayAccent.lilac,
@@ -124,10 +124,10 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: width * .258,
-                top: height * .098,
-                width: width * .47,
-                height: height * .462,
+                left: width * (406 / 1586),
+                top: height * (112 / 992),
+                width: width * (736 / 1586),
+                height: height * (473 / 992),
                 child: _FederationClassicConsoleBay(
                   key: const Key('federation-classic-calendar-bay'),
                   accent: _FederationClassicBayAccent.salmon,
@@ -139,10 +139,10 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: width * .258,
-                top: height * .575,
-                width: width * .47,
-                height: height * .273,
+                left: width * (406 / 1586),
+                top: height * (591 / 992),
+                width: width * (736 / 1586),
+                height: height * (276 / 992),
                 child: _FederationClassicConsoleBay(
                   key: const Key('federation-classic-planning-bay'),
                   accent: _FederationClassicBayAccent.salmon,
@@ -155,10 +155,10 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: width * .75,
-                top: height * .098,
-                width: width * .225,
-                height: height * .75,
+                left: width * (1162 / 1586),
+                top: height * (112 / 992),
+                width: width * (367 / 1586),
+                height: height * (702 / 992),
                 child: _FederationClassicConsoleBay(
                   key: const Key('federation-classic-insight-bay'),
                   accent: _FederationClassicBayAccent.lilac,
@@ -168,10 +168,10 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: width * .11,
-                top: height * .89,
-                width: width * .76,
-                height: height * .085,
+                left: width * (10 / 1586),
+                top: height * (887 / 992),
+                width: width * (1566 / 1586),
+                height: height * (97 / 992),
                 child: _FederationClassicNavigationDeck(
                   selectedIndex: mobileIndex,
                   onOpenDestination: onOpenDestination,
@@ -206,40 +206,72 @@ final class FederationClassicApplicationShell extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final enlargedText =
-                        MediaQuery.textScalerOf(context).scale(1) > 1.3;
-                    return SingleChildScrollView(
-                      key: const Key('federation-classic-portrait-scroll'),
-                      primary: true,
-                      child: SizedBox(
-                        height: enlargedText
-                            ? constraints.maxHeight * 1.62
-                            : constraints.maxHeight * 1.08,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 7,
-                              child: _FederationClassicConsoleBay(
-                                key: const Key(
-                                  'federation-classic-calendar-bay',
-                                ),
-                                accent: _FederationClassicBayAccent.salmon,
-                                shape: _FederationClassicBayShape.calendar,
-                                child: _FederationClassicCalendarViewport(
-                                  child: slots.centralContent,
-                                ),
-                              ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      width: 112,
+                      child: _FederationClassicNavigationDeck(
+                        selectedIndex: mobileIndex,
+                        onOpenDestination: onOpenDestination,
+                        onOpenAttention: onOpenAttention,
+                        compact: true,
+                        vertical: true,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final enlargedText =
+                              MediaQuery.textScalerOf(context).scale(1) > 1.3;
+                          return SingleChildScrollView(
+                            key: const Key(
+                              'federation-classic-portrait-scroll',
                             ),
-                            const SizedBox(height: 10),
-                            Expanded(
-                              flex: 4,
-                              child: Row(
+                            primary: true,
+                            child: SizedBox(
+                              height:
+                                  constraints.maxHeight *
+                                  (enlargedText ? 2.2 : 1.6),
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Expanded(
+                                    flex: 8,
+                                    child: _FederationClassicConsoleBay(
+                                      key: const Key(
+                                        'federation-classic-calendar-bay',
+                                      ),
+                                      accent:
+                                          _FederationClassicBayAccent.salmon,
+                                      shape:
+                                          _FederationClassicBayShape.calendar,
+                                      child: _FederationClassicCalendarViewport(
+                                        child: slots.centralContent,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Expanded(
+                                    flex: 4,
+                                    child: _FederationClassicConsoleBay(
+                                      key: const Key(
+                                        'federation-classic-planning-bay',
+                                      ),
+                                      accent:
+                                          _FederationClassicBayAccent.salmon,
+                                      shape:
+                                          _FederationClassicBayShape.planning,
+                                      child: VariantFPlanningBayMode(
+                                        expandedByDefault: false,
+                                        child: slots.planningRegion,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Expanded(
+                                    flex: 4,
                                     child: _FederationClassicConsoleBay(
                                       key: const Key(
                                         'federation-classic-placement-bay',
@@ -250,8 +282,9 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                                       child: slots.mobilePlacementSummary,
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
+                                  const SizedBox(height: 10),
                                   Expanded(
+                                    flex: 5,
                                     child: _FederationClassicConsoleBay(
                                       key: const Key(
                                         'federation-classic-insight-bay',
@@ -264,34 +297,12 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            Expanded(
-                              flex: 3,
-                              child: _FederationClassicConsoleBay(
-                                key: const Key(
-                                  'federation-classic-planning-bay',
-                                ),
-                                accent: _FederationClassicBayAccent.salmon,
-                                shape: _FederationClassicBayShape.planning,
-                                child: VariantFPlanningBayMode(
-                                  expandedByDefault: false,
-                                  child: slots.planningRegion,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              _FederationClassicNavigationDeck(
-                selectedIndex: mobileIndex,
-                onOpenDestination: onOpenDestination,
-                onOpenAttention: onOpenAttention,
-                compact: true,
               ),
             ],
           ),
@@ -372,12 +383,28 @@ final class _FederationClassicConsoleBay extends StatelessWidget {
     final content = ClipRRect(
       borderRadius: integrated ? BorderRadius.zero : BorderRadius.circular(24),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          shape == _FederationClassicBayShape.placement ? 14 : 12,
-          integrated ? 10 : 20,
-          shape == _FederationClassicBayShape.insight ? 14 : 12,
-          integrated ? 10 : 18,
-        ),
+        // The landscape positions are the concept's rail-safe interior bays;
+        // these offsets align live content within those already-safe bounds.
+        padding: integrated
+            ? switch (shape) {
+                _FederationClassicBayShape.placement =>
+                  const EdgeInsets.fromLTRB(20, 14, 5, 10),
+                _FederationClassicBayShape.calendar => EdgeInsets.zero,
+                _FederationClassicBayShape.planning =>
+                  const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                _FederationClassicBayShape.insight => const EdgeInsets.fromLTRB(
+                  2,
+                  8,
+                  14,
+                  10,
+                ),
+              }
+            : EdgeInsets.fromLTRB(
+                shape == _FederationClassicBayShape.placement ? 14 : 12,
+                20,
+                shape == _FederationClassicBayShape.insight ? 14 : 12,
+                18,
+              ),
         child: child,
       ),
     );
@@ -487,6 +514,63 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    if (integrated) {
+      return SizedBox(
+        key: const Key('federation-classic-command-crown'),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 280,
+              child: Tooltip(
+                message: 'Open menu',
+                child: InkWell(
+                  key: const Key('application-menu-action'),
+                  onTap: onOpenMenu,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'CLINICAL CALENDAR',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: .1,
+                            ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const Spacer(),
+            SizedBox(
+              width: 170,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    tooltip: 'Add schedule',
+                    onPressed: onAddSchedule,
+                    icon: const Icon(Icons.add, size: 30),
+                  ),
+                  IconButton(
+                    tooltip: 'Help',
+                    onPressed: () =>
+                        onOpenDestination(ClinicalCalendarDestination.help),
+                    icon: const Icon(Icons.help_outline),
+                  ),
+                  profileAvatar,
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     final content = SizedBox(
       key: const Key('federation-classic-command-crown'),
       height: compact ? 72 : 92,
@@ -553,7 +637,6 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
         ),
       ),
     );
-    if (integrated) return content;
     return CustomPaint(
       painter: _FederationClassicCrownPainter(
         structure: context.clinicalColors.structureRaised,
@@ -563,6 +646,36 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
       ),
       child: content,
     );
+  }
+}
+
+enum _FederationClassicNavigationItem {
+  today(Icons.today_outlined, 'TODAY'),
+  calendar(Icons.calendar_month_outlined, 'CALENDAR'),
+  placements(Icons.groups_outlined, 'PLACEMENTS'),
+  attention(Icons.notifications_outlined, 'ATTENTION'),
+  settings(Icons.settings_outlined, 'SETTINGS');
+
+  const _FederationClassicNavigationItem(this.icon, this.label);
+
+  final IconData icon;
+  final String label;
+
+  void activate(
+    ValueChanged<ClinicalCalendarDestination> onOpenDestination,
+    VoidCallback onOpenAttention,
+  ) {
+    switch (this) {
+      case today:
+      case calendar:
+        onOpenDestination(ClinicalCalendarDestination.calendar);
+      case placements:
+        onOpenDestination(ClinicalCalendarDestination.clinicalPlacements);
+      case attention:
+        onOpenAttention();
+      case settings:
+        onOpenDestination(ClinicalCalendarDestination.settings);
+    }
   }
 }
 
@@ -633,6 +746,7 @@ final class _FederationClassicNavigationDeck extends StatelessWidget {
     required this.onOpenAttention,
     this.compact = false,
     this.integrated = false,
+    this.vertical = false,
   });
 
   final int selectedIndex;
@@ -640,25 +754,21 @@ final class _FederationClassicNavigationDeck extends StatelessWidget {
   final VoidCallback onOpenAttention;
   final bool compact;
   final bool integrated;
+  final bool vertical;
 
   @override
   Widget build(BuildContext context) {
-    const destinations = [
-      (Icons.today_outlined, 'TODAY'),
-      (Icons.calendar_month_outlined, 'CALENDAR'),
-      (Icons.track_changes_outlined, 'PLACEMENTS'),
-      (Icons.notifications_outlined, 'ATTENTION'),
-      (Icons.settings_outlined, 'SETTINGS'),
-    ];
+    const destinations = _FederationClassicNavigationItem.values;
     return LayoutBuilder(
       builder: (context, constraints) {
         final iconsOnly =
+            vertical ||
             compact ||
-            constraints.maxWidth < 900 ||
+            constraints.maxWidth < (integrated ? 1500 : 900) ||
             MediaQuery.textScalerOf(context).scale(1) > 1.3;
         return Container(
           key: const Key('federation-classic-bottom-navigation'),
-          height: compact ? 68 : 92,
+          height: vertical ? constraints.maxHeight : (compact ? 68 : 92),
           decoration: BoxDecoration(
             color: integrated
                 ? Colors.transparent
@@ -679,85 +789,79 @@ final class _FederationClassicNavigationDeck extends StatelessWidget {
                   ],
           ),
           clipBehavior: Clip.antiAlias,
-          child: Row(
-            children: [
-              for (var index = 0; index < destinations.length; index++)
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    selected: index == selectedIndex,
-                    label: destinations[index].$2,
-                    child: InkWell(
-                      key: Key('federation-classic-navigation-$index'),
-                      onTap: () {
-                        switch (index) {
-                          case 0:
-                          case 1:
-                            onOpenDestination(
-                              ClinicalCalendarDestination.calendar,
-                            );
-                          case 2:
-                            onOpenDestination(
-                              ClinicalCalendarDestination.clinicalPlacements,
-                            );
-                          case 3:
-                            onOpenAttention();
-                          case 4:
-                            onOpenDestination(
-                              ClinicalCalendarDestination.settings,
-                            );
-                        }
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 7,
+          child: Padding(
+            padding: integrated
+                ? const EdgeInsets.only(left: 153, right: 181)
+                : EdgeInsets.zero,
+            child: Flex(
+              direction: vertical ? Axis.vertical : Axis.horizontal,
+              children: [
+                for (var index = 0; index < destinations.length; index++)
+                  Expanded(
+                    flex: integrated ? const [4, 6, 5, 5, 5][index] : 1,
+                    child: Semantics(
+                      button: true,
+                      selected: index == selectedIndex,
+                      label: destinations[index].label,
+                      child: InkWell(
+                        key: Key('federation-classic-navigation-$index'),
+                        onTap: () => destinations[index].activate(
+                          onOpenDestination,
+                          onOpenAttention,
                         ),
-                        decoration: BoxDecoration(
-                          color: index == selectedIndex
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(34),
-                        ),
-                        child: Center(
-                          child: iconsOnly
-                              ? Icon(
-                                  destinations[index].$1,
-                                  color: index == selectedIndex
-                                      ? Theme.of(context).colorScheme.onPrimary
-                                      : null,
-                                )
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      destinations[index].$1,
-                                      color: index == selectedIndex
-                                          ? Theme.of(
-                                              context,
-                                            ).colorScheme.onPrimary
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      destinations[index].$2,
-                                      style: index == selectedIndex
-                                          ? TextStyle(
-                                              color: Theme.of(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: index == selectedIndex
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(34),
+                          ),
+                          child: Center(
+                            child: iconsOnly
+                                ? Icon(
+                                    destinations[index].icon,
+                                    color: index == selectedIndex
+                                        ? Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary
+                                        : null,
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        destinations[index].icon,
+                                        color: index == selectedIndex
+                                            ? Theme.of(
                                                 context,
-                                              ).colorScheme.onPrimary,
-                                              fontWeight: FontWeight.w700,
-                                            )
-                                          : null,
-                                    ),
-                                  ],
-                                ),
+                                              ).colorScheme.onPrimary
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        destinations[index].label,
+                                        style: index == selectedIndex
+                                            ? TextStyle(
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.onPrimary,
+                                                fontWeight: FontWeight.w700,
+                                              )
+                                            : null,
+                                      ),
+                                    ],
+                                  ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         );
       },

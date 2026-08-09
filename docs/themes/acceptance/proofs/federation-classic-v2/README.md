@@ -2,9 +2,11 @@
 
 Issue: [#133](https://github.com/mshamblin5150-code/clinical-calendar/issues/133)
 
-Status: **candidate prepared for maintainer visual approval**. Physical
-Android-tablet acceptance is **pending under #139**. Passing automation and
-this proof package do not claim physical-device acceptance.
+Status: **REJECTED by the maintainer on 2026-08-08**. The equal-size
+comparison changed the approved concept's crown, rail geometry, region
+proportions, control grouping, and representative density. This package is
+historical evidence only and must never be used as an acceptance baseline.
+Physical Android-tablet acceptance remains **pending under #139**.
 
 The approved issue #113 concept is copied byte-for-byte because it is the
 normative visual reference. The exact landscape exemplar is the concept's
@@ -26,7 +28,7 @@ native 1586 by 992 viewport.
   region, with explicit horizontal Calendar scrolling and vertical console
   scrolling for the remaining portrait regions.
 
-Renderer contract: `federation-classic-owned-responsive-console-v2`.
+Rejected renderer contract: `federation-classic-owned-responsive-console-v2`.
 
 The candidate consumes the production shared Calendar, Planning, Clinical
 Placements, progress, attention, and navigation seams. Federation

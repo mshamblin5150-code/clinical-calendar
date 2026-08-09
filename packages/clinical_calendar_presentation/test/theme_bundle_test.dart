@@ -758,6 +758,13 @@ void main() {
 
       expect(find.byType(FederationClassicLandscapeChassis), findsOneWidget);
       expect(find.byType(FederationClassicNineSliceFrame), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(FederationClassicLandscapeChassis),
+          matching: find.byType(Image),
+        ),
+        findsNothing,
+      );
       expect(find.byType(GraphiteNineSliceFrame), findsNothing);
       expect(find.byType(VariantFNineSliceFrame), findsNothing);
       expect(tester.takeException(), isNull);
@@ -838,9 +845,14 @@ void main() {
       final navigation = tester.getRect(
         find.byKey(const Key('federation-classic-bottom-navigation')),
       );
-      expect(placements.width / 1586, closeTo(.19, .015));
-      expect(calendar.width / 1586, closeTo(.47, .015));
-      expect(insight.width / 1586, closeTo(.225, .015));
+      // Independent literals measured from the approved #113 concept at its
+      // native 1586x992 exemplar. These are intentionally not derived from
+      // the renderer or from a runtime-generated golden.
+      _expectRectNear(placements, const Rect.fromLTWH(90, 112, 306, 702));
+      _expectRectNear(calendar, const Rect.fromLTWH(406, 112, 736, 473));
+      _expectRectNear(planning, const Rect.fromLTWH(406, 591, 736, 276));
+      _expectRectNear(insight, const Rect.fromLTWH(1162, 112, 367, 702));
+      _expectRectNear(navigation, const Rect.fromLTWH(10, 887, 1566, 97));
       expect(placements.right, lessThan(calendar.left));
       expect(calendar.right, lessThan(insight.left));
       expect(planning.top, greaterThan(calendar.top));
@@ -941,12 +953,12 @@ void main() {
     final navigation = tester.getRect(
       find.byKey(const Key('federation-classic-bottom-navigation')),
     );
-    expect(calendar.top, lessThan(placements.top));
-    expect(placements.top, insight.top);
-    expect(placements.right, lessThan(insight.left));
-    expect(placements.top, lessThan(planning.top));
+    expect(navigation.right, lessThan(calendar.left));
+    expect(calendar.top, lessThan(planning.top));
+    expect(planning.top, lessThan(placements.top));
+    expect(placements.top, lessThan(insight.top));
     expect(navigation.bottom, lessThanOrEqualTo(1440));
-    expect(navigation.top, greaterThan(calendar.top));
+    expect(navigation.top, lessThanOrEqualTo(calendar.top));
     expect(
       find.byKey(const Key('federation-classic-portrait-scroll')),
       findsOneWidget,
@@ -1779,6 +1791,14 @@ Widget _shellHarness({
 Future<ui.Image> _capture(GlobalKey key) =>
     (key.currentContext!.findRenderObject()! as RenderRepaintBoundary)
         .toImage();
+
+void _expectRectNear(Rect actual, Rect expected) {
+  const tolerance = 3.0;
+  expect(actual.left, closeTo(expected.left, tolerance));
+  expect(actual.top, closeTo(expected.top, tolerance));
+  expect(actual.width, closeTo(expected.width, tolerance));
+  expect(actual.height, closeTo(expected.height, tolerance));
+}
 
 const _slots = ResponsiveShellSlots(
   centralContent: Center(child: Text('Calendar fixture')),
