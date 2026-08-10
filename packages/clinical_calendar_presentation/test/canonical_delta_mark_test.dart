@@ -125,10 +125,15 @@ void main() {
           '${packageDirectory.path}${Platform.pathSeparator}'
           '${relativePath.replaceAll('/', Platform.pathSeparator)}',
         ).readAsString();
+        final expectedReferences = relativePath == 'lib/src/graphite_shell.dart'
+            ? 2
+            : 1;
         expect(
           RegExp(r'CanonicalDeltaMark\(').allMatches(source),
-          hasLength(1),
-          reason: '$relativePath must have one canonical mark reference',
+          hasLength(expectedReferences),
+          reason:
+              '$relativePath must use the canonical mark in every '
+              'theme-owned crown',
         );
         expect(
           localDeltaPainter.hasMatch(source),
