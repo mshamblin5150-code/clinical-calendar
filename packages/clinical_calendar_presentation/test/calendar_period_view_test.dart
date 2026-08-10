@@ -243,6 +243,45 @@ void main() {
   );
 
   testWidgets(
+    'Academic Assignment renders with title, course, due date, and status in every period',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _pumpCalendar(
+        tester,
+        source: _MemoryCalendarDataSource(_snapshot()),
+        initialAnchor: LocalDate(2026, 8, 14),
+      );
+
+      expect(
+        find.bySemanticsLabel(
+          RegExp(
+            r'Friday, August 14, 2026, Evidence review, NURS 702, Due date, '
+            r'Pending, Tap to open Evidence review',
+          ),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Week'));
+      await tester.pumpAndSettle();
+      expect(find.text('Evidence review'), findsWidgets);
+      expect(find.text('NURS 702'), findsWidgets);
+      expect(find.text('Pending'), findsWidgets);
+
+      await tester.tap(find.text('Agenda'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(
+          const Key('agenda-row-academicAssignment-assignment-14-2026-08-14'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Due date'), findsWidgets);
+      semantics.dispose();
+    },
+  );
+
+  testWidgets(
     'selected occupied date deselects before opening its Work Shift',
     (tester) async {
       final selections = <Set<LocalDate>>[];
@@ -572,6 +611,15 @@ CalendarSnapshot _snapshot() => CalendarSnapshot([
     endTime: LocalTime(15, 0),
     title: 'Work Shift',
     statusLabel: 'Scheduled',
+  ),
+  CalendarEntry(
+    id: 'assignment-14',
+    kind: CalendarEntryKind.academicAssignment,
+    startDate: LocalDate(2026, 8, 14),
+    endDate: LocalDate(2026, 8, 14),
+    title: 'Evidence review',
+    assignment: 'NURS 702',
+    statusLabel: 'Pending',
   ),
   CalendarEntry(
     id: 'clinical-06',

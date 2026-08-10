@@ -3,7 +3,12 @@ import 'package:flutter/foundation.dart';
 
 enum CalendarPeriod { month, week, agenda }
 
-enum CalendarEntryKind { workShift, clinicalSession, protectedDay }
+enum CalendarEntryKind {
+  workShift,
+  clinicalSession,
+  protectedDay,
+  academicAssignment,
+}
 
 @immutable
 final class CalendarEntry {
@@ -36,6 +41,7 @@ final class CalendarEntry {
 
   String timeLabel({bool twelveHour = false}) {
     if (kind == CalendarEntryKind.protectedDay) return 'All day';
+    if (kind == CalendarEntryKind.academicAssignment) return 'Due date';
     final start = twelveHour ? startTime!.twelveHour : startTime!.military;
     final end = twelveHour ? endTime!.twelveHour : endTime!.military;
     return '$start–$end${endDate != startDate ? ' next day' : ''}';

@@ -1001,6 +1001,7 @@ final class _ArchiveCalendarLegend extends StatelessWidget {
         const _ArchiveLegendItem(CalendarEntryKind.workShift),
         const SizedBox(width: 38),
         const _ArchiveLegendItem(CalendarEntryKind.protectedDay),
+        const _ArchiveLegendItem(CalendarEntryKind.academicAssignment),
       ],
     );
     return Container(
@@ -1751,6 +1752,11 @@ final class _ArchiveEntryMark extends StatelessWidget {
     ),
     CalendarEntryKind.clinicalSession => Icon(
       Icons.add,
+      size: size,
+      color: color,
+    ),
+    CalendarEntryKind.academicAssignment => Icon(
+      Icons.assignment_outlined,
       size: size,
       color: color,
     ),
@@ -2632,6 +2638,7 @@ ThemeSemanticRole? _statusRole(String statusLabel) => switch (statusLabel) {
   'Completed' => ThemeSemanticRole.completedSession,
   'Cancelled' => ThemeSemanticRole.cancelledSession,
   'Missed' => ThemeSemanticRole.missedSession,
+  'Pending' => ThemeSemanticRole.urgent,
   _ => null,
 };
 
@@ -2860,12 +2867,14 @@ final class _AgendaBackgroundPainter extends CustomPainter {
       CalendarEntryKind.clinicalSession =>
         visuals?.clinicalFill ?? colors.structure,
       CalendarEntryKind.protectedDay => colors.protectedDay,
+      CalendarEntryKind.academicAssignment => colors.structureRaised,
     };
     canvas.drawRect(rect, Paint()..color = background);
     final accent = switch (kind) {
       CalendarEntryKind.workShift => colors.workMachinery,
       CalendarEntryKind.clinicalSession => colors.clinical,
       CalendarEntryKind.protectedDay => colors.protectedDayAccent,
+      CalendarEntryKind.academicAssignment => colors.urgent,
     };
     final entryVisuals = visuals;
     if (entryVisuals == null) {
@@ -2948,6 +2957,8 @@ BoxDecoration _entryDecoration(BuildContext context, CalendarEntry entry) =>
                         ?.clinicalFill ??
                     context.clinicalColors.structureRaised,
         CalendarEntryKind.protectedDay => context.clinicalColors.protectedDay,
+        CalendarEntryKind.academicAssignment =>
+          context.clinicalColors.urgent.withValues(alpha: .12),
       },
       border: Border.all(color: _entryAccent(context, entry)),
       borderRadius: BorderRadius.circular(context.clinicalMetrics.cornerRadius),
@@ -2983,12 +2994,14 @@ Color _entryAccent(BuildContext context, CalendarEntry entry) =>
             : context.clinicalColors.clinical,
       CalendarEntryKind.protectedDay =>
         context.clinicalColors.protectedDayAccent,
+      CalendarEntryKind.academicAssignment => context.clinicalColors.urgent,
     };
 
 ThemeSemanticRole _entryRole(CalendarEntryKind kind) => switch (kind) {
   CalendarEntryKind.workShift => ThemeSemanticRole.workShift,
   CalendarEntryKind.clinicalSession => ThemeSemanticRole.clinicalSession,
   CalendarEntryKind.protectedDay => ThemeSemanticRole.protectedDay,
+  CalendarEntryKind.academicAssignment => ThemeSemanticRole.urgent,
 };
 
 extension _ArchiveCalendarEntryKind on CalendarEntryKind {
@@ -2996,12 +3009,14 @@ extension _ArchiveCalendarEntryKind on CalendarEntryKind {
     CalendarEntryKind.workShift => 'WORK',
     CalendarEntryKind.clinicalSession => 'CLINICAL',
     CalendarEntryKind.protectedDay => 'PROTECTED',
+    CalendarEntryKind.academicAssignment => 'ASSIGNMENT',
   };
 
   Color archiveColor(BuildContext context) => switch (this) {
     CalendarEntryKind.workShift => context.clinicalColors.workMachinery,
     CalendarEntryKind.clinicalSession => context.clinicalColors.clinical,
     CalendarEntryKind.protectedDay => context.clinicalColors.protectedDayAccent,
+    CalendarEntryKind.academicAssignment => context.clinicalColors.urgent,
   };
 }
 
@@ -3009,6 +3024,7 @@ IconData _variantEntryIcon(CalendarEntryKind kind) => switch (kind) {
   CalendarEntryKind.workShift => Icons.work_outline,
   CalendarEntryKind.clinicalSession => Icons.medical_services_outlined,
   CalendarEntryKind.protectedDay => Icons.shield_outlined,
+  CalendarEntryKind.academicAssignment => Icons.assignment_outlined,
 };
 
 bool _usesAdditiveMarks(BuildContext context) {

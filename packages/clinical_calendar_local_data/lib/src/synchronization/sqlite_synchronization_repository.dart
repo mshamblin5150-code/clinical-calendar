@@ -594,6 +594,11 @@ final class SqliteSynchronizationRepository
           ...common,
           for (final key in _reminderColumns) key: value[key],
         });
+      case 'academic_assignment':
+        _upsert('academic_assignments', {
+          ...common,
+          for (final key in _academicAssignmentColumns) key: value[key],
+        });
       default:
         throw const RepositoryException(
           RepositoryFailureKind.corruptData,
@@ -617,6 +622,7 @@ final class SqliteSynchronizationRepository
       'historical_hours_entry' => 'historical_hours_entries',
       'evaluation_plan' => 'evaluation_plans',
       'reminder_state' => 'reminder_state',
+      'academic_assignment' => 'academic_assignments',
       _ => throw const RepositoryException(
         RepositoryFailureKind.corruptData,
         'The remote purge entity type is unsupported.',
@@ -1198,6 +1204,12 @@ const _reminderColumns = <String>[
   'resolution_source',
   'occurrence_key',
 ];
+const _academicAssignmentColumns = <String>[
+  'title',
+  'course',
+  'due_date',
+  'status',
+];
 
 String _tableFor(String entityType) => switch (entityType) {
   'student_profile' => 'student_profiles',
@@ -1210,6 +1222,7 @@ String _tableFor(String entityType) => switch (entityType) {
   'schedule_template' => 'schedule_templates',
   'settings' => 'settings',
   'reminder_state' => 'reminder_state',
+  'academic_assignment' => 'academic_assignments',
   _ => throw const RepositoryException(
     RepositoryFailureKind.corruptData,
     'The remote entity type is unsupported.',

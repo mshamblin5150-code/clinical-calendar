@@ -2,6 +2,7 @@
 /// and application code never import their implementations.
 library;
 
+export 'src/assignments/academic_assignment_application_service.dart';
 export 'src/application_dependencies.dart';
 export 'src/conflict_resolution/conflict_resolution_application_service.dart';
 export 'src/conflict_resolution/conflict_resolution_models.dart';

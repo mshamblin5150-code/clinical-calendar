@@ -1624,7 +1624,8 @@ final class _Repositories implements RepositoryRegistry {
 final class _ReadRepositories
     implements
         SupportLocalReadRepositories,
-        SynchronizationLocalReadRepositories {
+        SynchronizationLocalReadRepositories,
+        AcademicAssignmentLocalReadRepositories {
   _ReadRepositories({
     required bool seedLifecycle,
     required bool seedSynchronization,
@@ -1660,6 +1661,8 @@ final class _ReadRepositories
   final _EmptyReadRepository<HistoricalHoursEntry> _historicalHoursEntries =
       _EmptyReadRepository();
   final ReadRepository<EvaluationPlan> _evaluationPlans;
+  final _EmptyReadRepository<AcademicAssignment> _academicAssignments =
+      _EmptyReadRepository();
 
   @override
   final SynchronizationLocalRepository synchronization;
@@ -1691,6 +1694,10 @@ final class _ReadRepositories
 
   @override
   ReadRepository<EvaluationPlan> get evaluationPlans => _evaluationPlans;
+
+  @override
+  ReadRepository<AcademicAssignment> get academicAssignments =>
+      _academicAssignments;
 
   @override
   OutboxReadRepository get outbox => _outbox;

@@ -11,6 +11,50 @@ abstract interface class CalendarDataSource {
   });
 }
 
+/// Adds the application-owned Academic Assignment projection to any existing
+/// Calendar source without changing scheduling behavior.
+final class AcademicAssignmentCalendarDataSource implements CalendarDataSource {
+  const AcademicAssignmentCalendarDataSource({
+    required this.base,
+    required this.assignments,
+  });
+
+  final CalendarDataSource base;
+  final AcademicAssignmentCalendarQuery assignments;
+
+  @override
+  Future<CalendarSnapshot> load({
+    required String studentId,
+    required LocalDate firstDate,
+    required LocalDate lastDate,
+  }) async {
+    final results = await Future.wait([
+      base.load(studentId: studentId, firstDate: firstDate, lastDate: lastDate),
+      assignments.dueBetween(firstDate: firstDate, lastDate: lastDate),
+    ]);
+    final baseSnapshot = results[0] as CalendarSnapshot;
+    final assignmentRecords =
+        results[1] as List<StoredDomainRecord<AcademicAssignment>>;
+    final entries = <CalendarEntry>[
+      ...baseSnapshot.entries,
+      for (final record in assignmentRecords)
+        CalendarEntry(
+          id: record.value.id,
+          kind: CalendarEntryKind.academicAssignment,
+          startDate: record.value.dueDate,
+          endDate: record.value.dueDate,
+          title: record.value.title,
+          assignment: record.value.course,
+          statusLabel: switch (record.value.status) {
+            AcademicAssignmentStatus.pending => 'Pending',
+            AcademicAssignmentStatus.completed => 'Completed',
+          },
+        ),
+    ]..sort(_compareEntries);
+    return CalendarSnapshot(entries);
+  }
+}
+
 /// Presentation adapter over the application-owned calendar query.
 final class SchedulingCalendarDataSource implements CalendarDataSource {
   const SchedulingCalendarDataSource(this.scheduling);

@@ -208,6 +208,16 @@ void _validateCorrectedVersion({
           preceptorId: _nullableText(corrected, 'preceptor_id'),
           note: _nullableText(corrected, 'note'),
         );
+      case 'academic_assignment':
+        AcademicAssignment(
+          id: conflict.record.entityId,
+          title: _text(corrected, 'title'),
+          course: _text(corrected, 'course'),
+          dueDate: _localDate(_text(corrected, 'due_date')),
+          status: AcademicAssignmentStatus.values.byName(
+            _text(corrected, 'status'),
+          ),
+        );
       case 'student_profile':
         StudentProfile(
           id: conflict.record.entityId,
