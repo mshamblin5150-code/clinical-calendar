@@ -1,10 +1,174 @@
+import 'dart:io';
+
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/theme_acceptance_harness.dart';
+
 void main() {
+  testWidgets('runtime thumbnail renders the deterministic month grid', (
+    tester,
+  ) async {
+    final bundle = ClinicalCalendarThemeBundleRegistry
+        .standard
+        .selectableBundles
+        .singleWhere((candidate) => candidate.id == graphiteThemeId);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 800,
+            child: ThemeRuntimeThumbnail(bundle: bundle),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const Key('theme-thumbnail-weekday-grid')),
+      findsOneWidget,
+    );
+    expect(find.byType(GraphiteApplicationShell), findsOneWidget);
+    expect(
+      find.byKey(const Key('graphite-landscape-shell')),
+      findsOneWidget,
+      reason: 'Gallery must render the accepted product shell, not buildFrame.',
+    );
+    for (var index = 0; index < 42; index++) {
+      expect(
+        find.byKey(Key('theme-thumbnail-day-cell-$index')),
+        findsOneWidget,
+      );
+    }
+    expect(find.byKey(const Key('theme-thumbnail-day-cell-42')), findsNothing);
+  });
+
+  testWidgets('every thumbnail enters its accepted product shell', (
+    tester,
+  ) async {
+    const expectedShellKeys = <String, String>{
+      variantFThemeId: 'command-bar',
+      graphiteThemeId: 'graphite-landscape-shell',
+      federationClassicThemeId: 'federation-classic-landscape-shell',
+      federation2399ThemeId: 'federation-2399-landscape-shell',
+      coastalCalmThemeId: 'coastal-calm-landscape-shell',
+      botanicalStudyThemeId: 'botanical-study-landscape-shell',
+      heritageFieldNotesThemeId: 'heritage-field-notes-landscape-shell',
+    };
+
+    for (final bundle
+        in ClinicalCalendarThemeBundleRegistry.standard.selectableBundles) {
+      await tester.pumpWidget(
+        MaterialApp(home: ThemeRuntimeThumbnail(bundle: bundle)),
+      );
+      expect(
+        find.byKey(Key(expectedShellKeys[bundle.id]!)),
+        findsOneWidget,
+        reason: '${bundle.id} must not fall back to its legacy Gallery frame.',
+      );
+      final thumbnail = find.byKey(Key('theme-gallery-thumbnail-${bundle.id}'));
+      expect(
+        find.ancestor(
+          of: thumbnail,
+          matching: find.byWidgetPredicate(
+            (widget) => widget is IgnorePointer && widget.ignoring,
+          ),
+        ),
+        findsOneWidget,
+        reason: '${bundle.id} preview controls must remain inert.',
+      );
+      expect(
+        find.ancestor(
+          of: thumbnail,
+          matching: find.byWidgetPredicate(
+            (widget) => widget is ExcludeFocus && widget.excluding,
+          ),
+        ),
+        findsOneWidget,
+        reason: '${bundle.id} preview controls must be skipped by traversal.',
+      );
+      expect(tester.takeException(), isNull, reason: bundle.id);
+    }
+  });
+
+  for (final bundle
+      in ClinicalCalendarThemeBundleRegistry.standard.selectableBundles) {
+    testWidgets('${bundle.id} runtime thumbnail is visually pinned', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(bundle.gallery.thumbnailViewport);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox.fromSize(
+            size: bundle.gallery.thumbnailViewport,
+            child: ThemeRuntimeThumbnail(bundle: bundle),
+          ),
+        ),
+      );
+
+      final thumbnail = find.byKey(Key('theme-gallery-thumbnail-${bundle.id}'));
+      await tester.runAsync(() async {
+        for (final assetPath in bundle.frame.assetPaths) {
+          await precacheImage(
+            AssetImage(assetPath, package: bundle.frame.assetPackage),
+            tester.element(thumbnail),
+          );
+        }
+      });
+      await tester.pumpAndSettle();
+
+      expect(tester.getSize(thumbnail), bundle.gallery.thumbnailViewport);
+      await expectLater(
+        thumbnail,
+        matchesGoldenFile('goldens/theme_gallery_runtime/${bundle.id}.png'),
+      );
+      expect(tester.takeException(), isNull, reason: bundle.id);
+    });
+
+    test(
+      '${bundle.id} pinned runtime thumbnail passes the evidence audit',
+      () async {
+        final packageRoot =
+            Directory.current.path.endsWith('clinical_calendar_presentation')
+            ? Directory.current
+            : Directory('packages/clinical_calendar_presentation');
+        final bytes = await File(
+          '${packageRoot.path}/test/goldens/theme_gallery_runtime/'
+          '${bundle.id}.png',
+        ).readAsBytes();
+        final evidence = ThemeThumbnailEvidence(
+          themeId: bundle.id,
+          rendererVersion: bundle.shellRenderer.rendererId,
+          fixtureId: bundle.gallery.thumbnailFixtureId,
+          viewport: bundle.gallery.thumbnailViewport,
+          sha256: sha256.convert(bytes).toString(),
+          captureUri: 'captures/${bundle.id}-runtime-thumbnail.png',
+          fictionalFixture: true,
+          swatches: [
+            for (final swatch in bundle.gallery.swatches)
+              ThemeThumbnailSwatchEvidence(
+                role: swatch.role,
+                label: swatch.label,
+                color: swatch.color,
+              ),
+          ],
+        );
+
+        final result = await ThemeThumbnailAcceptanceAuditor.audit(
+          bundle: bundle,
+          bytes: bytes,
+          evidence: evidence,
+        );
+        expect(result.passed, isTrue, reason: result.failures.join('\n'));
+      },
+    );
+  }
+
   testWidgets('Preview is explicit and follows the inspected identity', (
     tester,
   ) async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'responsive_shell.dart';
 import 'theme_contract.dart';
 import 'variant_f_theme.dart';
 
@@ -317,21 +318,44 @@ final class ThemeRuntimeThumbnail extends StatelessWidget {
         '${bundle.gallery.rendererId}',
     image: true,
     child: ExcludeSemantics(
-      child: RepaintBoundary(
-        key: Key('theme-gallery-thumbnail-${bundle.id}'),
-        child: Theme(
-          data: bundle.standardPresentation.createThemeData(),
-          child: ClinicalCalendarSemanticMarkScope(
-            marks: bundle.marks,
-            child: AspectRatio(
-              aspectRatio: bundle.gallery.thumbnailViewport.aspectRatio,
-              child: ClipRect(
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  child: SizedBox.fromSize(
-                    size: bundle.gallery.thumbnailViewport,
-                    child: bundle.shellRenderer.buildFrame(
-                      child: const _PinnedCalendarFixture(),
+      child: ExcludeFocus(
+        child: IgnorePointer(
+          child: RepaintBoundary(
+            key: Key('theme-gallery-thumbnail-${bundle.id}'),
+            child: Theme(
+              data: bundle.standardPresentation.createThemeData(),
+              child: ClinicalCalendarSemanticMarkScope(
+                marks: bundle.marks,
+                child: AspectRatio(
+                  aspectRatio: bundle.gallery.thumbnailViewport.aspectRatio,
+                  child: ClipRect(
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: SizedBox.fromSize(
+                        size: bundle.gallery.thumbnailViewport,
+                        // Do not replace this with buildFrame. The completed
+                        // concept-fidelity issues #128 and #133-#137 retained
+                        // normalized frames for compact/destination use, while
+                        // their accepted Calendar designs live in build().
+                        child: bundle.shellRenderer.build(
+                          key: const Key('theme-thumbnail-product-shell'),
+                          environmentName: 'GALLERY PREVIEW',
+                          onOpenMenu: _ignoreThumbnailAction,
+                          onOpenDestination: _ignoreThumbnailDestination,
+                          onOpenAttention: _ignoreThumbnailAction,
+                          onAddSchedule: _ignoreThumbnailAction,
+                          slots: const ResponsiveShellSlots(
+                            centralContent: _PinnedCalendarFixture(),
+                            planningRegion: _ThumbnailPlanningFixture(),
+                            placementDock: _ThumbnailPlacementsFixture(),
+                            insightRail: _ThumbnailProgressFixture(),
+                            mobilePlacementSummary:
+                                _ThumbnailPlacementsFixture(),
+                            mobileAttention: _ThumbnailProgressFixture(),
+                            profileAvatar: Icon(Icons.person_outline),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -344,75 +368,354 @@ final class ThemeRuntimeThumbnail extends StatelessWidget {
   );
 }
 
+void _ignoreThumbnailAction() {}
+
+void _ignoreThumbnailDestination(ClinicalCalendarDestination _) {}
+
+final class _ThumbnailPlacementsFixture extends StatelessWidget {
+  const _ThumbnailPlacementsFixture();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.all(8),
+    child: Column(
+      key: Key('theme-thumbnail-placement-fixture'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('MY PLACEMENTS'),
+        SizedBox(height: 10),
+        Text('Acceptance Family Medicine'),
+        SizedBox(height: 6),
+        LinearProgressIndicator(value: 0.62),
+        SizedBox(height: 14),
+        Text('Acceptance Internal Medicine'),
+        SizedBox(height: 6),
+        LinearProgressIndicator(value: 0.38),
+      ],
+    ),
+  );
+}
+
+final class _ThumbnailProgressFixture extends StatelessWidget {
+  const _ThumbnailProgressFixture();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.all(8),
+    child: Column(
+      key: Key('theme-thumbnail-progress-fixture'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('TOTAL PROGRESS'),
+        SizedBox(height: 10),
+        Center(
+          child: SizedBox.square(
+            dimension: 76,
+            child: CircularProgressIndicator(value: 0.54, strokeWidth: 8),
+          ),
+        ),
+        SizedBox(height: 12),
+        Text('97 of 180 hours'),
+        SizedBox(height: 16),
+        Text('NEEDS ATTENTION'),
+        SizedBox(height: 8),
+        Text('1 evaluation due'),
+      ],
+    ),
+  );
+}
+
+final class _ThumbnailPlanningFixture extends StatelessWidget {
+  const _ThumbnailPlanningFixture();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.all(8),
+    child: Row(
+      key: Key('theme-thumbnail-planning-fixture'),
+      children: [
+        Icon(Icons.add_box_outlined),
+        SizedBox(width: 8),
+        Text('PLANNING'),
+        SizedBox(width: 18),
+        Expanded(child: Text('Clinical Session · Aug 12 · 08:00–16:00')),
+      ],
+    ),
+  );
+}
+
 final class _PinnedCalendarFixture extends StatelessWidget {
   const _PinnedCalendarFixture();
 
+  static const _weekdays = <String>[
+    'SUN',
+    'MON',
+    'TUE',
+    'WED',
+    'THU',
+    'FRI',
+    'SAT',
+  ];
+
+  static const _dates = <int>[
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    1,
+    2,
+    3,
+    4,
+    5,
+  ];
+
   @override
-  Widget build(BuildContext context) => ColoredBox(
-    color: Theme.of(context).colorScheme.surface,
-    child: Padding(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text('AUGUST 2026', maxLines: 1),
-          const SizedBox(height: 4),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _FixtureCommitment(
-                    label: 'Clinical Session',
-                    color: context.clinicalColors.clinical,
-                    role: ThemeSemanticRole.clinicalSession,
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => SizedBox(
+      height: constraints.hasBoundedHeight ? constraints.maxHeight : 520,
+      child: ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.chevron_left, size: 20),
+                  const Icon(Icons.chevron_right, size: 20),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      'AUGUST 2026',
+                      style: Theme.of(context).textTheme.titleMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: _FixtureCommitment(
-                    label: 'Work Shift',
-                    color: context.clinicalColors.work,
-                    role: ThemeSemanticRole.workShift,
+                  const Expanded(
+                    flex: 4,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _ThumbnailViewMode(
+                            label: 'MONTH',
+                            selected: true,
+                          ),
+                        ),
+                        Expanded(child: _ThumbnailViewMode(label: 'WEEK')),
+                        Expanded(child: _ThumbnailViewMode(label: 'AGENDA')),
+                      ],
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                key: const Key('theme-thumbnail-weekday-grid'),
+                children: [
+                  for (final weekday in _weekdays)
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          weekday,
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Expanded(
+                child: Column(
+                  children: [
+                    for (var week = 0; week < 6; week++)
+                      Expanded(
+                        child: Row(
+                          children: [
+                            for (var day = 0; day < 7; day++)
+                              Expanded(
+                                child: _ThumbnailDayCell(
+                                  key: Key(
+                                    'theme-thumbnail-day-cell-${week * 7 + day}',
+                                  ),
+                                  date: _dates[week * 7 + day],
+                                  outsideMonth:
+                                      week * 7 + day < 6 || week * 7 + day > 36,
+                                  today: week * 7 + day == 14,
+                                  commitment: switch (week * 7 + day) {
+                                    10 => _ThumbnailCommitment.workShift,
+                                    17 => _ThumbnailCommitment.clinicalSession,
+                                    _ => null,
+                                  },
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     ),
   );
 }
 
-final class _FixtureCommitment extends StatelessWidget {
-  const _FixtureCommitment({
-    required this.label,
-    required this.color,
-    required this.role,
-  });
+final class _ThumbnailViewMode extends StatelessWidget {
+  const _ThumbnailViewMode({required this.label, this.selected = false});
 
   final String label;
-  final Color color;
-  final ThemeSemanticRole role;
+  final bool selected;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.22),
-      border: Border.all(color: color, width: 2),
+      color: selected
+          ? Theme.of(context).colorScheme.secondaryContainer
+          : Theme.of(context).colorScheme.surfaceContainerLow,
+      border: Border.all(color: Theme.of(context).colorScheme.outline),
     ),
-    child: Center(
-      child: FittedBox(
-        child: Row(
-          children: [
-            ThemeSemanticMarkIcon(role: role, size: 14),
-            const SizedBox(width: 4),
-            Text(label),
-          ],
-        ),
-      ),
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
     ),
   );
+}
+
+enum _ThumbnailCommitment { clinicalSession, workShift }
+
+final class _ThumbnailDayCell extends StatelessWidget {
+  const _ThumbnailDayCell({
+    required this.date,
+    required this.outsideMonth,
+    required this.today,
+    required this.commitment,
+    super.key,
+  });
+
+  final int date;
+  final bool outsideMonth;
+  final bool today;
+  final _ThumbnailCommitment? commitment;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final commitmentColor = switch (commitment) {
+      _ThumbnailCommitment.clinicalSession => context.clinicalColors.clinical,
+      _ThumbnailCommitment.workShift => context.clinicalColors.work,
+      null => null,
+    };
+    final commitmentLabel = switch (commitment) {
+      _ThumbnailCommitment.clinicalSession => 'CLINICAL SESSION',
+      _ThumbnailCommitment.workShift => 'WORK SHIFT',
+      null => null,
+    };
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 64;
+        final dateLabel = Text(
+          '$date',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: outsideMonth
+                ? scheme.onSurface.withValues(alpha: 0.48)
+                : scheme.onSurface,
+            fontWeight: today ? FontWeight.w700 : null,
+          ),
+        );
+        return Container(
+          padding: EdgeInsets.all(compact ? 3 : 6),
+          decoration: BoxDecoration(
+            color: today
+                ? scheme.primaryContainer.withValues(alpha: 0.45)
+                : compact && commitmentColor != null
+                ? commitmentColor.withValues(alpha: 0.18)
+                : scheme.surfaceContainerLowest,
+            border: Border.all(
+              color: today ? scheme.error : scheme.outlineVariant,
+              width: today ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (compact)
+                SizedBox(
+                  height: 14,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.topLeft,
+                    child: dateLabel,
+                  ),
+                ),
+              if (!compact) dateLabel,
+              if (!compact &&
+                  commitmentColor != null &&
+                  commitmentLabel != null) ...[
+                const Spacer(),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 4,
+                  ),
+                  color: commitmentColor.withValues(alpha: 0.28),
+                  child: Text(
+                    commitmentLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: commitmentColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 final class _ThemeSwatch extends StatelessWidget {
