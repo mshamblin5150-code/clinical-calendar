@@ -329,19 +329,7 @@ Future<void> _pumpProof(
       fontFamily: 'ProofRoboto',
     ),
   );
-  final placementHarness = PlacementProgressHarness(
-    familyName: 'Acceptance Family Medicine',
-    familyTargetHours: 90,
-    seedHistoricalHours: false,
-    scheduledSessionCount: 2,
-    scheduledSessionHours: 8,
-    secondPlacementName: 'Internal Medicine',
-    splitSessionsBetweenPlacements: true,
-    selectSecondPlacement: true,
-    requireInitialSelfAssessments: true,
-    secondPlacementStartDate: LocalDate(2026, 8, 1),
-    firstSessionDate: LocalDate(2026, 8, 8),
-  );
+  final placementHarness = PlacementProgressHarness.graphiteConcept();
   await placementHarness.controller.load();
   await placementHarness.attentionController.load();
   expect(

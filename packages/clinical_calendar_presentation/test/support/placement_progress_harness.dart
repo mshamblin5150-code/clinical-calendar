@@ -5,6 +5,21 @@ import 'package:clinical_calendar_presentation/clinical_calendar_presentation.da
 const placementTestStudentId = '10000000-0000-4000-8000-000000000001';
 
 final class PlacementProgressHarness {
+  factory PlacementProgressHarness.graphiteConcept() =>
+      PlacementProgressHarness(
+        familyName: 'Acceptance Family Medicine',
+        familyTargetHours: 90,
+        seedHistoricalHours: false,
+        scheduledSessionCount: 2,
+        scheduledSessionHours: 8,
+        secondPlacementName: 'Internal Medicine',
+        splitSessionsBetweenPlacements: true,
+        selectSecondPlacement: true,
+        requireInitialSelfAssessments: true,
+        secondPlacementStartDate: LocalDate(2026, 8, 1),
+        firstSessionDate: LocalDate(2026, 8, 8),
+      );
+
   PlacementProgressHarness({
     bool completed = false,
     String familyName = 'Family Medicine',
