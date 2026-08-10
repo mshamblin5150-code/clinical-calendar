@@ -1,9 +1,19 @@
+import 'dart:io';
+
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/proof_fonts.dart';
+
 void main() {
+  setUpAll(() {
+    if (!Platform.isWindows) {
+      goldenFileComparator = createProofGoldenComparator(goldenFileComparator);
+    }
+  });
+
   testWidgets(
     'Graphite Calendar is pinned at tablet landscape and 200 percent',
     (tester) async {
