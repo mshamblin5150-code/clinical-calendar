@@ -339,6 +339,7 @@ final class _FederationClassicCalendarViewport extends StatelessWidget {
       final calendar = CalendarPeriodViewportPolicy(
         useBoundedMonthGrid: true,
         scaleDayNumberWithText: true,
+        useEnlargedTextLandscapeReflow: !scrollAtEnlargedText,
         toolbarLayout: CalendarPeriodToolbarLayout.stackedCentered,
         compactWeekdayLabels: true,
         uppercasePeriodTitle: true,
@@ -347,18 +348,12 @@ final class _FederationClassicCalendarViewport extends StatelessWidget {
         todayBackgroundOverride: FederationClassicColors.canvas,
         child: child,
       );
-      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3 ||
-          !scrollAtEnlargedText) {
-        return calendar;
-      }
-      return SingleChildScrollView(
-        key: const Key('federation-classic-calendar-horizontal-scroll'),
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: constraints.maxWidth * 3.5,
-          height: constraints.maxHeight,
-          child: calendar,
-        ),
+      return buildEnlargedTextCalendarScrollViewport(
+        context: context,
+        constraints: constraints,
+        enabled: scrollAtEnlargedText,
+        scrollKey: const Key('federation-classic-calendar-horizontal-scroll'),
+        child: calendar,
       );
     },
   );

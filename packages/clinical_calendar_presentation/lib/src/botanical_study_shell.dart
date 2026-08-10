@@ -352,20 +352,15 @@ final class _BotanicalStudyCalendarViewport extends StatelessWidget {
       final calendar = CalendarPeriodViewportPolicy(
         useBoundedMonthGrid: true,
         scaleDayNumberWithText: true,
+        useEnlargedTextLandscapeReflow: !scrollAtEnlargedText,
         child: child,
       );
-      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3 ||
-          !scrollAtEnlargedText) {
-        return calendar;
-      }
-      return SingleChildScrollView(
-        key: const Key('botanical-study-calendar-horizontal-scroll'),
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: constraints.maxWidth * 3.5,
-          height: constraints.maxHeight,
-          child: calendar,
-        ),
+      return buildEnlargedTextCalendarScrollViewport(
+        context: context,
+        constraints: constraints,
+        enabled: scrollAtEnlargedText,
+        scrollKey: const Key('botanical-study-calendar-horizontal-scroll'),
+        child: calendar,
       );
     },
   );

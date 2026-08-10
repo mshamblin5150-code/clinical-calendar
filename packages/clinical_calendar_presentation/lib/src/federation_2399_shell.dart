@@ -336,24 +336,19 @@ final class _Federation2399CalendarViewport extends StatelessWidget {
       final calendar = CalendarPeriodViewportPolicy(
         useBoundedMonthGrid: true,
         scaleDayNumberWithText: true,
+        useEnlargedTextLandscapeReflow: !scrollAtEnlargedText,
         centerPeriodHeader: true,
         useConceptMonthMarks: true,
         suppressProtectedHatch: true,
         clipDayDecoration: true,
         child: child,
       );
-      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3 ||
-          !scrollAtEnlargedText) {
-        return calendar;
-      }
-      return SingleChildScrollView(
-        key: const Key('federation-2399-calendar-horizontal-scroll'),
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: constraints.maxWidth * 3.5,
-          height: constraints.maxHeight,
-          child: calendar,
-        ),
+      return buildEnlargedTextCalendarScrollViewport(
+        context: context,
+        constraints: constraints,
+        enabled: scrollAtEnlargedText,
+        scrollKey: const Key('federation-2399-calendar-horizontal-scroll'),
+        child: calendar,
       );
     },
   );

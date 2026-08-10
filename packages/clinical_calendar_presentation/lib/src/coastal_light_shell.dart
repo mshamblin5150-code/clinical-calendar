@@ -343,6 +343,7 @@ final class _CoastalLightCalendarViewport extends StatelessWidget {
             child: CalendarPeriodViewportPolicy(
               useBoundedMonthGrid: true,
               scaleDayNumberWithText: true,
+              useEnlargedTextLandscapeReflow: !scrollAtEnlargedText,
               useDenseMonthCards: !enlargedText,
               useNeutralMonthCells: true,
               useLeadingTitleCenteredPeriodToolbar: !enlargedText,
@@ -356,17 +357,12 @@ final class _CoastalLightCalendarViewport extends StatelessWidget {
           ],
         ],
       );
-      if (!enlargedText || !scrollAtEnlargedText) {
-        return calendar;
-      }
-      return SingleChildScrollView(
-        key: const Key('coastal-calm-calendar-horizontal-scroll'),
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: constraints.maxWidth * 3.5,
-          height: constraints.maxHeight,
-          child: calendar,
-        ),
+      return buildEnlargedTextCalendarScrollViewport(
+        context: context,
+        constraints: constraints,
+        enabled: scrollAtEnlargedText,
+        scrollKey: const Key('coastal-calm-calendar-horizontal-scroll'),
+        child: calendar,
       );
     },
   );

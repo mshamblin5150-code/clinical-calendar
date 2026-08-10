@@ -711,21 +711,16 @@ final class _GraphiteCalendarViewport extends StatelessWidget {
       final calendar = CalendarPeriodViewportPolicy(
         useBoundedMonthGrid: true,
         scaleDayNumberWithText: true,
+        useEnlargedTextLandscapeReflow: !scrollAtEnlargedText,
         useInstrumentChrome: true,
         child: child,
       );
-      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3 ||
-          !scrollAtEnlargedText) {
-        return calendar;
-      }
-      return SingleChildScrollView(
-        key: const Key('graphite-calendar-horizontal-scroll'),
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: constraints.maxWidth * 3.5,
-          height: constraints.maxHeight,
-          child: calendar,
-        ),
+      return buildEnlargedTextCalendarScrollViewport(
+        context: context,
+        constraints: constraints,
+        enabled: scrollAtEnlargedText,
+        scrollKey: const Key('graphite-calendar-horizontal-scroll'),
+        child: calendar,
       );
     },
   );
@@ -802,6 +797,33 @@ final class _GraphiteCommandCrown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    final identity =
+        environmentName.trim().isEmpty ||
+            environmentName.trim().toUpperCase() == 'GRAPHITE'
+        ? 'GRAPHITE'
+        : 'GRAPHITE  •  $environmentName';
+    final title = Text(
+      'CLINICAL CALENDAR',
+      maxLines: 1,
+      overflow: TextOverflow.clip,
+      style: TextStyle(
+        color: context.clinicalColors.primaryText,
+        fontSize: compact ? 18 : 25,
+        height: 1,
+        letterSpacing: 1.5,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+    final subtitle = Text(
+      identity,
+      maxLines: 2,
+      overflow: TextOverflow.clip,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: context.clinicalColors.secondaryText,
+        fontSize: 11,
+        letterSpacing: 1.5,
+      ),
+    );
     return Container(
       key: const Key('graphite-command-crown'),
       height: compact ? 72 : null,
@@ -828,38 +850,19 @@ final class _GraphiteCommandCrown extends StatelessWidget {
           ),
           SizedBox(width: compact ? 8 : 12),
           Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'CLINICAL CALENDAR',
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: TextStyle(
-                    color: context.clinicalColors.primaryText,
-                    fontSize: compact ? 18 : 25,
-                    height: 1,
-                    letterSpacing: 1.5,
-                    fontWeight: FontWeight.w600,
+            child: !compact && enlargedText
+                ? Row(
+                    children: [
+                      title,
+                      const SizedBox(width: 18),
+                      Flexible(child: subtitle),
+                    ],
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [title, if (!compact) subtitle],
                   ),
-                ),
-                if (!compact && !enlargedText)
-                  Text(
-                    environmentName.trim().isEmpty ||
-                            environmentName.trim().toUpperCase() == 'GRAPHITE'
-                        ? 'GRAPHITE'
-                        : 'GRAPHITE  •  $environmentName',
-                    maxLines: 1,
-                    overflow: TextOverflow.clip,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: context.clinicalColors.secondaryText,
-                      fontSize: 11,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-              ],
-            ),
           ),
           IconButton(
             tooltip: 'Add schedule',

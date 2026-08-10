@@ -532,34 +532,12 @@ final class DestinationSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: context.clinicalColors.structure,
-        leadingWidth: enlargedText
-            ? 144
-            : entry == DestinationEntry.applicationMenu
-            ? 88
-            : 96,
-        toolbarHeight: enlargedText ? 72 : null,
-        leading: TextButton.icon(
-          key: Key(
-            entry == DestinationEntry.applicationMenu
-                ? 'back-action'
-                : 'close-action',
-          ),
-          onPressed: onExit,
-          icon: Icon(
-            entry == DestinationEntry.applicationMenu
-                ? Icons.arrow_back
-                : Icons.close,
-            size: 18,
-          ),
-          label: Text(
-            entry == DestinationEntry.applicationMenu ? 'Back' : 'Close',
-          ),
-        ),
-        title: Text(destination.label),
+      appBar: buildDestinationAppBar(
+        context,
+        destination: destination,
+        entry: entry,
+        onExit: onExit,
       ),
       body: SafeArea(
         child: Padding(
@@ -574,6 +552,29 @@ final class DestinationSurface extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Builds the shared destination header used by frozen and additive shells.
+PreferredSizeWidget buildDestinationAppBar(
+  BuildContext context, {
+  required ClinicalCalendarDestination destination,
+  required DestinationEntry entry,
+  required VoidCallback onExit,
+}) {
+  final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+  final enteredFromMenu = entry == DestinationEntry.applicationMenu;
+  return AppBar(
+    backgroundColor: context.clinicalColors.structure,
+    leadingWidth: enlargedText ? 144 : (enteredFromMenu ? 88 : 96),
+    toolbarHeight: enlargedText ? 72 : null,
+    leading: TextButton.icon(
+      key: Key(enteredFromMenu ? 'back-action' : 'close-action'),
+      onPressed: onExit,
+      icon: Icon(enteredFromMenu ? Icons.arrow_back : Icons.close, size: 18),
+      label: Text(enteredFromMenu ? 'Back' : 'Close'),
+    ),
+    title: Text(destination.label),
+  );
 }
 
 final class ShellPanel extends StatelessWidget {

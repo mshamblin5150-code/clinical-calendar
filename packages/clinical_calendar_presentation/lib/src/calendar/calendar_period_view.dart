@@ -14,6 +14,36 @@ enum CalendarPeriodToolbarLayout { inline, stackedCentered }
 
 enum CalendarPeriodLabelStyle { standard, compactUppercase }
 
+bool _usesLandscapeEnlargedTextLayout(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(1) > 1.3 &&
+    (CalendarPeriodViewportPolicy.maybeOf(
+          context,
+        )?.useEnlargedTextLandscapeReflow ??
+        MediaQuery.orientationOf(context) == Orientation.landscape);
+
+/// Applies the shared opt-in horizontal viewport used by portrait concept
+/// shells when enlarged text needs more room than the bounded dashboard bay.
+Widget buildEnlargedTextCalendarScrollViewport({
+  required BuildContext context,
+  required BoxConstraints constraints,
+  required bool enabled,
+  required Key scrollKey,
+  required Widget child,
+}) {
+  if (!enabled || MediaQuery.textScalerOf(context).scale(1) <= 1.3) {
+    return child;
+  }
+  return SingleChildScrollView(
+    key: scrollKey,
+    scrollDirection: Axis.horizontal,
+    child: SizedBox(
+      width: constraints.maxWidth * 3.5,
+      height: constraints.maxHeight,
+      child: child,
+    ),
+  );
+}
+
 /// Opt-in sizing policy for calendar hosts that intentionally constrain the
 /// month grid to a bounded dashboard bay.
 final class CalendarPeriodViewportPolicy extends InheritedWidget {
@@ -37,6 +67,7 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
     this.useConceptMonthMarks = false,
     this.suppressProtectedHatch = false,
     this.clipDayDecoration = false,
+    this.useEnlargedTextLandscapeReflow,
     required super.child,
     super.key,
   }) : assert(monthWeekRows == 6 || monthWeekRows == 7);
@@ -60,6 +91,7 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
   final bool useConceptMonthMarks;
   final bool suppressProtectedHatch;
   final bool clipDayDecoration;
+  final bool? useEnlargedTextLandscapeReflow;
 
   static bool usesBoundedMonthGrid(BuildContext context) =>
       context
@@ -169,7 +201,9 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
       centerPeriodHeader != oldWidget.centerPeriodHeader ||
       useConceptMonthMarks != oldWidget.useConceptMonthMarks ||
       suppressProtectedHatch != oldWidget.suppressProtectedHatch ||
-      clipDayDecoration != oldWidget.clipDayDecoration;
+      clipDayDecoration != oldWidget.clipDayDecoration ||
+      useEnlargedTextLandscapeReflow !=
+          oldWidget.useEnlargedTextLandscapeReflow;
 }
 
 final class CalendarPeriodView extends StatefulWidget {
@@ -313,6 +347,15 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
           final showArchiveMonthLegend =
               CalendarPeriodViewportPolicy.showsArchiveMonthLegend(context) &&
               _period == CalendarPeriod.month;
+          final landscapeEnlargedText = _usesLandscapeEnlargedTextLayout(
+            context,
+          );
+          final usesScrollableCalendar =
+              outerConstraints.hasBoundedHeight &&
+              (landscapeEnlargedText ||
+                  (context.accessibilityTokens.persistentExpandedLegend &&
+                      outerConstraints.maxWidth < 600 &&
+                      MediaQuery.textScalerOf(context).scale(1) > 1));
           final periodView = LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 600;
@@ -367,11 +410,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                 context.clinicalMetrics.cornerRadius,
               ),
             ),
-            child:
-                context.accessibilityTokens.persistentExpandedLegend &&
-                    outerConstraints.hasBoundedHeight &&
-                    outerConstraints.maxWidth < 600 &&
-                    MediaQuery.textScalerOf(context).scale(1) > 1
+            child: usesScrollableCalendar
                 ? SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -388,14 +427,25 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                           onPeriod: _changePeriod,
                           archiveTreatment: showArchiveMonthLegend,
                         ),
-                        const _EnhancedCalendarLegend(),
+                        if (context
+                            .accessibilityTokens
+                            .persistentExpandedLegend)
+                          const _EnhancedCalendarLegend(),
                         SizedBox(
                           height: math.max(
                             outerConstraints.maxHeight * .7,
-                            420,
+                            landscapeEnlargedText ? 640 : 420,
                           ),
                           child: periodView,
                         ),
+                        if (landscapeEnlargedText &&
+                            _period == CalendarPeriod.month &&
+                            CalendarPeriodViewportPolicy.usesInstrumentChrome(
+                              context,
+                            ))
+                          const _InstrumentCalendarLegend(),
+                        if (landscapeEnlargedText && showArchiveMonthLegend)
+                          const _ArchiveCalendarLegend(),
                       ],
                     ),
                   )
@@ -551,6 +601,7 @@ final class _CalendarToolbar extends StatelessWidget {
           final stackedCentered =
               CalendarPeriodViewportPolicy.toolbarLayoutOf(context) ==
               CalendarPeriodToolbarLayout.stackedCentered;
+          final enlargedText = _usesLandscapeEnlargedTextLayout(context);
           final resolvedTitle =
               (viewportPolicy?.uppercasePeriodTitle ?? false) ||
                   compactUppercaseLabels
@@ -626,6 +677,28 @@ final class _CalendarToolbar extends StatelessWidget {
             expandedInsets: stackedCentered ? EdgeInsets.zero : null,
             onSelectionChanged: (selection) => onPeriod(selection.single),
           );
+          if (!compact && enlargedText) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        resolvedTitle,
+                        key: const Key('calendar-period-title'),
+                        maxLines: 2,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    navigation,
+                  ],
+                ),
+                const SizedBox(height: 4),
+                switcher,
+              ],
+            );
+          }
           if (!compact &&
               CalendarPeriodViewportPolicy.centersPeriodHeader(context)) {
             final conceptArrowStyle = IconButton.styleFrom(
@@ -918,26 +991,36 @@ final class _ArchiveCalendarLegend extends StatelessWidget {
   const _ArchiveCalendarLegend();
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const Key('field-archive-calendar-legend'),
-    height: 42,
-    margin: const EdgeInsets.fromLTRB(0, 6, 0, 0),
-    padding: const EdgeInsets.symmetric(horizontal: 14),
-    decoration: BoxDecoration(
-      color: context.clinicalColors.structureRaised,
-      border: Border.all(color: context.clinicalColors.insetBorder),
-      borderRadius: BorderRadius.circular(4),
-    ),
-    child: const Row(
+  Widget build(BuildContext context) {
+    final enlargedText = _usesLandscapeEnlargedTextLayout(context);
+    final legend = Row(
+      mainAxisSize: enlargedText ? MainAxisSize.min : MainAxisSize.max,
       children: [
-        _ArchiveLegendItem(CalendarEntryKind.clinicalSession),
-        SizedBox(width: 38),
-        _ArchiveLegendItem(CalendarEntryKind.workShift),
-        SizedBox(width: 38),
-        _ArchiveLegendItem(CalendarEntryKind.protectedDay),
+        const _ArchiveLegendItem(CalendarEntryKind.clinicalSession),
+        const SizedBox(width: 38),
+        const _ArchiveLegendItem(CalendarEntryKind.workShift),
+        const SizedBox(width: 38),
+        const _ArchiveLegendItem(CalendarEntryKind.protectedDay),
       ],
-    ),
-  );
+    );
+    return Container(
+      key: const Key('field-archive-calendar-legend'),
+      height: 42,
+      margin: const EdgeInsets.fromLTRB(0, 6, 0, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: context.clinicalColors.structureRaised,
+        border: Border.all(color: context.clinicalColors.insetBorder),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: enlargedText
+          ? SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: legend,
+            )
+          : legend,
+    );
+  }
 }
 
 final class _ArchiveLegendItem extends StatelessWidget {
@@ -1078,10 +1161,11 @@ final class _MonthView extends StatelessWidget {
       height: height,
       child: Row(
         children: [
-          for (final label in weekdayLabels)
+          for (final (index, label) in weekdayLabels.indexed)
             Expanded(
               child: Center(
                 child: Text(
+                  key: Key('calendar-weekday-header-$index'),
                   label.toUpperCase(),
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     fontSize: _monthCellMetrics(context).weekdayLabelFontSize,
@@ -1124,9 +1208,12 @@ final class _MonthView extends StatelessWidget {
       );
     }
 
-    final columnFlex = Theme.of(
-      context,
-    ).extension<ClinicalCalendarPresentationPolicy>()?.monthColumnFlex;
+    final landscapeEnlargedText = _usesLandscapeEnlargedTextLayout(context);
+    final columnFlex = landscapeEnlargedText
+        ? null
+        : Theme.of(
+            context,
+          ).extension<ClinicalCalendarPresentationPolicy>()?.monthColumnFlex;
     if (columnFlex != null && boundedHeight != null) {
       final rowHeight = math
           .max(44, (boundedHeight - weekdayHeaderHeight) / weekRows)
@@ -1162,7 +1249,12 @@ final class _MonthView extends StatelessWidget {
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
         mainAxisExtent: boundedHeight != null
-            ? math.max(44, (boundedHeight - 32) / weekRows)
+            ? math.max(
+                44,
+                (boundedHeight -
+                        (landscapeEnlargedText ? weekdayHeaderHeight : 32)) /
+                    weekRows,
+              )
             : compact
             ? 58
             : 112,
@@ -1176,11 +1268,12 @@ final class _BotanicalMonthLegend extends StatelessWidget {
   const _BotanicalMonthLegend();
 
   @override
-  Widget build(BuildContext context) => const SizedBox(
-    height: 38,
-    child: Row(
+  Widget build(BuildContext context) {
+    final enlargedText = _usesLandscapeEnlargedTextLayout(context);
+    final legend = Row(
+      mainAxisSize: enlargedText ? MainAxisSize.min : MainAxisSize.max,
       mainAxisAlignment: MainAxisAlignment.center,
-      children: [
+      children: const [
         ThemeSemanticMarkIcon(
           role: ThemeSemanticRole.clinicalSession,
           size: 18,
@@ -1196,8 +1289,17 @@ final class _BotanicalMonthLegend extends StatelessWidget {
         SizedBox(width: 7),
         Text('PROTECTED'),
       ],
-    ),
-  );
+    );
+    return SizedBox(
+      height: 38,
+      child: enlargedText
+          ? SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: legend,
+            )
+          : legend,
+    );
+  }
 }
 
 final class _MonthDayCell extends StatelessWidget {
@@ -1721,6 +1823,7 @@ final class _DayNumber extends StatelessWidget {
     if (instrumentChrome && today) {
       final accent = Theme.of(context).colorScheme.primary;
       final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+      final landscapeEnlargedText = _usesLandscapeEnlargedTextLayout(context);
       final label = Text(
         'TODAY',
         key: const Key('calendar-today-label'),
@@ -1731,8 +1834,8 @@ final class _DayNumber extends StatelessWidget {
         ),
       );
       final number = Container(
-        width: 25,
-        height: 25,
+        width: landscapeEnlargedText ? 31 : 25,
+        height: landscapeEnlargedText ? 31 : 25,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: accent.withValues(alpha: .15),
@@ -1751,9 +1854,11 @@ final class _DayNumber extends StatelessWidget {
         ),
       );
       return SizedBox(
-        height: 42,
+        height: landscapeEnlargedText ? 31 : 42,
         child: Center(
-          child: enlargedText
+          child: landscapeEnlargedText
+              ? Semantics(label: 'Today', child: number)
+              : enlargedText
               ? Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [label, const SizedBox(width: 5), number],
@@ -1769,6 +1874,26 @@ final class _DayNumber extends StatelessWidget {
       context,
     );
     if (archiveTreatment && today) {
+      final landscapeEnlargedText = _usesLandscapeEnlargedTextLayout(context);
+      final number = Container(
+        width: landscapeEnlargedText ? 42 : 30,
+        height: landscapeEnlargedText ? 42 : 30,
+        decoration: BoxDecoration(
+          color: context.clinicalColors.clinical,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          '${date.day}',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+      if (landscapeEnlargedText) {
+        return Semantics(label: '${date.day}, Today', child: number);
+      }
       return SizedBox(
         width: double.infinity,
         height: 52,
@@ -1783,37 +1908,29 @@ final class _DayNumber extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 2),
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: context.clinicalColors.clinical,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '${date.day}',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+            number,
           ],
         ),
       );
     }
     if (monthCellMetrics.showTodayLabel) {
+      final number = Text(
+        '${date.day}',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontSize: monthCellMetrics.dayNumberFontSize,
+          fontWeight: today ? FontWeight.w700 : FontWeight.w500,
+          color: today ? conceptAccent : null,
+        ),
+      );
+      if (_usesLandscapeEnlargedTextLayout(context)) {
+        return Semantics(
+          label: today ? '${date.day}, Today' : null,
+          child: number,
+        );
+      }
       return Row(
         children: [
-          Text(
-            '${date.day}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: monthCellMetrics.dayNumberFontSize,
-              fontWeight: today ? FontWeight.w700 : FontWeight.w500,
-              color: today ? conceptAccent : null,
-            ),
-          ),
+          number,
           if (today) ...[
             const SizedBox(width: 10),
             Text(

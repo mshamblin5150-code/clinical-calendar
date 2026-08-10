@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
+import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,16 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'support/proof_fonts.dart';
 import 'support/theme_acceptance_harness.dart';
+
+const _calendarBayKeys = <String, String>{
+  variantFThemeId: 'central-content',
+  graphiteThemeId: 'graphite-calendar-bay',
+  federationClassicThemeId: 'federation-classic-calendar-bay',
+  federation2399ThemeId: 'federation-2399-calendar-bay',
+  coastalCalmThemeId: 'coastal-calm-calendar-bay',
+  botanicalStudyThemeId: 'botanical-study-calendar-bay',
+  heritageFieldNotesThemeId: 'heritage-field-notes-calendar-bay',
+};
 
 void main() {
   setUpAll(() {
@@ -63,7 +74,6 @@ void main() {
       const viewport = Size(1480, 924);
       await tester.binding.setSurfaceSize(viewport);
       addTearDown(() => tester.binding.setSurfaceSize(null));
-
       for (final bundle
           in ClinicalCalendarThemeBundleRegistry.standard.selectableBundles) {
         await tester.pumpWidget(
@@ -119,6 +129,7 @@ void main() {
         for (final enhanced in [false, true]) {
           await tester.pumpWidget(
             MaterialApp(
+              themeAnimationDuration: Duration.zero,
               theme: bundle.standardPresentation.createThemeData(
                 enhancedAccessibility: enhanced,
               ),
@@ -135,8 +146,13 @@ void main() {
                       onOpenDestination: _ignoreDestination,
                       onOpenAttention: _ignoreAction,
                       onAddSchedule: _ignoreAction,
-                      slots: const ResponsiveShellSlots(
-                        centralContent: _SevenDayCalendarFixture(),
+                      slots: ResponsiveShellSlots(
+                        centralContent: CalendarPeriodView(
+                          dataSource: const _EmptyCalendarDataSource(),
+                          studentId: '200-percent-calendar-student',
+                          today: LocalDate(2026, 8, 10),
+                          initialAnchor: LocalDate(2026, 8, 10),
+                        ),
                         planningRegion: SizedBox.shrink(),
                         placementDock: SizedBox.shrink(),
                         insightRail: SizedBox.shrink(),
@@ -150,14 +166,18 @@ void main() {
               ),
             ),
           );
-          await tester.pump();
+          await tester.pumpAndSettle();
+          final calendarBayFinder = find.byKey(
+            Key(_calendarBayKeys[bundle.id]!),
+          );
+          final calendarBay = tester.getRect(calendarBayFinder);
 
           for (var weekday = 0; weekday < 7; weekday++) {
             final rect = tester.getRect(
-              find.byKey(Key('tablet-weekday-$weekday')),
+              find.byKey(Key('calendar-weekday-header-$weekday')),
             );
             expect(
-              (Offset.zero & viewport).contains(rect.center),
+              calendarBay.contains(rect.center),
               isTrue,
               reason: '${bundle.id} enhanced=$enhanced hid weekday $weekday.',
             );
@@ -534,22 +554,13 @@ void _ignoreAction() {}
 
 void _ignoreDestination(ClinicalCalendarDestination _) {}
 
-final class _SevenDayCalendarFixture extends StatelessWidget {
-  const _SevenDayCalendarFixture();
+final class _EmptyCalendarDataSource implements CalendarDataSource {
+  const _EmptyCalendarDataSource();
 
   @override
-  Widget build(BuildContext context) => Row(
-    key: const Key('tablet-seven-day-calendar'),
-    children: [
-      for (var weekday = 0; weekday < 7; weekday++)
-        Expanded(
-          child: Center(
-            child: Text(
-              const ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][weekday],
-              key: Key('tablet-weekday-$weekday'),
-            ),
-          ),
-        ),
-    ],
-  );
+  Future<CalendarSnapshot> load({
+    required String studentId,
+    required LocalDate firstDate,
+    required LocalDate lastDate,
+  }) async => CalendarSnapshot([]);
 }

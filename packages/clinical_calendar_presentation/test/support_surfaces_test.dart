@@ -52,9 +52,98 @@ void main() {
       greaterThanOrEqualTo(400),
       reason: 'The field must grow with system text instead of clipping it.',
     );
-    expect(find.text('Military time'), findsOneWidget);
+    final timeField = tester.getRect(
+      find.byKey(const Key('time-display-setting')),
+    );
+    final selectedTime = tester.getRect(
+      find.descendant(
+        of: find.byKey(const Key('time-display-setting')),
+        matching: find.text('Military time'),
+      ),
+    );
+    expect(timeField.contains(selectedTime.topLeft), isTrue);
+    expect(timeField.contains(selectedTime.bottomRight), isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'all theme modes preserve 200 percent Settings navigation and values',
+    (tester) async {
+      const viewport = Size(1480, 924);
+      await tester.binding.setSurfaceSize(viewport);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final bundle
+          in ClinicalCalendarThemeBundleRegistry.standard.selectableBundles) {
+        for (final enhanced in [false, true]) {
+          await tester.pumpWidget(
+            MaterialApp(
+              themeAnimationDuration: Duration.zero,
+              theme: bundle.standardPresentation.createThemeData(
+                enhancedAccessibility: enhanced,
+              ),
+              home: Builder(
+                builder: (context) => MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: const TextScaler.linear(2)),
+                  child: ClinicalCalendarSemanticMarkScope(
+                    marks: bundle.marks,
+                    child: bundle.shellRenderer.buildDestination(
+                      destination: ClinicalCalendarDestination.settings,
+                      entry: DestinationEntry.applicationMenu,
+                      onExit: () {},
+                      child: SettingsTemplatesSurface(
+                        settings: StudentSettings(
+                          themeId: StudentSettings.variantFThemeId,
+                        ),
+                        scheduleTemplates: const [],
+                        newTemplateId: () => _id(199),
+                        onSaveSettings: (_) async {},
+                        onSaveTemplate: (_) async {},
+                        onRemoveTemplate: (_) async {},
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final actionRect = tester.getRect(
+            find.byKey(const Key('back-action')),
+          );
+          final backRect = tester.getRect(find.text('Back'));
+          expect(actionRect.contains(backRect.topLeft), isTrue);
+          expect(actionRect.contains(backRect.bottomRight), isTrue);
+
+          final settingsScroll = find.descendant(
+            of: find.byKey(const Key('settings-templates-surface')),
+            matching: find.byType(Scrollable),
+          );
+          final leadField = find.byKey(
+            const Key('work-shift-first-lead-setting'),
+          );
+          await _bringIntoView(tester, leadField, settingsScroll.first);
+          final selectedLead = find.descendant(
+            of: leadField,
+            matching: find.text('24 hours before'),
+          );
+          expect(selectedLead, findsOneWidget);
+          final fieldRect = tester.getRect(leadField);
+          final valueRect = tester.getRect(selectedLead);
+          expect(fieldRect.contains(valueRect.topLeft), isTrue);
+          expect(fieldRect.contains(valueRect.bottomRight), isTrue);
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '${bundle.id} enhanced=$enhanced',
+          );
+        }
+      }
+    },
+  );
 
   testWidgets(
     'profile avatar is a 44px header control with initials fallback',

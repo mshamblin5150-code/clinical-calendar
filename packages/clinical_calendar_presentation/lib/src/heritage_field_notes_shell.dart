@@ -564,22 +564,17 @@ final class _HeritageFieldNotesCalendarViewport extends StatelessWidget {
       final calendar = CalendarPeriodViewportPolicy(
         useBoundedMonthGrid: true,
         scaleDayNumberWithText: true,
+        useEnlargedTextLandscapeReflow: !scrollAtEnlargedText,
         useArchiveEntryVisuals: true,
         showArchiveMonthLegend: showArchiveMonthLegend,
         child: child,
       );
-      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3 ||
-          !scrollAtEnlargedText) {
-        return calendar;
-      }
-      return SingleChildScrollView(
-        key: const Key('heritage-field-notes-calendar-horizontal-scroll'),
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: constraints.maxWidth * 3.5,
-          height: constraints.maxHeight,
-          child: calendar,
-        ),
+      return buildEnlargedTextCalendarScrollViewport(
+        context: context,
+        constraints: constraints,
+        enabled: scrollAtEnlargedText,
+        scrollKey: const Key('heritage-field-notes-calendar-horizontal-scroll'),
+        child: calendar,
       );
     },
   );

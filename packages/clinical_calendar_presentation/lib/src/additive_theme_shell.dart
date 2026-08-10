@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'responsive_shell.dart';
 import 'variant_f_raster_assets.dart';
-import 'variant_f_theme.dart';
 
 /// Stable behavior model for the five primary shell navigation actions.
 ///
@@ -79,34 +78,12 @@ final class AdditiveThemeDestinationSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: context.clinicalColors.structure,
-        leadingWidth: enlargedText
-            ? 144
-            : entry == DestinationEntry.applicationMenu
-            ? 88
-            : 96,
-        toolbarHeight: enlargedText ? 72 : null,
-        leading: TextButton.icon(
-          key: Key(
-            entry == DestinationEntry.applicationMenu
-                ? 'back-action'
-                : 'close-action',
-          ),
-          onPressed: onExit,
-          icon: Icon(
-            entry == DestinationEntry.applicationMenu
-                ? Icons.arrow_back
-                : Icons.close,
-            size: 18,
-          ),
-          label: Text(
-            entry == DestinationEntry.applicationMenu ? 'Back' : 'Close',
-          ),
-        ),
-        title: Text(destination.label),
+      appBar: buildDestinationAppBar(
+        context,
+        destination: destination,
+        entry: entry,
+        onExit: onExit,
       ),
       body: SafeArea(
         child: Padding(
