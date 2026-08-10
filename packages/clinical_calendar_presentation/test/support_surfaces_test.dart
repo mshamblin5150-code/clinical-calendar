@@ -7,6 +7,55 @@ import 'package:flutter_test/flutter_test.dart';
 const _profileId = '00000000-0000-4000-8000-000000000002';
 
 void main() {
+  testWidgets('200 percent destination Back label remains fully available', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      DestinationSurface(
+        destination: ClinicalCalendarDestination.settings,
+        entry: DestinationEntry.applicationMenu,
+        onExit: () {},
+        child: const SizedBox.shrink(),
+      ),
+      size: const Size(1480, 924),
+      textScaler: const TextScaler.linear(2),
+      scaffold: false,
+    );
+
+    final actionRect = tester.getRect(find.byKey(const Key('back-action')));
+    final labelRect = tester.getRect(find.text('Back'));
+    expect(actionRect.contains(labelRect.topLeft), isTrue);
+    expect(actionRect.contains(labelRect.bottomRight), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('200 percent Settings fields preserve complete selected values', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      SettingsTemplatesSurface(
+        settings: StudentSettings(),
+        scheduleTemplates: const [],
+        newTemplateId: () => _id(99),
+        onSaveSettings: (_) async {},
+        onSaveTemplate: (_) async {},
+        onRemoveTemplate: (_) async {},
+      ),
+      size: const Size(1480, 924),
+      textScaler: const TextScaler.linear(2),
+    );
+
+    expect(
+      tester.getSize(find.byKey(const Key('time-display-setting'))).width,
+      greaterThanOrEqualTo(400),
+      reason: 'The field must grow with system text instead of clipping it.',
+    );
+    expect(find.text('Military time'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'profile avatar is a 44px header control with initials fallback',
     (tester) async {
@@ -604,13 +653,20 @@ Future<void> _pump(
   WidgetTester tester,
   Widget child, {
   Size size = const Size(800, 900),
+  TextScaler textScaler = TextScaler.noScaling,
+  bool scaffold = true,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     MaterialApp(
       theme: const VariantFVisualTheme().createThemeData(),
-      home: Scaffold(body: SafeArea(child: child)),
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          child: scaffold ? Scaffold(body: SafeArea(child: child)) : child,
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();

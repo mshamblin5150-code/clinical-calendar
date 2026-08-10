@@ -229,6 +229,7 @@ final class CoastalLightApplicationShell extends StatelessWidget {
                                   accent: _CoastalLightBayAccent.seaGlass,
                                   shape: _CoastalLightBayShape.calendar,
                                   child: _CoastalLightCalendarViewport(
+                                    scrollAtEnlargedText: true,
                                     child: slots.centralContent,
                                   ),
                                 ),
@@ -323,9 +324,13 @@ enum _CoastalLightBayAccent { seaGlass, clearBlue }
 enum _CoastalLightBayShape { placement, calendar, planning, insight }
 
 final class _CoastalLightCalendarViewport extends StatelessWidget {
-  const _CoastalLightCalendarViewport({required this.child});
+  const _CoastalLightCalendarViewport({
+    required this.child,
+    this.scrollAtEnlargedText = false,
+  });
 
   final Widget child;
+  final bool scrollAtEnlargedText;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -351,7 +356,9 @@ final class _CoastalLightCalendarViewport extends StatelessWidget {
           ],
         ],
       );
-      if (!enlargedText) return calendar;
+      if (!enlargedText || !scrollAtEnlargedText) {
+        return calendar;
+      }
       return SingleChildScrollView(
         key: const Key('coastal-calm-calendar-horizontal-scroll'),
         scrollDirection: Axis.horizontal,

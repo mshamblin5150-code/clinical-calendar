@@ -688,8 +688,12 @@ final class _SettingsTemplatesSurfaceState
     ],
   );
 
-  Widget _field(Widget child, {double width = 230}) =>
-      SizedBox(width: width, child: child);
+  Widget _field(Widget child, {double width = 230}) => Builder(
+    builder: (context) => SizedBox(
+      width: width * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0),
+      child: child,
+    ),
+  );
 
   Widget _switchTitle(
     String label,

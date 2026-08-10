@@ -237,6 +237,7 @@ final class GraphiteApplicationShell extends StatelessWidget {
                               safeInsets: graphiteCalendarSafeInsets,
                               accent: _GraphiteAccent.silver,
                               child: _GraphiteCalendarViewport(
+                                scrollAtEnlargedText: true,
                                 child: slots.centralContent,
                               ),
                             ),
@@ -696,9 +697,13 @@ final class _GraphiteLogoPainter extends CustomPainter {
 }
 
 final class _GraphiteCalendarViewport extends StatelessWidget {
-  const _GraphiteCalendarViewport({required this.child});
+  const _GraphiteCalendarViewport({
+    required this.child,
+    this.scrollAtEnlargedText = false,
+  });
 
   final Widget child;
+  final bool scrollAtEnlargedText;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -709,7 +714,10 @@ final class _GraphiteCalendarViewport extends StatelessWidget {
         useInstrumentChrome: true,
         child: child,
       );
-      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
+      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3 ||
+          !scrollAtEnlargedText) {
+        return calendar;
+      }
       return SingleChildScrollView(
         key: const Key('graphite-calendar-horizontal-scroll'),
         scrollDirection: Axis.horizontal,
@@ -793,6 +801,7 @@ final class _GraphiteCommandCrown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     return Container(
       key: const Key('graphite-command-crown'),
       height: compact ? 72 : null,
@@ -835,7 +844,7 @@ final class _GraphiteCommandCrown extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (!compact)
+                if (!compact && !enlargedText)
                   Text(
                     environmentName.trim().isEmpty ||
                             environmentName.trim().toUpperCase() == 'GRAPHITE'

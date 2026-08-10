@@ -105,6 +105,8 @@ final class PlacementProgressWheel extends StatelessWidget {
     final fractions = _progressWheelFractions(progress);
     final instrument = GraphiteInstrumentScope.isActive(context);
     final touchWording = _usesTouchWording(touch);
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final effectiveDiameter = diameter * textScale.clamp(1.0, 1.7);
     final semantics =
         '${snapshot.placement.name}, ${_minutes(progress.completedMinutes)} '
         'Completed Hours of ${_minutes(progress.targetMinutes)} Target Hours, '
@@ -120,7 +122,7 @@ final class PlacementProgressWheel extends StatelessWidget {
         onTap: onCycle,
         customBorder: const CircleBorder(),
         child: SizedBox.square(
-          dimension: diameter,
+          dimension: effectiveDiameter,
           child: PlacementProgressWheelGraphic(
             key: instrument ? const Key('graphite-live-detailed-wheel') : null,
             completedFraction: fractions.completed,
@@ -1308,6 +1310,7 @@ final class _TacticalPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1330,8 +1333,8 @@ final class _TacticalPanel extends StatelessWidget {
               Expanded(
                 child: Text(
                   label.toUpperCase(),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: enlargedText ? null : 2,
+                  overflow: enlargedText ? null : TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
@@ -1357,16 +1360,19 @@ final class _TacticalPanel extends StatelessWidget {
         if (expandChild) Expanded(child: child) else child,
       ],
     );
+    final adaptiveContent = enlargedText
+        ? SingleChildScrollView(child: content)
+        : content;
     if (VariantFRasterPanelInterior.isActive(context) ||
         EmbeddedPlacementPanelInterior.isActive(context)) {
-      return Padding(padding: const EdgeInsets.all(8), child: content);
+      return Padding(padding: const EdgeInsets.all(8), child: adaptiveContent);
     }
     return VariantFTacticalFrame(
       accent: statusColor,
       chamfer: 13,
       statusLight: true,
       padding: const EdgeInsets.all(12),
-      child: content,
+      child: adaptiveContent,
     );
   }
 }

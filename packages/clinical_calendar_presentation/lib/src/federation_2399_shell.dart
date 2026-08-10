@@ -231,6 +231,7 @@ final class Federation2399ApplicationShell extends StatelessWidget {
                                 accent: _Federation2399BayAccent.plum,
                                 shape: _Federation2399BayShape.calendar,
                                 child: _Federation2399CalendarViewport(
+                                  scrollAtEnlargedText: true,
                                   child: slots.centralContent,
                                 ),
                               ),
@@ -321,9 +322,13 @@ enum _Federation2399BayAccent { plum, cyan }
 enum _Federation2399BayShape { placement, calendar, planning, insight }
 
 final class _Federation2399CalendarViewport extends StatelessWidget {
-  const _Federation2399CalendarViewport({required this.child});
+  const _Federation2399CalendarViewport({
+    required this.child,
+    this.scrollAtEnlargedText = false,
+  });
 
   final Widget child;
+  final bool scrollAtEnlargedText;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -337,7 +342,10 @@ final class _Federation2399CalendarViewport extends StatelessWidget {
         clipDayDecoration: true,
         child: child,
       );
-      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
+      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3 ||
+          !scrollAtEnlargedText) {
+        return calendar;
+      }
       return SingleChildScrollView(
         key: const Key('federation-2399-calendar-horizontal-scroll'),
         scrollDirection: Axis.horizontal,

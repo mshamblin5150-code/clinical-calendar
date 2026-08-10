@@ -138,6 +138,34 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('200 percent progress heading keeps its complete name', (
+    tester,
+  ) async {
+    final harness = _Harness(familyName: 'Acceptance Family Medicine');
+    await harness.controller.load();
+    await _pump(
+      tester,
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: SizedBox(
+          width: 300,
+          child: PlacementProgressRail(
+            controller: harness.controller,
+            studentId: _studentId,
+          ),
+        ),
+      ),
+      size: const Size(340, 900),
+    );
+
+    final heading = tester.widget<Text>(
+      find.text('ACCEPTANCE FAMILY MEDICINE'),
+    );
+    expect(heading.overflow, isNot(TextOverflow.ellipsis));
+    expect(heading.maxLines, isNot(1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('narrow placement dock wraps full Clinical Placement names', (
     tester,
   ) async {

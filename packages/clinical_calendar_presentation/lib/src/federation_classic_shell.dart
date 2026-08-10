@@ -239,6 +239,7 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                                       shape:
                                           _FederationClassicBayShape.calendar,
                                       child: _FederationClassicCalendarViewport(
+                                        scrollAtEnlargedText: true,
                                         child: slots.centralContent,
                                       ),
                                     ),
@@ -324,9 +325,13 @@ enum _FederationClassicBayAccent { salmon, lilac }
 enum _FederationClassicBayShape { placement, calendar, planning, insight }
 
 final class _FederationClassicCalendarViewport extends StatelessWidget {
-  const _FederationClassicCalendarViewport({required this.child});
+  const _FederationClassicCalendarViewport({
+    required this.child,
+    this.scrollAtEnlargedText = false,
+  });
 
   final Widget child;
+  final bool scrollAtEnlargedText;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -342,7 +347,10 @@ final class _FederationClassicCalendarViewport extends StatelessWidget {
         todayBackgroundOverride: FederationClassicColors.canvas,
         child: child,
       );
-      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
+      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3 ||
+          !scrollAtEnlargedText) {
+        return calendar;
+      }
       return SingleChildScrollView(
         key: const Key('federation-classic-calendar-horizontal-scroll'),
         scrollDirection: Axis.horizontal,

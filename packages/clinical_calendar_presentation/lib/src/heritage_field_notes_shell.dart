@@ -264,6 +264,7 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                                 accent: _HeritageFieldNotesBayAccent.forest,
                                 shape: _HeritageFieldNotesBayShape.calendar,
                                 child: _HeritageFieldNotesCalendarViewport(
+                                  scrollAtEnlargedText: true,
                                   child: slots.centralContent,
                                 ),
                               ),
@@ -550,10 +551,12 @@ final class _HeritageFieldNotesCalendarViewport extends StatelessWidget {
   const _HeritageFieldNotesCalendarViewport({
     required this.child,
     this.showArchiveMonthLegend = false,
+    this.scrollAtEnlargedText = false,
   });
 
   final Widget child;
   final bool showArchiveMonthLegend;
+  final bool scrollAtEnlargedText;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -565,7 +568,10 @@ final class _HeritageFieldNotesCalendarViewport extends StatelessWidget {
         showArchiveMonthLegend: showArchiveMonthLegend,
         child: child,
       );
-      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
+      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3 ||
+          !scrollAtEnlargedText) {
+        return calendar;
+      }
       return SingleChildScrollView(
         key: const Key('heritage-field-notes-calendar-horizontal-scroll'),
         scrollDirection: Axis.horizontal,

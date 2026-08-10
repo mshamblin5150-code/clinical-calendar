@@ -245,6 +245,7 @@ final class BotanicalStudyApplicationShell extends StatelessWidget {
                                 accent: _BotanicalStudyBayAccent.eucalyptus,
                                 shape: _BotanicalStudyBayShape.calendar,
                                 child: _BotanicalStudyCalendarViewport(
+                                  scrollAtEnlargedText: true,
                                   child: slots.centralContent,
                                 ),
                               ),
@@ -337,9 +338,13 @@ enum _BotanicalStudyBayAccent { eucalyptus, dustyRose }
 enum _BotanicalStudyBayShape { placement, calendar, planning, insight }
 
 final class _BotanicalStudyCalendarViewport extends StatelessWidget {
-  const _BotanicalStudyCalendarViewport({required this.child});
+  const _BotanicalStudyCalendarViewport({
+    required this.child,
+    this.scrollAtEnlargedText = false,
+  });
 
   final Widget child;
+  final bool scrollAtEnlargedText;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -349,7 +354,10 @@ final class _BotanicalStudyCalendarViewport extends StatelessWidget {
         scaleDayNumberWithText: true,
         child: child,
       );
-      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3) return calendar;
+      if (MediaQuery.textScalerOf(context).scale(1) <= 1.3 ||
+          !scrollAtEnlargedText) {
+        return calendar;
+      }
       return SingleChildScrollView(
         key: const Key('botanical-study-calendar-horizontal-scroll'),
         scrollDirection: Axis.horizontal,

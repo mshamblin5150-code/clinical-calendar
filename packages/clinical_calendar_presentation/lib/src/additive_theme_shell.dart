@@ -78,44 +78,52 @@ final class AdditiveThemeDestinationSurface extends StatelessWidget {
   final EdgeInsets compactDestinationInsets;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      backgroundColor: context.clinicalColors.structure,
-      leadingWidth: entry == DestinationEntry.applicationMenu ? 88 : 96,
-      leading: TextButton.icon(
-        key: Key(
-          entry == DestinationEntry.applicationMenu
-              ? 'back-action'
-              : 'close-action',
+  Widget build(BuildContext context) {
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: context.clinicalColors.structure,
+        leadingWidth: enlargedText
+            ? 144
+            : entry == DestinationEntry.applicationMenu
+            ? 88
+            : 96,
+        toolbarHeight: enlargedText ? 72 : null,
+        leading: TextButton.icon(
+          key: Key(
+            entry == DestinationEntry.applicationMenu
+                ? 'back-action'
+                : 'close-action',
+          ),
+          onPressed: onExit,
+          icon: Icon(
+            entry == DestinationEntry.applicationMenu
+                ? Icons.arrow_back
+                : Icons.close,
+            size: 18,
+          ),
+          label: Text(
+            entry == DestinationEntry.applicationMenu ? 'Back' : 'Close',
+          ),
         ),
-        onPressed: onExit,
-        icon: Icon(
-          entry == DestinationEntry.applicationMenu
-              ? Icons.arrow_back
-              : Icons.close,
-          size: 18,
-        ),
-        label: Text(
-          entry == DestinationEntry.applicationMenu ? 'Back' : 'Close',
-        ),
+        title: Text(destination.label),
       ),
-      title: Text(destination.label),
-    ),
-    body: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: LayoutBuilder(
-          builder: (context, constraints) => frameBuilder(
-            AdditiveThemePanelInterior(child: child),
-            constraints.maxWidth < 600
-                ? compactDestinationInsets
-                : statusSafeInsets,
-            const EdgeInsets.all(8),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: LayoutBuilder(
+            builder: (context, constraints) => frameBuilder(
+              AdditiveThemePanelInterior(child: child),
+              constraints.maxWidth < 600
+                  ? compactDestinationInsets
+                  : statusSafeInsets,
+              const EdgeInsets.all(8),
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// One shared additive shell with theme-owned framing injected at its edge.

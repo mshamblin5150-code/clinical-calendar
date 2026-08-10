@@ -531,41 +531,49 @@ final class DestinationSurface extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      backgroundColor: context.clinicalColors.structure,
-      leadingWidth: entry == DestinationEntry.applicationMenu ? 88 : 96,
-      leading: TextButton.icon(
-        key: Key(
-          entry == DestinationEntry.applicationMenu
-              ? 'back-action'
-              : 'close-action',
+  Widget build(BuildContext context) {
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: context.clinicalColors.structure,
+        leadingWidth: enlargedText
+            ? 144
+            : entry == DestinationEntry.applicationMenu
+            ? 88
+            : 96,
+        toolbarHeight: enlargedText ? 72 : null,
+        leading: TextButton.icon(
+          key: Key(
+            entry == DestinationEntry.applicationMenu
+                ? 'back-action'
+                : 'close-action',
+          ),
+          onPressed: onExit,
+          icon: Icon(
+            entry == DestinationEntry.applicationMenu
+                ? Icons.arrow_back
+                : Icons.close,
+            size: 18,
+          ),
+          label: Text(
+            entry == DestinationEntry.applicationMenu ? 'Back' : 'Close',
+          ),
         ),
-        onPressed: onExit,
-        icon: Icon(
-          entry == DestinationEntry.applicationMenu
-              ? Icons.arrow_back
-              : Icons.close,
-          size: 18,
-        ),
-        label: Text(
-          entry == DestinationEntry.applicationMenu ? 'Back' : 'Close',
+        title: Text(destination.label),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: VariantFTacticalFrame(
+            padding: const EdgeInsets.all(8),
+            chamfer: 14,
+            statusLight: true,
+            child: child,
+          ),
         ),
       ),
-      title: Text(destination.label),
-    ),
-    body: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: VariantFTacticalFrame(
-          padding: const EdgeInsets.all(8),
-          chamfer: 14,
-          statusLight: true,
-          child: child,
-        ),
-      ),
-    ),
-  );
+    );
+  }
 }
 
 final class ShellPanel extends StatelessWidget {

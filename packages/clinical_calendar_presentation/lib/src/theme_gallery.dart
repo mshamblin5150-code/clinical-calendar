@@ -322,37 +322,42 @@ final class ThemeRuntimeThumbnail extends StatelessWidget {
         child: IgnorePointer(
           child: RepaintBoundary(
             key: Key('theme-gallery-thumbnail-${bundle.id}'),
-            child: Theme(
-              data: bundle.standardPresentation.createThemeData(),
-              child: ClinicalCalendarSemanticMarkScope(
-                marks: bundle.marks,
-                child: AspectRatio(
-                  aspectRatio: bundle.gallery.thumbnailViewport.aspectRatio,
-                  child: ClipRect(
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: SizedBox.fromSize(
-                        size: bundle.gallery.thumbnailViewport,
-                        // Do not replace this with buildFrame. The completed
-                        // concept-fidelity issues #128 and #133-#137 retained
-                        // normalized frames for compact/destination use, while
-                        // their accepted Calendar designs live in build().
-                        child: bundle.shellRenderer.build(
-                          key: const Key('theme-thumbnail-product-shell'),
-                          environmentName: 'GALLERY PREVIEW',
-                          onOpenMenu: _ignoreThumbnailAction,
-                          onOpenDestination: _ignoreThumbnailDestination,
-                          onOpenAttention: _ignoreThumbnailAction,
-                          onAddSchedule: _ignoreThumbnailAction,
-                          slots: const ResponsiveShellSlots(
-                            centralContent: _PinnedCalendarFixture(),
-                            planningRegion: _ThumbnailPlanningFixture(),
-                            placementDock: _ThumbnailPlacementsFixture(),
-                            insightRail: _ThumbnailProgressFixture(),
-                            mobilePlacementSummary:
-                                _ThumbnailPlacementsFixture(),
-                            mobileAttention: _ThumbnailProgressFixture(),
-                            profileAvatar: Icon(Icons.person_outline),
+            child: MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.noScaling),
+              child: Theme(
+                data: bundle.standardPresentation.createThemeData(),
+                child: ClinicalCalendarSemanticMarkScope(
+                  marks: bundle.marks,
+                  child: AspectRatio(
+                    aspectRatio: bundle.gallery.thumbnailViewport.aspectRatio,
+                    child: ClipRect(
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        child: SizedBox.fromSize(
+                          size: bundle.gallery.thumbnailViewport,
+                          // Do not replace this with buildFrame. The completed
+                          // concept-fidelity issues #128 and #133-#137 retained
+                          // normalized frames for compact/destination use, while
+                          // their accepted Calendar designs live in build().
+                          child: bundle.shellRenderer.build(
+                            key: const Key('theme-thumbnail-product-shell'),
+                            environmentName: 'GALLERY PREVIEW',
+                            onOpenMenu: _ignoreThumbnailAction,
+                            onOpenDestination: _ignoreThumbnailDestination,
+                            onOpenAttention: _ignoreThumbnailAction,
+                            onAddSchedule: _ignoreThumbnailAction,
+                            slots: const ResponsiveShellSlots(
+                              centralContent: _PinnedCalendarFixture(),
+                              planningRegion: _ThumbnailPlanningFixture(),
+                              placementDock: _ThumbnailPlacementsFixture(),
+                              insightRail: _ThumbnailProgressFixture(),
+                              mobilePlacementSummary:
+                                  _ThumbnailPlacementsFixture(),
+                              mobileAttention: _ThumbnailProgressFixture(),
+                              profileAvatar: Icon(Icons.person_outline),
+                            ),
                           ),
                         ),
                       ),
@@ -652,7 +657,9 @@ final class _ThumbnailDayCell extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxHeight < 64;
+        final compact =
+            constraints.maxHeight < 64 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.3;
         final dateLabel = Text(
           '$date',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(

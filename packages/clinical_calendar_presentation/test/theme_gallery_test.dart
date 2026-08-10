@@ -57,6 +57,121 @@ void main() {
     expect(find.byKey(const Key('theme-thumbnail-day-cell-42')), findsNothing);
   });
 
+  testWidgets(
+    'every 200 percent landscape thumbnail keeps all seven weekdays visible',
+    (tester) async {
+      const viewport = Size(1480, 924);
+      await tester.binding.setSurfaceSize(viewport);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final bundle
+          in ClinicalCalendarThemeBundleRegistry.standard.selectableBundles) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Builder(
+              builder: (context) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(2)),
+                child: SizedBox.fromSize(
+                  size: viewport,
+                  child: ThemeRuntimeThumbnail(bundle: bundle),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final thumbnail = find.byKey(
+          Key('theme-gallery-thumbnail-${bundle.id}'),
+        );
+        final thumbnailRect = tester.getRect(thumbnail);
+        final weekdayLabels = find.descendant(
+          of: find.byKey(const Key('theme-thumbnail-weekday-grid')),
+          matching: find.byType(Text),
+        );
+        expect(weekdayLabels, findsNWidgets(7), reason: bundle.id);
+        for (final label in weekdayLabels.evaluate()) {
+          final rect = tester.getRect(find.byWidget(label.widget));
+          expect(
+            thumbnailRect.contains(rect.center),
+            isTrue,
+            reason:
+                '${bundle.id} must communicate every weekday without an '
+                'offscreen Calendar column.',
+          );
+        }
+        expect(tester.takeException(), isNull, reason: bundle.id);
+      }
+    },
+  );
+
+  testWidgets(
+    'all themes and modes keep seven Calendar columns at the tablet viewport',
+    (tester) async {
+      const viewport = Size(1480, 924);
+      await tester.binding.setSurfaceSize(viewport);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final bundle
+          in ClinicalCalendarThemeBundleRegistry.standard.selectableBundles) {
+        for (final enhanced in [false, true]) {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: bundle.standardPresentation.createThemeData(
+                enhancedAccessibility: enhanced,
+              ),
+              home: Builder(
+                builder: (context) => MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: const TextScaler.linear(2)),
+                  child: ClinicalCalendarSemanticMarkScope(
+                    marks: bundle.marks,
+                    child: bundle.shellRenderer.build(
+                      environmentName: '200% TEXT TEST',
+                      onOpenMenu: _ignoreAction,
+                      onOpenDestination: _ignoreDestination,
+                      onOpenAttention: _ignoreAction,
+                      onAddSchedule: _ignoreAction,
+                      slots: const ResponsiveShellSlots(
+                        centralContent: _SevenDayCalendarFixture(),
+                        planningRegion: SizedBox.shrink(),
+                        placementDock: SizedBox.shrink(),
+                        insightRail: SizedBox.shrink(),
+                        mobilePlacementSummary: SizedBox.shrink(),
+                        mobileAttention: SizedBox.shrink(),
+                        profileAvatar: Icon(Icons.person_outline),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          for (var weekday = 0; weekday < 7; weekday++) {
+            final rect = tester.getRect(
+              find.byKey(Key('tablet-weekday-$weekday')),
+            );
+            expect(
+              (Offset.zero & viewport).contains(rect.center),
+              isTrue,
+              reason: '${bundle.id} enhanced=$enhanced hid weekday $weekday.',
+            );
+          }
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '${bundle.id} enhanced=$enhanced',
+          );
+        }
+      }
+    },
+  );
+
   testWidgets('every thumbnail enters its accepted product shell', (
     tester,
   ) async {
@@ -412,5 +527,29 @@ void main() {
       expect(tester.takeException(), isNull);
       semantics.dispose();
     },
+  );
+}
+
+void _ignoreAction() {}
+
+void _ignoreDestination(ClinicalCalendarDestination _) {}
+
+final class _SevenDayCalendarFixture extends StatelessWidget {
+  const _SevenDayCalendarFixture();
+
+  @override
+  Widget build(BuildContext context) => Row(
+    key: const Key('tablet-seven-day-calendar'),
+    children: [
+      for (var weekday = 0; weekday < 7; weekday++)
+        Expanded(
+          child: Center(
+            child: Text(
+              const ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][weekday],
+              key: Key('tablet-weekday-$weekday'),
+            ),
+          ),
+        ),
+    ],
   );
 }
