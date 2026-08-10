@@ -58,10 +58,11 @@ the fictional acceptance fixture already present on the supported tablet.
 
 The all-theme requirement is covered by production widget tests at the SM-X920
 logical viewport and 200% text scale: seven catalog themes multiplied by
-Standard and Enhanced modes. Calendar coverage lives in
-`issue_156_tablet_accessibility_golden_test.dart`; Settings navigation and
-complete values live in `support_surfaces_test.dart`; and the seven-day product
-Gallery shell lives in `theme_gallery_test.dart`.
+Standard and Enhanced modes. The production Calendar and seven-day Gallery
+matrix lives in `theme_gallery_test.dart`; Settings navigation and complete
+values live in `support_surfaces_test.dart`; and
+`issue_156_tablet_accessibility_golden_test.dart` supplies the retained
+Graphite Standard visual golden.
 
 The physical captures above are the retained representative device evidence;
 they do not claim to replace the reproducible fourteen-state widget matrix.
