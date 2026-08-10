@@ -28,24 +28,40 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!_academicAssignmentThemeIds.contains(themeId)) return calendar;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-            child: FilledButton.icon(
-              key: const Key('add-academic-assignment'),
-              onPressed: onAddAssignment,
-              icon: const Icon(Icons.assignment_add),
-              label: const Text('Add Assignment'),
-            ),
-          ),
+    final addButton = Align(
+      alignment: AlignmentDirectional.centerEnd,
+      widthFactor: 1,
+      heightFactor: 1,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+        child: FilledButton.icon(
+          key: const Key('add-academic-assignment'),
+          onPressed: onAddAssignment,
+          icon: const Icon(Icons.assignment_add),
+          label: const Text('Add Assignment'),
         ),
-        Flexible(fit: FlexFit.loose, child: calendar),
-      ],
+      ),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.hasBoundedHeight) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              calendar,
+              PositionedDirectional(end: 8, bottom: 8, child: addButton),
+            ],
+          );
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            addButton,
+            Flexible(fit: FlexFit.loose, child: calendar),
+          ],
+        );
+      },
     );
   }
 }
