@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 14;
+  static const latestVersion = 15;
 
   final MigrationTestHook? _testHook;
 
@@ -667,5 +667,21 @@ final Map<int, List<String>> _statements = {
           SELECT 1 FROM settings
           WHERE settings.student_id = profile.student_id
         )''',
+  ],
+  15: [
+    '''CREATE TABLE academic_assignments (
+      $_syncColumns,
+      title TEXT NOT NULL CHECK (length(trim(title)) BETWEEN 1 AND 200),
+      course TEXT NOT NULL CHECK (length(trim(course)) BETWEEN 1 AND 120),
+      due_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'completed')),
+      PRIMARY KEY (id),
+      UNIQUE (id, student_id),
+      FOREIGN KEY (student_id) REFERENCES student_profiles(student_id)
+    ) STRICT''',
+    '''CREATE INDEX academic_assignments_due_index
+      ON academic_assignments(student_id, due_date)
+      WHERE deleted_at_utc IS NULL''',
   ],
 };

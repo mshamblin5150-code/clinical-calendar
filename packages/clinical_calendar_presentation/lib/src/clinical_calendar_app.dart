@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'calendar/calendar_data_source.dart';
 import 'calendar/calendar_models.dart';
 import 'calendar/calendar_period_view.dart';
+import 'assignments/academic_assignment_surface.dart';
 import 'backup/backup_restore_surface.dart';
 import 'code_only_presentation_recovery.dart';
 import 'commitments/commitment_lifecycle_controller.dart';
@@ -534,7 +535,9 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   ClinicalCalendarDestination? _destination;
   DestinationEntry _entry = DestinationEntry.direct;
   late final SchedulingApplicationService _schedulingService;
-  late final SchedulingCalendarDataSource _calendarDataSource;
+  late final SchedulingCalendarDataSource _schedulingCalendarDataSource;
+  late final AcademicAssignmentCalendarDataSource _assignmentCalendarDataSource;
+  late final AcademicAssignmentApplicationService _academicAssignmentService;
   late final PlacementProgressController _placementController;
   late final CommitmentLifecycleController _commitmentController;
   late final EvaluationAttentionController _attentionController;
@@ -567,7 +570,19 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       dependencies.clock,
       dependencies.identifiers,
     );
-    _calendarDataSource = SchedulingCalendarDataSource(_schedulingService);
+    _schedulingCalendarDataSource = SchedulingCalendarDataSource(
+      _schedulingService,
+    );
+    _academicAssignmentService = AcademicAssignmentApplicationService(
+      repositories: dependencies.repositories,
+      clock: dependencies.clock,
+      identifiers: dependencies.identifiers,
+      studentId: widget.studentId,
+    );
+    _assignmentCalendarDataSource = AcademicAssignmentCalendarDataSource(
+      base: _schedulingCalendarDataSource,
+      assignments: _academicAssignmentService,
+    );
     final placementService = PlacementApplicationService(
       repositories: dependencies.repositories,
       clock: dependencies.clock,
@@ -836,13 +851,98 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   }
 
   Future<void> _openCommitment(CalendarItemReference reference) async {
+    if (reference.kind == CalendarEntryKind.academicAssignment) {
+      await _openAcademicAssignment(reference.id);
+      return;
+    }
     final kind = switch (reference.kind) {
       CalendarEntryKind.workShift => CommitmentLifecycleKind.workShift,
       CalendarEntryKind.clinicalSession =>
         CommitmentLifecycleKind.clinicalSession,
       CalendarEntryKind.protectedDay => CommitmentLifecycleKind.protectedDay,
+      CalendarEntryKind.academicAssignment => throw StateError(
+        'Academic Assignments use their dedicated editor.',
+      ),
     };
     await _openCommitmentLifecycle(kind: kind, id: reference.id);
+  }
+
+  Future<void> _openAcademicAssignment([String? assignmentId]) async {
+    StoredDomainRecord<AcademicAssignment>? record;
+    if (assignmentId != null) {
+      try {
+        record = await _academicAssignmentService.find(assignmentId);
+      } on Object catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Assignment could not be opened: $error')),
+          );
+        }
+        return;
+      }
+      if (record == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Assignment was not found.')),
+          );
+        }
+        return;
+      }
+    }
+    if (!mounted) return;
+    final current = record;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final size = MediaQuery.sizeOf(dialogContext);
+        return Dialog(
+          insetPadding: const EdgeInsets.all(12),
+          child: SizedBox(
+            width: size.width < 720 ? size.width - 24 : 620,
+            height: size.height * .9,
+            child: AcademicAssignmentEditor(
+              record: current,
+              onClose: () => Navigator.pop(dialogContext),
+              onSave:
+                  ({
+                    required title,
+                    required course,
+                    required dueDate,
+                    required status,
+                  }) async {
+                    if (current == null) {
+                      await _academicAssignmentService.create(
+                        title: title,
+                        course: course,
+                        dueDate: dueDate,
+                      );
+                    } else {
+                      await _academicAssignmentService.update(
+                        assignmentId: current.value.id,
+                        expectedRevision: current.revision,
+                        title: title,
+                        course: course,
+                        dueDate: dueDate,
+                        status: status,
+                      );
+                    }
+                    if (dialogContext.mounted) Navigator.pop(dialogContext);
+                  },
+              onDelete: current == null
+                  ? null
+                  : () async {
+                      await _academicAssignmentService.delete(
+                        assignmentId: current.value.id,
+                        expectedRevision: current.revision,
+                      );
+                      if (dialogContext.mounted) Navigator.pop(dialogContext);
+                    },
+            ),
+          ),
+        );
+      },
+    );
+    if (mounted) setState(() => _calendarRevision++);
   }
 
   Future<void> _openCommitmentLifecycle({
@@ -1360,17 +1460,23 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         ),
         centralContent: KeyedSubtree(
           key: _calendarContentKey,
-          child: CalendarPeriodView(
-            key: ValueKey('calendar-period-view-$_calendarRevision'),
-            dataSource: _calendarDataSource,
-            studentId: widget.studentId,
-            today: _today(widget.dependencies.clock),
-            weekStartsOn: settings.weekStart,
-            twelveHourTime:
-                settings.timeDisplay == TimeDisplayPreference.twelveHour,
-            initialSelectedDates: _selectedDates,
-            onSelectionChanged: _updateCalendarSelection,
-            onOpenItem: _openCommitment,
+          child: AcademicAssignmentCalendarWorkspace(
+            themeId: widget.themeBundle.id,
+            onAddAssignment: _openAcademicAssignment,
+            calendar: CalendarPeriodView(
+              key: ValueKey('calendar-period-view-$_calendarRevision'),
+              dataSource: widget.themeBundle.id == variantFThemeId
+                  ? _schedulingCalendarDataSource
+                  : _assignmentCalendarDataSource,
+              studentId: widget.studentId,
+              today: _today(widget.dependencies.clock),
+              weekStartsOn: settings.weekStart,
+              twelveHourTime:
+                  settings.timeDisplay == TimeDisplayPreference.twelveHour,
+              initialSelectedDates: _selectedDates,
+              onSelectionChanged: _updateCalendarSelection,
+              onOpenItem: _openCommitment,
+            ),
           ),
         ),
         insightRail: KeyedSubtree(

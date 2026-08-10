@@ -394,6 +394,7 @@ final class SqliteRepositoryRegistry
       'historical_hours_entry' => 'historical_hours_entries',
       'evaluation_plan' => 'evaluation_plans',
       'reminder_state' => 'reminder_state',
+      'academic_assignment' => 'academic_assignments',
       _ => throw const RecoveryException(
         RecoveryFailureKind.invariantViolation,
         'This type of Trash entry cannot be permanently deleted.',
@@ -712,6 +713,13 @@ void _restoreTombstone(
         entityId,
         mutation,
       );
+    case 'academic_assignment':
+      _restoreRecord(
+        repositories.academicAssignments,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
     default:
       throw const RecoveryException(
         RecoveryFailureKind.invariantViolation,
@@ -816,6 +824,7 @@ final class _RestoreOutboxIntentSink
       'historical_hours_entries' => 'historical_hours_entry',
       'evaluation_plans' => 'evaluation_plan',
       'schedule_templates' => 'schedule_template',
+      'academic_assignments' => 'academic_assignment',
       'settings' => 'settings',
       _ => throw StateError('Unmapped portable restore table: $table'),
     };
@@ -896,7 +905,10 @@ final class _RestoreOutboxTarget {
 
   int get dependencyRank => switch (entityType) {
     'student_profile' => 0,
-    'preceptor' || 'protected_day' || 'work_shift' => 1,
+    'preceptor' ||
+    'protected_day' ||
+    'work_shift' ||
+    'academic_assignment' => 1,
     'clinical_placement' => 2,
     'evaluation_plan' ||
     'clinical_session' ||
@@ -941,6 +953,9 @@ Map<String, Object?> _restorePayloadValue(
     _decodeEvaluationPlan(repositories, row),
   ),
   'schedule_templates' => _encodeScheduleTemplate(_decodeScheduleTemplate(row)),
+  'academic_assignments' => _encodeAcademicAssignment(
+    _decodeAcademicAssignment(row),
+  ),
   'settings' => {
     'week_start': _int(row, 'week_start'),
     'time_display': _text(row, 'time_display'),
@@ -960,7 +975,8 @@ final class _Repositories
     implements
         SupportLocalWriteRepositories,
         ReminderLocalWriteRepositories,
-        SynchronizationLocalWriteRepositories {
+        SynchronizationLocalWriteRepositories,
+        AcademicAssignmentLocalWriteRepositories {
   _Repositories(this.registry, {required this.writable});
 
   final SqliteRepositoryRegistry registry;
@@ -1053,6 +1069,15 @@ final class _Repositories
     idOf: (value) => value.id,
     encode: _encodeReminderState,
     decode: _decodeReminderState,
+  );
+  @override
+  late final academicAssignments = _EntityRepository<AcademicAssignment>(
+    this,
+    table: 'academic_assignments',
+    entityType: 'academic_assignment',
+    idOf: (value) => value.id,
+    encode: _encodeAcademicAssignment,
+    decode: _decodeAcademicAssignment,
   );
 
   void requireWritable() {
@@ -1762,6 +1787,22 @@ Preceptor _decodePreceptor(Map<String, Object?> row) => Preceptor(
   email: _nullableText(row, 'email'),
   schedulingNotes: _nullableText(row, 'scheduling_notes'),
 );
+
+Map<String, Object?> _encodeAcademicAssignment(AcademicAssignment value) => {
+  'title': value.title,
+  'course': value.course,
+  'due_date': value.dueDate.toString(),
+  'status': value.status.name,
+};
+
+AcademicAssignment _decodeAcademicAssignment(Map<String, Object?> row) =>
+    AcademicAssignment(
+      id: _identifier(_text(row, 'id')),
+      title: _text(row, 'title'),
+      course: _text(row, 'course'),
+      dueDate: _localDate(_text(row, 'due_date')),
+      status: AcademicAssignmentStatus.values.byName(_text(row, 'status')),
+    );
 
 Map<String, Object?> _encodeReminderState(ReminderState value) => {
   'reminder_type': value.kind.name,

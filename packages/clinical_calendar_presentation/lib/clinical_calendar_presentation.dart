@@ -1,6 +1,7 @@
 /// Shared responsive Flutter presentation surface.
 library;
 
+export 'src/assignments/academic_assignment_surface.dart';
 export 'src/additive_theme_shell.dart';
 export 'src/additive_semantic_colors.dart';
 export 'src/clinical_calendar_app.dart';

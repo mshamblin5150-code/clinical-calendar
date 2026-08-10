@@ -129,6 +129,18 @@ abstract interface class MutableRepository<T> implements ReadRepository<T> {
   });
 }
 
+/// Optional academic-assignment capability kept separate from the scheduling
+/// repositories so older adapters and focused test fakes remain compatible.
+abstract interface class AcademicAssignmentLocalReadRepositories {
+  ReadRepository<AcademicAssignment> get academicAssignments;
+}
+
+abstract interface class AcademicAssignmentLocalWriteRepositories
+    implements AcademicAssignmentLocalReadRepositories {
+  @override
+  MutableRepository<AcademicAssignment> get academicAssignments;
+}
+
 enum OutboxOperationType { upsert, delete, resolveConflict, purge }
 
 /// A mutation waiting to be delivered to synchronization infrastructure.

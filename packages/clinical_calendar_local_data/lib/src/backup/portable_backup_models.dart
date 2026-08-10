@@ -224,6 +224,10 @@ final class DefaultPortableBackupMigrator implements PortableBackupMigrator {
       }
       payload['source_database_schema_version'] = 13;
     }
+    if (sourceVersion < 15 && tables is Map<dynamic, dynamic>) {
+      tables.putIfAbsent('academic_assignments', () => <Object?>[]);
+      payload['source_database_schema_version'] = 15;
+    }
     return payload;
   }
 }

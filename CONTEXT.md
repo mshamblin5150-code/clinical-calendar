@@ -8,6 +8,10 @@ This context describes a personal clinical-training calendar that helps one stud
 The sole person who uses the application and owns all data they enter. Preceptors, schools, and coordinators do not operate the MVP.
 _Avoid_: User, learner
 
+**Academic Assignment**:
+A course deliverable owned by the Student with a title, class or course, required Due Date, and Pending or Completed status. It is distinct from assigning a Clinical Session to a Clinical Placement and Preceptor.
+_Avoid_: Assignment alone, clinical assignment, placement assignment
+
 **Clinical Placement**:
 A program requirement with a defined target number of hours, Start Date, and Completion Deadline, such as Family Medicine with a 270-hour target. It persists independently of any particular Preceptor or clinical site, so changing either never resets its progress.
 _Avoid_: Preceptorship, rotation

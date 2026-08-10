@@ -353,5 +353,6 @@ String _entityLabel(String type) => switch (type) {
   'clinical_placement' => 'Clinical Placement',
   'historical_hours_entry' => 'Historical Hours Entry',
   'evaluation_plan' => 'Evaluation Plan',
+  'academic_assignment' => 'Academic Assignment',
   _ => 'Calendar record',
 };

@@ -66,6 +66,7 @@ void main() {
         'evaluation_plans',
         'evaluation_requirements',
         'schedule_templates',
+        'academic_assignments',
         'settings',
         'reminder_state',
         'device_metadata',

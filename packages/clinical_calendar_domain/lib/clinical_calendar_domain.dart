@@ -1,6 +1,7 @@
 /// Public API for the dependency-free Clinical Calendar domain package.
 library;
 
+export 'src/assignments/academic_assignment.dart';
 export 'src/domain_boundary.dart';
 export 'src/domain_validation.dart';
 export 'src/time/local_date.dart';
