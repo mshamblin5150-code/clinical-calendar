@@ -49,9 +49,22 @@ void main() {
     final addScheduleTarget = tester.getRect(
       find.widgetWithIcon(IconButton, Icons.add),
     );
+    final commandPill = tester.getRect(
+      find.byKey(const Key('federation-classic-command-pill')),
+    );
+    final helpTarget = tester.getRect(
+      find.byKey(const Key('federation-classic-help-action')),
+    );
     final studentMenuTarget = tester.getRect(
       find.byKey(const Key('federation-classic-help-menu')),
     );
+    expect(commandPill.left, lessThanOrEqualTo(helpTarget.left));
+    expect(commandPill.right, greaterThanOrEqualTo(studentMenuTarget.right));
+    expect(helpTarget.right, lessThanOrEqualTo(addScheduleTarget.left));
+    expect(addScheduleTarget.right, lessThanOrEqualTo(studentMenuTarget.left));
+    expect(helpTarget.center.dy, closeTo(commandPill.center.dy, 1));
+    expect(addScheduleTarget.center.dy, closeTo(commandPill.center.dy, 1));
+    expect(studentMenuTarget.center.dy, closeTo(commandPill.center.dy, 1));
     expect(addScheduleTarget.width, greaterThanOrEqualTo(43.99));
     expect(addScheduleTarget.height, greaterThanOrEqualTo(43.99));
     expect(studentMenuTarget.width, greaterThanOrEqualTo(43.99));

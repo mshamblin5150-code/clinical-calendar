@@ -798,48 +798,19 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: FederationClassicColors.surfaceSunken,
-                border: Border.all(
-                  color: FederationClassicColors.workAccent,
-                  width: 2,
-                ),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(18),
-                  bottomLeft: Radius.circular(18),
-                  topRight: Radius.circular(6),
-                  bottomRight: Radius.circular(6),
-                ),
-              ),
-              child: IconButton(
-                key: const Key('federation-classic-help-action'),
-                tooltip: 'Help',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 44,
-                  height: 44,
-                ),
-                onPressed: () =>
-                    onOpenDestination(ClinicalCalendarDestination.help),
-                icon: const Icon(Icons.help_outline),
-              ),
-            ),
-            const SizedBox(width: 8),
             SizedBox(
-              width: 170,
+              width: 222,
               child: Align(
                 alignment: Alignment.bottomLeft,
                 child: SizedBox(
-                  width: 139,
+                  key: const Key('federation-classic-command-pill'),
+                  width: 191,
                   height: 44,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       Container(
-                        width: 139,
+                        width: 191,
                         height: 36,
                         decoration: BoxDecoration(
                           color: const Color(0xFF02040D),
@@ -851,7 +822,25 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
                         ),
                       ),
                       Positioned(
-                        left: 18,
+                        left: 8,
+                        width: 44,
+                        height: 44,
+                        child: IconButton(
+                          key: const Key('federation-classic-help-action'),
+                          tooltip: 'Help',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints.tightFor(
+                            width: 44,
+                            height: 44,
+                          ),
+                          onPressed: () => onOpenDestination(
+                            ClinicalCalendarDestination.help,
+                          ),
+                          icon: const Icon(Icons.help_outline),
+                        ),
+                      ),
+                      Positioned(
+                        left: 67,
                         width: 48,
                         height: 44,
                         child: IconButton(
@@ -866,7 +855,7 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
                         ),
                       ),
                       Positioned(
-                        left: 81,
+                        left: 133,
                         width: 44,
                         height: 44,
                         child: PopupMenuButton<ClinicalCalendarDestination>(
