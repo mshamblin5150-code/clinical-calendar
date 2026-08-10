@@ -618,7 +618,7 @@ CalendarSnapshot _snapshot() => CalendarSnapshot([
     startDate: LocalDate(2026, 8, 14),
     endDate: LocalDate(2026, 8, 14),
     title: 'Evidence review',
-    assignment: 'NURS 702',
+    course: 'NURS 702',
     statusLabel: 'Pending',
   ),
   CalendarEntry(

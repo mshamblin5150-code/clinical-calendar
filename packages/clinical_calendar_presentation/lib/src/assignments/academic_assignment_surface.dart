@@ -27,7 +27,7 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (themeId == variantFThemeId) return calendar;
+    if (!_academicAssignmentThemeIds.contains(themeId)) return calendar;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -49,6 +49,15 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
     );
   }
 }
+
+const _academicAssignmentThemeIds = <String>{
+  graphiteThemeId,
+  federationClassicThemeId,
+  federation2399ThemeId,
+  coastalCalmThemeId,
+  botanicalStudyThemeId,
+  heritageFieldNotesThemeId,
+};
 
 final class AcademicAssignmentEditor extends StatefulWidget {
   const AcademicAssignmentEditor({

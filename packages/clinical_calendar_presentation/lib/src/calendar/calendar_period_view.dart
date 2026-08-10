@@ -2105,7 +2105,7 @@ final class _MonthEventCard extends StatelessWidget {
                 ],
                 Expanded(
                   child: Text(
-                    entry.assignment ?? entry.title,
+                    entry.supportingLabel ?? entry.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 10),
@@ -2472,7 +2472,7 @@ final class _AgendaAssignment extends StatelessWidget {
       const SizedBox(width: 7),
       Expanded(
         child: Text(
-          '${entry.title}${entry.assignment == null ? '' : ' · ${entry.assignment}'}',
+          '${entry.title}${entry.supportingLabel == null ? '' : ' · ${entry.supportingLabel}'}',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
@@ -2530,9 +2530,9 @@ final class _PeriodEntryRow extends StatelessWidget {
               ),
             ],
           ),
-          if (entry.assignment != null)
+          if (entry.supportingLabel != null)
             Text(
-              entry.assignment!,
+              entry.supportingLabel!,
               style: Theme.of(context).textTheme.bodySmall,
             ),
           _CalendarStatusLabel(entry: entry),
@@ -3076,7 +3076,7 @@ String _dateSemanticLabel(
     if (today) 'Today',
     for (final entry in entries) ...[
       entry.title,
-      if (entry.assignment != null) entry.assignment!,
+      if (entry.supportingLabel != null) entry.supportingLabel!,
       entry.isContinuationOn(date)
           ? 'continues from ${formatUsDate(entry.startDate)}'
           : entry.timeLabel(twelveHour: twelveHourTime),

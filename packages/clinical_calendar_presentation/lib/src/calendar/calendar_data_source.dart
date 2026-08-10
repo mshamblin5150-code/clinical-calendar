@@ -44,7 +44,7 @@ final class AcademicAssignmentCalendarDataSource implements CalendarDataSource {
           startDate: record.value.dueDate,
           endDate: record.value.dueDate,
           title: record.value.title,
-          assignment: record.value.course,
+          course: record.value.course,
           statusLabel: switch (record.value.status) {
             AcademicAssignmentStatus.pending => 'Pending',
             AcademicAssignmentStatus.completed => 'Completed',

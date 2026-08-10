@@ -58,6 +58,14 @@ begin
       'code', 'invalid_payload', 'field', 'academic_assignment'
     );
   end if;
+  if jsonb_typeof(v -> 'title') <> 'string'
+    or jsonb_typeof(v -> 'course') <> 'string'
+    or jsonb_typeof(v -> 'due_date') <> 'string'
+    or jsonb_typeof(v -> 'status') <> 'string' then
+    return jsonb_build_object(
+      'code', 'invalid_payload', 'field', 'academic_assignment'
+    );
+  end if;
   if length(trim(v ->> 'title')) not between 1 and 200
     or length(trim(v ->> 'course')) not between 1 and 120
     or (v ->> 'title') ~ '[[:cntrl:]]'

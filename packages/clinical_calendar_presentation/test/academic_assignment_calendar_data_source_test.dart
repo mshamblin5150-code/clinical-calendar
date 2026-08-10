@@ -28,7 +28,8 @@ void main() {
       final entry = snapshot.entries.single;
       expect(entry.kind, CalendarEntryKind.academicAssignment);
       expect(entry.title, 'Evidence review');
-      expect(entry.assignment, 'NURS 702');
+      expect(entry.course, 'NURS 702');
+      expect(entry.assignment, isNull);
       expect(entry.startDate, LocalDate(2026, 9, 14));
       expect(entry.statusLabel, 'Completed');
       expect(entry.timeLabel(), 'Due date');

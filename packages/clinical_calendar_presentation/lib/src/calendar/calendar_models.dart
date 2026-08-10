@@ -22,6 +22,7 @@ final class CalendarEntry {
     this.startTime,
     this.endTime,
     this.assignment,
+    this.course,
   });
 
   final String id;
@@ -31,8 +32,15 @@ final class CalendarEntry {
   final LocalTime? startTime;
   final LocalTime? endTime;
   final String title;
+
+  /// Clinical Placement and Preceptor context for a Clinical Session.
   final String? assignment;
+
+  /// Class or course context for an Academic Assignment.
+  final String? course;
   final String statusLabel;
+
+  String? get supportingLabel => course ?? assignment;
 
   bool touches(LocalDate date) =>
       !date.isBefore(startDate) && !date.isAfter(endDate);
