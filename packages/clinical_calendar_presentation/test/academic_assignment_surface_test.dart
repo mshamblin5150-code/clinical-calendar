@@ -29,6 +29,11 @@ void main() {
           reason: themeId,
         );
         expect(tester.takeException(), isNull, reason: themeId);
+        expect(
+          find.byKey(const Key('graphite-assignment-control-housing')),
+          themeId == graphiteThemeId ? findsOneWidget : findsNothing,
+          reason: themeId,
+        );
       }
 
       await tester.pumpWidget(_workspace(variantFThemeId));

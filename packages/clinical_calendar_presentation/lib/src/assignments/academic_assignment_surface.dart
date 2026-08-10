@@ -28,20 +28,22 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!_academicAssignmentThemeIds.contains(themeId)) return calendar;
-    final addButton = Align(
-      alignment: AlignmentDirectional.centerEnd,
-      widthFactor: 1,
-      heightFactor: 1,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-        child: FilledButton.icon(
-          key: const Key('add-academic-assignment'),
-          onPressed: onAddAssignment,
-          icon: const Icon(Icons.assignment_add),
-          label: const Text('Add Assignment'),
-        ),
-      ),
-    );
+    final addButton = themeId == graphiteThemeId
+        ? _GraphiteAssignmentControlHousing(onPressed: onAddAssignment)
+        : Align(
+            alignment: AlignmentDirectional.centerEnd,
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+              child: FilledButton.icon(
+                key: const Key('add-academic-assignment'),
+                onPressed: onAddAssignment,
+                icon: const Icon(Icons.assignment_add),
+                label: const Text('Add Assignment'),
+              ),
+            ),
+          );
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.hasBoundedHeight) {
@@ -64,6 +66,41 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
       },
     );
   }
+}
+
+final class _GraphiteAssignmentControlHousing extends StatelessWidget {
+  const _GraphiteAssignmentControlHousing({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('graphite-assignment-control-housing'),
+    width: 54,
+    height: 54,
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      color: const Color(0xFF111619).withValues(alpha: .96),
+      border: Border(
+        left: BorderSide(
+          color: Theme.of(context).colorScheme.primary,
+          width: 3,
+        ),
+        top: const BorderSide(color: Color(0xFF6F7C86)),
+        right: const BorderSide(color: Color(0xFF3E4851)),
+        bottom: const BorderSide(color: Color(0xFF3E4851)),
+      ),
+      boxShadow: const [
+        BoxShadow(color: Colors.black54, blurRadius: 3, offset: Offset(0, 1)),
+      ],
+    ),
+    child: IconButton(
+      key: const Key('add-academic-assignment'),
+      tooltip: 'Add Assignment',
+      onPressed: onPressed,
+      icon: const Icon(Icons.assignment_add),
+    ),
+  );
 }
 
 const _academicAssignmentThemeIds = <String>{

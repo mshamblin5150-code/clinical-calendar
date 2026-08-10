@@ -21,7 +21,12 @@ void main() {
   testWidgets('Graphite landscape is the approved precision instrument', (
     tester,
   ) async {
-    await _pumpProof(tester, const Size(1536, 1024));
+    var addAssignmentInvocations = 0;
+    await _pumpProof(
+      tester,
+      const Size(1536, 1024),
+      onAddAssignment: () => addAssignmentInvocations++,
+    );
 
     expect(find.byKey(const Key('graphite-landscape-rails')), findsOneWidget);
     expect(find.byKey(const Key('calendar-today-label')), findsOneWidget);
@@ -39,11 +44,17 @@ void main() {
     );
 
     expect(find.bySemanticsLabel('Graphite calendar mark'), findsOneWidget);
+    expect(
+      find.byKey(const Key('graphite-assignment-control-housing')),
+      findsOneWidget,
+    );
 
     await expectLater(
       find.byKey(const Key('graphite-proof')),
       matchesGoldenFile('goldens/graphite/graphite_landscape_1536x1024.png'),
     );
+    await tester.tap(find.byKey(const Key('add-academic-assignment')));
+    expect(addAssignmentInvocations, 1);
   });
 
   testWidgets('Graphite landscape directly matches the approved concept', (
@@ -162,6 +173,32 @@ void main() {
       ),
     );
   });
+
+  testWidgets(
+    'Graphite Clinical Placements uses its destination-wide machinery',
+    (tester) async {
+      await _pumpDestinationProof(
+        tester,
+        destination: ClinicalCalendarDestination.clinicalPlacements,
+        child: const _ClinicalPlacementsDestinationProof(),
+      );
+
+      expect(
+        find.byKey(const Key('graphite-destination-crown')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('graphite-destination-bay')), findsOneWidget);
+      expect(find.byType(GraphiteNineSliceFrame), findsNothing);
+      expect(find.byType(VariantFNineSliceFrame), findsNothing);
+      await expectLater(
+        find.byKey(const Key('graphite-destination-proof')),
+        matchesGoldenFile(
+          'goldens/graphite/'
+          'graphite_destination_clinical_placements_1536x1024.png',
+        ),
+      );
+    },
+  );
 }
 
 img.Image _loadApprovedConceptComparison() {
@@ -210,6 +247,7 @@ Future<void> _pumpProof(
   VoidCallback onAddSchedule = _noop,
   VoidCallback onOpenProfile = _noop,
   VoidCallback onOpenMenu = _noop,
+  VoidCallback onAddAssignment = _noop,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -246,11 +284,15 @@ Future<void> _pumpProof(
     ),
   );
   final slots = ResponsiveShellSlots(
-    centralContent: CalendarPeriodView(
-      dataSource: _ProofCalendarDataSource(),
-      studentId: _studentId,
-      today: _today,
-      initialAnchor: _today,
+    centralContent: AcademicAssignmentCalendarWorkspace(
+      themeId: graphiteThemeId,
+      onAddAssignment: onAddAssignment,
+      calendar: CalendarPeriodView(
+        dataSource: _ProofCalendarDataSource(),
+        studentId: _studentId,
+        today: _today,
+        initialAnchor: _today,
+      ),
     ),
     planningRegion: const _PlanningProof(),
     placementDock: const _PlacementsProof(),
@@ -317,6 +359,164 @@ Future<void> _pumpProof(
   }
   await tester.pump();
   expect(tester.takeException(), isNull);
+}
+
+Future<void> _pumpDestinationProof(
+  WidgetTester tester, {
+  required ClinicalCalendarDestination destination,
+  required Widget child,
+}) async {
+  await tester.binding.setSurfaceSize(const Size(1536, 1024));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  const themeBundle = GraphiteThemeBundle();
+  final baseTheme = themeBundle.standardPresentation.createThemeData();
+  final proofTheme = baseTheme.copyWith(
+    textTheme: baseTheme.textTheme.apply(fontFamily: 'ProofRoboto'),
+    primaryTextTheme: baseTheme.primaryTextTheme.apply(
+      fontFamily: 'ProofRoboto',
+    ),
+  );
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: proofTheme,
+      home: RepaintBoundary(
+        key: const Key('graphite-destination-proof'),
+        child: themeBundle.shellRenderer.buildDestination(
+          destination: destination,
+          entry: DestinationEntry.applicationMenu,
+          onExit: _noop,
+          child: child,
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  expect(tester.takeException(), isNull);
+}
+
+final class _ClinicalPlacementsDestinationProof extends StatelessWidget {
+  const _ClinicalPlacementsDestinationProof();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Text(
+              'PENDING PLACEMENTS',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(letterSpacing: 1.2),
+            ),
+            const SizedBox(width: 18),
+            Expanded(child: Divider(color: context.clinicalColors.insetBorder)),
+            const SizedBox(width: 18),
+            OutlinedButton.icon(
+              onPressed: _noop,
+              icon: const Icon(Icons.add),
+              label: const Text('Add Clinical Placement'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 22),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: 310,
+                child: ListView(
+                  children: const [
+                    _PlacementDestinationChoice(
+                      title: 'Acceptance Family Medicine',
+                      detail: '90 hr target  /  Sep 30 deadline',
+                      selected: true,
+                    ),
+                    SizedBox(height: 10),
+                    _PlacementDestinationChoice(
+                      title: 'Internal Medicine',
+                      detail: '90 hr target  /  Oct 31 deadline',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF171B1E),
+                    border: Border(
+                      left: BorderSide(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 3,
+                      ),
+                    ),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: _ProofPanel(
+                      title: 'ACCEPTANCE FAMILY MEDICINE',
+                      lines: [
+                        'Target Hours                         90 hr',
+                        'Start Date                           08-10-2026',
+                        'Completion Deadline          09-30-2026',
+                        'Primary Preceptor                Jordan Lee',
+                        'Completed Hours                    0 hr',
+                        'Scheduled Hours                    8 hr',
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+final class _PlacementDestinationChoice extends StatelessWidget {
+  const _PlacementDestinationChoice({
+    required this.title,
+    required this.detail,
+    this.selected = false,
+  });
+
+  final String title;
+  final String detail;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: selected ? const Color(0xFF1C2329) : const Color(0xFF13171A),
+      border: Border(
+        left: BorderSide(
+          color: selected
+              ? Theme.of(context).colorScheme.primary
+              : context.clinicalColors.insetBorder,
+          width: selected ? 3 : 1,
+        ),
+        top: BorderSide(color: context.clinicalColors.insetBorder),
+        right: BorderSide(color: context.clinicalColors.insetBorder),
+        bottom: BorderSide(color: context.clinicalColors.insetBorder),
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text(detail, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    ),
+  );
 }
 
 final class _PlacementsProof extends StatelessWidget {

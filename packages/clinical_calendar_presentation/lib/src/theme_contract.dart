@@ -285,7 +285,7 @@ final class GraphiteShellRenderer implements ClinicalCalendarShellRenderer {
   String get themeId => graphiteThemeId;
 
   @override
-  String get rendererId => 'graphite-owned-responsive-instrument-v3';
+  String get rendererId => 'graphite-owned-responsive-instrument-v4';
 
   @override
   Widget build({
@@ -1405,7 +1405,7 @@ final class GraphiteThemeBundle implements ClinicalCalendarThemeBundle {
   @override
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: graphiteThemeId,
-    rendererId: 'graphite-owned-responsive-instrument-v3',
+    rendererId: 'graphite-owned-responsive-instrument-v4',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [

@@ -229,7 +229,7 @@ void main() {
         ),
         (
           graphite,
-          'graphite-owned-responsive-instrument-v3',
+          'graphite-owned-responsive-instrument-v4',
           GraphiteApplicationShell,
         ),
         (
@@ -1722,7 +1722,7 @@ void main() {
   });
 
   testWidgets(
-    'Graphite destination keeps compact chrome and no Variant frame',
+    'Graphite destination keeps owned compact machinery and no raster frame',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 700));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -1745,14 +1745,101 @@ void main() {
 
       expect(find.byType(VariantFNineSliceFrame), findsNothing);
       expect(
-        tester
-            .widget<GraphiteNineSliceFrame>(find.byType(GraphiteNineSliceFrame))
-            .chromeInsets,
-        graphiteCompactDestinationInsets,
+        find.byKey(const Key('graphite-destination-shell')),
+        findsOneWidget,
       );
+      expect(find.byType(GraphiteNineSliceFrame), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'Graphite owns one coherent shell across all ten top-level destinations',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1536, 1024));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final destination in applicationMenuDestinations) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: graphite.standardPresentation.createThemeData(),
+            home: graphite.shellRenderer.buildDestination(
+              destination: destination,
+              entry: DestinationEntry.applicationMenu,
+              onExit: _noop,
+              child: ShellPanel(
+                label: '${destination.label} fixture',
+                child: const Text('Fictional shared workflow content'),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('graphite-destination-shell')),
+          findsOneWidget,
+          reason: destination.label,
+        );
+        expect(
+          find.byKey(const Key('graphite-destination-crown')),
+          findsOneWidget,
+          reason: destination.label,
+        );
+        expect(
+          find.byKey(const Key('graphite-destination-bay')),
+          findsOneWidget,
+          reason: destination.label,
+        );
+        expect(
+          find.byKey(const Key('graphite-destination-grid')),
+          findsOneWidget,
+          reason: destination.label,
+        );
+        expect(find.byType(CanonicalDeltaMark), findsOneWidget);
+        expect(find.byType(AdditiveThemeDestinationSurface), findsNothing);
+        expect(find.byType(GraphiteNineSliceFrame), findsNothing);
+        expect(find.byType(VariantFNineSliceFrame), findsNothing);
+        expect(tester.takeException(), isNull, reason: destination.label);
+      }
+    },
+  );
+
+  testWidgets('Graphite destination remains operable at 200 percent text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: graphite.standardPresentation.createThemeData(),
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: graphite.shellRenderer.buildDestination(
+            destination: ClinicalCalendarDestination.clinicalPlacements,
+            entry: DestinationEntry.applicationMenu,
+            onExit: _noop,
+            child: const SingleChildScrollView(
+              child: SizedBox(
+                height: 1800,
+                child: Text('Fictional shared Clinical Placement content'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('graphite-destination-scroll')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('back-action')), findsOneWidget);
+    expect(find.text('Clinical Placements'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('late Graphite failure replaces the complete application', (
     tester,
