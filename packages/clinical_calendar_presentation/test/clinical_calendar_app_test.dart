@@ -1288,6 +1288,15 @@ void main() {
       expect(find.byType(AttentionRail), findsOneWidget);
       expect(find.byKey(const Key('live-planning-region')), findsOneWidget);
       expect(find.byKey(const Key('primary-planning-action')), findsOneWidget);
+      for (final key in const [
+        'federation-classic-placements-housing',
+        'federation-classic-planning-housing',
+        'federation-classic-clinical-placement-housing',
+        'federation-classic-needs-attention-housing',
+      ]) {
+        expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+      }
+      expect(find.byType(VariantFTacticalFrame), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

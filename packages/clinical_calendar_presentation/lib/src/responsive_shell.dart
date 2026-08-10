@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'tactical_frame.dart';
 import 'variant_f_theme.dart';
 import 'enhanced_accessibility_controller.dart';
+import 'federation_classic_panel_scope.dart';
 import 'variant_f_raster_assets.dart';
 
 enum ClinicalCalendarDestination {
@@ -618,6 +619,13 @@ final class ShellPanel extends StatelessWidget {
         child,
       ],
     );
+    if (FederationClassicPanelScope.isActive(context)) {
+      return FederationClassicPanelHousing(
+        label: label,
+        accent: accent,
+        child: child,
+      );
+    }
     if (VariantFRasterPanelInterior.isActive(context)) {
       return Padding(padding: const EdgeInsets.all(8), child: content);
     }

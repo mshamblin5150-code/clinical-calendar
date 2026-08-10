@@ -4,6 +4,7 @@ import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
 import 'canonical_delta_mark.dart';
 import 'federation_classic_frame.dart';
+import 'federation_classic_panel_scope.dart';
 import 'federation_classic_theme.dart';
 import 'insight_rail_presentation_policy.dart';
 import 'responsive_shell.dart';
@@ -357,7 +358,9 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                   accent: _FederationClassicBayAccent.lilac,
                   shape: _FederationClassicBayShape.placement,
                   integrated: true,
-                  child: slots.placementDock,
+                  child: FederationClassicPanelScope(
+                    child: slots.placementDock,
+                  ),
                 ),
               ),
               Positioned.fromRect(
@@ -381,7 +384,9 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                   integrated: true,
                   child: VariantFPlanningBayMode(
                     expandedByDefault: false,
-                    child: slots.planningRegion,
+                    child: FederationClassicPanelScope(
+                      child: slots.planningRegion,
+                    ),
                   ),
                 ),
               ),
@@ -397,7 +402,9 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                         PlacementProgressRailLayout.sideBySide,
                     expandedAttentionRows: true,
                     outlinedAttentionRows: true,
-                    child: slots.insightRail,
+                    child: FederationClassicPanelScope(
+                      child: slots.insightRail,
+                    ),
                   ),
                 ),
               ),
@@ -496,7 +503,9 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                                           _FederationClassicBayShape.planning,
                                       child: VariantFPlanningBayMode(
                                         expandedByDefault: false,
-                                        child: slots.planningRegion,
+                                        child: FederationClassicPanelScope(
+                                          child: slots.planningRegion,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -510,7 +519,9 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                                       accent: _FederationClassicBayAccent.lilac,
                                       shape:
                                           _FederationClassicBayShape.placement,
-                                      child: slots.mobilePlacementSummary,
+                                      child: FederationClassicPanelScope(
+                                        child: slots.mobilePlacementSummary,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 10),
@@ -522,7 +533,9 @@ final class FederationClassicApplicationShell extends StatelessWidget {
                                       ),
                                       accent: _FederationClassicBayAccent.lilac,
                                       shape: _FederationClassicBayShape.insight,
-                                      child: slots.mobileAttention,
+                                      child: FederationClassicPanelScope(
+                                        child: slots.mobileAttention,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -917,13 +930,13 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
               onPressed: onAddSchedule,
               icon: const Icon(Icons.add_box_outlined),
             ),
-            if (!compact)
-              IconButton(
-                tooltip: 'Help',
-                onPressed: () =>
-                    onOpenDestination(ClinicalCalendarDestination.help),
-                icon: const Icon(Icons.help_outline),
-              ),
+            IconButton(
+              key: const Key('federation-classic-help-action'),
+              tooltip: 'Help',
+              onPressed: () =>
+                  onOpenDestination(ClinicalCalendarDestination.help),
+              icon: const Icon(Icons.help_outline),
+            ),
             profileAvatar,
           ],
         ),

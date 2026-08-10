@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:clinical_calendar_presentation/src/canonical_delta_mark.dart';
+import 'package:clinical_calendar_presentation/src/federation_classic_panel_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,7 +25,7 @@ void main() {
     expect(find.text('MY PLACEMENTS'), findsOneWidget);
     expect(find.text('AUGUST 2026'), findsOneWidget);
     expect(find.text('PLANNING'), findsOneWidget);
-    expect(find.text('NEEDS ATTENTION'), findsOneWidget);
+    expect(find.textContaining('NEEDS ATTENTION'), findsOneWidget);
     expect(
       find.byKey(const Key('federation-classic-axion-delta')),
       findsOneWidget,
@@ -34,6 +35,14 @@ void main() {
       find.byKey(const Key('federation-classic-assignment-control-housing')),
       findsOneWidget,
     );
+    for (final key in const [
+      'federation-classic-placements-housing',
+      'federation-classic-planning-housing',
+      'federation-classic-clinical-placement-housing',
+      'federation-classic-needs-attention-housing',
+    ]) {
+      expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+    }
     final studentInitials = tester.getRect(find.text('AB'));
     expect(studentInitials.center.dx, closeTo(1501, 2));
     expect(studentInitials.center.dy, closeTo(74, 2));
@@ -108,6 +117,10 @@ void main() {
     expect(find.text('CLINICAL CALENDAR'), findsOneWidget);
     expect(
       find.byKey(const Key('federation-classic-axion-delta')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('federation-classic-help-action')),
       findsOneWidget,
     );
 
@@ -452,45 +465,44 @@ final class _PlacementsProof extends StatelessWidget {
   const _PlacementsProof();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10),
-        child: Row(
-          children: [
-            Expanded(child: _SectionTitle('MY PLACEMENTS')),
-            Icon(
-              Icons.settings_outlined,
-              size: 22,
-              color: FederationClassicColors.workAccent,
-            ),
-          ],
+  Widget build(BuildContext context) => ShellPanel(
+    label: 'My placements',
+    accent: FederationClassicColors.workAccent,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Align(
+          alignment: Alignment.centerRight,
+          child: Icon(
+            Icons.settings_outlined,
+            size: 22,
+            color: FederationClassicColors.workAccent,
+          ),
         ),
-      ),
-      const SizedBox(height: 20),
-      const _PlacementCard(
-        name: 'Acceptance\nFamily Medicine',
-        accent: FederationClassicColors.workAccent,
-        completed: '0 hr',
-        scheduled: '8 hr',
-      ),
-      const SizedBox(height: 12),
-      const _PlacementCard(
-        name: 'Internal Medicine',
-        accent: FederationClassicColors.clinical,
-        completed: '0 hr',
-        scheduled: '8 hr',
-      ),
-      const Spacer(),
-      Text(
-        'TAP A PLACEMENT FOR DETAILS',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: FederationClassicColors.workAccent,
-          letterSpacing: 1.1,
+        const SizedBox(height: 8),
+        const _PlacementCard(
+          name: 'Acceptance\nFamily Medicine',
+          accent: FederationClassicColors.workAccent,
+          completed: '0 hr',
+          scheduled: '8 hr',
         ),
-      ),
-    ],
+        const SizedBox(height: 12),
+        const _PlacementCard(
+          name: 'Internal Medicine',
+          accent: FederationClassicColors.clinical,
+          completed: '0 hr',
+          scheduled: '8 hr',
+        ),
+        const Spacer(),
+        Text(
+          'TAP A PLACEMENT FOR DETAILS',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: FederationClassicColors.workAccent,
+            letterSpacing: 1.1,
+          ),
+        ),
+      ],
+    ),
   );
 }
 
@@ -591,116 +603,100 @@ final class _PlanningProof extends StatelessWidget {
   const _PlanningProof();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      const Row(
-        children: [
-          _SectionTitle('PLANNING'),
-          SizedBox(width: 12),
-          Expanded(child: _AccentRule(FederationClassicColors.workAccent)),
-        ],
-      ),
-      const SizedBox(height: 5),
-      Text(
-        'Build the monthly plan in this in-flow region.',
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-      const SizedBox(height: 7),
-      const Row(
-        children: [
-          Expanded(
-            child: _ProofAction(
-              icon: Icons.add,
-              label: 'ADD SCHEDULE',
-              filled: true,
-            ),
-          ),
-          SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: _ProofAction(
-              icon: Icons.warning_amber_outlined,
-              label: 'PLANNING INCOMPLETE',
-            ),
-          ),
-          SizedBox(width: 8),
-          Expanded(
-            child: _ProofAction(
-              icon: Icons.keyboard_arrow_up,
-              label: 'COLLAPSE',
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 7),
-      Expanded(
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-          decoration: BoxDecoration(
-            border: Border.all(color: FederationClassicColors.outline),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Center(child: _PlanningStep('1', 'TYPE & TIME')),
-              const SizedBox(height: 3),
-              Text(
-                '0 selected dates',
-                style: Theme.of(context).textTheme.bodySmall,
+  Widget build(BuildContext context) => ShellPanel(
+    label: 'Planning',
+    accent: FederationClassicColors.clinical,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Row(
+          children: [
+            Expanded(
+              child: _ProofAction(
+                icon: Icons.add,
+                label: 'ADD SCHEDULE',
+                filled: true,
               ),
-              const SizedBox(height: 3),
-              const Row(
-                children: [
-                  Expanded(
-                    child: _ChoiceChip(
-                      'WORK SHIFT',
-                      FederationClassicColors.workAccent,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: _ChoiceChip(
-                      'CLINICAL SESSION',
-                      FederationClassicColors.clinical,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: _ChoiceChip(
-                      'PROTECTED DAY',
-                      FederationClassicColors.protectedDayAccent,
-                    ),
-                  ),
-                ],
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: _ProofAction(
+                icon: Icons.warning_amber_outlined,
+                label: 'PLANNING INCOMPLETE',
               ),
-              const Spacer(),
-              const Row(
-                children: [
-                  Expanded(
-                    child: _FieldProof(
-                      label: 'SCHEDULE TEMPLATE',
-                      value: 'ENTER TIMES MANUALLY',
-                    ),
-                  ),
-                  SizedBox(width: 10),
-                  SizedBox(
-                    width: 120,
-                    child: _FieldProof(label: 'START', value: '08:00'),
-                  ),
-                  SizedBox(width: 10),
-                  SizedBox(
-                    width: 120,
-                    child: _FieldProof(label: 'END', value: '17:00'),
-                  ),
-                ],
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: _ProofAction(
+                icon: Icons.keyboard_arrow_up,
+                label: 'COLLAPSE',
               ),
-            ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 7),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: FederationClassicColors.outline),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Row(
+                  children: [
+                    Expanded(
+                      child: _ChoiceChip(
+                        'WORK SHIFT',
+                        FederationClassicColors.workAccent,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: _ChoiceChip(
+                        'CLINICAL SESSION',
+                        FederationClassicColors.clinical,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: _ChoiceChip(
+                        'PROTECTED DAY',
+                        FederationClassicColors.protectedDayAccent,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                const Row(
+                  children: [
+                    Expanded(
+                      child: _FieldProof(
+                        label: 'SCHEDULE TEMPLATE',
+                        value: 'ENTER TIMES MANUALLY',
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    SizedBox(
+                      width: 120,
+                      child: _FieldProof(label: 'START', value: '08:00'),
+                    ),
+                    SizedBox(width: 10),
+                    SizedBox(
+                      width: 120,
+                      child: _FieldProof(label: 'END', value: '17:00'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 }
 
@@ -738,30 +734,6 @@ final class _ProofAction extends StatelessWidget {
         ),
       ],
     ),
-  );
-}
-
-final class _PlanningStep extends StatelessWidget {
-  const _PlanningStep(this.number, this.label);
-
-  final String number;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      CircleAvatar(
-        radius: 12,
-        backgroundColor: Colors.transparent,
-        foregroundColor: FederationClassicColors.clinical,
-        child: Text(number),
-      ),
-      const SizedBox(width: 7),
-      Text(
-        label,
-        style: const TextStyle(color: FederationClassicColors.clinical),
-      ),
-    ],
   );
 }
 
@@ -812,140 +784,103 @@ final class _InsightProof extends StatelessWidget {
   const _InsightProof();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      const Row(
-        children: [
-          _SectionTitle(
-            'INTERNAL MEDICINE',
-            color: FederationClassicColors.clinical,
-          ),
-          SizedBox(width: 10),
-          Expanded(child: _AccentRule(FederationClassicColors.clinical)),
-        ],
-      ),
-      const SizedBox(height: 22),
-      const Row(
-        children: [
-          SizedBox.square(
-            dimension: 142,
-            child: PlacementProgressWheelGraphic(
-              completedFraction: 0,
-              scheduledFraction: 8 / 90,
-              unscheduledFraction: 82 / 90,
-              child: Center(
-                child: Text('0 hr\ncompleted', textAlign: TextAlign.center),
+  Widget build(BuildContext context) => ShellPanel(
+    label: 'Clinical Placement',
+    accent: FederationClassicColors.clinical,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 4),
+        const Row(
+          children: [
+            SizedBox.square(
+              dimension: 142,
+              child: PlacementProgressWheelGraphic(
+                completedFraction: 0,
+                scheduledFraction: 8 / 90,
+                unscheduledFraction: 82 / 90,
+                child: Center(
+                  child: Text('0 hr\ncompleted', textAlign: TextAlign.center),
+                ),
               ),
             ),
-          ),
-          SizedBox(width: 14),
-          Expanded(
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                children: [
+                  _MetricLine(
+                    'Target                 90 hr',
+                    FederationClassicColors.workAccent,
+                    filledMarker: true,
+                  ),
+                  _MetricLine(
+                    'Completed            0 hr',
+                    FederationClassicColors.completed,
+                    filledMarker: true,
+                  ),
+                  _MetricLine(
+                    'Scheduled             8 hr',
+                    FederationClassicColors.scheduled,
+                    filledMarker: true,
+                  ),
+                  _MetricLine(
+                    'Unscheduled       82 hr',
+                    FederationClassicColors.unscheduled,
+                    filledMarker: true,
+                  ),
+                  _MetricLine(
+                    'Over-Target          0 hr',
+                    FederationClassicColors.workAccent,
+                    filledMarker: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        const _StatusStrip(
+          'TAP WHEEL TO VIEW NEXT PLACEMENT',
+          FederationClassicColors.scheduled,
+        ),
+        const SizedBox(height: 4),
+        const _StatusStrip(
+          'SHOW PRECEPTOR BREAKDOWN',
+          FederationClassicColors.clinical,
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: FederationClassicPanelHousing(
+            label: 'Needs Attention · 5',
+            accent: FederationClassicColors.urgent,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _MetricLine(
-                  'Target                 90 hr',
-                  FederationClassicColors.workAccent,
-                  filledMarker: true,
+                const _AttentionCard(
+                  icon: Icons.assignment_late_outlined,
+                  title: 'Clinical Session needs confirmation',
+                  subtitle: 'Confirm the actual times and supervisors.',
                 ),
-                _MetricLine(
-                  'Completed            0 hr',
-                  FederationClassicColors.completed,
-                  filledMarker: true,
+                const _AttentionCard(
+                  icon: Icons.fact_check_outlined,
+                  title: 'INITIAL SELF-ASSESSMENT',
+                  subtitle: 'Acceptance Family Medicine - Due',
                 ),
-                _MetricLine(
-                  'Scheduled             8 hr',
-                  FederationClassicColors.scheduled,
-                  filledMarker: true,
+                const _AttentionCard(
+                  icon: Icons.fact_check_outlined,
+                  title: 'INITIAL SELF-ASSESSMENT',
+                  subtitle: 'Internal Medicine - Due',
                 ),
-                _MetricLine(
-                  'Unscheduled       82 hr',
-                  FederationClassicColors.unscheduled,
-                  filledMarker: true,
-                ),
-                _MetricLine(
-                  'Over-Target          0 hr',
-                  FederationClassicColors.workAccent,
-                  filledMarker: true,
+                const Spacer(),
+                const Text(
+                  'OPEN ATTENTION CENTER',
+                  style: TextStyle(color: FederationClassicColors.scheduled),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-      const SizedBox(height: 5),
-      Text(
-        'Additional pace required - 21 hr 16 min / week',
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-      const SizedBox(height: 7),
-      const _StatusStrip(
-        'TAP WHEEL TO VIEW NEXT PLACEMENT',
-        FederationClassicColors.scheduled,
-      ),
-      const SizedBox(height: 4),
-      const _StatusStrip(
-        'SHOW PRECEPTOR BREAKDOWN',
-        FederationClassicColors.clinical,
-      ),
-      const SizedBox(height: 34),
-      const Row(
-        children: [
-          _SectionTitle('NEEDS ATTENTION'),
-          SizedBox(width: 10),
-          Expanded(child: _AccentRule(FederationClassicColors.workAccent)),
-        ],
-      ),
-      const Text(
-        'ON - 5',
-        style: TextStyle(color: FederationClassicColors.scheduled),
-      ),
-      const SizedBox(height: 5),
-      const _AttentionCard(
-        icon: Icons.assignment_late_outlined,
-        title: 'Clinical Session needs confirmation',
-        subtitle: 'Confirm the actual times and supervisors.',
-      ),
-      const _AttentionCard(
-        icon: Icons.fact_check_outlined,
-        title: 'INITIAL SELF-ASSESSMENT',
-        subtitle: 'Acceptance Family Medicine - Due',
-      ),
-      const _AttentionCard(
-        icon: Icons.fact_check_outlined,
-        title: 'INITIAL SELF-ASSESSMENT',
-        subtitle: 'Internal Medicine - Due',
-      ),
-      const _AttentionCard(
-        icon: Icons.warning_amber_outlined,
-        title: 'Planning Incomplete',
-        subtitle: 'Choose one empty Protected Day',
-      ),
-      const Spacer(),
-      const Row(
-        children: [
-          Text(
-            'OPEN ATTENTION CENTER',
-            style: TextStyle(color: FederationClassicColors.scheduled),
-          ),
-          SizedBox(width: 10),
-          Expanded(child: _AccentRule(FederationClassicColors.scheduled)),
-        ],
-      ),
-    ],
-  );
-}
-
-final class _AccentRule extends StatelessWidget {
-  const _AccentRule(this.color);
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    height: 10,
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: BorderRadius.circular(8),
+        ),
+      ],
     ),
   );
 }
@@ -986,8 +921,8 @@ final class _AttentionCard extends StatelessWidget {
       minHeight: subtitle == null
           ? 48
           : title.startsWith('Clinical Session')
-          ? 84
-          : 62,
+          ? 68
+          : 54,
     ),
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
     decoration: BoxDecoration(
@@ -1072,19 +1007,15 @@ final class _AttentionSummaryProof extends StatelessWidget {
 }
 
 final class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(
-    this.label, {
-    this.color = FederationClassicColors.workAccent,
-  });
+  const _SectionTitle(this.label);
 
   final String label;
-  final Color color;
 
   @override
   Widget build(BuildContext context) => Text(
     label,
     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-      color: color,
+      color: FederationClassicColors.workAccent,
       letterSpacing: 1.7,
       fontWeight: FontWeight.w700,
     ),

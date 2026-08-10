@@ -10,7 +10,11 @@ This repair preserves the maintainer-approved v8 Calendar composition and its
 Federation Classic mechanism:
 
 - a direct, 44 logical-pixel Help control now sits in the LCARS crown without
-  moving the approved Student identity or Axion delta;
+  moving the approved Student identity or Axion delta, and the same Help
+  action remains present in portrait;
+- Placements, Planning, Clinical Placement, and Needs Attention keep their
+  shared production workflows while rendering through Federation
+  Classic-owned asymmetric LCARS housings;
 - the shared Add Academic Assignment callback is presented through a
   Federation Classic-owned control housing, and its due-date projection is
   visible in the deterministic Calendar fixture;
@@ -46,11 +50,11 @@ frames, and exercises Back at 200 percent text.
 
 ```text
 9d7de52026ffe05e7bca073693a65be502afc74c7d805a28005e56d2c1877a14  approved-concept-landscape.png
-9a13aab613be21872256545225c8a332f0189f04339be660ece9da24f7bd38f5  landscape-concept-vs-runtime.png
+a61cbdae07d26c3ff1455cdf1cd81482c1f0e4092705c090ccd4c7ea435e64a5  landscape-concept-vs-runtime.png
 a89d25dae5595c157bf9ddf975256be08081eb5613fccd7115aa63ce0b71297e  runtime-destination-clinical-placements-1586x992.png
-edefa3a2e7a1ee48d56b0e6f28259642067a84569ce400a116b21c21d9cc5961  runtime-landscape-1586x992.png
-5ef5864331ac0a95007eabdb4c0315105372eef427dd5d68a8b4e917e65ccb7d  runtime-portrait-200-percent-900x1440.png
-f7f43057a91514693a1a323fdc6dfb216520dac81745044f8db4501372a1b1e9  runtime-portrait-900x1440.png
+efea63b8d0649697e4ee2e60c6945fc3c14b01f275a545b5d40f3723a068dd14  runtime-landscape-1586x992.png
+fc032efe0843dd1c3df158da1b68346f2d24735c5afa8209a9ce332e0f82ffc7  runtime-portrait-200-percent-900x1440.png
+c3b7fa5c8dd8aba0303c69851c098ab313f9092eab1061156ac1a189dd4188e8  runtime-portrait-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance

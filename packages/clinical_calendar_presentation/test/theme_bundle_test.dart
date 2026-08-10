@@ -1013,8 +1013,73 @@ void main() {
       find.byKey(const Key('federation-classic-portrait-scroll')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('federation-classic-help-action')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Federation Classic gives shared landing workflows owned housings',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1586, 992));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      const slots = ResponsiveShellSlots(
+        centralContent: Text('Calendar fixture'),
+        placementDock: ShellPanel(
+          label: 'My placements',
+          child: Text('Live placement workflow'),
+        ),
+        planningRegion: ShellPanel(
+          label: 'Planning',
+          child: Text('Live planning workflow'),
+        ),
+        insightRail: Column(
+          children: [
+            ShellPanel(
+              label: 'Clinical Placement',
+              child: Text('Live progress workflow'),
+            ),
+            ShellPanel(
+              label: 'Needs Attention · 2',
+              child: Text('Live attention workflow'),
+            ),
+          ],
+        ),
+        mobilePlacementSummary: Text('Placement summary fixture'),
+        mobileAttention: Text('Attention fixture'),
+        profileAvatar: SizedBox.square(dimension: 44),
+      );
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: federationClassic.standardPresentation.createThemeData(),
+          boundaryKey: GlobalKey(),
+          shell: federationClassic.shellRenderer.build(
+            slots: slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (final key in const [
+        'federation-classic-placements-housing',
+        'federation-classic-planning-housing',
+        'federation-classic-clinical-placement-housing',
+        'federation-classic-needs-attention-housing',
+      ]) {
+        expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+      }
+      expect(find.byType(VariantFTacticalFrame), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Federation Classic tablet console survives 200% text', (
     tester,
