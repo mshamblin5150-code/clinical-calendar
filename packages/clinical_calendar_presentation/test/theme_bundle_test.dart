@@ -640,7 +640,7 @@ void main() {
       find.byKey(const Key('graphite-command-crown')),
     );
     final placements = tester.getRect(
-      find.byKey(const Key('graphite-placement-bay')),
+      find.byKey(const Key('graphite-placement-housing')),
     );
     final calendar = tester.getRect(
       find.byKey(const Key('graphite-calendar-bay')),
@@ -743,7 +743,7 @@ void main() {
       find.byKey(const Key('graphite-planning-bay')),
     );
     final placements = tester.getRect(
-      find.byKey(const Key('graphite-placement-bay')),
+      find.byKey(const Key('graphite-placement-housing')),
     );
     final insight = tester.getRect(
       find.byKey(const Key('graphite-insight-bay')),
@@ -1811,6 +1811,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(900, 1440));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
+    var exitCount = 0;
     await tester.pumpWidget(
       MaterialApp(
         theme: graphite.standardPresentation.createThemeData(),
@@ -1819,7 +1820,7 @@ void main() {
           child: graphite.shellRenderer.buildDestination(
             destination: ClinicalCalendarDestination.clinicalPlacements,
             entry: DestinationEntry.applicationMenu,
-            onExit: _noop,
+            onExit: () => exitCount++,
             child: const SingleChildScrollView(
               child: SizedBox(
                 height: 1800,
@@ -1838,6 +1839,8 @@ void main() {
     );
     expect(find.byKey(const Key('back-action')), findsOneWidget);
     expect(find.text('Clinical Placements'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('back-action')));
+    expect(exitCount, 1);
     expect(tester.takeException(), isNull);
   });
 

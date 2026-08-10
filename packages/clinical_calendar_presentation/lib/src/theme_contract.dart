@@ -278,6 +278,8 @@ final class VariantFShellRenderer implements ClinicalCalendarShellRenderer {
   );
 }
 
+const graphiteRendererId = 'graphite-owned-responsive-instrument-v4';
+
 final class GraphiteShellRenderer implements ClinicalCalendarShellRenderer {
   const GraphiteShellRenderer();
 
@@ -285,7 +287,7 @@ final class GraphiteShellRenderer implements ClinicalCalendarShellRenderer {
   String get themeId => graphiteThemeId;
 
   @override
-  String get rendererId => 'graphite-owned-responsive-instrument-v4';
+  String get rendererId => graphiteRendererId;
 
   @override
   Widget build({
@@ -1405,7 +1407,7 @@ final class GraphiteThemeBundle implements ClinicalCalendarThemeBundle {
   @override
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: graphiteThemeId,
-    rendererId: 'graphite-owned-responsive-instrument-v4',
+    rendererId: graphiteRendererId,
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [

@@ -1,9 +1,9 @@
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_presentation/src/canonical_delta_mark.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
 import 'support/proof_fonts.dart';
+import 'support/placement_progress_harness.dart';
 
 const _studentId = '00000000-0000-4000-8000-000000000128';
 final _today = LocalDate(2026, 8, 6);
@@ -30,6 +31,24 @@ void main() {
 
     expect(find.byKey(const Key('graphite-landscape-rails')), findsOneWidget);
     expect(find.byKey(const Key('calendar-today-label')), findsOneWidget);
+    final placementHousing = find.byKey(
+      const Key('graphite-placement-housing'),
+    );
+    expect(placementHousing, findsOneWidget);
+    expect(
+      find.descendant(
+        of: placementHousing,
+        matching: find.byType(GraphiteNineSliceFrame),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: placementHousing,
+        matching: find.byKey(const Key('graphite-live-placement-card')),
+      ),
+      findsNWidgets(2),
+    );
 
     final planningBay = tester.getRect(
       find.byKey(const Key('graphite-planning-bay')),
@@ -177,10 +196,17 @@ void main() {
   testWidgets(
     'Graphite Clinical Placements uses its destination-wide machinery',
     (tester) async {
+      final harness = PlacementProgressHarness(
+        familyName: 'Acceptance Family Medicine',
+      );
+      await harness.controller.load();
       await _pumpDestinationProof(
         tester,
         destination: ClinicalCalendarDestination.clinicalPlacements,
-        child: const _ClinicalPlacementsDestinationProof(),
+        child: PlacementManagementSurface(
+          controller: harness.controller,
+          studentId: placementTestStudentId,
+        ),
       );
 
       expect(
@@ -188,6 +214,11 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('graphite-destination-bay')), findsOneWidget);
+      expect(
+        find.byKey(const Key('placement-management-surface')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('add-placement-action')), findsOneWidget);
       expect(find.byType(GraphiteNineSliceFrame), findsNothing);
       expect(find.byType(VariantFNineSliceFrame), findsNothing);
       await expectLater(
@@ -255,6 +286,9 @@ Future<void> _pumpProof(
     frameFile: _findWorkspaceFile(
       'packages/clinical_calendar_presentation/$graphiteFrameAsset',
     ),
+    deltaFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/$canonicalDeltaMarkAsset',
+    ),
   );
   final preloadKey = GlobalKey();
   await tester.pumpWidget(
@@ -264,13 +298,22 @@ Future<void> _pumpProof(
     ),
   );
   await tester.runAsync(() async {
-    await precacheImage(
-      const AssetImage(
-        graphiteFrameAsset,
-        package: 'clinical_calendar_presentation',
+    await Future.wait([
+      precacheImage(
+        const AssetImage(
+          graphiteFrameAsset,
+          package: 'clinical_calendar_presentation',
+        ),
+        preloadKey.currentContext!,
       ),
-      preloadKey.currentContext!,
-    );
+      precacheImage(
+        const AssetImage(
+          canonicalDeltaMarkAsset,
+          package: 'clinical_calendar_presentation',
+        ),
+        preloadKey.currentContext!,
+      ),
+    ]);
   });
   await tester.pump();
   expect(tester.takeException(), isNull);
@@ -283,6 +326,10 @@ Future<void> _pumpProof(
       fontFamily: 'ProofRoboto',
     ),
   );
+  final placementHarness = PlacementProgressHarness(
+    familyName: 'Acceptance Family Medicine',
+  );
+  await placementHarness.controller.load();
   final slots = ResponsiveShellSlots(
     centralContent: AcademicAssignmentCalendarWorkspace(
       themeId: graphiteThemeId,
@@ -295,8 +342,14 @@ Future<void> _pumpProof(
       ),
     ),
     planningRegion: const _PlanningProof(),
-    placementDock: const _PlacementsProof(),
-    insightRail: const _InsightProof(),
+    placementDock: PlacementDock(
+      controller: placementHarness.controller,
+      studentId: placementTestStudentId,
+    ),
+    insightRail: PlacementProgressRail(
+      controller: placementHarness.controller,
+      studentId: placementTestStudentId,
+    ),
     mobilePlacementSummary: const _ProofPanel(
       title: 'PLACEMENT STATUS',
       lines: ['42 / 90 hr completed', '24 hr scheduled', '24 hr unscheduled'],
@@ -376,693 +429,51 @@ Future<void> _pumpDestinationProof(
       fontFamily: 'ProofRoboto',
     ),
   );
+  final proofAssets = _ProofAssetBundle(
+    frameFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/$graphiteFrameAsset',
+    ),
+    deltaFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/$canonicalDeltaMarkAsset',
+    ),
+  );
+  final preloadKey = GlobalKey();
   await tester.pumpWidget(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: proofTheme,
-      home: RepaintBoundary(
-        key: const Key('graphite-destination-proof'),
-        child: themeBundle.shellRenderer.buildDestination(
-          destination: destination,
-          entry: DestinationEntry.applicationMenu,
-          onExit: _noop,
-          child: child,
+    DefaultAssetBundle(
+      bundle: proofAssets,
+      child: MaterialApp(home: SizedBox(key: preloadKey)),
+    ),
+  );
+  await tester.runAsync(() async {
+    await precacheImage(
+      const AssetImage(
+        canonicalDeltaMarkAsset,
+        package: 'clinical_calendar_presentation',
+      ),
+      preloadKey.currentContext!,
+    );
+  });
+  await tester.pump();
+  await tester.pumpWidget(
+    DefaultAssetBundle(
+      bundle: proofAssets,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: proofTheme,
+        home: RepaintBoundary(
+          key: const Key('graphite-destination-proof'),
+          child: themeBundle.shellRenderer.buildDestination(
+            destination: destination,
+            entry: DestinationEntry.applicationMenu,
+            onExit: _noop,
+            child: child,
+          ),
         ),
       ),
     ),
   );
   await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
-}
-
-final class _ClinicalPlacementsDestinationProof extends StatelessWidget {
-  const _ClinicalPlacementsDestinationProof();
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(20),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Text(
-              'PENDING PLACEMENTS',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(letterSpacing: 1.2),
-            ),
-            const SizedBox(width: 18),
-            Expanded(child: Divider(color: context.clinicalColors.insetBorder)),
-            const SizedBox(width: 18),
-            OutlinedButton.icon(
-              onPressed: _noop,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Clinical Placement'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 22),
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(
-                width: 310,
-                child: ListView(
-                  children: const [
-                    _PlacementDestinationChoice(
-                      title: 'Acceptance Family Medicine',
-                      detail: '90 hr target  /  Sep 30 deadline',
-                      selected: true,
-                    ),
-                    SizedBox(height: 10),
-                    _PlacementDestinationChoice(
-                      title: 'Internal Medicine',
-                      detail: '90 hr target  /  Oct 31 deadline',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF171B1E),
-                    border: Border(
-                      left: BorderSide(
-                        color: Theme.of(context).colorScheme.primary,
-                        width: 3,
-                      ),
-                    ),
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: _ProofPanel(
-                      title: 'ACCEPTANCE FAMILY MEDICINE',
-                      lines: [
-                        'Target Hours                         90 hr',
-                        'Start Date                           08-10-2026',
-                        'Completion Deadline          09-30-2026',
-                        'Primary Preceptor                Jordan Lee',
-                        'Completed Hours                    0 hr',
-                        'Scheduled Hours                    8 hr',
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-final class _PlacementDestinationChoice extends StatelessWidget {
-  const _PlacementDestinationChoice({
-    required this.title,
-    required this.detail,
-    this.selected = false,
-  });
-
-  final String title;
-  final String detail;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: selected ? const Color(0xFF1C2329) : const Color(0xFF13171A),
-      border: Border(
-        left: BorderSide(
-          color: selected
-              ? Theme.of(context).colorScheme.primary
-              : context.clinicalColors.insetBorder,
-          width: selected ? 3 : 1,
-        ),
-        top: BorderSide(color: context.clinicalColors.insetBorder),
-        right: BorderSide(color: context.clinicalColors.insetBorder),
-        bottom: BorderSide(color: context.clinicalColors.insetBorder),
-      ),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        Text(detail, style: Theme.of(context).textTheme.bodySmall),
-      ],
-    ),
-  );
-}
-
-final class _PlacementsProof extends StatelessWidget {
-  const _PlacementsProof();
-
-  @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _ProofTitle('MY PLACEMENTS'),
-        const SizedBox(height: 26),
-        _PlacementCard(
-          name: 'ACCEPTANCE FAMILY MEDICINE',
-          progress: 0,
-          accent: Theme.of(context).colorScheme.primary,
-          detail: '0 hr / 90 hr completed\n8 hr scheduled\n82 hr unscheduled',
-        ),
-        const SizedBox(height: 22),
-        _PlacementCard(
-          name: 'INTERNAL MEDICINE',
-          progress: 0,
-          accent: context.clinicalColors.workMachinery,
-          detail: '0 hr / 90 hr completed\n8 hr scheduled\n82 hr unscheduled',
-        ),
-      ],
-    ),
-  );
-}
-
-final class _PlacementCard extends StatelessWidget {
-  const _PlacementCard({
-    required this.name,
-    required this.progress,
-    required this.accent,
-    required this.detail,
-  });
-
-  final String name;
-  final double progress;
-  final Color accent;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 258,
-    child: Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 16, 16),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: context.clinicalColors.insetBorder.withValues(alpha: .72),
-        ),
-        borderRadius: BorderRadius.circular(8),
-        color: context.clinicalColors.structureRaised,
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            right: null,
-            child: Container(width: 4, color: accent),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 7),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  detail.split('\n').first,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const Spacer(),
-                Center(
-                  child: SizedBox.square(
-                    dimension: 104,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        CustomPaint(
-                          painter: _PlacementWheelPainter(
-                            progress: progress,
-                            accent: accent,
-                          ),
-                        ),
-                        Center(
-                          child: Text(
-                            '${(progress * 100).round()}%',
-                            style: const TextStyle(fontSize: 20),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                _PlacementDependency(
-                  scheduled: true,
-                  accent: accent,
-                  label: detail.split('\n')[1],
-                ),
-                const SizedBox(height: 5),
-                _PlacementDependency(
-                  scheduled: false,
-                  accent: accent,
-                  label: detail.split('\n')[2],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-final class _PlacementWheelPainter extends CustomPainter {
-  const _PlacementWheelPainter({required this.progress, required this.accent});
-
-  final double progress;
-  final Color accent;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.shortestSide / 2 - 7;
-    canvas.drawCircle(
-      center,
-      radius + 4,
-      Paint()
-        ..color = const Color(0xFF1A1E21)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
-    );
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..color = const Color(0xFF4A5054)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 7,
-    );
-    canvas.drawCircle(
-      center,
-      radius - 5,
-      Paint()
-        ..color = const Color(0xFF252A2E)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
-    );
-    if (progress > 0) {
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        -1.5708,
-        6.2832 * progress,
-        false,
-        Paint()
-          ..color = accent
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 7
-          ..strokeCap = StrokeCap.round,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_PlacementWheelPainter oldDelegate) =>
-      progress != oldDelegate.progress || accent != oldDelegate.accent;
-}
-
-final class _PlacementDependency extends StatelessWidget {
-  const _PlacementDependency({
-    required this.scheduled,
-    required this.accent,
-    required this.label,
-  });
-
-  final bool scheduled;
-  final Color accent;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      SizedBox.square(
-        dimension: 21,
-        child: scheduled
-            ? Icon(
-                Icons.schedule_outlined,
-                size: 20,
-                color: context.clinicalColors.secondaryText,
-              )
-            : CustomPaint(painter: _DashedRingPainter(color: accent)),
-      ),
-      const SizedBox(width: 8),
-      Text(label, style: Theme.of(context).textTheme.bodyMedium),
-    ],
-  );
-}
-
-final class _DashedRingPainter extends CustomPainter {
-  const _DashedRingPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.shortestSide / 2 - 2;
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round;
-    for (var index = 0; index < 10; index++) {
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        index * .6283,
-        .31,
-        false,
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedRingPainter oldDelegate) =>
-      color != oldDelegate.color;
-}
-
-final class _InsightProof extends StatelessWidget {
-  const _InsightProof();
-
-  @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 20,
-              decoration: BoxDecoration(
-                color: context.clinicalColors.workMachinery,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Expanded(child: _ProofTitle('INTERNAL MEDICINE')),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Center(
-          child: SizedBox.square(
-            dimension: 136,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CustomPaint(
-                  painter: _DetailedWheelPainter(
-                    accent: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                Center(
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: '0 hr\n',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontSize: 26,
-                          ),
-                        ),
-                        TextSpan(
-                          text: 'completed',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 0),
-        const _InsightDependency(
-          icon: Icons.gps_fixed,
-          label: 'Target',
-          value: '90 hr',
-        ),
-        const _InsightDependency(
-          icon: Icons.check_circle_outline,
-          label: 'Completed',
-          value: '0 hr',
-        ),
-        const _InsightDependency(
-          icon: Icons.schedule_outlined,
-          label: 'Scheduled',
-          value: '8 hr',
-        ),
-        const _InsightDependency(
-          icon: Icons.radio_button_unchecked,
-          label: 'Unscheduled',
-          value: '82 hr',
-          dashed: true,
-        ),
-        const _InsightDependency(
-          icon: Icons.keyboard_double_arrow_up,
-          label: 'Over-Target',
-          value: '0 hr',
-        ),
-        const SizedBox(height: 4),
-        const Divider(),
-        Text(
-          'Additional pace required',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        Text(
-          '21 hr 16 min / week',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        const SizedBox(height: 28),
-        Text(
-          'TAP WHEEL TO VIEW NEXT PLACEMENT',
-          style: TextStyle(color: Theme.of(context).colorScheme.primary),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          'SHOW PRECEPTOR BREAKDOWN',
-          style: TextStyle(color: context.clinicalColors.scheduled),
-        ),
-        const SizedBox(height: 20),
-        const Divider(),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 20,
-              decoration: BoxDecoration(
-                color: context.clinicalColors.secondaryText,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Expanded(child: _ProofTitle('NEEDS ATTENTION')),
-            Text('ON  •  5', style: TextStyle(color: Color(0xFFFF8D86))),
-          ],
-        ),
-        const SizedBox(height: 8),
-        const _AttentionProofItem(
-          icon: Icons.report_gmailerrorred_outlined,
-          title: 'CLINICAL SESSION NEEDS CONFIRMATION',
-          detail: 'Confirm the actual times and supervisor',
-        ),
-        const _AttentionProofItem(
-          icon: Icons.assignment_outlined,
-          title: 'INITIAL SELF-ASSESSMENT',
-          detail: 'Acceptance Family Medicine',
-          trailing: 'Due',
-        ),
-        const _AttentionProofItem(
-          icon: Icons.assignment_outlined,
-          title: 'INITIAL SELF-ASSESSMENT',
-          detail: 'Internal Medicine',
-          trailing: 'Due',
-        ),
-        const _AttentionProofItem(
-          icon: Icons.report_gmailerrorred_outlined,
-          title: 'PLANNING INCOMPLETE',
-          detail: 'Choose one empty Protected Day',
-        ),
-      ],
-    ),
-  );
-}
-
-final class _DetailedWheelPainter extends CustomPainter {
-  const _DetailedWheelPainter({required this.accent});
-
-  final Color accent;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final tickRadius = size.shortestSide / 2 - 6;
-    final tickPaint = Paint()
-      ..color = const Color(0xFF9BA3A8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    for (var index = 0; index < 60; index++) {
-      final angle = index * .10472 - 1.5708;
-      final outer = Offset(
-        center.dx + tickRadius * math.cos(angle),
-        center.dy + tickRadius * math.sin(angle),
-      );
-      final innerRadius = tickRadius - (index % 5 == 0 ? 5 : 3);
-      final inner = Offset(
-        center.dx + innerRadius * math.cos(angle),
-        center.dy + innerRadius * math.sin(angle),
-      );
-      canvas.drawLine(inner, outer, tickPaint);
-    }
-    canvas.drawCircle(
-      center,
-      tickRadius - 10,
-      Paint()
-        ..color = const Color(0xFF4A5054)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-    canvas.drawCircle(
-      center,
-      tickRadius - 14,
-      Paint()
-        ..color = accent.withValues(alpha: .18)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_DetailedWheelPainter oldDelegate) =>
-      accent != oldDelegate.accent;
-}
-
-final class _InsightDependency extends StatelessWidget {
-  const _InsightDependency({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.dashed = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final bool dashed;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
-    child: Row(
-      children: [
-        SizedBox.square(
-          dimension: 19,
-          child: dashed
-              ? CustomPaint(
-                  painter: _DashedRingPainter(
-                    color: context.clinicalColors.secondaryText,
-                  ),
-                )
-              : Icon(
-                  icon,
-                  size: 18,
-                  color: context.clinicalColors.secondaryText,
-                ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(child: Text(label)),
-        Text(value),
-      ],
-    ),
-  );
-}
-
-final class _AttentionProofItem extends StatelessWidget {
-  const _AttentionProofItem({
-    required this.icon,
-    required this.title,
-    required this.detail,
-    this.trailing,
-  });
-
-  final IconData icon;
-  final String title;
-  final String detail;
-  final String? trailing;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(minHeight: 68),
-    padding: const EdgeInsets.symmetric(vertical: 7),
-    decoration: BoxDecoration(
-      border: Border(
-        bottom: BorderSide(
-          color: context.clinicalColors.insetBorder.withValues(alpha: .38),
-        ),
-      ),
-    ),
-    child: Row(
-      children: [
-        Icon(icon, size: 38, color: context.clinicalColors.urgent),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.clinicalColors.urgent,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                detail,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ),
-        if (trailing != null) ...[
-          const SizedBox(width: 8),
-          Text(
-            trailing!,
-            style: TextStyle(color: context.clinicalColors.urgent),
-          ),
-        ],
-      ],
-    ),
-  );
 }
 
 final class _PlanningProof extends StatelessWidget {
@@ -1354,14 +765,19 @@ File _findWorkspaceFile(String relativePath) {
 }
 
 final class _ProofAssetBundle extends CachingAssetBundle {
-  _ProofAssetBundle({required this.frameFile});
+  _ProofAssetBundle({required this.frameFile, required this.deltaFile});
 
   final File frameFile;
+  final File deltaFile;
 
   @override
   Future<ByteData> load(String key) async {
     if (key == 'packages/clinical_calendar_presentation/$graphiteFrameAsset') {
       return ByteData.sublistView(await frameFile.readAsBytes());
+    }
+    if (key ==
+        'packages/clinical_calendar_presentation/$canonicalDeltaMarkAsset') {
+      return ByteData.sublistView(await deltaFile.readAsBytes());
     }
     return rootBundle.load(key);
   }

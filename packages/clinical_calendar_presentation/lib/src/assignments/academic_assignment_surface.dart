@@ -96,7 +96,7 @@ final class _GraphiteAssignmentControlHousing extends StatelessWidget {
     ),
     child: IconButton(
       key: const Key('add-academic-assignment'),
-      tooltip: 'Add Assignment',
+      tooltip: 'Add Academic Assignment',
       onPressed: onPressed,
       icon: const Icon(Icons.assignment_add),
     ),

@@ -8,8 +8,6 @@ import 'graphite_instrument_scope.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
-const graphiteCompactDestinationInsets = EdgeInsets.fromLTRB(18, 20, 18, 22);
-
 Widget _buildGraphiteFrame(
   Widget child,
   EdgeInsets chromeInsets,
@@ -336,11 +334,7 @@ final class GraphiteApplicationShell extends StatelessWidget {
                   top: height * .085,
                   width: width * .192,
                   height: height * .82,
-                  child: _GraphiteInstrumentBay(
-                    key: const Key('graphite-placement-bay'),
-                    safeInsets: graphitePlacementsSafeInsets,
-                    accent: _GraphiteAccent.emerald,
-                    integrated: true,
+                  child: _GraphitePlacementHousing(
                     child: GraphiteInstrumentScope(child: slots.placementDock),
                   ),
                 ),
@@ -478,10 +472,7 @@ final class GraphiteApplicationShell extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Expanded(
-                                  child: _GraphiteInstrumentBay(
-                                    key: const Key('graphite-placement-bay'),
-                                    safeInsets: graphitePlacementsSafeInsets,
-                                    accent: _GraphiteAccent.emerald,
+                                  child: _GraphitePlacementHousing(
                                     child: GraphiteInstrumentScope(
                                       child: slots.mobilePlacementSummary,
                                     ),
@@ -539,6 +530,80 @@ final class GraphiteApplicationShell extends StatelessWidget {
 }
 
 enum _GraphiteAccent { silver, emerald, coral }
+
+/// Dedicated Graphite machinery for the live placements slot.
+///
+/// This deliberately does not share the generic instrument-bay or nine-slice
+/// frame used by the other landing regions. The placement workflow stays live
+/// and shared; only its Graphite housing is owned here.
+final class _GraphitePlacementHousing extends StatelessWidget {
+  const _GraphitePlacementHousing({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    key: const Key('graphite-placement-housing'),
+    painter: _GraphitePlacementHousingPainter(
+      signal: context.clinicalColors.clinical,
+    ),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 14, 16),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(color: _GraphiteChrome.contentSurface),
+        child: ClipRect(child: child),
+      ),
+    ),
+  );
+}
+
+final class _GraphitePlacementHousingPainter extends CustomPainter {
+  const _GraphitePlacementHousingPainter({required this.signal});
+
+  final Color signal;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bounds = Offset.zero & size;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(bounds, const Radius.circular(8)),
+      Paint()..color = const Color(0xFF0D1114),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(bounds.deflate(.5), const Radius.circular(8)),
+      Paint()
+        ..color = _GraphiteChrome.decorativeBoundary
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+
+    final rail = Paint()
+      ..color = signal
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.square;
+    canvas.drawLine(const Offset(9, 26), Offset(9, size.height - 18), rail);
+    canvas.drawLine(const Offset(9, 14), const Offset(9, 18), rail);
+
+    final machinery = Paint()
+      ..color = const Color(0xFF8C969C)
+      ..strokeWidth = 1;
+    canvas.drawLine(
+      const Offset(20, 10),
+      Offset(size.width - 52, 10),
+      machinery,
+    );
+    for (var index = 0; index < 3; index++) {
+      canvas.drawRect(
+        Rect.fromLTWH(size.width - 40 + index * 9, 7, 5, 5),
+        Paint()..color = index == 2 ? signal : const Color(0xFF596167),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GraphitePlacementHousingPainter oldDelegate) =>
+      signal != oldDelegate.signal;
+}
 
 final class _GraphiteLandscapeRailsPainter extends CustomPainter {
   const _GraphiteLandscapeRailsPainter();

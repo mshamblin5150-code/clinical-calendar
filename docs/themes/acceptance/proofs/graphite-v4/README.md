@@ -1,4 +1,4 @@
-# Graphite destination-coherence candidate v4
+﻿# Graphite destination-coherence candidate v4
 
 Issue: [#160](https://github.com/mshamblin5150-code/clinical-calendar/issues/160)
 
@@ -12,6 +12,9 @@ viewport. Renderer contract: `graphite-owned-responsive-instrument-v4`.
 
 ## Repair evidence
 
+- The landing-page placements slot now has dedicated Graphite machinery: a
+  signal rail, precision top rule, and status cells replace the shared generic
+  instrument bay while retaining the live `PlacementDock` workflow.
 - The Clinical Placements destination no longer delegates to the generic
   additive destination scaffold or uses a Graphite/Containment-style
   nine-slice box. Its production shell now owns a matte graphite crown,
@@ -20,13 +23,15 @@ viewport. Renderer contract: `graphite-owned-responsive-instrument-v4`.
 - One parameterized production-shell test renders all ten top-level
   destinations through that same hierarchy and proves that neither
   `GraphiteNineSliceFrame` nor `VariantFNineSliceFrame` is present.
-- The focused Clinical Placements golden pins the previously rejected
-  **Pending Placements** housing with fictional shared-content fixtures.
+- The landscape golden pins the repaired production placements housing, and
+  the focused Clinical Placements golden renders the real
+  `PlacementManagementSurface` with a real controller and fictional,
+  domain-valid repository records. No test-only replacement surface is used.
 - The Calendar proof consumes the shared
   `AcademicAssignmentCalendarWorkspace`. Graphite gives its existing shared
-  Add Assignment callback a compact 54-pixel precision housing; the editor,
-  domain model, validation, persistence, calendar projection, and callback
-  remain shared.
+  Add Academic Assignment callback a compact 54-pixel precision housing; the
+  editor, domain model, validation, persistence, calendar projection, and
+  callback remain shared.
 - The Graphite Calendar crown and destination crown both consume
   `CanonicalDeltaMark`; no Graphite-local delta painter or asset exists.
 - Portrait and 200-percent text proofs remain deterministic and operable. A
@@ -53,7 +58,8 @@ the concept-fidelity gate.
 
 - `approved-concept-landscape.png`: untouched approved issue #117 concept.
 - `runtime-landscape-1536x1024.png`: deterministic full-screen Flutter render
-  with fictional, domain-valid data and the shared Add Assignment control.
+  with fictional, domain-valid data, the live placement widgets, and the
+  shared Add Academic Assignment control.
 - `landscape-concept-vs-runtime.png`: labeled equal-size comparison; both
   images are displayed at 768 by 512 pixels.
 - `runtime-portrait-900x1440.png`: deterministic intentional portrait
@@ -61,18 +67,19 @@ the concept-fidelity gate.
 - `runtime-portrait-200-percent-900x1440.png`: deterministic 200-percent text
   and overflow evidence.
 - `runtime-destination-clinical-placements-1536x1024.png`: deterministic
-  focused proof of the repaired destination shell and Pending Placements
-  housing. It is a test render, not a physical-device capture.
+  focused proof of the repaired destination shell around the production
+  Clinical Placements workflow. It is a test render, not a physical-device
+  capture.
 
 ## SHA-256
 
 ```text
 1d37e9c2c0f97a2428fbebfd0fc2b5d6e85e3281a634fa16ca2c67479ec24e4e  approved-concept-landscape.png
-c5a65fb03bfb9a101107cbf443078adb0a02669947b644813f324e4f04bd0d34  landscape-concept-vs-runtime.png
-bcf3b98f77ee78c1fe75c73dca5ba6fc7aaa6c4e1fb8ac82e03ae7915ac962f8  runtime-destination-clinical-placements-1536x1024.png
-3e59ff8ac074b092eb920e77fc978a83d271e7834b6c51e0550248c49be17117  runtime-landscape-1536x1024.png
-8c66b2962b30810159e8b115f90bb7667a2a1fd1e6db59343fc1b0ced8d1f004  runtime-portrait-200-percent-900x1440.png
-e64ddc39df2b348fa0d780671dc89aece7c68ca41ae9e22f4f0d4f321409b691  runtime-portrait-900x1440.png
+6dbd84fc9f79f91fef29fed6c453f00243ca834800c9d236db3b136a35420d40  landscape-concept-vs-runtime.png
+2fc63b61dedd2f839592f5044008d45d9e6bb37a8fca3986318ea8ef96498867  runtime-destination-clinical-placements-1536x1024.png
+5246aec1793f2c0d5b9bb042ad1384001b5e1423704592b53dcd38f7db2d884c  runtime-landscape-1536x1024.png
+6f46bbbd58e1987224218899585753ed34eb8239ef9fd9a7f14d948a0744c126  runtime-portrait-200-percent-900x1440.png
+099e1ceff6a9c260419e6ddb8743ace7ecdf6ecdecddf6e7ea1382650817e137  runtime-portrait-900x1440.png
 ```
 
 ## Physical Android-tablet acceptance

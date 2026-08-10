@@ -34,6 +34,9 @@ void main() {
           themeId == graphiteThemeId ? findsOneWidget : findsNothing,
           reason: themeId,
         );
+        if (themeId == graphiteThemeId) {
+          expect(find.byTooltip('Add Academic Assignment'), findsOneWidget);
+        }
       }
 
       await tester.pumpWidget(_workspace(variantFThemeId));
