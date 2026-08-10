@@ -34,6 +34,13 @@ void main() {
           themeId == graphiteThemeId ? findsOneWidget : findsNothing,
           reason: themeId,
         );
+        expect(
+          find.byKey(
+            const Key('federation-classic-assignment-control-housing'),
+          ),
+          themeId == federationClassicThemeId ? findsOneWidget : findsNothing,
+          reason: themeId,
+        );
         if (themeId == graphiteThemeId) {
           expect(find.byTooltip('Add Academic Assignment'), findsOneWidget);
         }

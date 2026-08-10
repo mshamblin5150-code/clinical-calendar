@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../additive_semantic_colors.dart';
+import '../federation_classic_panel_scope.dart';
 import '../graphite_instrument_scope.dart';
 import '../insight_rail_presentation_policy.dart';
 import '../tactical_frame.dart';
@@ -1363,6 +1364,14 @@ final class _TacticalPanel extends StatelessWidget {
     final adaptiveContent = enlargedText
         ? SingleChildScrollView(child: content)
         : content;
+    if (FederationClassicPanelScope.isActive(context)) {
+      return FederationClassicPanelHousing(
+        label: label,
+        accent: statusColor,
+        showHeader: false,
+        child: adaptiveContent,
+      );
+    }
     if (VariantFRasterPanelInterior.isActive(context) ||
         EmbeddedPlacementPanelInterior.isActive(context)) {
       return Padding(padding: const EdgeInsets.all(8), child: adaptiveContent);

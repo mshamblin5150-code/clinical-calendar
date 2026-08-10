@@ -941,10 +941,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Open menu'));
     await tester.tap(find.byTooltip('Add schedule'));
-    await tester.tap(find.byKey(const Key('federation-classic-help-menu')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Help').last);
-    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Help'));
     await tester.tap(find.byKey(const Key('federation-classic-navigation-0')));
     await tester.tap(find.byKey(const Key('federation-classic-navigation-1')));
     await tester.tap(find.byKey(const Key('federation-classic-navigation-2')));
@@ -1016,8 +1013,73 @@ void main() {
       find.byKey(const Key('federation-classic-portrait-scroll')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('federation-classic-help-action')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Federation Classic gives shared landing workflows owned housings',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1586, 992));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      const slots = ResponsiveShellSlots(
+        centralContent: Text('Calendar fixture'),
+        placementDock: ShellPanel(
+          label: 'My placements',
+          child: Text('Live placement workflow'),
+        ),
+        planningRegion: ShellPanel(
+          label: 'Planning',
+          child: Text('Live planning workflow'),
+        ),
+        insightRail: Column(
+          children: [
+            ShellPanel(
+              label: 'Clinical Placement',
+              child: Text('Live progress workflow'),
+            ),
+            ShellPanel(
+              label: 'Needs Attention · 2',
+              child: Text('Live attention workflow'),
+            ),
+          ],
+        ),
+        mobilePlacementSummary: Text('Placement summary fixture'),
+        mobileAttention: Text('Attention fixture'),
+        profileAvatar: SizedBox.square(dimension: 44),
+      );
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: federationClassic.standardPresentation.createThemeData(),
+          boundaryKey: GlobalKey(),
+          shell: federationClassic.shellRenderer.build(
+            slots: slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (final key in const [
+        'federation-classic-placements-housing',
+        'federation-classic-planning-housing',
+        'federation-classic-clinical-placement-housing',
+        'federation-classic-needs-attention-housing',
+      ]) {
+        expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+      }
+      expect(find.byType(VariantFTacticalFrame), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Federation Classic tablet console survives 200% text', (
     tester,
@@ -1802,6 +1864,93 @@ void main() {
         expect(find.byType(VariantFNineSliceFrame), findsNothing);
         expect(tester.takeException(), isNull, reason: destination.label);
       }
+    },
+  );
+
+  testWidgets(
+    'Federation Classic owns one coherent shell across all top-level destinations',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1586, 992));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final destination in applicationMenuDestinations) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: federationClassic.standardPresentation.createThemeData(),
+            home: federationClassic.shellRenderer.buildDestination(
+              destination: destination,
+              entry: DestinationEntry.applicationMenu,
+              onExit: _noop,
+              child: ShellPanel(
+                label: '${destination.label} fixture',
+                child: const Text('Fictional shared workflow content'),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('federation-classic-destination-shell')),
+          findsOneWidget,
+          reason: destination.label,
+        );
+        expect(
+          find.byKey(const Key('federation-classic-destination-crown')),
+          findsOneWidget,
+          reason: destination.label,
+        );
+        expect(
+          find.byKey(const Key('federation-classic-destination-bay')),
+          findsOneWidget,
+          reason: destination.label,
+        );
+        expect(find.byType(CanonicalDeltaMark), findsOneWidget);
+        expect(find.byType(AdditiveThemeDestinationSurface), findsNothing);
+        expect(find.byType(GraphiteNineSliceFrame), findsNothing);
+        expect(find.byType(VariantFNineSliceFrame), findsNothing);
+        expect(tester.takeException(), isNull, reason: destination.label);
+      }
+    },
+  );
+
+  testWidgets(
+    'Federation Classic destination remains operable at 200 percent text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1440));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      var exitCount = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: federationClassic.standardPresentation.createThemeData(),
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: federationClassic.shellRenderer.buildDestination(
+              destination: ClinicalCalendarDestination.clinicalPlacements,
+              entry: DestinationEntry.applicationMenu,
+              onExit: () => exitCount++,
+              child: const SingleChildScrollView(
+                child: SizedBox(
+                  height: 1800,
+                  child: Text('Fictional shared Clinical Placement content'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('federation-classic-destination-scroll')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('back-action')), findsOneWidget);
+      expect(find.text('Clinical Placements'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('back-action')));
+      expect(exitCount, 1);
+      expect(tester.takeException(), isNull);
     },
   );
 
