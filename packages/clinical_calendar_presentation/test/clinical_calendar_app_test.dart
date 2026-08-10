@@ -65,7 +65,11 @@ void main() {
     }
 
     testWidgets('settings-320', (tester) async {
-      await _pumpAcceptedRenderAt(tester, const Size(320, 700));
+      await _pumpAcceptedRenderAt(
+        tester,
+        const Size(320, 700),
+        preloadFrame: true,
+      );
       await tester.tap(find.text('Settings').last);
       await tester.pumpAndSettle();
       await _expectAppGolden(
@@ -77,7 +81,11 @@ void main() {
 
     for (final destination in applicationMenuDestinations) {
       testWidgets('destination-${destination.name}', (tester) async {
-        await _pumpAcceptedRenderAt(tester, const Size(1024, 768));
+        await _pumpAcceptedRenderAt(
+          tester,
+          const Size(1024, 768),
+          preloadFrame: destination.name == 'settings',
+        );
         await tester.tap(find.byKey(const Key('desktop-menu-action')));
         await tester.pumpAndSettle();
         await tester.tap(find.text(destination.label));
@@ -1321,7 +1329,28 @@ String _goldenPlatformDirectory() {
   );
 }
 
-Future<void> _pumpAcceptedRenderAt(WidgetTester tester, Size size) async {
+Future<void> _pumpAcceptedRenderAt(
+  WidgetTester tester,
+  Size size, {
+  bool preloadFrame = false,
+}) async {
+  // Variant F's nine-slice painter is populated by an asynchronous image
+  // stream. Preload it so catalog goldens do not depend on whether another
+  // concurrently running proof happened to warm the process image cache.
+  if (preloadFrame) {
+    final preloadKey = GlobalKey();
+    await tester.pumpWidget(MaterialApp(home: SizedBox(key: preloadKey)));
+    await tester.runAsync(() async {
+      await precacheImage(
+        const AssetImage(
+          'assets/variant_f_raster/panel-nine-slice-v2.png',
+          package: 'clinical_calendar_presentation',
+        ),
+        preloadKey.currentContext!,
+      );
+    });
+    await tester.pump();
+  }
   debugDefaultTargetPlatformOverride = TargetPlatform.android;
   final repositories = _Repositories();
   repositories.settings.value = StoredDomainRecord(

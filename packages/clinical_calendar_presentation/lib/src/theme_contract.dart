@@ -32,7 +32,10 @@ const botanicalStudyThemeId = 'botanical-study';
 const graphiteThemeId = 'graphite';
 const heritageFieldNotesThemeId = 'heritage-field-notes';
 const themeGalleryFixtureId = 'theme-gallery-android-tablet-calendar-v1';
-const themeGalleryViewport = Size(1280, 800);
+// The Gallery renders each accepted landscape product shell, not its legacy
+// normalized frame. Keep enough native canvas for the concept-owned chassis
+// from #128 and #133-#137 before the preview is scaled into Settings.
+const themeGalleryViewport = Size(1600, 1000);
 
 enum ThemeBundleOrigin { compiled, runtime, remote }
 

@@ -647,12 +647,17 @@ void main() {
         final thumbnail = find.byKey(
           Key('theme-gallery-thumbnail-${bundle.id}'),
         );
+        await _precacheThemeFrameAssets(tester, bundle, thumbnail);
         expect(tester.getSize(thumbnail), bundle.gallery.thumbnailViewport);
         await expectLater(
           thumbnail,
           matchesGoldenFile('goldens/federation_classic_runtime_thumbnail.png'),
         );
-        expect(find.byType(FederationClassicNineSliceFrame), findsOneWidget);
+        expect(find.byType(FederationClassicApplicationShell), findsOneWidget);
+        expect(
+          find.byKey(const Key('federation-classic-landscape-shell')),
+          findsOneWidget,
+        );
         expect(find.byType(GraphiteNineSliceFrame), findsNothing);
         expect(find.byType(VariantFNineSliceFrame), findsNothing);
         expect(tester.takeException(), isNull);
@@ -715,12 +720,17 @@ void main() {
         final thumbnail = find.byKey(
           Key('theme-gallery-thumbnail-${bundle.id}'),
         );
+        await _precacheThemeFrameAssets(tester, bundle, thumbnail);
         expect(tester.getSize(thumbnail), bundle.gallery.thumbnailViewport);
         await expectLater(
           thumbnail,
           matchesGoldenFile('goldens/federation_2399_runtime_thumbnail.png'),
         );
-        expect(find.byType(Federation2399NineSliceFrame), findsOneWidget);
+        expect(find.byType(Federation2399ApplicationShell), findsOneWidget);
+        expect(
+          find.byKey(const Key('federation-2399-landscape-shell')),
+          findsOneWidget,
+        );
         expect(find.byType(GraphiteNineSliceFrame), findsNothing);
         expect(find.byType(VariantFNineSliceFrame), findsNothing);
         expect(tester.takeException(), isNull);
@@ -783,12 +793,17 @@ void main() {
         final thumbnail = find.byKey(
           Key('theme-gallery-thumbnail-${bundle.id}'),
         );
+        await _precacheThemeFrameAssets(tester, bundle, thumbnail);
         expect(tester.getSize(thumbnail), bundle.gallery.thumbnailViewport);
         await expectLater(
           thumbnail,
           matchesGoldenFile('goldens/coastal_light_runtime_thumbnail.png'),
         );
-        expect(find.byType(CoastalLightNineSliceFrame), findsOneWidget);
+        expect(find.byType(CoastalLightApplicationShell), findsOneWidget);
+        expect(
+          find.byKey(const Key('coastal-calm-landscape-shell')),
+          findsOneWidget,
+        );
         expect(find.byType(GraphiteNineSliceFrame), findsNothing);
         expect(find.byType(VariantFNineSliceFrame), findsNothing);
         expect(tester.takeException(), isNull);
@@ -1020,6 +1035,22 @@ void main() {
       },
     );
   });
+}
+
+Future<void> _precacheThemeFrameAssets(
+  WidgetTester tester,
+  ClinicalCalendarThemeBundle bundle,
+  Finder thumbnail,
+) async {
+  await tester.runAsync(() async {
+    for (final assetPath in bundle.frame.assetPaths) {
+      await precacheImage(
+        AssetImage(assetPath, package: bundle.frame.assetPackage),
+        tester.element(thumbnail),
+      );
+    }
+  });
+  await tester.pumpAndSettle();
 }
 
 final class _AcceptanceWorkingState extends StatefulWidget {
