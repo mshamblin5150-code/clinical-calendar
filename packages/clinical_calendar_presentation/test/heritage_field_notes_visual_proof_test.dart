@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_presentation/src/canonical_delta_mark.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -87,7 +88,7 @@ Future<void> _pumpProof(
       'packages/clinical_calendar_presentation/$heritageFieldNotesFrameAsset',
     ),
     brandFile: _findWorkspaceFile(
-      'packages/clinical_calendar_presentation/$heritageFieldNotesAxionDeltaAsset',
+      'packages/clinical_calendar_presentation/$canonicalDeltaMarkAsset',
     ),
     chassisFile: _findWorkspaceFile(
       'packages/clinical_calendar_presentation/$heritageFieldNotesMaterialChassisAsset',
@@ -110,7 +111,7 @@ Future<void> _pumpProof(
     );
     await precacheImage(
       const AssetImage(
-        heritageFieldNotesAxionDeltaAsset,
+        canonicalDeltaMarkAsset,
         package: 'clinical_calendar_presentation',
       ),
       preloadKey.currentContext!,
@@ -218,7 +219,7 @@ final class _ProofAssetBundle extends CachingAssetBundle {
       );
     }
     if (key ==
-        'packages/clinical_calendar_presentation/$heritageFieldNotesAxionDeltaAsset') {
+        'packages/clinical_calendar_presentation/$canonicalDeltaMarkAsset') {
       return ByteData.sublistView(
         Uint8List.fromList(await brandFile.readAsBytes()),
       );

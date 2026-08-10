@@ -6,8 +6,6 @@ import 'graphite_frame.dart';
 
 const heritageFieldNotesFrameAsset =
     'assets/heritage_field_notes_raster/panel-nine-slice-v1.png';
-const heritageFieldNotesAxionDeltaAsset =
-    'assets/heritage_field_notes_brand/axion-delta.png';
 const heritageFieldNotesMaterialChassisAsset =
     'assets/heritage_field_notes_materials/field-archive-chassis.png';
 const heritageFieldNotesCalendarSafeInsets = EdgeInsets.fromLTRB(

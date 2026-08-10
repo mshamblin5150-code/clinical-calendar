@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_presentation/src/canonical_delta_mark.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -162,7 +163,7 @@ Future<void> _pumpProof(
       '$botanicalStudyLandscapeChassisAsset',
     ),
     logoFile: _findWorkspaceFile(
-      'packages/clinical_calendar_presentation/$botanicalStudyAxionLogoAsset',
+      'packages/clinical_calendar_presentation/$canonicalDeltaMarkAsset',
     ),
   );
   final preloadKey = GlobalKey();
@@ -189,7 +190,7 @@ Future<void> _pumpProof(
     );
     await precacheImage(
       const AssetImage(
-        botanicalStudyAxionLogoAsset,
+        canonicalDeltaMarkAsset,
         package: 'clinical_calendar_presentation',
       ),
       preloadKey.currentContext!,
@@ -309,7 +310,7 @@ final class _ProofAssetBundle extends CachingAssetBundle {
       );
     }
     if (key ==
-        'packages/clinical_calendar_presentation/$botanicalStudyAxionLogoAsset') {
+        'packages/clinical_calendar_presentation/$canonicalDeltaMarkAsset') {
       return ByteData.sublistView(
         Uint8List.fromList(await logoFile.readAsBytes()),
       );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
+import 'canonical_delta_mark.dart';
 import 'federation_classic_frame.dart';
 import 'federation_classic_theme.dart';
 import 'insight_rail_presentation_policy.dart';
@@ -683,14 +684,9 @@ final class _FederationClassicAxionDeltaMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
-    child: Image.asset(
-      federationClassicAxionDeltaAsset,
-      package: 'clinical_calendar_presentation',
+    child: CanonicalDeltaMark(
       key: const Key('federation-classic-axion-delta'),
-      width: size,
-      height: size,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.high,
+      size: size,
     ),
   );
 }

@@ -8,8 +8,6 @@ const federationClassicFrameAsset =
     'assets/federation_classic_raster/panel-nine-slice-v1.png';
 const federationClassicRailNineSliceAsset =
     'assets/federation_classic_raster/lcars-rail-nine-slice-v2.png';
-const federationClassicAxionDeltaAsset =
-    'assets/federation_classic_raster/axion-delta-v1.png';
 const federationClassicCalendarSafeInsets = EdgeInsets.fromLTRB(38, 46, 38, 46);
 const federationClassicPlacementsSafeInsets = EdgeInsets.fromLTRB(
   30,
