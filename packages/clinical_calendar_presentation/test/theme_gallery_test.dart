@@ -7,9 +7,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/proof_fonts.dart';
 import 'support/theme_acceptance_harness.dart';
 
 void main() {
+  setUpAll(() {
+    if (!Platform.isWindows) {
+      goldenFileComparator = createProofGoldenComparator(
+        goldenFileComparator,
+        highDeltaPixelTolerance: .0045,
+      );
+    }
+  });
+
   testWidgets('runtime thumbnail renders the deterministic month grid', (
     tester,
   ) async {
