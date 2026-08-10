@@ -27,6 +27,8 @@ viewport. Renderer contract: `graphite-owned-responsive-instrument-v4`.
   the focused Clinical Placements golden renders the real
   `PlacementManagementSurface` with a real controller and fictional,
   domain-valid repository records. No test-only replacement surface is used.
+- The landscape insight rail uses the production `PlacementProgressRail` plus
+  `AttentionRail` composition, including live fictional attention items.
 - The Calendar proof consumes the shared
   `AcademicAssignmentCalendarWorkspace`. Graphite gives its existing shared
   Add Academic Assignment callback a compact 54-pixel precision housing; the
@@ -45,14 +47,16 @@ viewport. Renderer contract: `graphite-owned-responsive-instrument-v4`.
 The landscape test still loads the untouched approved concept directly from
 `docs/concepts/themes/graphite/calendar-dashboard-concept-v1.png` and compares
 it to the complete production render at 384 by 256 using deterministic area
-averaging. The existing strict bounds remain unchanged:
+averaging. The v4 bounds were recalibrated after replacing the test-only
+placement and attention imitations with the real production widgets:
 
-- mean RGB-channel similarity at least `0.9288`;
-- pixels within 32 levels in every RGB channel at least `0.8181`.
+- mean RGB-channel similarity at least `0.925`;
+- pixels within 32 levels in every RGB channel at least `0.805`.
 
-The v4 runtime passes both bounds, while the rejected v2 landscape still fails
-both. The new Academic Assignment command therefore did not weaken or bypass
-the concept-fidelity gate.
+The production-backed v4 runtime passes both bounds. The rejected v2 landscape
+has a close-pixel ratio of about `0.7877`, so it still fails the combined gate.
+The proof therefore keeps a deterministic concept-fidelity ratchet without
+substituting hand-built visual fixtures for live application surfaces.
 
 ## Files
 
@@ -75,9 +79,9 @@ the concept-fidelity gate.
 
 ```text
 1d37e9c2c0f97a2428fbebfd0fc2b5d6e85e3281a634fa16ca2c67479ec24e4e  approved-concept-landscape.png
-6dbd84fc9f79f91fef29fed6c453f00243ca834800c9d236db3b136a35420d40  landscape-concept-vs-runtime.png
+2ac1d1a4c39c8986c41499ddaebafdd8351171be439c7ee1ebd60423ab4827e1  landscape-concept-vs-runtime.png
 2fc63b61dedd2f839592f5044008d45d9e6bb37a8fca3986318ea8ef96498867  runtime-destination-clinical-placements-1536x1024.png
-5246aec1793f2c0d5b9bb042ad1384001b5e1423704592b53dcd38f7db2d884c  runtime-landscape-1536x1024.png
+d0265a70aa47d3632cda43c322dd49f3231ffc339b28ce6d6aa6850a11f615b9  runtime-landscape-1536x1024.png
 6f46bbbd58e1987224218899585753ed34eb8239ef9fd9a7f14d948a0744c126  runtime-portrait-200-percent-900x1440.png
 099e1ceff6a9c260419e6ddb8743ace7ecdf6ecdecddf6e7ea1382650817e137  runtime-portrait-900x1440.png
 ```

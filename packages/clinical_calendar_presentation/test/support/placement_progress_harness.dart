@@ -8,16 +8,49 @@ final class PlacementProgressHarness {
   PlacementProgressHarness({
     bool completed = false,
     String familyName = 'Family Medicine',
+    int familyTargetHours = 270,
+    bool seedHistoricalHours = true,
+    int scheduledSessionCount = 9,
+    int scheduledSessionHours = 12,
+    String secondPlacementName = 'Pediatrics',
+    bool splitSessionsBetweenPlacements = false,
+    bool selectSecondPlacement = false,
+    bool requireInitialSelfAssessments = false,
+    LocalDate? secondPlacementStartDate,
+    LocalDate? firstSessionDate,
   }) {
-    _seed(completed: completed, familyName: familyName);
+    _seed(
+      completed: completed,
+      familyName: familyName,
+      familyTargetHours: familyTargetHours,
+      seedHistoricalHours: seedHistoricalHours,
+      scheduledSessionCount: scheduledSessionCount,
+      scheduledSessionHours: scheduledSessionHours,
+      secondPlacementName: secondPlacementName,
+      splitSessionsBetweenPlacements: splitSessionsBetweenPlacements,
+      selectSecondPlacement: selectSecondPlacement,
+      requireInitialSelfAssessments: requireInitialSelfAssessments,
+      secondPlacementStartDate:
+          secondPlacementStartDate ?? LocalDate(2026, 9, 1),
+      firstSessionDate: firstSessionDate ?? LocalDate(2026, 8, 20),
+    );
+    final placementService = PlacementApplicationService(
+      repositories: registry,
+      clock: const _Clock(),
+      identifiers: _Identifiers(),
+      studentId: placementTestStudentId,
+    );
     controller = PlacementProgressController(
-      service: PlacementApplicationService(
-        repositories: registry,
+      service: placementService,
+      studentId: placementTestStudentId,
+    );
+    attentionController = EvaluationAttentionController(
+      service: EvaluationAttentionApplicationService(
+        placements: PlacementEvaluationGateway(placementService),
+        attentionSource: LocalAttentionRepositorySource(registry),
         clock: const _Clock(),
-        identifiers: _Identifiers(),
         studentId: placementTestStudentId,
       ),
-      studentId: placementTestStudentId,
     );
   }
 
@@ -26,18 +59,38 @@ final class PlacementProgressHarness {
     repositories,
   );
   late final PlacementProgressController controller;
+  late final EvaluationAttentionController attentionController;
 
-  void _seed({required bool completed, required String familyName}) {
+  void _seed({
+    required bool completed,
+    required String familyName,
+    required int familyTargetHours,
+    required bool seedHistoricalHours,
+    required int scheduledSessionCount,
+    required int scheduledSessionHours,
+    required String secondPlacementName,
+    required bool splitSessionsBetweenPlacements,
+    required bool selectSecondPlacement,
+    required bool requireInitialSelfAssessments,
+    required LocalDate secondPlacementStartDate,
+    required LocalDate firstSessionDate,
+  }) {
     final smith = Preceptor(id: _smithId, name: 'Dr. Smith');
     final nguyen = Preceptor(id: placementTestNguyenId, name: 'Dr. Nguyen');
     repositories.preceptors
       ..seed(smith)
       ..seed(nguyen);
-    final familyPlan = _plan(_familyPlanId, _smithId, 270 * 60);
+    final familyPlan = _plan(
+      _familyPlanId,
+      _smithId,
+      familyTargetHours * 60,
+      requireInitialSelfAssessment: requireInitialSelfAssessments,
+    );
     final pediatricsPlan = _plan(
       _pediatricsPlanId,
       placementTestNguyenId,
       90 * 60,
+      requireInitialSelfAssessment: requireInitialSelfAssessments,
     );
     repositories.evaluationPlans
       ..seed(familyPlan)
@@ -47,7 +100,7 @@ final class PlacementProgressHarness {
         ClinicalPlacement.restore(
           id: placementTestFamilyId,
           name: familyName,
-          targetHours: TargetHours.fromWholeHours(270),
+          targetHours: TargetHours.fromWholeHours(familyTargetHours),
           startDate: LocalDate(2026, 8, 1),
           completionDeadline: LocalDate(2026, 12, 31),
           attachedPreceptorIds: const [_smithId, placementTestNguyenId],
@@ -61,55 +114,70 @@ final class PlacementProgressHarness {
       ..seed(
         ClinicalPlacement.create(
           id: _pediatricsId,
-          name: 'Pediatrics',
+          name: secondPlacementName,
           targetHours: TargetHours.fromWholeHours(90),
-          startDate: LocalDate(2026, 9, 1),
+          startDate: secondPlacementStartDate,
           completionDeadline: LocalDate(2027, 1, 31),
           attachedPreceptorIds: const [placementTestNguyenId],
           primaryPreceptorId: placementTestNguyenId,
           evaluationPlanId: _pediatricsPlanId,
         ),
       );
-    repositories.historicalHoursEntries
-      ..seed(
-        HistoricalHoursEntry(
-          id: _historySmithId,
-          clinicalPlacementId: placementTestFamilyId,
-          completedMinutes: 90 * 60,
-          effectiveDate: LocalDate(2026, 8, 2),
-          preceptorId: _smithId,
-        ),
-      )
-      ..seed(
-        HistoricalHoursEntry(
-          id: _historyUnattributedId,
-          clinicalPlacementId: placementTestFamilyId,
-          completedMinutes: 36 * 60,
-          effectiveDate: LocalDate(2026, 8, 3),
-        ),
-      );
-    for (var index = 0; index < 9; index++) {
-      final date = LocalDate(2026, 8, 20).addDays(index);
+    if (seedHistoricalHours) {
+      repositories.historicalHoursEntries
+        ..seed(
+          HistoricalHoursEntry(
+            id: _historySmithId,
+            clinicalPlacementId: placementTestFamilyId,
+            completedMinutes: 90 * 60,
+            effectiveDate: LocalDate(2026, 8, 2),
+            preceptorId: _smithId,
+          ),
+        )
+        ..seed(
+          HistoricalHoursEntry(
+            id: _historyUnattributedId,
+            clinicalPlacementId: placementTestFamilyId,
+            completedMinutes: 36 * 60,
+            effectiveDate: LocalDate(2026, 8, 3),
+          ),
+        );
+    }
+    for (var index = 0; index < scheduledSessionCount; index++) {
+      final secondPlacementSession =
+          splitSessionsBetweenPlacements && index.isOdd;
+      final date =
+          (secondPlacementSession ? LocalDate(2026, 9, 20) : firstSessionDate)
+              .addDays(index);
       repositories.clinicalSessions.seed(
         ClinicalSession.restore(
           id: '50000000-0000-4000-8000-${index.toString().padLeft(12, '0')}',
-          clinicalPlacementId: placementTestFamilyId,
+          clinicalPlacementId: secondPlacementSession
+              ? _pediatricsId
+              : placementTestFamilyId,
           preceptorId: index.isEven ? _smithId : placementTestNguyenId,
-          plannedInterval: _interval(date),
+          plannedInterval: _interval(date, scheduledSessionHours),
           state: ClinicalSessionState.scheduled,
         ),
       );
     }
-    repositories.activePlacementSelection.seed(placementTestFamilyId);
+    repositories.activePlacementSelection.seed(
+      selectSecondPlacement ? _pediatricsId : placementTestFamilyId,
+    );
   }
 }
 
-EvaluationPlan _plan(String id, String primary, int targetMinutes) {
+EvaluationPlan _plan(
+  String id,
+  String primary,
+  int targetMinutes, {
+  required bool requireInitialSelfAssessment,
+}) {
   const engine = EvaluationPlanEngine();
   return engine.create(
     evaluationPlanId: id,
     configuration: EvaluationPlanConfiguration(
-      initialSelfAssessmentRequired: false,
+      initialSelfAssessmentRequired: requireInitialSelfAssessment,
       interimReviewCadenceMinutes: targetMinutes + 60,
       finalSelfAssessmentRequired: false,
       finalPlacementReviewRequired: false,
@@ -125,10 +193,10 @@ EvaluationPlan _plan(String id, String primary, int targetMinutes) {
   );
 }
 
-ZonedInterval _interval(LocalDate date) => ZonedInterval(
+ZonedInterval _interval(LocalDate date, int hours) => ZonedInterval(
   startDate: date,
   startTime: LocalTime(7, 0),
-  endTime: LocalTime(19, 0),
+  endTime: LocalTime(7 + hours, 0),
   timeZone: TimeZoneId('UTC'),
   startOffset: UtcOffset.utc,
   endOffset: UtcOffset.utc,
@@ -240,7 +308,7 @@ final class PlacementTestMemoryRepository<T> implements MutableRepository<T> {
   List<StoredDomainRecord<T>> list({
     required String studentId,
     bool includeDeleted = false,
-  }) => records.values.toList(growable: false);
+  }) => records.values.toList();
 
   @override
   MutationReceipt<T> put({
@@ -325,7 +393,7 @@ final class _Outbox implements OutboxMaintenanceRepository {
     required String studentId,
     required DateTime asOfUtc,
     int limit = 100,
-  }) => const [];
+  }) => <OutboxOperation>[];
   @override
   void recordFailedAttempt({
     required String studentId,
