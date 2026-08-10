@@ -28,22 +28,28 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!_academicAssignmentThemeIds.contains(themeId)) return calendar;
-    final addButton = themeId == graphiteThemeId
-        ? _GraphiteAssignmentControlHousing(onPressed: onAddAssignment)
-        : Align(
-            alignment: AlignmentDirectional.centerEnd,
-            widthFactor: 1,
-            heightFactor: 1,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-              child: FilledButton.icon(
-                key: const Key('add-academic-assignment'),
-                onPressed: onAddAssignment,
-                icon: const Icon(Icons.assignment_add),
-                label: const Text('Add Assignment'),
-              ),
-            ),
-          );
+    final addButton = switch (themeId) {
+      graphiteThemeId => _GraphiteAssignmentControlHousing(
+        onPressed: onAddAssignment,
+      ),
+      federationClassicThemeId => _FederationClassicAssignmentControlHousing(
+        onPressed: onAddAssignment,
+      ),
+      _ => Align(
+        alignment: AlignmentDirectional.centerEnd,
+        widthFactor: 1,
+        heightFactor: 1,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+          child: FilledButton.icon(
+            key: const Key('add-academic-assignment'),
+            onPressed: onAddAssignment,
+            icon: const Icon(Icons.assignment_add),
+            label: const Text('Add Assignment'),
+          ),
+        ),
+      ),
+    };
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.hasBoundedHeight) {
@@ -99,6 +105,51 @@ final class _GraphiteAssignmentControlHousing extends StatelessWidget {
       tooltip: 'Add Academic Assignment',
       onPressed: onPressed,
       icon: const Icon(Icons.assignment_add),
+    ),
+  );
+}
+
+final class _FederationClassicAssignmentControlHousing extends StatelessWidget {
+  const _FederationClassicAssignmentControlHousing({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('federation-classic-assignment-control-housing'),
+    width: 58,
+    height: 58,
+    padding: const EdgeInsets.fromLTRB(7, 7, 3, 3),
+    decoration: const BoxDecoration(
+      color: Color(0xFFF29A72),
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(22),
+        topRight: Radius.circular(8),
+        bottomRight: Radius.circular(8),
+        bottomLeft: Radius.circular(8),
+      ),
+      boxShadow: [
+        BoxShadow(color: Colors.black54, blurRadius: 3, offset: Offset(0, 1)),
+      ],
+    ),
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFF15101C),
+        border: Border.all(color: const Color(0xFFB8A3E0)),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(5),
+          bottomRight: Radius.circular(5),
+          bottomLeft: Radius.circular(5),
+        ),
+      ),
+      child: IconButton(
+        key: const Key('add-academic-assignment'),
+        tooltip: 'Add Academic Assignment',
+        padding: EdgeInsets.zero,
+        onPressed: onPressed,
+        icon: const Icon(Icons.assignment_add),
+      ),
     ),
   );
 }

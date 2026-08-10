@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/proof_fonts.dart';
+import 'support/placement_progress_harness.dart';
 
 const _studentId = '00000000-0000-4000-8000-000000000133';
 final _today = LocalDate(2026, 8, 5);
@@ -29,6 +30,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('CLINICAL CALENDAR'), findsOneWidget);
+    expect(
+      find.byKey(const Key('federation-classic-assignment-control-housing')),
+      findsOneWidget,
+    );
     final studentInitials = tester.getRect(find.text('AB'));
     expect(studentInitials.center.dx, closeTo(1501, 2));
     expect(studentInitials.center.dy, closeTo(74, 2));
@@ -90,7 +95,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v8/federation_classic_landscape_1586x992.png',
+        'goldens/federation_classic_v9/federation_classic_landscape_1586x992.png',
       ),
     );
   });
@@ -109,7 +114,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v8/federation_classic_portrait_900x1440.png',
+        'goldens/federation_classic_v9/federation_classic_portrait_900x1440.png',
       ),
     );
   });
@@ -144,11 +149,52 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v8/'
+        'goldens/federation_classic_v9/'
         'federation_classic_portrait_200_percent_900x1440.png',
       ),
     );
   });
+
+  testWidgets(
+    'Federation Classic Clinical Placements uses its destination console',
+    (tester) async {
+      final harness = PlacementProgressHarness(
+        familyName: 'Acceptance Family Medicine',
+      );
+      await harness.controller.load();
+      await _pumpDestinationProof(
+        tester,
+        destination: ClinicalCalendarDestination.clinicalPlacements,
+        child: PlacementManagementSurface(
+          controller: harness.controller,
+          studentId: placementTestStudentId,
+        ),
+      );
+
+      expect(
+        find.byKey(const Key('federation-classic-destination-crown')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('federation-classic-destination-bay')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('placement-management-surface')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('add-placement-action')), findsOneWidget);
+      expect(find.byType(AdditiveThemeDestinationSurface), findsNothing);
+      expect(find.byType(VariantFNineSliceFrame), findsNothing);
+      await expectLater(
+        find.byKey(const Key('federation-classic-destination-proof')),
+        matchesGoldenFile(
+          'goldens/federation_classic_v9/'
+          'federation_classic_destination_clinical_placements_1586x992.png',
+        ),
+      );
+    },
+  );
 }
 
 Future<void> _pumpProof(
@@ -194,11 +240,15 @@ Future<void> _pumpProof(
   );
   final source = _ProofCalendarDataSource();
   final slots = ResponsiveShellSlots(
-    centralContent: CalendarPeriodView(
-      dataSource: source,
-      studentId: _studentId,
-      today: _today,
-      initialAnchor: _today,
+    centralContent: AcademicAssignmentCalendarWorkspace(
+      themeId: federationClassicThemeId,
+      onAddAssignment: _noop,
+      calendar: CalendarPeriodView(
+        dataSource: source,
+        studentId: _studentId,
+        today: _today,
+        initialAnchor: _today,
+      ),
     ),
     planningRegion: const _PlanningProof(),
     placementDock: const _PlacementsProof(),
@@ -260,6 +310,65 @@ Future<void> _pumpProof(
     }
   }
   await tester.pump();
+  expect(tester.takeException(), isNull);
+}
+
+Future<void> _pumpDestinationProof(
+  WidgetTester tester, {
+  required ClinicalCalendarDestination destination,
+  required Widget child,
+}) async {
+  await tester.binding.setSurfaceSize(const Size(1586, 992));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  const themeBundle = FederationClassicThemeBundle();
+  final baseTheme = themeBundle.standardPresentation.createThemeData();
+  final proofTheme = baseTheme.copyWith(
+    textTheme: baseTheme.textTheme.apply(fontFamily: 'ProofRoboto'),
+    primaryTextTheme: baseTheme.primaryTextTheme.apply(
+      fontFamily: 'ProofRoboto',
+    ),
+  );
+  final proofAssets = _ProofAssetBundle(
+    frameFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/$federationClassicFrameAsset',
+    ),
+  );
+  final preloadKey = GlobalKey();
+  await tester.pumpWidget(
+    DefaultAssetBundle(
+      bundle: proofAssets,
+      child: MaterialApp(home: SizedBox(key: preloadKey)),
+    ),
+  );
+  await tester.runAsync(() async {
+    await precacheImage(
+      const AssetImage(
+        canonicalDeltaMarkAsset,
+        package: 'clinical_calendar_presentation',
+      ),
+      preloadKey.currentContext!,
+    );
+  });
+  await tester.pump();
+  await tester.pumpWidget(
+    DefaultAssetBundle(
+      bundle: proofAssets,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: proofTheme,
+        home: RepaintBoundary(
+          key: const Key('federation-classic-destination-proof'),
+          child: themeBundle.shellRenderer.buildDestination(
+            destination: destination,
+            entry: DestinationEntry.applicationMenu,
+            onExit: _noop,
+            child: child,
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
 }
 
@@ -1020,6 +1129,15 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
         assignment: 'Internal Medicine · Jordan Lee',
         statusLabel: day == 5 ? 'Awaiting Confirmation' : 'Scheduled',
       ),
+    CalendarEntry(
+      id: 'assignment-14',
+      kind: CalendarEntryKind.academicAssignment,
+      startDate: LocalDate(2026, 8, 14),
+      endDate: LocalDate(2026, 8, 14),
+      title: 'Cardiology Case Study',
+      course: 'Advanced Practice Seminar',
+      statusLabel: 'Pending',
+    ),
   ]);
 }
 

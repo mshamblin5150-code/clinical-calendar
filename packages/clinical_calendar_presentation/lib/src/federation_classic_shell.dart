@@ -9,13 +9,6 @@ import 'insight_rail_presentation_policy.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
-const federationClassicCompactDestinationInsets = EdgeInsets.fromLTRB(
-  18,
-  20,
-  18,
-  22,
-);
-
 Widget _buildFederationClassicFrame(
   Widget child,
   EdgeInsets chromeInsets,
@@ -41,15 +34,260 @@ final class FederationClassicDestinationSurface extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => AdditiveThemeDestinationSurface(
-    destination: destination,
-    entry: entry,
-    onExit: onExit,
-    frameBuilder: _buildFederationClassicFrame,
-    statusSafeInsets: federationClassicStatusSafeInsets,
-    compactDestinationInsets: federationClassicCompactDestinationInsets,
-    child: child,
-  );
+  Widget build(BuildContext context) {
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    return Scaffold(
+      key: const Key('federation-classic-destination-shell'),
+      backgroundColor: FederationClassicColors.canvas,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _FederationClassicDestinationCrown(
+                destination: destination,
+                entry: entry,
+                onExit: onExit,
+                enlargedText: enlargedText,
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: _FederationClassicDestinationBay(
+                  destination: destination,
+                  enlargedText: enlargedText,
+                  child: KeyedSubtree(
+                    key: const Key('federation-classic-destination-scroll'),
+                    child: AdditiveThemePanelInterior(child: child),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _FederationClassicDestinationCrown extends StatelessWidget {
+  const _FederationClassicDestinationCrown({
+    required this.destination,
+    required this.entry,
+    required this.onExit,
+    required this.enlargedText,
+  });
+
+  final ClinicalCalendarDestination destination;
+  final DestinationEntry entry;
+  final VoidCallback onExit;
+  final bool enlargedText;
+
+  @override
+  Widget build(BuildContext context) {
+    final enteredFromMenu = entry == DestinationEntry.applicationMenu;
+    return CustomPaint(
+      key: const Key('federation-classic-destination-crown'),
+      painter: const _FederationClassicDestinationChromePainter(crown: true),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: enlargedText ? 112 : 82),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            enlargedText ? 18 : 26,
+            8,
+            enlargedText ? 14 : 22,
+            8,
+          ),
+          child: Row(
+            children: [
+              TextButton.icon(
+                key: Key(enteredFromMenu ? 'back-action' : 'close-action'),
+                onPressed: onExit,
+                style: TextButton.styleFrom(
+                  foregroundColor: FederationClassicColors.onPrimary,
+                ),
+                icon: Icon(enteredFromMenu ? Icons.arrow_back : Icons.close),
+                label: Text(enteredFromMenu ? 'Back' : 'Close'),
+              ),
+              const SizedBox(width: 14),
+              SizedBox.square(
+                dimension: enlargedText ? 42 : 50,
+                child: const _FederationClassicAxionDeltaMark(size: 50),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      destination.label,
+                      maxLines: 2,
+                      overflow: TextOverflow.clip,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: FederationClassicColors.text,
+                            letterSpacing: 1.4,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    if (!enlargedText)
+                      Text(
+                        'CLINICAL CALENDAR  /  FEDERATION CLASSIC',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: FederationClassicColors.scheduled,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.blur_on,
+                color: FederationClassicColors.workAccent,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _FederationClassicDestinationBay extends StatelessWidget {
+  const _FederationClassicDestinationBay({
+    required this.destination,
+    required this.enlargedText,
+    required this.child,
+  });
+
+  final ClinicalCalendarDestination destination;
+  final bool enlargedText;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = switch (destination) {
+      ClinicalCalendarDestination.clinicalPlacements =>
+        FederationClassicColors.clinical,
+      ClinicalCalendarDestination.notifications =>
+        FederationClassicColors.urgent,
+      ClinicalCalendarDestination.synchronization =>
+        FederationClassicColors.scheduled,
+      _ => FederationClassicColors.workAccent,
+    };
+    return CustomPaint(
+      key: const Key('federation-classic-destination-bay'),
+      painter: _FederationClassicDestinationChromePainter(accent: accent),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          enlargedText ? 14 : 30,
+          enlargedText ? 18 : 28,
+          enlargedText ? 14 : 24,
+          enlargedText ? 14 : 22,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: FederationClassicColors.surfaceSunken,
+            border: Border.all(color: FederationClassicColors.outlineVariant),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _FederationClassicDestinationChromePainter extends CustomPainter {
+  const _FederationClassicDestinationChromePainter({
+    this.crown = false,
+    this.accent = FederationClassicColors.clinical,
+  });
+
+  final bool crown;
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final background = Paint()..color = FederationClassicColors.surfaceLow;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(12)),
+      background,
+    );
+
+    final salmon = Paint()..color = FederationClassicColors.clinical;
+    final lilac = Paint()..color = FederationClassicColors.workAccent;
+    final amber = Paint()..color = FederationClassicColors.scheduled;
+    if (crown) {
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(0, 0, size.width * .24, size.height),
+          topLeft: const Radius.circular(12),
+          bottomLeft: const Radius.circular(34),
+        ),
+        salmon,
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(size.width * .25, 0, size.width * .22, 9),
+        lilac,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(size.width * .49, 0, size.width * .31, 9),
+          const Radius.circular(6),
+        ),
+        amber,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(size.width * .82, 0, size.width * .18, size.height),
+          topRight: const Radius.circular(12),
+          bottomRight: const Radius.circular(34),
+        ),
+        lilac,
+      );
+    } else {
+      final rail = Paint()..color = accent;
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(0, 0, 22, size.height),
+          topLeft: const Radius.circular(12),
+          bottomLeft: const Radius.circular(42),
+        ),
+        rail,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(26, 0, size.width * .28, 10),
+          const Radius.circular(7),
+        ),
+        salmon,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(size.width * .31, 0, size.width * .34, 10),
+          const Radius.circular(7),
+        ),
+        lilac,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(size.width - 18, 0, 18, size.height),
+          topRight: const Radius.circular(12),
+          bottomRight: const Radius.circular(42),
+        ),
+        amber,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FederationClassicDestinationChromePainter oldDelegate) =>
+      crown != oldDelegate.crown || accent != oldDelegate.accent;
 }
 
 final class FederationClassicApplicationShell extends StatelessWidget {
@@ -547,6 +785,36 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
               ),
             ),
             const Spacer(),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: FederationClassicColors.surfaceSunken,
+                border: Border.all(
+                  color: FederationClassicColors.workAccent,
+                  width: 2,
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  bottomLeft: Radius.circular(18),
+                  topRight: Radius.circular(6),
+                  bottomRight: Radius.circular(6),
+                ),
+              ),
+              child: IconButton(
+                key: const Key('federation-classic-help-action'),
+                tooltip: 'Help',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
+                ),
+                onPressed: () =>
+                    onOpenDestination(ClinicalCalendarDestination.help),
+                icon: const Icon(Icons.help_outline),
+              ),
+            ),
+            const SizedBox(width: 8),
             SizedBox(
               width: 170,
               child: Align(
@@ -590,13 +858,9 @@ final class _FederationClassicCommandCrown extends StatelessWidget {
                         height: 44,
                         child: PopupMenuButton<ClinicalCalendarDestination>(
                           key: const Key('federation-classic-help-menu'),
-                          tooltip: 'Profile and Help',
+                          tooltip: 'Student Profile',
                           onSelected: onOpenDestination,
                           itemBuilder: (context) => const [
-                            PopupMenuItem(
-                              value: ClinicalCalendarDestination.help,
-                              child: Text('Help'),
-                            ),
                             PopupMenuItem(
                               value: ClinicalCalendarDestination.studentProfile,
                               child: Text('Student Profile'),
