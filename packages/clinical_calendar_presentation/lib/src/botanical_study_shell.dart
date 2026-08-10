@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
+import 'canonical_delta_mark.dart';
 import 'botanical_study_frame.dart';
 import 'botanical_study_theme.dart';
 import 'graphite_frame.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
-
-const botanicalStudyAxionLogoAsset =
-    'assets/botanical_study_raster/axion-delta-mark-v2.png';
 
 const botanicalStudyCompactDestinationInsets = EdgeInsets.fromLTRB(
   18,
@@ -754,12 +752,8 @@ final class _BotanicalStudyAxionDeltaMark extends StatelessWidget {
     child: SizedBox.square(
       key: const Key('botanical-study-axion-delta'),
       dimension: size,
-      child: Image.asset(
-        botanicalStudyAxionLogoAsset,
-        key: const Key('botanical-study-axion-delta-image'),
-        package: 'clinical_calendar_presentation',
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.high,
+      child: CanonicalDeltaMark(
+        imageKey: const Key('botanical-study-axion-delta-image'),
         errorBuilder: (context, error, stackTrace) {
           GraphitePresentationFailureBoundary.report(
             context,

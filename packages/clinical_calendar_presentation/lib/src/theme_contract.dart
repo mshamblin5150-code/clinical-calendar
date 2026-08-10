@@ -4,6 +4,7 @@ import 'additive_theme_shell.dart';
 import 'botanical_study_frame.dart';
 import 'botanical_study_shell.dart';
 import 'botanical_study_theme.dart';
+import 'canonical_delta_mark.dart';
 import 'coastal_light_frame.dart';
 import 'coastal_light_shell.dart';
 import 'coastal_light_theme.dart';
@@ -1387,7 +1388,10 @@ final class GraphiteThemeBundle implements ClinicalCalendarThemeBundle {
     themeId: graphiteThemeId,
     assetPackage: 'clinical_calendar_presentation',
     primaryAsset: 'assets/graphite_raster/panel-nine-slice-v1.png',
-    assetPaths: ['assets/graphite_raster/panel-nine-slice-v1.png'],
+    assetPaths: [
+      'assets/graphite_raster/panel-nine-slice-v1.png',
+      canonicalDeltaMarkAsset,
+    ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
     safeInsets: {
@@ -1538,7 +1542,7 @@ final class FederationClassicThemeBundle
     assetPaths: [
       federationClassicFrameAsset,
       federationClassicRailNineSliceAsset,
-      federationClassicAxionDeltaAsset,
+      canonicalDeltaMarkAsset,
     ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
@@ -1690,7 +1694,7 @@ final class Federation2399ThemeBundle implements ClinicalCalendarThemeBundle {
     assetPaths: [
       federation2399FrameAsset,
       federation2399LandscapeChassisAsset,
-      federation2399DeltaAsset,
+      canonicalDeltaMarkAsset,
     ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
@@ -1843,7 +1847,7 @@ final class HeritageFieldNotesThemeBundle
     primaryAsset: heritageFieldNotesFrameAsset,
     assetPaths: [
       heritageFieldNotesFrameAsset,
-      heritageFieldNotesAxionDeltaAsset,
+      canonicalDeltaMarkAsset,
       heritageFieldNotesMaterialChassisAsset,
     ],
     sourceSize: Size(1536, 1024),
@@ -1992,7 +1996,11 @@ final class CoastalLightThemeBundle implements ClinicalCalendarThemeBundle {
     themeId: coastalCalmThemeId,
     assetPackage: 'clinical_calendar_presentation',
     primaryAsset: coastalLightFrameAsset,
-    assetPaths: [coastalLightFrameAsset, coastalLightLandscapeChassisAsset],
+    assetPaths: [
+      coastalLightFrameAsset,
+      coastalLightLandscapeChassisAsset,
+      canonicalDeltaMarkAsset,
+    ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
     safeInsets: {
@@ -2144,7 +2152,7 @@ final class BotanicalStudyThemeBundle implements ClinicalCalendarThemeBundle {
     assetPaths: [
       botanicalStudyFrameAsset,
       botanicalStudyLandscapeChassisAsset,
-      botanicalStudyAxionLogoAsset,
+      canonicalDeltaMarkAsset,
     ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),

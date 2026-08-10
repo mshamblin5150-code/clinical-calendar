@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_presentation/src/canonical_delta_mark.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -173,7 +174,7 @@ Future<void> _pumpProof(
     for (final asset in const [
       federationClassicFrameAsset,
       federationClassicRailNineSliceAsset,
-      federationClassicAxionDeltaAsset,
+      canonicalDeltaMarkAsset,
     ]) {
       await precacheImage(
         AssetImage(asset, package: 'clinical_calendar_presentation'),

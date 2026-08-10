@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_presentation/src/canonical_delta_mark.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -57,7 +58,7 @@ void main() {
       graphite.frame.sourceCuts,
       const EdgeInsets.fromLTRB(120, 145, 120, 170),
     );
-    expect(graphite.frame.assetPaths, hasLength(1));
+    expect(graphite.frame.assetPaths, hasLength(2));
     expect(graphite.gallery.swatches, hasLength(5));
     expect(graphite.marks.marks, hasLength(9));
     expect(graphite.helpGuide.calendarStates, hasLength(5));
@@ -108,7 +109,7 @@ void main() {
       containsAll([
         federationClassicFrameAsset,
         federationClassicRailNineSliceAsset,
-        federationClassicAxionDeltaAsset,
+        canonicalDeltaMarkAsset,
       ]),
     );
     expect(federationClassic.gallery.swatches, hasLength(5));
@@ -161,7 +162,7 @@ void main() {
       containsAll([
         federation2399FrameAsset,
         federation2399LandscapeChassisAsset,
-        federation2399DeltaAsset,
+        canonicalDeltaMarkAsset,
       ]),
     );
     expect(federation2399.gallery.swatches, hasLength(5));
@@ -271,7 +272,7 @@ void main() {
     expect(fieldArchive.shellRenderer, isA<HeritageFieldNotesShellRenderer>());
     expect(fieldArchive.frame.assetPaths, const [
       heritageFieldNotesFrameAsset,
-      heritageFieldNotesAxionDeltaAsset,
+      canonicalDeltaMarkAsset,
       heritageFieldNotesMaterialChassisAsset,
     ]);
     expect(fieldArchive.gallery.swatches, hasLength(5));
@@ -1312,7 +1313,8 @@ void main() {
       find.byKey(const Key('coastal-light-enhanced-flat-chassis')),
       findsOneWidget,
     );
-    expect(find.byType(Image), findsNothing);
+    expect(find.byType(CanonicalDeltaMark), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
 
     await tester.binding.setSurfaceSize(const Size(900, 1440));
     await tester.pumpWidget(

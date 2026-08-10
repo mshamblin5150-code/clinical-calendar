@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_presentation/src/canonical_delta_mark.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,7 +24,7 @@ void main() {
     expect(botanical.frame.assetPaths, [
       botanicalStudyFrameAsset,
       botanicalStudyLandscapeChassisAsset,
-      botanicalStudyAxionLogoAsset,
+      canonicalDeltaMarkAsset,
     ]);
     expect(botanical.gallery.swatches, hasLength(5));
     expect(botanical.marks.marks, hasLength(9));
@@ -124,12 +125,12 @@ void main() {
   });
 
   test('Botanical Study crown ships the Axion company mark', () {
-    final packageRelative = File(botanicalStudyAxionLogoAsset);
+    final packageRelative = File(canonicalDeltaMarkAsset);
     final file = packageRelative.existsSync()
         ? packageRelative
         : File(
             'packages/clinical_calendar_presentation/'
-            '$botanicalStudyAxionLogoAsset',
+            '$canonicalDeltaMarkAsset',
           );
     expect(file.existsSync(), isTrue);
     expect(file.lengthSync(), greaterThan(500));
@@ -345,7 +346,7 @@ final class _FailingAxionAssetBundle extends CachingAssetBundle {
     if (key.endsWith(botanicalStudyLandscapeChassisAsset)) {
       return ByteData.sublistView(await chassisFile.readAsBytes());
     }
-    if (key.endsWith(botanicalStudyAxionLogoAsset)) {
+    if (key.endsWith(canonicalDeltaMarkAsset)) {
       failedAxionLoad = true;
       throw StateError('fixture Axion decode failure');
     }

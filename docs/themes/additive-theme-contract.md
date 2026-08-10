@@ -84,6 +84,21 @@ Semantic tokens and redundant marks must satisfy the complete requirements in
 the cross-theme accessibility contract. `ThemeData` alone is not a complete
 theme.
 
+### Catalog brand-mark exception
+
+Issue [#159](https://github.com/mshamblin5150-code/clinical-calendar/issues/159)
+ratifies one narrow exception to theme-local asset ownership. Graphite,
+Coastal Light, Botanical Study, Field Archive, Federation Classic, and
+Federation 2399 consume the catalog-owned Axion delta from
+`assets/shared_brand/axion-delta-mark.png`. Each bundle declares that shared
+dependency and renders it through the common mark boundary.
+
+This exception covers only the underlying delta-and-orbit geometry. Placement,
+scale, optional color treatment, semantics, crown composition, material
+language, panel art, and all other chrome remain independently theme-owned.
+It does not authorize borrowing generic panels or any other identity's art.
+Containment Drone 47-Alpha remains outside this exception and unchanged.
+
 ## Renderer lanes
 
 The initial catalog uses two renderer lanes over the same workflow
@@ -161,6 +176,7 @@ physical follow-up.
 Each of the six additions owns original artwork. It must never import,
 recolor, trace, or modify Containment Drone raster art.
 
+The catalog-owned Axion delta exception above does not change frame ownership.
 Every new primary frame uses the normalized geometry contract:
 
 - 1536x1024 transparent source;

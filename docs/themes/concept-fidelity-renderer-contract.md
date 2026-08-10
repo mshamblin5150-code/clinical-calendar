@@ -57,6 +57,15 @@ slots. It may wrap those widgets in generic opt-in viewport policies, but the
 default path for another theme must not change. Theme code must not fork
 clinical state, persistence, validation, or workflow logic.
 
+Issue [#159](https://github.com/mshamblin5150-code/clinical-calendar/issues/159)
+also establishes one catalog-level visual invariant for the six concept
+themes: wherever an approved composition specifies the Axion delta, its
+underlying delta-and-orbit mark comes from the same catalog-owned source.
+This does not make the crown or shell shared. Each theme continues to own the
+mark's placement, scale, optional color treatment, semantics, surrounding
+material, and complete responsive composition. Containment Drone 47-Alpha is
+not a consumer of the shared mark.
+
 Control coordinates and breakpoint numbers are therefore not catalog-wide
 invariants. Reachability, meaning, minimum usable size, semantic order, and
 workflow behavior are invariants.

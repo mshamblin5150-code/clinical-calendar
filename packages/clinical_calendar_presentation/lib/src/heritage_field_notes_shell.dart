@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
+import 'canonical_delta_mark.dart';
 import 'heritage_field_notes_frame.dart';
 import 'heritage_field_notes_theme.dart';
 import 'responsive_shell.dart';
@@ -751,13 +752,7 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                 tooltip: 'Open menu',
                 onPressed: onOpenMenu,
                 padding: EdgeInsets.all(compact ? 4 : 2),
-                icon: Image.asset(
-                  heritageFieldNotesAxionDeltaAsset,
-                  package: 'clinical_calendar_presentation',
-                  width: compact ? 36 : 46,
-                  height: compact ? 36 : 46,
-                  filterQuality: FilterQuality.high,
-                ),
+                icon: CanonicalDeltaMark(size: compact ? 36 : 46),
               ),
             ),
             const SizedBox(width: 12),

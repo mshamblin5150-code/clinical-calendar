@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
+import 'canonical_delta_mark.dart';
 import 'coastal_light_frame.dart';
 import 'coastal_light_theme.dart';
 import 'responsive_shell.dart';
@@ -788,11 +789,7 @@ final class _CoastalLightBrandLockup extends StatelessWidget {
           key: const Key('coastal-light-axion-delta'),
           label: 'Axion delta',
           image: true,
-          child: CustomPaint(
-            painter: _CoastalLightAxionDeltaPainter(
-              color: context.clinicalColors.clinical,
-            ),
-          ),
+          child: CanonicalDeltaMark(color: context.clinicalColors.clinical),
         ),
       ),
       if (!hideTitle) ...[
@@ -818,51 +815,6 @@ final class _CoastalLightBrandLockup extends StatelessWidget {
       ],
     ],
   );
-}
-
-final class _CoastalLightAxionDeltaPainter extends CustomPainter {
-  const _CoastalLightAxionDeltaPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scale = size.shortestSide / 46;
-    canvas.save();
-    canvas.scale(scale, scale);
-
-    final delta = Path()
-      ..fillType = PathFillType.evenOdd
-      ..moveTo(5, 42)
-      ..quadraticBezierTo(14, 20, 21, 6)
-      ..quadraticBezierTo(23, 2, 26, 7)
-      ..quadraticBezierTo(34, 23, 41, 42)
-      ..quadraticBezierTo(42, 45, 38, 42)
-      ..lineTo(25, 17)
-      ..quadraticBezierTo(23, 14, 21, 18)
-      ..lineTo(10, 42)
-      ..quadraticBezierTo(7, 46, 5, 42)
-      ..close();
-    canvas.drawPath(delta, Paint()..color = color);
-
-    canvas.save();
-    canvas.translate(23, 27);
-    canvas.rotate(-.24);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset.zero, width: 39, height: 16),
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.2
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.restore();
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _CoastalLightAxionDeltaPainter oldDelegate) =>
-      oldDelegate.color != color;
 }
 
 enum _CoastalLightCrownAction { addSchedule, help }
