@@ -11,6 +11,22 @@ GitHub Issues in `mshamblin5150-code/clinical-calendar` are the canonical tracke
 - Use native GitHub sub-issues for parent/child relationships and native issue dependencies for `blocked by` relationships.
 - Do not duplicate GitHub Issues under `.scratch/`.
 
+## Reconcile dependents when closing a blocker
+
+The drone that closes or merges a blocking issue must reconcile every open
+issue that depends on it before finishing the task. GitHub's native dependency
+state is authoritative, but GitHub does not synchronize the repository's
+manual triage labels.
+
+- Fetch each downstream issue and all of its native blockers after the blocker
+  closes.
+- If any blocker remains open, keep `blocked` and remove stale readiness labels.
+- If every blocker is closed, remove `blocked` and apply `ready-for-agent`.
+- Use `ready-for-human` instead when the next required action is inherently
+  manual, such as physical-device acceptance or unavailable equipment.
+- Verify the resulting labels and report the downstream issues updated or left
+  blocked. Do not assume that closing the blocker updated labels automatically.
+
 ## When a skill says "publish to the issue tracker"
 
 Create a GitHub Issue in `mshamblin5150-code/clinical-calendar`, apply the appropriate type and triage labels, and return its URL.
