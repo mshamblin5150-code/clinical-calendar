@@ -234,7 +234,7 @@ void main() {
         ),
         (
           federation2399,
-          'federation-2399-owned-responsive-console-v4',
+          'federation-2399-owned-responsive-console-v5',
           Federation2399ApplicationShell,
         ),
       ];
@@ -1214,16 +1214,21 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Open menu'));
-    await tester.tap(find.byTooltip('Add schedule'));
+    await tester.tap(find.byTooltip('Add Placement'));
     await tester.tap(find.byTooltip('Help'));
+    expect(
+      find.byKey(const Key('federation-2399-profile-control-housing')),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const Key('federation-2399-navigation-2')));
     await tester.tap(find.byKey(const Key('federation-2399-navigation-3')));
     await tester.tap(find.byKey(const Key('federation-2399-navigation-4')));
 
     expect(menuCount, 1);
-    expect(addCount, 1);
+    expect(addCount, 0);
     expect(attentionCount, 1);
     expect(destinations, [
+      ClinicalCalendarDestination.clinicalPlacements,
       ClinicalCalendarDestination.help,
       ClinicalCalendarDestination.clinicalPlacements,
       ClinicalCalendarDestination.settings,
@@ -1314,6 +1319,12 @@ void main() {
     );
     expect(
       find.byKey(const Key('federation-2399-bottom-navigation')),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Add Placement'), findsOneWidget);
+    expect(find.byTooltip('Help'), findsOneWidget);
+    expect(
+      find.byKey(const Key('federation-2399-profile-control-housing')),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);

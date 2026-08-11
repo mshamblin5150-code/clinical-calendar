@@ -17,9 +17,18 @@ GoldenFileComparator createProofGoldenComparator(
   GoldenFileComparator delegate, {
   double highDeltaPixelTolerance = _nonWindowsHighDeltaPixelTolerance,
 }) => _ProofGoldenComparator(
-  delegate,
+  _unwrapProofGoldenComparator(delegate),
   highDeltaPixelTolerance: highDeltaPixelTolerance,
 );
+
+GoldenFileComparator _unwrapProofGoldenComparator(
+  GoldenFileComparator comparator,
+) {
+  while (comparator is _ProofGoldenComparator) {
+    comparator = comparator.delegate;
+  }
+  return comparator;
+}
 
 Future<void> prepareProofEnvironment() async {
   if (!Platform.isWindows && goldenFileComparator is! _ProofGoldenComparator) {

@@ -4,6 +4,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:clinical_calendar_presentation/src/canonical_delta_mark.dart';
+import 'package:clinical_calendar_presentation/src/federation_2399_console_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,6 +35,14 @@ void main() {
       reason: 'The END field must clear the Federation planning chrome.',
     );
     expect(find.bySemanticsLabel('Axion delta'), findsOneWidget);
+    expect(
+      find.byKey(const Key('federation-2399-live-planning-housing')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('federation-2399-live-attention-housing')),
+      findsOneWidget,
+    );
 
     await expectLater(
       find.byKey(const Key('federation-2399-proof')),
@@ -196,7 +205,12 @@ void main() {
       findsOneWidget,
     );
     expect(find.byTooltip('Open menu'), findsOneWidget);
-    expect(find.byTooltip('Add schedule'), findsOneWidget);
+    expect(find.byTooltip('Add Placement'), findsOneWidget);
+    expect(find.byTooltip('Help'), findsOneWidget);
+    expect(
+      find.byKey(const Key('federation-2399-profile-control-housing')),
+      findsOneWidget,
+    );
 
     await expectLater(
       find.byKey(const Key('federation-2399-proof')),
@@ -534,79 +548,87 @@ final class _PlanningProof extends StatelessWidget {
   const _PlanningProof();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
-        children: [
-          const Expanded(child: _SectionTitle('PLANNING')),
-          OutlinedButton.icon(
-            onPressed: _noop,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('ADD SCHEDULE'),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton.icon(
-            onPressed: _noop,
-            icon: const Icon(Icons.warning_amber_outlined, size: 18),
-            label: const Text('PLANNING INCOMPLETE'),
-          ),
-        ],
-      ),
-      const SizedBox(height: 8),
-      Text(
-        'Build the monthly plan in this in-flow region.',
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-      const SizedBox(height: 12),
-      const Row(
-        children: [
-          _PlanningStep('1', 'TYPE & TIME'),
-          SizedBox(width: 18),
-          Expanded(
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+  Widget build(BuildContext context) => Federation2399SectionHousing(
+    key: const Key('federation-2399-live-planning-housing'),
+    label: 'Planning',
+    accent: Federation2399Colors.scheduled,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Spacer(),
+            OutlinedButton.icon(
+              onPressed: _noop,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('ADD SCHEDULE'),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: _noop,
+              icon: const Icon(Icons.warning_amber_outlined, size: 18),
+              label: const Text('PLANNING INCOMPLETE'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Build the monthly plan in this in-flow region.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        const Row(
+          children: [
+            _PlanningStep('1', 'TYPE & TIME'),
+            SizedBox(width: 18),
+            Expanded(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _ChoiceChip('WORK SHIFT', Federation2399Colors.workMachinery),
+                  _ChoiceChip(
+                    'CLINICAL SESSION',
+                    Federation2399Colors.clinical,
+                  ),
+                  _ChoiceChip(
+                    'PROTECTED DAY',
+                    Federation2399Colors.protectedDayAccent,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: FractionallySizedBox(
+            widthFactor: .94,
+            child: Row(
               children: [
-                _ChoiceChip('WORK SHIFT', Federation2399Colors.workMachinery),
-                _ChoiceChip('CLINICAL SESSION', Federation2399Colors.clinical),
-                _ChoiceChip(
-                  'PROTECTED DAY',
-                  Federation2399Colors.protectedDayAccent,
+                Expanded(
+                  child: _FieldProof(
+                    label: 'SCHEDULE TEMPLATE',
+                    value: 'ENTER TIMES MANUALLY',
+                  ),
+                ),
+                SizedBox(width: 10),
+                SizedBox(
+                  width: 112,
+                  child: _FieldProof(label: 'START', value: '08:00'),
+                ),
+                SizedBox(width: 10),
+                SizedBox(
+                  width: 112,
+                  child: _FieldProof(label: 'END', value: '16:00'),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-      const Spacer(),
-      const Align(
-        alignment: Alignment.centerLeft,
-        child: FractionallySizedBox(
-          widthFactor: .94,
-          child: Row(
-            children: [
-              Expanded(
-                child: _FieldProof(
-                  label: 'SCHEDULE TEMPLATE',
-                  value: 'ENTER TIMES MANUALLY',
-                ),
-              ),
-              SizedBox(width: 10),
-              SizedBox(
-                width: 112,
-                child: _FieldProof(label: 'START', value: '08:00'),
-              ),
-              SizedBox(width: 10),
-              SizedBox(
-                width: 112,
-                child: _FieldProof(label: 'END', value: '16:00'),
-              ),
-            ],
-          ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 }
 
@@ -687,23 +709,32 @@ final class _InsightProof extends StatelessWidget {
         onCycle: _noop,
       ),
       const SizedBox(height: 10),
-      const _SectionTitle('NEEDS ATTENTION'),
-      const SizedBox(height: 8),
-      const _AttentionCard(
-        icon: Icons.assignment_late_outlined,
-        title: 'CLINICAL SESSION\nNEEDS CONFIRMATION',
-      ),
-      const _AttentionCard(
-        icon: Icons.fact_check_outlined,
-        title: 'INITIAL SELF-ASSESSMENT',
-      ),
-      const _AttentionCard(
-        icon: Icons.fact_check_outlined,
-        title: 'INITIAL SELF-ASSESSMENT',
-      ),
-      const _AttentionCard(
-        icon: Icons.warning_amber_outlined,
-        title: 'PLANNING INCOMPLETE',
+      const Federation2399SectionHousing(
+        key: Key('federation-2399-live-attention-housing'),
+        headingKey: Key('federation-2399-attention-heading'),
+        label: 'Needs Attention',
+        count: 4,
+        accent: Federation2399Colors.urgent,
+        child: Column(
+          children: [
+            _AttentionCard(
+              icon: Icons.assignment_late_outlined,
+              title: 'CLINICAL SESSION\nNEEDS CONFIRMATION',
+            ),
+            _AttentionCard(
+              icon: Icons.fact_check_outlined,
+              title: 'INITIAL SELF-ASSESSMENT',
+            ),
+            _AttentionCard(
+              icon: Icons.fact_check_outlined,
+              title: 'INITIAL SELF-ASSESSMENT',
+            ),
+            _AttentionCard(
+              icon: Icons.warning_amber_outlined,
+              title: 'PLANNING INCOMPLETE',
+            ),
+          ],
+        ),
       ),
     ],
   );
@@ -830,20 +861,24 @@ final class _AttentionSummaryProof extends StatelessWidget {
   const _AttentionSummaryProof();
 
   @override
-  Widget build(BuildContext context) => const Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      _SectionTitle('NEEDS ATTENTION'),
-      SizedBox(height: 8),
-      _AttentionCard(
-        icon: Icons.assignment_late_outlined,
-        title: 'SESSION NEEDS CONFIRMATION',
-      ),
-      _AttentionCard(
-        icon: Icons.warning_amber_outlined,
-        title: 'PLANNING INCOMPLETE',
-      ),
-    ],
+  Widget build(BuildContext context) => const Federation2399SectionHousing(
+    key: Key('federation-2399-live-attention-housing'),
+    headingKey: Key('federation-2399-attention-heading'),
+    label: 'Needs Attention',
+    count: 2,
+    accent: Federation2399Colors.urgent,
+    child: Column(
+      children: [
+        _AttentionCard(
+          icon: Icons.assignment_late_outlined,
+          title: 'SESSION NEEDS CONFIRMATION',
+        ),
+        _AttentionCard(
+          icon: Icons.warning_amber_outlined,
+          title: 'PLANNING INCOMPLETE',
+        ),
+      ],
+    ),
   );
 }
 

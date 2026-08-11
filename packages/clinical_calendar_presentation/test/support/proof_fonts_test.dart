@@ -102,4 +102,57 @@ void main() {
       );
     },
   );
+
+  test(
+    'reconfiguring a proof comparator replaces its prior tolerance',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'clinical-calendar-proof-comparator-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final goldenDirectory = Directory(
+        '${directory.path}${Platform.pathSeparator}goldens',
+      );
+      await goldenDirectory.create();
+      final expected = img.Image(width: 100, height: 100)
+        ..clear(img.ColorRgb8(245, 245, 245));
+      final actual = img.Image.from(expected);
+      for (var index = 0; index < 26; index++) {
+        final position = (index * 37) % (actual.width * actual.height);
+        actual.setPixelRgb(
+          position % actual.width,
+          position ~/ actual.width,
+          20,
+          20,
+          20,
+        );
+      }
+      await File(
+        '${goldenDirectory.path}${Platform.pathSeparator}sample.png',
+      ).writeAsBytes(img.encodePng(expected));
+      final localComparator = LocalFileComparator(
+        Uri.file('${directory.path}${Platform.pathSeparator}sample_test.dart'),
+      );
+      final defaultComparator = createProofGoldenComparator(localComparator);
+      final reconfiguredComparator = createProofGoldenComparator(
+        defaultComparator,
+        highDeltaPixelTolerance: .00265,
+      );
+
+      expect(
+        await defaultComparator.compare(
+          img.encodePng(actual),
+          Uri.parse('goldens/sample.png'),
+        ),
+        isFalse,
+      );
+      expect(
+        await reconfiguredComparator.compare(
+          img.encodePng(actual),
+          Uri.parse('goldens/sample.png'),
+        ),
+        isTrue,
+      );
+    },
+  );
 }

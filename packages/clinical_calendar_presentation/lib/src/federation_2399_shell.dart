@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
 import 'canonical_delta_mark.dart';
+import 'federation_2399_console_scope.dart';
 import 'federation_2399_frame.dart';
 import 'placements/placement_progress_widgets.dart';
 import 'responsive_shell.dart';
@@ -106,7 +107,6 @@ final class Federation2399ApplicationShell extends StatelessWidget {
                 child: _Federation2399CommandCrown(
                   environmentName: environmentName,
                   onOpenMenu: onOpenMenu,
-                  onAddSchedule: onAddSchedule,
                   onOpenDestination: onOpenDestination,
                   profileAvatar: slots.profileAvatar,
                   integrated: true,
@@ -201,7 +201,6 @@ final class Federation2399ApplicationShell extends StatelessWidget {
               _Federation2399CommandCrown(
                 environmentName: environmentName,
                 onOpenMenu: onOpenMenu,
-                onAddSchedule: onAddSchedule,
                 onOpenDestination: onOpenDestination,
                 profileAvatar: slots.profileAvatar,
                 compact: true,
@@ -339,7 +338,7 @@ final class _Federation2399CalendarViewport extends StatelessWidget {
         useConceptMonthMarks: true,
         suppressProtectedHatch: true,
         clipDayDecoration: true,
-        child: child,
+        child: Federation2399ConsoleScope(child: child),
       );
       return buildEnlargedTextCalendarScrollViewport(
         context: context,
@@ -386,7 +385,7 @@ final class _Federation2399ConsoleBay extends StatelessWidget {
           shape == _Federation2399BayShape.insight ? 14 : 12,
           integrated ? 10 : 18,
         ),
-        child: child,
+        child: Federation2399ConsoleScope(child: child),
       ),
     );
     if (integrated) {
@@ -538,7 +537,6 @@ final class _Federation2399CommandCrown extends StatelessWidget {
   const _Federation2399CommandCrown({
     required this.environmentName,
     required this.onOpenMenu,
-    required this.onAddSchedule,
     required this.onOpenDestination,
     required this.profileAvatar,
     this.compact = false,
@@ -547,7 +545,6 @@ final class _Federation2399CommandCrown extends StatelessWidget {
 
   final String environmentName;
   final VoidCallback onOpenMenu;
-  final VoidCallback onAddSchedule;
   final ValueChanged<ClinicalCalendarDestination> onOpenDestination;
   final Widget profileAvatar;
   final bool compact;
@@ -608,19 +605,64 @@ final class _Federation2399CommandCrown extends StatelessWidget {
                       ],
                     ),
             ),
-            IconButton(
-              tooltip: 'Add schedule',
-              onPressed: onAddSchedule,
-              icon: const Icon(Icons.add_box_outlined),
-            ),
-            if (!compact)
-              IconButton(
-                tooltip: 'Help',
-                onPressed: () =>
-                    onOpenDestination(ClinicalCalendarDestination.help),
-                icon: const Icon(Icons.help_outline),
+            Container(
+              key: const Key('federation-2399-crown-controls'),
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: context.clinicalColors.canvas.withValues(alpha: .82),
+                border: Border.all(
+                  color: context.clinicalColors.workMachinery.withValues(
+                    alpha: .68,
+                  ),
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  topRight: Radius.circular(4),
+                  bottomLeft: Radius.circular(4),
+                  bottomRight: Radius.circular(18),
+                ),
               ),
-            profileAvatar,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Help',
+                    onPressed: () =>
+                        onOpenDestination(ClinicalCalendarDestination.help),
+                    icon: const Icon(Icons.help_outline),
+                  ),
+                  const SizedBox(width: 2),
+                  Tooltip(
+                    message: 'Add Placement',
+                    child: TextButton.icon(
+                      key: const Key('federation-2399-add-placement'),
+                      onPressed: () => onOpenDestination(
+                        ClinicalCalendarDestination.clinicalPlacements,
+                      ),
+                      icon: const Icon(Icons.add_circle_outline, size: 20),
+                      label: Text(compact ? 'PLACEMENT' : 'ADD PLACEMENT'),
+                    ),
+                  ),
+                  Container(
+                    key: const Key('federation-2399-profile-control-housing'),
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: context.clinicalColors.clinical.withValues(
+                        alpha: .12,
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(14),
+                        bottomRight: Radius.circular(14),
+                      ),
+                    ),
+                    child: profileAvatar,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
