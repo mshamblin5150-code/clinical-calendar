@@ -65,15 +65,93 @@ void main() {
     }
     expect(find.text('SUNDAY'), findsNothing);
 
+    final calendarViewport = tester.getRect(find.byType(CalendarPeriodView));
+    final calendarLegend = tester.getRect(
+      find.byKey(const Key('coastal-calm-calendar-legend-line')),
+    );
+    expect(
+      calendarLegend.top,
+      greaterThanOrEqualTo(calendarViewport.bottom),
+      reason:
+          'Clinical, Work, and Protected belong on their own line below Calendar.',
+    );
+
     final visibleEntries = find.byWidgetPredicate((widget) {
       final key = widget.key;
       return key is ValueKey<String> && key.value.startsWith('month-entry-');
     });
     expect(
       visibleEntries,
-      findsNWidgets(18),
+      findsNWidgets(19),
       reason: 'The concept month is a populated planning surface.',
     );
+  });
+
+  testWidgets('Coastal Light crown exposes shared destination controls', (
+    tester,
+  ) async {
+    final opened = <ClinicalCalendarDestination>[];
+    await _pumpProof(
+      tester,
+      const Size(1586, 992),
+      onOpenDestination: opened.add,
+    );
+
+    for (final key in const [
+      Key('coastal-light-add-placement-action'),
+      Key('coastal-light-help-action'),
+      Key('coastal-light-profile-action'),
+    ]) {
+      expect(find.byKey(key).hitTestable(), findsOneWidget);
+    }
+
+    await tester.tap(
+      find.byKey(const Key('coastal-light-add-placement-action')),
+    );
+    await tester.tap(find.byKey(const Key('coastal-light-help-action')));
+    await tester.tap(find.byKey(const Key('coastal-light-profile-action')));
+    expect(opened, [
+      ClinicalCalendarDestination.clinicalPlacements,
+      ClinicalCalendarDestination.help,
+    ]);
+  });
+
+  testWidgets('Coastal Light owns destination crown and housing', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1586, 992));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const themeBundle = CoastalLightThemeBundle();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: themeBundle.standardPresentation.createThemeData(),
+        home: themeBundle.shellRenderer.buildDestination(
+          destination: ClinicalCalendarDestination.clinicalPlacements,
+          entry: DestinationEntry.direct,
+          onExit: _noop,
+          child: const ShellPanel(
+            label: 'Clinical Placements',
+            child: Text('Fictional placement content'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('coastal-light-destination-shell')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('coastal-light-destination-crown')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('coastal-light-destination-housing')),
+      findsOneWidget,
+    );
+    expect(find.byType(AdditiveThemeDestinationSurface), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Coastal Light portrait is an intentional tablet console', (
@@ -137,6 +215,8 @@ Future<void> _pumpProof(
   WidgetTester tester,
   Size size, {
   TextScaler textScaler = TextScaler.noScaling,
+  ValueChanged<ClinicalCalendarDestination> onOpenDestination =
+      _ignoreDestination,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -184,11 +264,15 @@ Future<void> _pumpProof(
   );
   final source = _ProofCalendarDataSource();
   final slots = ResponsiveShellSlots(
-    centralContent: CalendarPeriodView(
-      dataSource: source,
-      studentId: _studentId,
-      today: _today,
-      initialAnchor: _today,
+    centralContent: AcademicAssignmentCalendarWorkspace(
+      themeId: coastalCalmThemeId,
+      onAddAssignment: _noop,
+      calendar: CalendarPeriodView(
+        dataSource: source,
+        studentId: _studentId,
+        today: _today,
+        initialAnchor: _today,
+      ),
     ),
     planningRegion: const _PlanningProof(),
     placementDock: const _PlacementsProof(),
@@ -216,7 +300,7 @@ Future<void> _pumpProof(
             slots: slots,
             environmentName: 'COASTAL LIGHT',
             onOpenMenu: _noop,
-            onOpenDestination: _ignoreDestination,
+            onOpenDestination: onOpenDestination,
             onOpenAttention: _noop,
             onAddSchedule: _noop,
           ),
@@ -1118,6 +1202,15 @@ final class _ProofCalendarDataSource implements CalendarDataSource {
     required LocalDate firstDate,
     required LocalDate lastDate,
   }) async => CalendarSnapshot([
+    CalendarEntry(
+      id: 'assignment-11',
+      kind: CalendarEntryKind.academicAssignment,
+      startDate: LocalDate(2026, 8, 11),
+      endDate: LocalDate(2026, 8, 11),
+      title: 'SOAP Note Reflection',
+      course: 'NURS 642',
+      statusLabel: 'Pending',
+    ),
     for (final day in [7, 17, 27])
       CalendarEntry(
         id: 'protected-$day',
