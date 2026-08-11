@@ -5,13 +5,129 @@
   "themeId": "federation-2399",
   "displayName": "Federation 2399",
   "fixture": "catalog-acceptance-fictional-v1",
-  "evidenceDate": "2026-08-11",
-  "physicalTarget": "Samsung SM-X920 Android tablet",
-  "assetHashes": {"assets/federation_2399_raster/panel-nine-slice-v1.png": "1a11f86edb76286e6bf35c58188b23fee0a4414c0d173c8bd28f602732ec49aa"},
-  "objectiveEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237",
-  "decisionEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256590790",
-  "visualDecision": "Pending",
-  "followUpIssue": "https://github.com/mshamblin5150-code/clinical-calendar/issues/175",
-  "catalogAcceptanceState": "Pending",
-  "scope": "Android tablet only; no Windows or physical-phone acceptance"
+  "capturedAtUtc": "2026-08-11T14:48:43.000Z",
+  "environment": {
+    "platform": "Android",
+    "deviceModel": "Samsung SM-X920",
+    "osVersion": "device-managed Android",
+    "displayMode": "native 2960x1848 landscape and 1848x2960 portrait",
+    "orientation": "landscape and portrait",
+    "refreshRateHz": 120
+  },
+  "assetHashes": {
+    "assets/federation_2399_raster/panel-nine-slice-v1.png": "1a11f86edb76286e6bf35c58188b23fee0a4414c0d173c8bd28f602732ec49aa"
+  },
+  "reports": [
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/federation-2399/runtime-tokens-standard.json",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/federation-2399/runtime-tokens-enhanced.json",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/federation-2399/primary-frame.json",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/federation-2399/thumbnail-capture-required.json",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/federation-2399/performance-schema-example.json"
+  ],
+  "captures": [
+    "artifact://issue-139/android-final-b91f5f7/standard-landscape/federation-2399/calendar.png",
+    "artifact://issue-139/android-final-b91f5f7/standard-portrait/federation-2399/calendar.png",
+    "artifact://issue-139/android-final-b91f5f7/enhanced-landscape/federation-2399/calendar.png",
+    "artifact://issue-139/android-final-b91f5f7/text-200-standard/federation-2399/calendar.png",
+    "artifact://issue-139/android-final-b91f5f7/text-200-enhanced/federation-2399/calendar.png"
+  ],
+  "ciRun": "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31503547444",
+  "manualChecklists": [
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790"
+  ],
+  "accessibilityScannerReport": "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237",
+  "approvedSignerSha256": "9903aca5242daa0f926270940b4174687f65144b698d28a7c4dbd00bedb817f0",
+  "retrievedEvidenceSha256": {
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/federation-2399/runtime-tokens-standard.json": "1b2cb9d4ead1c0f3d9f09200b0af274c2adad75bfa457750ab761af2715801da",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/federation-2399/runtime-tokens-enhanced.json": "30432691139133385dc006d6d58fe369c1ffbefc03a54fd16e2473caebbd2188",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/federation-2399/primary-frame.json": "8026ed55d8cbd59acc4269c11a8f03187bb55da689adeb9ec73b9a7bd01ca720",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/federation-2399/thumbnail-capture-required.json": "fabce407c4eae3fbdafba6f661c3b582c7edc60b0d1b5b030a9e52df725399ea",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/federation-2399/performance-schema-example.json": "1c52e17e62a2ced1b9c7a35af770e8bb280b1305504a72cbf222391e8d730d0c",
+    "artifact://issue-139/android-final-b91f5f7/standard-landscape/federation-2399/calendar.png": "3e086b411c36e9e2a13ffbc36cfaac57c343ce337eda662ae63c92853c440538",
+    "artifact://issue-139/android-final-b91f5f7/standard-portrait/federation-2399/calendar.png": "5890c3be864804383503995774bfa8cd8e87b600b30fb4d16b3ab2c6dcf5defc",
+    "artifact://issue-139/android-final-b91f5f7/enhanced-landscape/federation-2399/calendar.png": "05c3d039cbf0c9b7458e1a04542dae817f4dd40ec3c47c9cfb548df6317e5c84",
+    "artifact://issue-139/android-final-b91f5f7/text-200-standard/federation-2399/calendar.png": "9f9a5455865e387ce3a08ee8fc0adbdda6e9fd61b966efeaab1be0f34b9c4e6c",
+    "artifact://issue-139/android-final-b91f5f7/text-200-enhanced/federation-2399/calendar.png": "35737c55bc3bbbf2c01a7c9a8fde4a4559b710fb04ec3b21439f4030aa0740cf",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237": "a3a77b33a239083eafd4c7b925b752d48d260d2a6008300a52281da9b8fac801",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790": "ade670340bc113bb362b4f3087cfef6c39af29e7d719e8b418ffea05f040c2db",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31503547444": "ba8686eeb15fd1c978e2573440b18b6338da54c92074d92ae187c452196d1e1c"
+  },
+  "contrastExceptions": [],
+  "gates": [
+    {
+      "gateId": "runtime-tokens",
+      "passed": false,
+      "failures": [
+        "Automated candidate manifest retains unresolved runtime-token failures."
+      ]
+    },
+    {
+      "gateId": "registry-ownership",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "asset-geometry-originality",
+      "passed": false,
+      "failures": [
+        "Automated candidate manifest retains unresolved originality attestation requirements."
+      ]
+    },
+    {
+      "gateId": "thumbnail-provenance",
+      "passed": false,
+      "failures": [
+        "Automated candidate manifest still records thumbnail capture as required."
+      ]
+    },
+    {
+      "gateId": "containment-drone-equality",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "switching-state",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "persistence",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "fallback-privacy",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "help",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "accessibility",
+      "passed": false,
+      "failures": [
+        "TalkBack and keyboard evidence passed, but no distinct Accessibility Scanner report is present."
+      ]
+    },
+    {
+      "gateId": "performance",
+      "passed": false,
+      "failures": [
+        "Candidate performance report remains measurement-required."
+      ]
+    },
+    {
+      "gateId": "physical-android-visual",
+      "passed": false,
+      "failures": [
+        "Maintainer kept Federation 2399 Pending; follow-up #175 owns Application Menu delta routing."
+      ]
+    }
+  ],
+  "approvalState": "pending",
+  "acceptanceState": "pending"
 }

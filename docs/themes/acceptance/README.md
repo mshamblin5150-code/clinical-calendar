@@ -97,3 +97,8 @@ passphrases in reports or captures.
 Originality remains a maintainer judgment. Every new frame needs a retrievable
 creation record and an explicit side-by-side approval against Containment
 Drone; the harness deliberately does not substitute a similarity score.
+
+Issue #139 manifests use `artifact://issue-139/android-final-b91f5f7/` for
+files in the private, credential-free physical evidence bundle described by
+the objective checkpoint. Each such reference carries the SHA-256 verified
+from that bundle; public GitHub API references carry retrieval hashes as well.

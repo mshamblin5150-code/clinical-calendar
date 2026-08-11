@@ -5,13 +5,129 @@
   "themeId": "graphite",
   "displayName": "Graphite",
   "fixture": "catalog-acceptance-fictional-v1",
-  "evidenceDate": "2026-08-11",
-  "physicalTarget": "Samsung SM-X920 Android tablet",
-  "assetHashes": {"assets/graphite_raster/panel-nine-slice-v1.png": "4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15"},
-  "objectiveEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237",
-  "decisionEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256590790",
-  "visualDecision": "Pending",
-  "followUpIssue": "https://github.com/mshamblin5150-code/clinical-calendar/issues/174",
-  "catalogAcceptanceState": "Pending",
-  "scope": "Android tablet only; no Windows or physical-phone acceptance"
+  "capturedAtUtc": "2026-08-11T14:48:43.000Z",
+  "environment": {
+    "platform": "Android",
+    "deviceModel": "Samsung SM-X920",
+    "osVersion": "device-managed Android",
+    "displayMode": "native 2960x1848 landscape and 1848x2960 portrait",
+    "orientation": "landscape and portrait",
+    "refreshRateHz": 120
+  },
+  "assetHashes": {
+    "assets/graphite_raster/panel-nine-slice-v1.png": "4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15"
+  },
+  "reports": [
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/runtime-tokens-standard.json",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/runtime-tokens-enhanced.json",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/primary-frame.json",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/thumbnail-capture-required.json",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/performance-schema-example.json"
+  ],
+  "captures": [
+    "artifact://issue-139/android-final-b91f5f7/standard-landscape/graphite/calendar.png",
+    "artifact://issue-139/android-final-b91f5f7/standard-portrait/graphite/calendar.png",
+    "artifact://issue-139/android-final-b91f5f7/enhanced-landscape/graphite/calendar.png",
+    "artifact://issue-139/android-final-b91f5f7/text-200-standard/graphite/calendar.png",
+    "artifact://issue-139/android-final-b91f5f7/text-200-enhanced/graphite/calendar.png"
+  ],
+  "ciRun": "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31503547444",
+  "manualChecklists": [
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790"
+  ],
+  "accessibilityScannerReport": "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237",
+  "approvedSignerSha256": "9903aca5242daa0f926270940b4174687f65144b698d28a7c4dbd00bedb817f0",
+  "retrievedEvidenceSha256": {
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/runtime-tokens-standard.json": "0ef5da2d68637c2f20032c72eace3db543a5dcd6b0595cc347427e1f8db61a6d",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/runtime-tokens-enhanced.json": "5e2a851eb36ddd9b5cfc2958d88768af10251dee55a075c2c051915f3bfe29cd",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/primary-frame.json": "4120f3594a616201ffd3c4b06ff1eee39362b2a03185503a90932b9cfa323cde",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/thumbnail-capture-required.json": "8607a615e14f3552a925fefc4c2f5b1bd49c82cf87ef9f751d83796f23e93f1b",
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/performance-schema-example.json": "1c52e17e62a2ced1b9c7a35af770e8bb280b1305504a72cbf222391e8d730d0c",
+    "artifact://issue-139/android-final-b91f5f7/standard-landscape/graphite/calendar.png": "ccd0fc686e91df0edcd1829c7161b1a2b8ba6f56ca4cfe909164159228e377f1",
+    "artifact://issue-139/android-final-b91f5f7/standard-portrait/graphite/calendar.png": "313a67ed020bb90769c1afc41287928f7d7306e0617c481fe61b5bba9ce67400",
+    "artifact://issue-139/android-final-b91f5f7/enhanced-landscape/graphite/calendar.png": "acf9b70ffc08b0a0e2dcb923506589d47769ea27e600700f4032a1ca6b6e6324",
+    "artifact://issue-139/android-final-b91f5f7/text-200-standard/graphite/calendar.png": "7dbf819dd76c1026cdc8fabe8e124b72090e3cf88647fe9dd7025681d1b15fb2",
+    "artifact://issue-139/android-final-b91f5f7/text-200-enhanced/graphite/calendar.png": "e1bb723e1463e2c1537c27fb7712dfeb5a7b745236f1ce06acf582b6f80cc2f1",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237": "a3a77b33a239083eafd4c7b925b752d48d260d2a6008300a52281da9b8fac801",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790": "ade670340bc113bb362b4f3087cfef6c39af29e7d719e8b418ffea05f040c2db",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31503547444": "ba8686eeb15fd1c978e2573440b18b6338da54c92074d92ae187c452196d1e1c"
+  },
+  "contrastExceptions": [],
+  "gates": [
+    {
+      "gateId": "runtime-tokens",
+      "passed": false,
+      "failures": [
+        "Automated candidate manifest retains unresolved runtime-token failures."
+      ]
+    },
+    {
+      "gateId": "registry-ownership",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "asset-geometry-originality",
+      "passed": false,
+      "failures": [
+        "Automated candidate manifest retains unresolved originality attestation requirements."
+      ]
+    },
+    {
+      "gateId": "thumbnail-provenance",
+      "passed": false,
+      "failures": [
+        "Automated candidate manifest still records thumbnail capture as required."
+      ]
+    },
+    {
+      "gateId": "containment-drone-equality",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "switching-state",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "persistence",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "fallback-privacy",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "help",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "gateId": "accessibility",
+      "passed": false,
+      "failures": [
+        "TalkBack and keyboard evidence passed, but no distinct Accessibility Scanner report is present."
+      ]
+    },
+    {
+      "gateId": "performance",
+      "passed": false,
+      "failures": [
+        "Candidate performance report remains measurement-required."
+      ]
+    },
+    {
+      "gateId": "physical-android-visual",
+      "passed": false,
+      "failures": [
+        "Maintainer kept Graphite Pending; follow-up #174 owns delta routing and upper/lower box chrome ownership."
+      ]
+    }
+  ],
+  "approvalState": "pending",
+  "acceptanceState": "pending"
 }
