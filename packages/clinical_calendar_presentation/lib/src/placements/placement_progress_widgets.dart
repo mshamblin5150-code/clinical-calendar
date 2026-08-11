@@ -9,6 +9,7 @@ import '../additive_semantic_colors.dart';
 import '../coastal_light_panel_scope.dart';
 import '../federation_classic_panel_scope.dart';
 import '../graphite_instrument_scope.dart';
+import '../heritage_field_notes_panel_scope.dart';
 import '../insight_rail_presentation_policy.dart';
 import '../tactical_frame.dart';
 import '../variant_f_theme.dart';
@@ -1381,6 +1382,22 @@ final class _TacticalPanel extends StatelessWidget {
     if (CoastalLightPanelScope.isActive(context)) {
       return CoastalLightWorkflowHousing(
         role: coastalRole,
+        label: label,
+        accent: statusColor,
+        showHeader: false,
+        child: adaptiveContent,
+      );
+    }
+    if (HeritageFieldNotesPanelScope.isActive(context)) {
+      final role = switch (coastalRole) {
+        CoastalLightPanelRole.placements =>
+          HeritageFieldNotesPanelRole.placements,
+        CoastalLightPanelRole.clinicalPlacement =>
+          HeritageFieldNotesPanelRole.clinicalPlacement,
+        _ => HeritageFieldNotesPanelRole.supporting,
+      };
+      return HeritageFieldNotesWorkflowHousing(
+        role: role,
         label: label,
         accent: statusColor,
         showHeader: false,

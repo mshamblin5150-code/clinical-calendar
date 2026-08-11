@@ -35,6 +35,7 @@ export 'src/graphite_shell.dart';
 export 'src/graphite_theme.dart';
 export 'src/insight_rail_presentation_policy.dart';
 export 'src/heritage_field_notes_frame.dart';
+export 'src/heritage_field_notes_panel_scope.dart';
 export 'src/heritage_field_notes_shell.dart';
 export 'src/heritage_field_notes_theme.dart';
 export 'src/evaluation_attention/attention_surfaces.dart';

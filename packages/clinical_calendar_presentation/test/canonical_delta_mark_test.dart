@@ -125,9 +125,11 @@ void main() {
           '${packageDirectory.path}${Platform.pathSeparator}'
           '${relativePath.replaceAll('/', Platform.pathSeparator)}',
         ).readAsString();
-        final expectedReferences = relativePath == 'lib/src/graphite_shell.dart'
-            ? 2
-            : 1;
+        final expectedReferences = switch (relativePath) {
+          'lib/src/graphite_shell.dart' ||
+          'lib/src/heritage_field_notes_shell.dart' => 2,
+          _ => 1,
+        };
         expect(
           RegExp(r'CanonicalDeltaMark\(').allMatches(source),
           hasLength(expectedReferences),

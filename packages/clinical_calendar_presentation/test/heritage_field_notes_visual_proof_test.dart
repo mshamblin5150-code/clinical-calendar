@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/proof_fonts.dart';
+import 'support/placement_progress_harness.dart';
 
 const _studentId = '00000000-0000-4000-8000-000000000137';
 final _today = LocalDate(2026, 8, 6);
@@ -25,6 +26,81 @@ void main() {
       find.byKey(const Key('heritage-field-notes-proof')),
       matchesGoldenFile(
         'goldens/heritage_field_notes/heritage_field_notes_landscape_1536x1024.png',
+      ),
+    );
+  });
+
+  testWidgets('Field Archive crown exposes shared destination controls', (
+    tester,
+  ) async {
+    final opened = <ClinicalCalendarDestination>[];
+    await _pumpProof(
+      tester,
+      const Size(1536, 1024),
+      onOpenDestination: opened.add,
+    );
+
+    for (final key in const [
+      Key('heritage-field-notes-add-placement-action'),
+      Key('heritage-field-notes-help-action'),
+      Key('heritage-field-notes-profile-action'),
+    ]) {
+      expect(find.byKey(key).hitTestable(), findsOneWidget);
+    }
+
+    await tester.tap(
+      find.byKey(const Key('heritage-field-notes-add-placement-action')),
+    );
+    await tester.tap(find.byKey(const Key('heritage-field-notes-help-action')));
+    await tester.tap(
+      find.byKey(const Key('heritage-field-notes-profile-action')),
+    );
+    expect(opened, [
+      ClinicalCalendarDestination.clinicalPlacements,
+      ClinicalCalendarDestination.help,
+    ]);
+  });
+
+  testWidgets('Field Archive owns destination crown and housing', (
+    tester,
+  ) async {
+    final harness = PlacementProgressHarness(
+      familyName: 'Acceptance Family Medicine',
+    );
+    await harness.controller.load();
+    await _pumpDestinationProof(
+      tester,
+      destination: ClinicalCalendarDestination.clinicalPlacements,
+      child: PlacementManagementSurface(
+        controller: harness.controller,
+        studentId: placementTestStudentId,
+      ),
+    );
+
+    expect(
+      find.byKey(const Key('heritage-field-notes-destination-shell')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('heritage-field-notes-destination-crown')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('heritage-field-notes-destination-housing')),
+      findsOneWidget,
+    );
+    expect(find.byType(AdditiveThemeDestinationSurface), findsNothing);
+    expect(
+      find.byKey(const Key('placement-management-surface')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('add-placement-action')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await expectLater(
+      find.byKey(const Key('heritage-field-notes-destination-proof')),
+      matchesGoldenFile(
+        'goldens/heritage_field_notes/'
+        'heritage_field_notes_destination_clinical_placements_1536x1024.png',
       ),
     );
   });
@@ -80,6 +156,8 @@ Future<void> _pumpProof(
   WidgetTester tester,
   Size size, {
   TextScaler textScaler = TextScaler.noScaling,
+  ValueChanged<ClinicalCalendarDestination> onOpenDestination =
+      _ignoreDestination,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -162,7 +240,7 @@ Future<void> _pumpProof(
             slots: slots,
             environmentName: 'CC-2026-08',
             onOpenMenu: _noop,
-            onOpenDestination: _ignoreDestination,
+            onOpenDestination: onOpenDestination,
             onOpenAttention: _noop,
             onAddSchedule: _noop,
           ),
@@ -185,6 +263,72 @@ Future<void> _pumpProof(
     }
   }
   await tester.pump();
+  expect(tester.takeException(), isNull);
+}
+
+Future<void> _pumpDestinationProof(
+  WidgetTester tester, {
+  required ClinicalCalendarDestination destination,
+  required Widget child,
+}) async {
+  await tester.binding.setSurfaceSize(const Size(1536, 1024));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  final proofAssets = _ProofAssetBundle(
+    frameFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/$heritageFieldNotesFrameAsset',
+    ),
+    brandFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/$canonicalDeltaMarkAsset',
+    ),
+    chassisFile: _findWorkspaceFile(
+      'packages/clinical_calendar_presentation/'
+      '$heritageFieldNotesMaterialChassisAsset',
+    ),
+  );
+  final preloadKey = GlobalKey();
+  await tester.pumpWidget(
+    DefaultAssetBundle(
+      bundle: proofAssets,
+      child: MaterialApp(home: SizedBox(key: preloadKey)),
+    ),
+  );
+  await tester.runAsync(() async {
+    await precacheImage(
+      const AssetImage(
+        heritageFieldNotesFrameAsset,
+        package: 'clinical_calendar_presentation',
+      ),
+      preloadKey.currentContext!,
+    );
+    await precacheImage(
+      const AssetImage(
+        canonicalDeltaMarkAsset,
+        package: 'clinical_calendar_presentation',
+      ),
+      preloadKey.currentContext!,
+    );
+  });
+  await tester.pump();
+  const themeBundle = HeritageFieldNotesThemeBundle();
+  await tester.pumpWidget(
+    DefaultAssetBundle(
+      bundle: proofAssets,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: themeBundle.standardPresentation.createThemeData(),
+        home: RepaintBoundary(
+          key: const Key('heritage-field-notes-destination-proof'),
+          child: themeBundle.shellRenderer.buildDestination(
+            destination: destination,
+            entry: DestinationEntry.applicationMenu,
+            onExit: _noop,
+            child: child,
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
 }
 
