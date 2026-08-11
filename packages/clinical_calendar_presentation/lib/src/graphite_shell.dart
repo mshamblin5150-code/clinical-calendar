@@ -18,6 +18,28 @@ Widget _buildGraphiteFrame(
   child: child,
 );
 
+/// Graphite-owned decomposition of the shared live insight surfaces.
+///
+/// Other themes continue to consume [ResponsiveShellSlots.insightRail] as one
+/// opaque widget. Graphite uses this wrapper to keep placement progress and
+/// Needs Attention inside independently clipped concept housings.
+final class GraphiteInsightRailSlots extends StatelessWidget {
+  const GraphiteInsightRailSlots({
+    required this.placementProgress,
+    required this.attention,
+    super.key,
+  });
+
+  final Widget placementProgress;
+  final Widget attention;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [placementProgress, const SizedBox(height: 10), attention],
+  );
+}
+
 final class GraphiteDestinationSurface extends StatelessWidget {
   const GraphiteDestinationSurface({
     required this.destination,
@@ -148,8 +170,6 @@ final class _GraphiteDestinationCrown extends StatelessWidget {
               child: const ExcludeSemantics(child: CanonicalDeltaMark()),
             ),
           ),
-          const SizedBox(width: 10),
-          const _GraphiteGridIcon(key: Key('graphite-destination-grid')),
         ],
       ),
     );
@@ -314,6 +334,9 @@ final class GraphiteApplicationShell extends StatelessWidget {
           builder: (context, constraints) {
             final width = constraints.maxWidth;
             final height = constraints.maxHeight;
+            final splitInsight = slots.insightRail is GraphiteInsightRailSlots
+                ? slots.insightRail as GraphiteInsightRailSlots
+                : null;
             return Stack(
               children: [
                 Positioned(
@@ -370,19 +393,59 @@ final class GraphiteApplicationShell extends StatelessWidget {
                     ),
                   ),
                 ),
-                Positioned(
-                  left: width * .757,
-                  top: height * .085,
-                  width: width * .243,
-                  height: height * .82,
-                  child: _GraphiteInstrumentBay(
-                    key: const Key('graphite-insight-bay'),
-                    safeInsets: graphiteStatusSafeInsets,
-                    accent: _GraphiteAccent.coral,
-                    integrated: true,
-                    child: GraphiteInstrumentScope(child: slots.insightRail),
+                if (splitInsight != null) ...[
+                  Positioned(
+                    left: width * .757,
+                    top: height * .085,
+                    width: width * .243,
+                    height: height * .475,
+                    child: _GraphiteInstrumentBay(
+                      key: const Key('graphite-placement-progress-housing'),
+                      clipKey: const Key('graphite-placement-progress-clip'),
+                      safeInsets: graphiteStatusSafeInsets,
+                      accent: _GraphiteAccent.emerald,
+                      integrated: true,
+                      child: GraphiteInstrumentScope(
+                        child: SingleChildScrollView(
+                          primary: false,
+                          child: splitInsight.placementProgress,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  Positioned(
+                    left: width * .757,
+                    top: height * .569,
+                    width: width * .243,
+                    height: height * .336,
+                    child: _GraphiteInstrumentBay(
+                      key: const Key('graphite-attention-housing'),
+                      clipKey: const Key('graphite-attention-clip'),
+                      safeInsets: graphiteStatusSafeInsets,
+                      accent: _GraphiteAccent.coral,
+                      integrated: true,
+                      child: GraphiteInstrumentScope(
+                        child: SingleChildScrollView(
+                          primary: false,
+                          child: splitInsight.attention,
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else
+                  Positioned(
+                    left: width * .757,
+                    top: height * .085,
+                    width: width * .243,
+                    height: height * .82,
+                    child: _GraphiteInstrumentBay(
+                      key: const Key('graphite-insight-bay'),
+                      safeInsets: graphiteStatusSafeInsets,
+                      accent: _GraphiteAccent.coral,
+                      integrated: true,
+                      child: GraphiteInstrumentScope(child: slots.insightRail),
+                    ),
+                  ),
                 Positioned(
                   left: 0,
                   top: height * .914,
@@ -719,58 +782,6 @@ abstract final class _GraphiteChrome {
   static const decorativeBoundary = Color(0xFF5C646A);
 }
 
-final class _GraphiteGridIcon extends StatelessWidget {
-  const _GraphiteGridIcon({super.key});
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-    size: const Size.square(28),
-    painter: _GraphiteGridPainter(
-      line: context.clinicalColors.secondaryText,
-      signal: context.clinicalColors.clinical,
-    ),
-  );
-}
-
-final class _GraphiteGridPainter extends CustomPainter {
-  const _GraphiteGridPainter({required this.line, required this.signal});
-
-  final Color line;
-  final Color signal;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const cell = 5.0;
-    const gap = 3.0;
-    final origin = Offset(
-      (size.width - (cell * 3 + gap * 2)) / 2,
-      (size.height - (cell * 3 + gap * 2)) / 2,
-    );
-    for (var row = 0; row < 3; row++) {
-      for (var column = 0; column < 3; column++) {
-        final rect = Rect.fromLTWH(
-          origin.dx + column * (cell + gap),
-          origin.dy + row * (cell + gap),
-          cell,
-          cell,
-        );
-        final active = row == 1 && column == 2;
-        canvas.drawRect(
-          rect,
-          Paint()
-            ..color = active ? signal : line.withValues(alpha: .62)
-            ..style = active ? PaintingStyle.fill : PaintingStyle.stroke
-            ..strokeWidth = 1,
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_GraphiteGridPainter oldDelegate) =>
-      line != oldDelegate.line || signal != oldDelegate.signal;
-}
-
 final class _GraphiteCalendarViewport extends StatelessWidget {
   const _GraphiteCalendarViewport({
     required this.child,
@@ -808,6 +819,7 @@ final class _GraphiteInstrumentBay extends StatelessWidget {
     required this.child,
     this.integrated = false,
     this.integratedPadding = const EdgeInsets.fromLTRB(23, 18, 23, 18),
+    this.clipKey,
     super.key,
   });
 
@@ -816,6 +828,7 @@ final class _GraphiteInstrumentBay extends StatelessWidget {
   final Widget child;
   final bool integrated;
   final EdgeInsets integratedPadding;
+  final Key? clipKey;
 
   @override
   Widget build(BuildContext context) {
@@ -829,7 +842,11 @@ final class _GraphiteInstrumentBay extends StatelessWidget {
       color: _GraphiteChrome.contentSurface.withValues(alpha: .96),
       child: Padding(
         padding: integrated ? integratedPadding : EdgeInsets.zero,
-        child: ClipRect(clipBehavior: Clip.hardEdge, child: child),
+        child: ClipRect(
+          key: clipKey,
+          clipBehavior: Clip.hardEdge,
+          child: child,
+        ),
       ),
     );
     return DecoratedBox(
@@ -913,12 +930,16 @@ final class _GraphiteCommandCrown extends StatelessWidget {
       ),
       child: Row(
         children: [
-          SizedBox.square(
-            dimension: compact ? 40 : 50,
-            child: Semantics(
-              label: 'Graphite calendar mark',
-              image: true,
-              child: const ExcludeSemantics(child: CanonicalDeltaMark()),
+          Semantics(
+            label: 'Open menu',
+            button: true,
+            child: IconButton(
+              key: const Key('application-menu-action'),
+              tooltip: 'Open menu',
+              onPressed: onOpenMenu,
+              iconSize: compact ? 40 : 50,
+              padding: EdgeInsets.zero,
+              icon: const ExcludeSemantics(child: CanonicalDeltaMark()),
             ),
           ),
           SizedBox(width: compact ? 8 : 12),
@@ -952,12 +973,6 @@ final class _GraphiteCommandCrown extends StatelessWidget {
           SizedBox.square(
             dimension: compact ? 36 : 40,
             child: FittedBox(child: profileAvatar),
-          ),
-          IconButton(
-            key: const Key('application-menu-action'),
-            tooltip: 'Open menu',
-            onPressed: onOpenMenu,
-            icon: const _GraphiteGridIcon(),
           ),
         ],
       ),

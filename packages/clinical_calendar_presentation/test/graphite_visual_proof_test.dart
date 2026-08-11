@@ -66,7 +66,7 @@ void main() {
       reason: 'The END field must clear the planning bay chrome.',
     );
 
-    expect(find.bySemanticsLabel('Graphite calendar mark'), findsOneWidget);
+    expect(find.bySemanticsLabel('Open menu'), findsOneWidget);
     expect(
       find.byKey(const Key('graphite-assignment-control-housing')),
       findsOneWidget,
@@ -79,6 +79,58 @@ void main() {
     await tester.tap(find.byKey(const Key('add-academic-assignment')));
     expect(addAssignmentInvocations, 1);
   });
+
+  testWidgets(
+    'Graphite expanded Preceptors remain clipped above Needs Attention',
+    (tester) async {
+      await _pumpProof(tester, const Size(1536, 1024));
+      final placementHousing = find.byKey(
+        const Key('graphite-placement-progress-housing'),
+      );
+      final attentionHousing = find.byKey(
+        const Key('graphite-attention-housing'),
+      );
+      final collapsedPlacement = tester.getRect(placementHousing);
+      final collapsedAttention = tester.getRect(attentionHousing);
+
+      await tester.tap(find.byKey(const Key('toggle-preceptor-breakdown')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PreceptorProgressBreakdown), findsOneWidget);
+      expect(tester.getRect(placementHousing), collapsedPlacement);
+      expect(tester.getRect(attentionHousing), collapsedAttention);
+      expect(collapsedPlacement.bottom, lessThan(collapsedAttention.top));
+      expect(
+        find.descendant(
+          of: placementHousing,
+          matching: find.byKey(const Key('graphite-placement-progress-clip')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: attentionHousing,
+          matching: find.byKey(const Key('graphite-attention-clip')),
+        ),
+        findsOneWidget,
+      );
+      await tester.drag(
+        find
+            .descendant(of: placementHousing, matching: find.byType(Scrollable))
+            .first,
+        const Offset(0, -300),
+      );
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byKey(const Key('graphite-proof')),
+        matchesGoldenFile(
+          'goldens/graphite/'
+          'graphite_landscape_preceptors_expanded_1536x1024.png',
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Graphite landscape directly matches the approved concept', (
     tester,
@@ -353,21 +405,15 @@ Future<void> _pumpProof(
       controller: placementHarness.controller,
       studentId: placementTestStudentId,
     ),
-    insightRail: SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PlacementProgressRail(
-            controller: placementHarness.controller,
-            studentId: placementTestStudentId,
-          ),
-          const SizedBox(height: 10),
-          AttentionRail(
-            controller: placementHarness.attentionController,
-            onOpenAction: (_) {},
-            onOpenAll: _noop,
-          ),
-        ],
+    insightRail: GraphiteInsightRailSlots(
+      placementProgress: PlacementProgressRail(
+        controller: placementHarness.controller,
+        studentId: placementTestStudentId,
+      ),
+      attention: AttentionRail(
+        controller: placementHarness.attentionController,
+        onOpenAction: (_) {},
+        onOpenAll: _noop,
       ),
     ),
     mobilePlacementSummary: const _ProofPanel(

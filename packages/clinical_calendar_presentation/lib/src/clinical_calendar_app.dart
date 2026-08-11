@@ -25,6 +25,7 @@ import 'federation_2399_console_scope.dart';
 import 'enhanced_accessibility_controller.dart';
 import 'enhanced_focus_perimeter.dart';
 import 'graphite_frame.dart';
+import 'graphite_shell.dart';
 import 'heritage_field_notes_panel_scope.dart';
 import 'identity/identity_devices_surface.dart';
 import 'placements/placement_management_surface.dart';
@@ -1482,13 +1483,10 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             ),
           ),
         ),
-        insightRail: KeyedSubtree(
-          key: _insightRailContentKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _PlacementLoadState(
+        insightRail: widget.themeBundle.id == graphiteThemeId
+            ? GraphiteInsightRailSlots(
+                key: _insightRailContentKey,
+                placementProgress: _PlacementLoadState(
                   controller: _placementController,
                   onRetry: _placementController.load,
                   child: PlacementProgressRail(
@@ -1496,16 +1494,36 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
                     studentId: widget.studentId,
                   ),
                 ),
-                const SizedBox(height: 10),
-                AttentionRail(
+                attention: AttentionRail(
                   controller: _attentionController,
                   onOpenAction: _openAttentionItem,
                   onOpenAll: _openAttentionCenter,
                 ),
-              ],
-            ),
-          ),
-        ),
+              )
+            : KeyedSubtree(
+                key: _insightRailContentKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _PlacementLoadState(
+                        controller: _placementController,
+                        onRetry: _placementController.load,
+                        child: PlacementProgressRail(
+                          controller: _placementController,
+                          studentId: widget.studentId,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      AttentionRail(
+                        controller: _attentionController,
+                        onOpenAction: _openAttentionItem,
+                        onOpenAll: _openAttentionCenter,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
         mobilePlacementSummary: KeyedSubtree(
           key: _mobilePlacementContentKey,
           child: _PlacementLoadState(

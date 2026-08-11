@@ -648,8 +648,11 @@ void main() {
     final planning = tester.getRect(
       find.byKey(const Key('graphite-planning-bay')),
     );
-    final insight = tester.getRect(
-      find.byKey(const Key('graphite-insight-bay')),
+    final placementProgress = tester.getRect(
+      find.byKey(const Key('graphite-placement-progress-housing')),
+    );
+    final attention = tester.getRect(
+      find.byKey(const Key('graphite-attention-housing')),
     );
     final navigation = tester.getRect(
       find.byKey(const Key('graphite-bottom-navigation')),
@@ -657,9 +660,11 @@ void main() {
     expect(crown.height / 1024, closeTo(.078, .012));
     expect(placements.width / 1536, closeTo(.19, .012));
     expect(calendar.width / 1536, closeTo(.55, .012));
-    expect(insight.width / 1536, closeTo(.24, .012));
+    expect(placementProgress.width / 1536, closeTo(.24, .012));
+    expect(attention.width, placementProgress.width);
     expect(placements.right, lessThan(calendar.left));
-    expect(calendar.right, lessThan(insight.left));
+    expect(calendar.right, lessThan(placementProgress.left));
+    expect(placementProgress.bottom, lessThan(attention.top));
     expect(planning.left, calendar.left);
     expect(planning.right, calendar.right);
     expect(planning.top, greaterThan(calendar.bottom));
@@ -694,6 +699,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final applicationMenu = find.byKey(const Key('application-menu-action'));
+    expect(
+      find.descendant(
+        of: applicationMenu,
+        matching: find.byType(CanonicalDeltaMark),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('graphite-destination-grid')), findsNothing);
     await tester.tap(find.byTooltip('Open menu'));
     await tester.tap(find.byTooltip('Add schedule'));
     await tester.tap(find.byTooltip('Help'));
@@ -711,6 +725,84 @@ void main() {
     ]);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Graphite keeps expanded preceptor progress above the attention boundary',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1536, 1024));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        _shellHarness(
+          theme: graphite.standardPresentation.createThemeData(),
+          boundaryKey: GlobalKey(),
+          shell: graphite.shellRenderer.build(
+            slots: ResponsiveShellSlots(
+              centralContent: const Text('Calendar fixture'),
+              planningRegion: const Text('Planning fixture'),
+              placementDock: const Text('Placement fixture'),
+              insightRail: const GraphiteInsightRailSlots(
+                placementProgress: _ExpandablePreceptorFixture(),
+                attention: ColoredBox(
+                  key: Key('attention-menu-fixture'),
+                  color: Colors.red,
+                  child: SizedBox(height: 200),
+                ),
+              ),
+              mobilePlacementSummary: const Text('Placement summary fixture'),
+              mobileAttention: const Text('Attention fixture'),
+              profileAvatar: const SizedBox.square(dimension: 44),
+            ),
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final upperFinder = find.byKey(
+        const Key('graphite-placement-progress-housing'),
+      );
+      final lowerFinder = find.byKey(const Key('graphite-attention-housing'));
+      final collapsedUpper = tester.getRect(upperFinder);
+      final collapsedLower = tester.getRect(lowerFinder);
+      expect(collapsedUpper.bottom, lessThan(collapsedLower.top));
+      expect(
+        find.descendant(
+          of: upperFinder,
+          matching: find.byKey(const Key('graphite-placement-progress-clip')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: lowerFinder,
+          matching: find.byKey(const Key('graphite-attention-clip')),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('toggle-preceptor-breakdown')));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getRect(upperFinder),
+        collapsedUpper,
+        reason: 'Expanding Preceptors must not move the ownership boundary.',
+      );
+      expect(tester.getRect(lowerFinder), collapsedLower);
+      expect(
+        tester
+            .getRect(find.byKey(const Key('attention-menu-fixture')))
+            .overlaps(collapsedUpper),
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Graphite portrait owns one ordered vertical reading path', (
     tester,
@@ -1865,7 +1957,7 @@ void main() {
         );
         expect(
           find.byKey(const Key('graphite-destination-grid')),
-          findsOneWidget,
+          findsNothing,
           reason: destination.label,
         );
         expect(find.byType(CanonicalDeltaMark), findsOneWidget);
@@ -2118,11 +2210,48 @@ const _slots = ResponsiveShellSlots(
   centralContent: Center(child: Text('Calendar fixture')),
   planningRegion: Text('Planning fixture'),
   placementDock: Text('Placement fixture'),
-  insightRail: Text('Insight fixture'),
+  insightRail: GraphiteInsightRailSlots(
+    placementProgress: Text('Placement progress fixture'),
+    attention: Text('Attention rail fixture'),
+  ),
   mobilePlacementSummary: Text('Placement summary fixture'),
   mobileAttention: Text('Attention fixture'),
   profileAvatar: SizedBox.square(dimension: 44),
 );
+
+final class _ExpandablePreceptorFixture extends StatefulWidget {
+  const _ExpandablePreceptorFixture();
+
+  @override
+  State<_ExpandablePreceptorFixture> createState() =>
+      _ExpandablePreceptorFixtureState();
+}
+
+final class _ExpandablePreceptorFixtureState
+    extends State<_ExpandablePreceptorFixture> {
+  var _expanded = false;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const SizedBox(height: 160, child: Text('Placement wheel fixture')),
+      TextButton(
+        key: const Key('toggle-preceptor-breakdown'),
+        onPressed: () => setState(() => _expanded = !_expanded),
+        child: Text(_expanded ? 'HIDE PRECEPTORS' : 'SHOW PRECEPTORS'),
+      ),
+      if (_expanded)
+        const SizedBox(
+          height: 600,
+          child: ColoredBox(
+            color: Colors.green,
+            child: Text('Expanded Preceptors'),
+          ),
+        ),
+    ],
+  );
+}
 
 void _noop() {}
 
