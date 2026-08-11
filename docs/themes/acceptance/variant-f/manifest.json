@@ -36,7 +36,7 @@
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790"
   ],
-  "accessibilityScannerReport": "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237",
+  "accessibilityScannerReport": "docs/themes/acceptance/issue-139/accessibility-scanner-pending.json",
   "approvedSignerSha256": "9903aca5242daa0f926270940b4174687f65144b698d28a7c4dbd00bedb817f0",
   "retrievedEvidenceSha256": {
     "artifact://issue-139/android-final-b91f5f7/automated-manifests/variant-f/runtime-tokens-standard.json": "291d4a75c49fe103c581fca0386c120429c99c6a957f022a4a32d4fabd865ef1",
@@ -51,7 +51,8 @@
     "artifact://issue-139/android-final-b91f5f7/text-200-enhanced/containment-drone/calendar.png": "552d70d96826273768debc0b5f2c66994c28a1e1c2cf858287dcad6798680860",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237": "a3a77b33a239083eafd4c7b925b752d48d260d2a6008300a52281da9b8fac801",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790": "ade670340bc113bb362b4f3087cfef6c39af29e7d719e8b418ffea05f040c2db",
-    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31503547444": "ba8686eeb15fd1c978e2573440b18b6338da54c92074d92ae187c452196d1e1c"
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31503547444": "ba8686eeb15fd1c978e2573440b18b6338da54c92074d92ae187c452196d1e1c",
+    "docs/themes/acceptance/issue-139/accessibility-scanner-pending.json": "ffda4f1659fb9d8c010cd14a75f14c0e73d539ad34c02ce8118e01d2b9e7850a"
   },
   "contrastExceptions": [],
   "gates": [

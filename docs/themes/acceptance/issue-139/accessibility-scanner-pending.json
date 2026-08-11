@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "issue": 139,
+  "candidateCommit": "b91f5f7fc4f58e41049ff9e8c72ea9c1801a168f",
+  "candidateBuild": 43,
+  "target": "Samsung SM-X920 Android tablet",
+  "status": "pending",
+  "recordedEvidence": [
+    "TalkBack service bound and focused the Clinical Calendar window",
+    "Keyboard traversal retained a focused semantic node in all seven Gallery captures",
+    "TalkBack was restored to disabled with no enabled accessibility services"
+  ],
+  "missingEvidence": "No distinct Android Accessibility Scanner report or maintainer adjudication was captured for this candidate.",
+  "objectiveCheckpoint": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237"
+}
