@@ -41,15 +41,133 @@ final class BotanicalStudyDestinationSurface extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => AdditiveThemeDestinationSurface(
-    destination: destination,
-    entry: entry,
-    onExit: onExit,
-    frameBuilder: _buildBotanicalStudyFrame,
-    statusSafeInsets: botanicalStudyStatusSafeInsets,
-    compactDestinationInsets: botanicalStudyCompactDestinationInsets,
-    child: child,
-  );
+  Widget build(BuildContext context) {
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    return Scaffold(
+      key: const Key('botanical-study-destination-shell'),
+      backgroundColor: BotanicalStudyColors.canvas,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _BotanicalStudyDestinationCrown(
+                destination: destination,
+                entry: entry,
+                onExit: onExit,
+                enlargedText: enlargedText,
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: _BotanicalStudyConsoleBay(
+                  key: const Key('botanical-study-destination-bay'),
+                  accent: _destinationAccent(destination),
+                  shape: _BotanicalStudyBayShape.insight,
+                  child: KeyedSubtree(
+                    key: const Key('botanical-study-destination-scroll'),
+                    child: AdditiveThemePanelInterior(child: child),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static _BotanicalStudyBayAccent _destinationAccent(
+    ClinicalCalendarDestination destination,
+  ) => switch (destination) {
+    ClinicalCalendarDestination.notifications ||
+    ClinicalCalendarDestination.trashRecovery =>
+      _BotanicalStudyBayAccent.dustyRose,
+    _ => _BotanicalStudyBayAccent.eucalyptus,
+  };
+}
+
+final class _BotanicalStudyDestinationCrown extends StatelessWidget {
+  const _BotanicalStudyDestinationCrown({
+    required this.destination,
+    required this.entry,
+    required this.onExit,
+    required this.enlargedText,
+  });
+
+  final ClinicalCalendarDestination destination;
+  final DestinationEntry entry;
+  final VoidCallback onExit;
+  final bool enlargedText;
+
+  @override
+  Widget build(BuildContext context) {
+    final enteredFromMenu = entry == DestinationEntry.applicationMenu;
+    return CustomPaint(
+      key: const Key('botanical-study-destination-crown'),
+      painter: _BotanicalStudyCrownPainter(
+        structure: context.clinicalColors.structureRaised,
+        border: context.clinicalColors.insetBorder,
+        rose: context.clinicalColors.workMachinery,
+        sage: context.clinicalColors.clinical,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: enlargedText ? 112 : 82),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: enlargedText ? 12 : 20,
+            vertical: 8,
+          ),
+          child: Row(
+            children: [
+              TextButton.icon(
+                key: Key(enteredFromMenu ? 'back-action' : 'close-action'),
+                onPressed: onExit,
+                icon: Icon(enteredFromMenu ? Icons.arrow_back : Icons.close),
+                label: Text(enteredFromMenu ? 'Back' : 'Close'),
+              ),
+              SizedBox(width: enlargedText ? 8 : 18),
+              _BotanicalStudyAxionDeltaMark(size: enlargedText ? 40 : 46),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      destination.label,
+                      maxLines: 2,
+                      overflow: TextOverflow.clip,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: BotanicalStudyColors.focus,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: .8,
+                          ),
+                    ),
+                    if (!enlargedText)
+                      Text(
+                        'CLINICAL CALENDAR  /  BOTANICAL STUDY',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: context.clinicalColors.secondaryText,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (!enlargedText)
+                const SizedBox(
+                  width: 190,
+                  height: 34,
+                  child: _BotanicalStudyScale(),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 final class BotanicalStudyApplicationShell extends StatelessWidget {
@@ -584,6 +702,8 @@ final class _BotanicalStudyCommandCrown extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(29, 8, 10, 7),
           child: Row(
             children: [
+              const _BotanicalStudyAxionDeltaMark(size: 42),
+              const SizedBox(width: 8),
               Tooltip(
                 message: 'Open menu',
                 child: Transform.translate(
@@ -607,8 +727,6 @@ final class _BotanicalStudyCommandCrown extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              const _BotanicalStudyAxionDeltaMark(size: 42),
               const Spacer(),
               if (!enlargedText)
                 Column(

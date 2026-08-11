@@ -67,6 +67,7 @@ Production Flutter, final nine-slice artwork, and deterministic implementation
 evidence are owned by issue #135. Physical Android acceptance remains pending
 in catalog device-acceptance issue #139.
 
-The latest production candidate and side-by-side evidence are recorded in
-`docs/themes/acceptance/proofs/botanical-study-v4/`. That package remains a
-candidate until the maintainer explicitly approves it on issue #135.
+The latest production repair candidate and side-by-side evidence are recorded
+in `docs/themes/acceptance/proofs/botanical-study-v5/`. That package remains a
+candidate pending physical SM-X920 review and an explicit maintainer decision
+on issue #139; issue #164 owns the implementation repair.

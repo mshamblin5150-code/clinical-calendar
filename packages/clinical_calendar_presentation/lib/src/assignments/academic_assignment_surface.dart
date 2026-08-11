@@ -3,6 +3,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../date_input.dart';
+import '../botanical_study_theme.dart';
 import '../coastal_light_theme.dart';
 import '../theme_contract.dart';
 
@@ -42,6 +43,9 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
       coastalCalmThemeId => _CoastalLightAssignmentControlHousing(
         onPressed: onAddAssignment,
       ),
+      botanicalStudyThemeId => _BotanicalStudyAssignmentControlHousing(
+        onPressed: onAddAssignment,
+      ),
       _ => Align(
         alignment: AlignmentDirectional.centerEnd,
         widthFactor: 1,
@@ -79,6 +83,67 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
       },
     );
   }
+}
+
+final class _BotanicalStudyAssignmentControlHousing extends StatelessWidget {
+  const _BotanicalStudyAssignmentControlHousing({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    key: const Key('botanical-study-assignment-control-housing'),
+    painter: const _BotanicalStudyAssignmentControlPainter(),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(12, 7, 14, 7),
+      child: TextButton.icon(
+        key: const Key('add-academic-assignment'),
+        onPressed: onPressed,
+        icon: const Icon(Icons.assignment_add),
+        label: const Text('Add Assignment'),
+      ),
+    ),
+  );
+}
+
+final class _BotanicalStudyAssignmentControlPainter extends CustomPainter {
+  const _BotanicalStudyAssignmentControlPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final outer = Path()
+      ..moveTo(8, 0)
+      ..lineTo(size.width - 18, 0)
+      ..lineTo(size.width, 18)
+      ..lineTo(size.width, size.height - 8)
+      ..quadraticBezierTo(size.width, size.height, size.width - 8, size.height)
+      ..lineTo(18, size.height)
+      ..lineTo(0, size.height - 18)
+      ..lineTo(0, 8)
+      ..quadraticBezierTo(0, 0, 8, 0)
+      ..close();
+    canvas.drawPath(outer, Paint()..color = BotanicalStudyColors.surface);
+    canvas.drawPath(
+      outer,
+      Paint()
+        ..color = BotanicalStudyColors.clinical
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    canvas.drawLine(
+      const Offset(14, 5),
+      Offset(size.width * .42, 5),
+      Paint()
+        ..color = BotanicalStudyColors.workAccent
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BotanicalStudyAssignmentControlPainter oldDelegate) =>
+      false;
 }
 
 final class _CoastalLightAssignmentControlHousing extends StatelessWidget {

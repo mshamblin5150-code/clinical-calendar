@@ -1073,7 +1073,18 @@ void main() {
       expect(find.byKey(const Key('placement-progress-rail')), findsOneWidget);
       expect(find.byKey(const Key('attention-rail')), findsOneWidget);
       expect(find.byKey(const Key('batch-scheduling-tray')), findsOneWidget);
+      expect(
+        find.byKey(const Key('botanical-study-assignment-control-housing')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('add-academic-assignment')), findsOneWidget);
       expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const Key('add-academic-assignment')));
+      await tester.pumpAndSettle();
+      expect(find.byType(AcademicAssignmentEditor), findsOneWidget);
+      await tester.tap(find.byTooltip('Close assignment details'));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('revert-theme-preview')));
       await tester.pumpAndSettle();
