@@ -4,6 +4,7 @@ import 'additive_theme_shell.dart';
 import 'calendar/calendar_period_view.dart';
 import 'canonical_delta_mark.dart';
 import 'heritage_field_notes_frame.dart';
+import 'heritage_field_notes_panel_scope.dart';
 import 'heritage_field_notes_theme.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
@@ -57,15 +58,143 @@ final class HeritageFieldNotesDestinationSurface extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => AdditiveThemeDestinationSurface(
-    destination: destination,
-    entry: entry,
-    onExit: onExit,
-    frameBuilder: _buildHeritageFieldNotesFrame,
-    statusSafeInsets: heritageFieldNotesStatusSafeInsets,
-    compactDestinationInsets: heritageFieldNotesCompactDestinationInsets,
-    child: child,
-  );
+  Widget build(BuildContext context) {
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    return Scaffold(
+      key: const Key('heritage-field-notes-destination-shell'),
+      backgroundColor: HeritageFieldNotesColors.canvas,
+      body: SafeArea(
+        child: HeritageFieldNotesNineSliceFrame(
+          chromeInsets: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _HeritageFieldNotesDestinationCrown(
+                  destination: destination,
+                  entry: entry,
+                  onExit: onExit,
+                  enlargedText: enlargedText,
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: _HeritageFieldNotesConsoleBay(
+                    key: const Key('heritage-field-notes-destination-housing'),
+                    accent: _HeritageFieldNotesBayAccent.brass,
+                    shape: _HeritageFieldNotesBayShape.insight,
+                    child: HeritageFieldNotesPanelScope(
+                      child: _HeritageFieldNotesDestinationContentTheme(
+                        child: AdditiveThemePanelInterior(child: child),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _HeritageFieldNotesDestinationContentTheme extends StatelessWidget {
+  const _HeritageFieldNotesDestinationContentTheme({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.clinicalColors;
+    return Theme(
+      data: theme.copyWith(
+        canvasColor: colors.structure,
+        scaffoldBackgroundColor: colors.structure,
+        extensions: [
+          for (final extension in theme.extensions.values)
+            if (extension is! ClinicalCalendarColors) extension,
+          colors.copyWith(canvas: colors.structure),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+final class _HeritageFieldNotesDestinationCrown extends StatelessWidget {
+  const _HeritageFieldNotesDestinationCrown({
+    required this.destination,
+    required this.entry,
+    required this.onExit,
+    required this.enlargedText,
+  });
+
+  final ClinicalCalendarDestination destination;
+  final DestinationEntry entry;
+  final VoidCallback onExit;
+  final bool enlargedText;
+
+  @override
+  Widget build(BuildContext context) {
+    final enteredFromMenu = entry == DestinationEntry.applicationMenu;
+    return CustomPaint(
+      key: const Key('heritage-field-notes-destination-crown'),
+      painter: _HeritageFieldNotesCrownPainter(
+        structure: context.clinicalColors.structureRaised,
+        border: context.clinicalColors.insetBorder,
+        brass: context.clinicalColors.protectedDayAccent,
+        forest: context.clinicalColors.clinical,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: enlargedText ? 108 : 82),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            children: [
+              TextButton.icon(
+                key: Key(enteredFromMenu ? 'back-action' : 'close-action'),
+                onPressed: onExit,
+                icon: Icon(enteredFromMenu ? Icons.arrow_back : Icons.close),
+                label: Text(enteredFromMenu ? 'Back' : 'Close'),
+              ),
+              const SizedBox(width: 12),
+              const _HeritageFieldNotesDeltaMark(size: 46),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      destination.label.toUpperCase(),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: context.clinicalColors.primaryText,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
+                    ),
+                    if (!enlargedText)
+                      Text(
+                        'CLINICAL CALENDAR  /  FIELD ARCHIVE',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: context.clinicalColors.secondaryText,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 final class HeritageFieldNotesApplicationShell extends StatelessWidget {
@@ -152,7 +281,9 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                       key: const Key('heritage-field-notes-placement-bay'),
                       accent: _HeritageFieldNotesBayAccent.brass,
                       shape: _HeritageFieldNotesBayShape.placement,
-                      child: slots.placementDock,
+                      child: HeritageFieldNotesPanelScope(
+                        child: slots.placementDock,
+                      ),
                     ),
                   ),
                   Positioned.fromRect(
@@ -173,9 +304,11 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                       key: const Key('heritage-field-notes-planning-bay'),
                       accent: _HeritageFieldNotesBayAccent.forest,
                       shape: _HeritageFieldNotesBayShape.planning,
-                      child: VariantFPlanningBayMode(
-                        expandedByDefault: true,
-                        child: slots.planningRegion,
+                      child: HeritageFieldNotesPanelScope(
+                        child: VariantFPlanningBayMode(
+                          expandedByDefault: true,
+                          child: slots.planningRegion,
+                        ),
                       ),
                     ),
                   ),
@@ -185,7 +318,9 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                       key: const Key('heritage-field-notes-insight-bay'),
                       accent: _HeritageFieldNotesBayAccent.forest,
                       shape: _HeritageFieldNotesBayShape.insight,
-                      child: slots.insightRail,
+                      child: HeritageFieldNotesPanelScope(
+                        child: slots.insightRail,
+                      ),
                     ),
                   ),
                   Positioned.fromRect(
@@ -279,9 +414,11 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                                 ),
                                 accent: _HeritageFieldNotesBayAccent.forest,
                                 shape: _HeritageFieldNotesBayShape.planning,
-                                child: VariantFPlanningBayMode(
-                                  expandedByDefault: false,
-                                  child: slots.planningRegion,
+                                child: HeritageFieldNotesPanelScope(
+                                  child: VariantFPlanningBayMode(
+                                    expandedByDefault: false,
+                                    child: slots.planningRegion,
+                                  ),
                                 ),
                               ),
                             ),
@@ -300,7 +437,14 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                                           _HeritageFieldNotesBayAccent.brass,
                                       shape:
                                           _HeritageFieldNotesBayShape.placement,
-                                      child: slots.mobilePlacementSummary,
+                                      child: SingleChildScrollView(
+                                        key: const Key(
+                                          'heritage-field-notes-mobile-placements-scroll',
+                                        ),
+                                        child: HeritageFieldNotesPanelScope(
+                                          child: slots.mobilePlacementSummary,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
@@ -313,7 +457,9 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                                           _HeritageFieldNotesBayAccent.brass,
                                       shape:
                                           _HeritageFieldNotesBayShape.insight,
-                                      child: slots.mobileAttention,
+                                      child: HeritageFieldNotesPanelScope(
+                                        child: slots.mobileAttention,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -342,7 +488,19 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
 
   Widget _compact() => AdditiveThemeApplicationShell(
     key: const Key('heritage-field-notes-compact-shell'),
-    slots: slots,
+    slots: ResponsiveShellSlots(
+      placementDock: HeritageFieldNotesPanelScope(child: slots.placementDock),
+      centralContent: slots.centralContent,
+      insightRail: HeritageFieldNotesPanelScope(child: slots.insightRail),
+      mobilePlacementSummary: HeritageFieldNotesPanelScope(
+        child: slots.mobilePlacementSummary,
+      ),
+      mobileAttention: HeritageFieldNotesPanelScope(
+        child: slots.mobileAttention,
+      ),
+      planningRegion: HeritageFieldNotesPanelScope(child: slots.planningRegion),
+      profileAvatar: slots.profileAvatar,
+    ),
     environmentName: environmentName,
     onOpenMenu: onOpenMenu,
     onOpenDestination: onOpenDestination,
@@ -752,7 +910,7 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                 tooltip: 'Open menu',
                 onPressed: onOpenMenu,
                 padding: EdgeInsets.all(compact ? 4 : 2),
-                icon: CanonicalDeltaMark(size: compact ? 36 : 46),
+                icon: _HeritageFieldNotesDeltaMark(size: compact ? 36 : 46),
               ),
             ),
             const SizedBox(width: 12),
@@ -793,49 +951,60 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                       ],
                     ),
             ),
+            IconButton(
+              tooltip: 'Add schedule',
+              onPressed: onAddSchedule,
+              icon: const Icon(Icons.add_box_outlined),
+            ),
             if (compact)
               IconButton(
-                tooltip: 'Add schedule',
-                onPressed: onAddSchedule,
-                icon: const Icon(Icons.add_box_outlined),
+                key: const Key('heritage-field-notes-add-placement-action'),
+                tooltip: 'Add Placement',
+                onPressed: () => onOpenDestination(
+                  ClinicalCalendarDestination.clinicalPlacements,
+                ),
+                icon: const Icon(Icons.add_circle_outline),
               )
-            else if (!enlargedText && environmentName.trim().isNotEmpty)
-              PopupMenuButton<String>(
-                tooltip: 'Archive actions',
-                onSelected: (value) {
-                  if (value == 'add') {
-                    onAddSchedule();
-                  } else {
-                    onOpenDestination(ClinicalCalendarDestination.help);
-                  }
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'add', child: Text('Add schedule')),
-                  PopupMenuItem(value: 'help', child: Text('Help')),
-                ],
-                child: Container(
-                  width: 130,
-                  height: double.infinity,
-                  margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      left: BorderSide(
-                        color: context.clinicalColors.insetBorder,
-                      ),
-                    ),
+            else
+              TextButton.icon(
+                key: const Key('heritage-field-notes-add-placement-action'),
+                onPressed: () => onOpenDestination(
+                  ClinicalCalendarDestination.clinicalPlacements,
+                ),
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('Add Placement'),
+              ),
+            IconButton(
+              key: const Key('heritage-field-notes-help-action'),
+              tooltip: 'Help',
+              onPressed: () =>
+                  onOpenDestination(ClinicalCalendarDestination.help),
+              icon: const Icon(Icons.help_outline),
+            ),
+            KeyedSubtree(
+              key: const Key('heritage-field-notes-profile-action'),
+              child: profileAvatar,
+            ),
+            if (!compact && !enlargedText && environmentName.trim().isNotEmpty)
+              Container(
+                width: 116,
+                height: double.infinity,
+                margin: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: context.clinicalColors.insetBorder),
                   ),
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'ARCHIVE NO.\n$environmentName',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      letterSpacing: .8,
-                      height: 1.35,
-                    ),
+                ),
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'ARCHIVE NO.\n$environmentName',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    letterSpacing: .8,
+                    height: 1.35,
                   ),
                 ),
               ),
-            if (compact) profileAvatar,
           ],
         ),
       ),
@@ -850,6 +1019,15 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
       child: content,
     );
   }
+}
+
+class _HeritageFieldNotesDeltaMark extends StatelessWidget {
+  const _HeritageFieldNotesDeltaMark({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => CanonicalDeltaMark(size: size);
 }
 
 final class _HeritageFieldNotesCrownPainter extends CustomPainter {

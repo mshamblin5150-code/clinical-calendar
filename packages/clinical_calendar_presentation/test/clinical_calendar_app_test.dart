@@ -1380,6 +1380,86 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'Field Archive owns shared live workflow housings without forking slots',
+    (tester) async {
+      final repositories = _Repositories(seedLifecycle: true);
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: heritageFieldNotesThemeId,
+        initialRevision: 1,
+      );
+      addTearDown(preview.dispose);
+
+      await _pumpAt(
+        tester,
+        const Size(1536, 1024),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: preview,
+      );
+
+      expect(find.byType(CalendarPeriodView), findsOneWidget);
+      expect(find.byType(PlacementDock), findsOneWidget);
+      expect(find.byType(PlacementProgressRail), findsOneWidget);
+      expect(find.byType(AttentionRail), findsOneWidget);
+      expect(find.text('Add Assignment'), findsOneWidget);
+      for (final key in const [
+        'heritage-field-notes-placements-housing',
+        'heritage-field-notes-planning-housing',
+        'heritage-field-notes-clinical-placement-housing',
+        'heritage-field-notes-needs-attention-housing',
+      ]) {
+        final housing = find.byKey(Key(key));
+        expect(housing, findsOneWidget, reason: key);
+        final container = tester.widget<Container>(housing);
+        final decoration = container.decoration! as BoxDecoration;
+        expect(decoration.gradient, isNull, reason: '$key must remain flat');
+      }
+      final attentionSemantics = tester.getSemantics(
+        find.byKey(const Key('heritage-field-notes-needs-attention-heading')),
+      );
+      expect(attentionSemantics.label, startsWith('Needs Attention, '));
+      expect(find.byType(VariantFTacticalFrame), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Field Archive Needs Attention remains clear at 200 percent text scale',
+    (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final repositories = _Repositories(seedLifecycle: true);
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: heritageFieldNotesThemeId,
+        initialRevision: 1,
+      );
+      addTearDown(preview.dispose);
+
+      await _pumpAt(
+        tester,
+        const Size(900, 1440),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: preview,
+      );
+
+      final heading = find.byKey(
+        const Key('heritage-field-notes-needs-attention-heading'),
+      );
+      expect(heading, findsOneWidget);
+      expect(
+        tester.getSemantics(heading).label,
+        startsWith('Needs Attention, '),
+      );
+      expect(
+        find.byKey(const Key('heritage-field-notes-needs-attention-housing')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Future<void> _expectAppGolden(

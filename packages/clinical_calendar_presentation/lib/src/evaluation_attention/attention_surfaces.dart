@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../graphite_instrument_scope.dart';
 import '../coastal_light_panel_scope.dart';
 import '../federation_2399_console_scope.dart';
+import '../heritage_field_notes_panel_scope.dart';
 import '../insight_rail_presentation_policy.dart';
 import '../responsive_shell.dart';
 import '../theme_contract.dart';
@@ -184,6 +185,15 @@ final class AttentionRail extends StatelessWidget {
           return CoastalLightWorkflowHousing(
             role: CoastalLightPanelRole.needsAttention,
             label: 'Needs Attention · ${items.length}',
+            accent: signal,
+            child: content,
+          );
+        }
+        if (HeritageFieldNotesPanelScope.isActive(context)) {
+          return HeritageFieldNotesWorkflowHousing(
+            role: HeritageFieldNotesPanelRole.needsAttention,
+            label: 'Needs Attention',
+            count: items.length,
             accent: signal,
             child: content,
           );

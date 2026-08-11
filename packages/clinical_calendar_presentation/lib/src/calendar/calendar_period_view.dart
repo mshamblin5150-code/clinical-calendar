@@ -1407,7 +1407,12 @@ final class _MonthDayCell extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _DayNumber(date: date, today: today, selected: selected),
+                _DayNumber(
+                  date: date,
+                  today: today,
+                  selected: selected,
+                  compactArchiveToday: today && entries.isNotEmpty,
+                ),
                 if (!(instrumentChrome && today))
                   SizedBox(
                     height: dense && tightDenseSpacing
@@ -1796,11 +1801,13 @@ final class _DayNumber extends StatelessWidget {
     required this.date,
     required this.today,
     required this.selected,
+    required this.compactArchiveToday,
   });
 
   final LocalDate date;
   final bool today;
   final bool selected;
+  final bool compactArchiveToday;
 
   @override
   Widget build(BuildContext context) {
@@ -1881,9 +1888,18 @@ final class _DayNumber extends StatelessWidget {
     );
     if (archiveTreatment && today) {
       final landscapeEnlargedText = _usesLandscapeEnlargedTextLayout(context);
+      final compact = compactArchiveToday && !landscapeEnlargedText;
       final number = Container(
-        width: landscapeEnlargedText ? 42 : 30,
-        height: landscapeEnlargedText ? 42 : 30,
+        width: landscapeEnlargedText
+            ? 42
+            : compact
+            ? 22
+            : 30,
+        height: landscapeEnlargedText
+            ? 42
+            : compact
+            ? 22
+            : 30,
         decoration: BoxDecoration(
           color: context.clinicalColors.clinical,
           shape: BoxShape.circle,
@@ -1899,6 +1915,25 @@ final class _DayNumber extends StatelessWidget {
       );
       if (landscapeEnlargedText) {
         return Semantics(label: '${date.day}, Today', child: number);
+      }
+      if (compact) {
+        return SizedBox(
+          height: 23,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'TODAY',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: context.clinicalColors.clinical,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 4),
+              number,
+            ],
+          ),
+        );
       }
       return SizedBox(
         width: double.infinity,

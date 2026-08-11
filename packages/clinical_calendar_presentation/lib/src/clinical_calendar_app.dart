@@ -25,6 +25,7 @@ import 'federation_2399_console_scope.dart';
 import 'enhanced_accessibility_controller.dart';
 import 'enhanced_focus_perimeter.dart';
 import 'graphite_frame.dart';
+import 'heritage_field_notes_panel_scope.dart';
 import 'identity/identity_devices_surface.dart';
 import 'placements/placement_management_surface.dart';
 import 'placements/placement_progress_controller.dart';
@@ -1993,6 +1994,14 @@ final class _PlanningRegionState extends State<_PlanningRegion> {
     if (CoastalLightPanelScope.isActive(context)) {
       return CoastalLightWorkflowHousing(
         role: CoastalLightPanelRole.planning,
+        label: 'Planning',
+        accent: context.clinicalColors.scheduled,
+        child: content,
+      );
+    }
+    if (HeritageFieldNotesPanelScope.isActive(context)) {
+      return HeritageFieldNotesWorkflowHousing(
+        role: HeritageFieldNotesPanelRole.planning,
         label: 'Planning',
         accent: context.clinicalColors.scheduled,
         child: content,
