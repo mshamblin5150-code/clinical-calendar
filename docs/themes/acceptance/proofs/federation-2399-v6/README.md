@@ -19,7 +19,8 @@ golden viewport. Renderer contract:
   deterministic `Open menu` button semantic with tap action.
 - Production interaction tests open the complete Application Menu in
   landscape, portrait, Standard, and Enhanced modes. Separate tests exercise
-  keyboard/switch traversal and accessibility-service semantic activation.
+  keyboard Enter, switch-style Space activation after focus traversal, and
+  accessibility-service semantic activation.
 - The accepted layered burgundy chassis, destination housings, Needs Attention
   composition, Academic Assignment workflow, 200-percent behavior, and
   canonical delta asset source remain intact.

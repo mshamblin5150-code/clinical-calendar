@@ -292,32 +292,37 @@ void main() {
     }
   }
 
-  testWidgets(
-    'Federation 2399 delta opens the production menu from keyboard traversal',
-    (tester) async {
-      final preview = ThemePreviewController(
-        registry: ClinicalCalendarThemeBundleRegistry.standard,
-        authoritativeThemeId: federation2399ThemeId,
-        initialRevision: 1,
-      );
-      addTearDown(preview.dispose);
-      await _pumpAt(
-        tester,
-        const Size(1536, 1024),
-        dependencies: _themeDependencies(federation2399ThemeId),
-        themePreviewController: preview,
-        themeId: federation2399ThemeId,
-      );
+  for (final activation in const [
+    (LogicalKeyboardKey.enter, 'keyboard Enter'),
+    (LogicalKeyboardKey.space, 'switch-style Space'),
+  ]) {
+    testWidgets(
+      'Federation 2399 delta opens the production menu with ${activation.$2}',
+      (tester) async {
+        final preview = ThemePreviewController(
+          registry: ClinicalCalendarThemeBundleRegistry.standard,
+          authoritativeThemeId: federation2399ThemeId,
+          initialRevision: 1,
+        );
+        addTearDown(preview.dispose);
+        await _pumpAt(
+          tester,
+          const Size(1536, 1024),
+          dependencies: _themeDependencies(federation2399ThemeId),
+          themePreviewController: preview,
+          themeId: federation2399ThemeId,
+        );
 
-      final delta = find.byKey(const Key('application-menu-action'));
-      await focusWithKeyboard(tester, delta);
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pumpAndSettle();
+        final delta = find.byKey(const Key('application-menu-action'));
+        await focusWithKeyboard(tester, delta);
+        await tester.sendKeyEvent(activation.$1);
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('application-menu')), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+        expect(find.byKey(const Key('application-menu')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets(
     'Federation 2399 delta exposes one accessible menu-button action',
