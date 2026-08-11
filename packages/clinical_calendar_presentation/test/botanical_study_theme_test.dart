@@ -185,8 +185,9 @@ void main() {
     final axionDelta = tester.getRect(
       find.byKey(const Key('botanical-study-axion-delta')),
     );
+    final applicationMenu = _expectCanonicalApplicationMenu(tester);
     final applicationTitle = tester.getRect(
-      find.byKey(const Key('application-menu-action')),
+      find.byKey(const Key('botanical-study-application-title')),
     );
     final axionImage = tester.widget<Image>(
       find.byKey(const Key('botanical-study-axion-delta-image')),
@@ -196,7 +197,17 @@ void main() {
     );
     _expectRectClose(crown, const Rect.fromLTWH(61, 0, 1494, 65));
     expect(axionDelta.size, const Size.square(42));
+    expect(find.byIcon(Icons.grid_view_outlined), findsNothing);
     expect(axionDelta.right, lessThan(applicationTitle.left));
+    // The canonical PNG's visible alpha bounds are top-biased within its
+    // square canvas. Compare the visible-ink center rather than the widget
+    // box center so this assertion proves optical alignment.
+    final deltaVisibleInkCenterY =
+        axionDelta.center.dy - (axionDelta.height * 59 / 1254);
+    expect(
+      (deltaVisibleInkCenterY - applicationTitle.center.dy).abs(),
+      lessThanOrEqualTo(.5),
+    );
     expect(axionImage.color, isNull);
     expect(axionImage.errorBuilder, isNotNull);
     _expectRectClose(placements, const Rect.fromLTWH(61, 66, 307, 834));
@@ -205,7 +216,7 @@ void main() {
     _expectRectClose(insight, const Rect.fromLTWH(1154, 66, 401, 834));
     _expectRectClose(navigation, const Rect.fromLTWH(0, 912, 1586, 80));
 
-    await tester.tap(find.byTooltip('Open menu'));
+    await tester.tap(applicationMenu);
     await tester.tap(find.byTooltip('Add schedule'));
     await tester.tap(find.byTooltip('Help'));
     await tester.tap(find.byKey(const Key('botanical-study-navigation-2')));
@@ -385,10 +396,84 @@ void main() {
     final axionDelta = tester.getRect(
       find.byKey(const Key('botanical-study-axion-delta')),
     );
+    _expectCanonicalApplicationMenu(tester);
     expect(calendar.top, lessThan(planning.top));
     expect(planning.top, lessThan(placements.top));
-    expect(axionDelta.width, greaterThanOrEqualTo(36));
-    expect(axionDelta.height, greaterThanOrEqualTo(36));
+    expect(axionDelta.width, closeTo(36, .01));
+    expect(axionDelta.height, closeTo(36, .01));
+    expect(find.byIcon(Icons.grid_view_outlined), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'Botanical Study delta remains the sole menu trigger at 200 percent text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1440));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var menuCount = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: botanical.standardPresentation.createThemeData(),
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: botanical.shellRenderer.build(
+              slots: _slots,
+              environmentName: 'TEST',
+              onOpenMenu: () => menuCount++,
+              onOpenDestination: _ignoreDestination,
+              onOpenAttention: _noop,
+              onAddSchedule: _noop,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final applicationMenu = _expectCanonicalApplicationMenu(tester);
+      expect(find.byIcon(Icons.grid_view_outlined), findsNothing);
+
+      await tester.tap(applicationMenu);
+      expect(menuCount, 1);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      expect(menuCount, 2);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      expect(menuCount, 3);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Botanical Study delta remains the sole compact menu trigger', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var menuCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: botanical.standardPresentation.createThemeData(),
+        home: botanical.shellRenderer.build(
+          slots: _slots,
+          environmentName: 'TEST',
+          onOpenMenu: () => menuCount++,
+          onOpenDestination: _ignoreDestination,
+          onOpenAttention: _noop,
+          onAddSchedule: _noop,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final applicationMenu = _expectCanonicalApplicationMenu(tester);
+    expect(find.byIcon(Icons.menu), findsNothing);
+    expect(find.byIcon(Icons.grid_view_outlined), findsNothing);
+
+    await tester.tap(applicationMenu);
+    expect(menuCount, 1);
     expect(tester.takeException(), isNull);
   });
 
@@ -524,6 +609,23 @@ const _slots = ResponsiveShellSlots(
 void _noop() {}
 
 void _ignoreDestination(ClinicalCalendarDestination _) {}
+
+Finder _expectCanonicalApplicationMenu(WidgetTester tester) {
+  final applicationMenu = find.byKey(const Key('application-menu-action'));
+  expect(applicationMenu, findsOneWidget);
+  expect(
+    find.descendant(
+      of: applicationMenu,
+      matching: find.byType(CanonicalDeltaMark),
+    ),
+    findsOneWidget,
+  );
+  expect(
+    tester.getSemantics(applicationMenu),
+    matchesSemantics(label: 'Open menu', isButton: true, hasTapAction: true),
+  );
+  return applicationMenu;
+}
 
 void _expectRectClose(Rect actual, Rect expected) {
   const tolerance = 12.0;

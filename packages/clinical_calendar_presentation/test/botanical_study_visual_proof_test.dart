@@ -41,8 +41,9 @@ void main() {
     );
     const regions =
         <String, ({int x, int y, int width, int height, double minimum})>{
-          // #164 intentionally moves the canonical delta ahead of the title.
-          'crown': (x: 0, y: 0, width: 1586, height: 66, minimum: .948),
+          // #176 makes the canonical delta the menu trigger and centers it
+          // with the title, intentionally revising the approved crown.
+          'crown': (x: 0, y: 0, width: 1586, height: 66, minimum: .946),
           'placements': (x: 61, y: 66, width: 307, height: 834, minimum: .94),
           // #166 adds the shared due-date projection and #164 gives its entry
           // control Botanical-owned housing inside this production bay.
