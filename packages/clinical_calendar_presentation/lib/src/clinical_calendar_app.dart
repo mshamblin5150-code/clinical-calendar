@@ -16,6 +16,7 @@ import 'commitments/commitment_lifecycle_controller.dart';
 import 'commitments/commitment_lifecycle_surface.dart';
 import 'conflict_resolution/conflict_resolution_controller.dart';
 import 'conflict_resolution/conflict_resolution_surface.dart';
+import 'coastal_light_panel_scope.dart';
 import 'evaluation_attention/attention_surfaces.dart';
 import 'evaluation_attention/evaluation_attention_controller.dart';
 import 'evaluation_attention/evaluation_plan_surface.dart';
@@ -1984,6 +1985,14 @@ final class _PlanningRegionState extends State<_PlanningRegion> {
     if (Federation2399ConsoleScope.isActive(context)) {
       return Federation2399SectionHousing(
         key: const Key('federation-2399-live-planning-housing'),
+        label: 'Planning',
+        accent: context.clinicalColors.scheduled,
+        child: content,
+      );
+    }
+    if (CoastalLightPanelScope.isActive(context)) {
+      return CoastalLightWorkflowHousing(
+        role: CoastalLightPanelRole.planning,
         label: 'Planning',
         accent: context.clinicalColors.scheduled,
         child: content,

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../additive_semantic_colors.dart';
+import '../coastal_light_panel_scope.dart';
 import '../federation_classic_panel_scope.dart';
 import '../graphite_instrument_scope.dart';
 import '../insight_rail_presentation_policy.dart';
@@ -40,6 +41,7 @@ final class PlacementDock extends StatelessWidget {
       animation: controller,
       builder: (context, _) => _TacticalPanel(
         key: const Key('placement-dock-surface'),
+        coastalRole: CoastalLightPanelRole.placements,
         label: 'My placements',
         stackedHeader: true,
         expandChild: true,
@@ -328,6 +330,7 @@ final class _PlacementProgressPanelState extends State<PlacementProgressPanel> {
           )
         : null;
     return _TacticalPanel(
+      coastalRole: CoastalLightPanelRole.clinicalPlacement,
       label: snapshot?.placement.name ?? 'Clinical Placement',
       statusColor: context.clinicalColors.clinical,
       child: snapshot == null
@@ -438,6 +441,7 @@ final class PlacementMobileSummary extends StatelessWidget {
           animation: controller,
           builder: (context, _) => _TacticalPanel(
             key: const Key('mobile-total-progress'),
+            coastalRole: CoastalLightPanelRole.supporting,
             label: 'Total progress',
             child: TotalProgressSegments(progress: controller.totalProgress),
           ),
@@ -1295,6 +1299,7 @@ final class _TacticalPanel extends StatelessWidget {
   const _TacticalPanel({
     required this.label,
     required this.child,
+    required this.coastalRole,
     this.trailing,
     this.statusColor,
     this.expandChild = false,
@@ -1304,6 +1309,7 @@ final class _TacticalPanel extends StatelessWidget {
 
   final String label;
   final Widget child;
+  final CoastalLightPanelRole coastalRole;
   final Widget? trailing;
   final Color? statusColor;
   final bool expandChild;
@@ -1366,6 +1372,15 @@ final class _TacticalPanel extends StatelessWidget {
         : content;
     if (FederationClassicPanelScope.isActive(context)) {
       return FederationClassicPanelHousing(
+        label: label,
+        accent: statusColor,
+        showHeader: false,
+        child: adaptiveContent,
+      );
+    }
+    if (CoastalLightPanelScope.isActive(context)) {
+      return CoastalLightWorkflowHousing(
+        role: coastalRole,
         label: label,
         accent: statusColor,
         showHeader: false,

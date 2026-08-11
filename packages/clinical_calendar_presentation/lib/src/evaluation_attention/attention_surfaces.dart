@@ -4,6 +4,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:flutter/material.dart';
 
 import '../graphite_instrument_scope.dart';
+import '../coastal_light_panel_scope.dart';
 import '../federation_2399_console_scope.dart';
 import '../insight_rail_presentation_policy.dart';
 import '../responsive_shell.dart';
@@ -146,41 +147,51 @@ final class AttentionRail extends StatelessWidget {
               context,
             )?.expandedAttentionRows ??
             false;
+        final signal = items.isEmpty
+            ? context.clinicalColors.clinical
+            : context.clinicalColors.urgent;
+        final content = Column(
+          key: const Key('attention-rail'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (controller.isBusy && controller.snapshot == null)
+              const Center(child: CircularProgressIndicator())
+            else if (controller.error != null && controller.snapshot == null)
+              OutlinedButton(
+                onPressed: controller.load,
+                child: const Text('Retry attention'),
+              )
+            else if (items.isEmpty)
+              const Text('No unresolved items need attention.')
+            else
+              for (final item in items.take(4)) ...[
+                _AttentionRow(
+                  item: item,
+                  expanded: expandedRows,
+                  onOpen: () => onOpenAction(item),
+                ),
+                const SizedBox(height: 6),
+              ],
+            if (items.length > 4 || onOpenAll != null)
+              TextButton(
+                key: const Key('open-attention-center-action'),
+                onPressed: onOpenAll,
+                child: const Text('OPEN ATTENTION CENTER'),
+              ),
+          ],
+        );
+        if (CoastalLightPanelScope.isActive(context)) {
+          return CoastalLightWorkflowHousing(
+            role: CoastalLightPanelRole.needsAttention,
+            label: 'Needs Attention · ${items.length}',
+            accent: signal,
+            child: content,
+          );
+        }
         return ShellPanel(
           label: 'Needs Attention · ${items.length}',
-          accent: items.isEmpty
-              ? context.clinicalColors.clinical
-              : context.clinicalColors.urgent,
-          child: Column(
-            key: const Key('attention-rail'),
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (controller.isBusy && controller.snapshot == null)
-                const Center(child: CircularProgressIndicator())
-              else if (controller.error != null && controller.snapshot == null)
-                OutlinedButton(
-                  onPressed: controller.load,
-                  child: const Text('Retry attention'),
-                )
-              else if (items.isEmpty)
-                const Text('No unresolved items need attention.')
-              else
-                for (final item in items.take(4)) ...[
-                  _AttentionRow(
-                    item: item,
-                    expanded: expandedRows,
-                    onOpen: () => onOpenAction(item),
-                  ),
-                  const SizedBox(height: 6),
-                ],
-              if (items.length > 4 || onOpenAll != null)
-                TextButton(
-                  key: const Key('open-attention-center-action'),
-                  onPressed: onOpenAll,
-                  child: const Text('OPEN ATTENTION CENTER'),
-                ),
-            ],
-          ),
+          accent: signal,
+          child: content,
         );
       },
     );

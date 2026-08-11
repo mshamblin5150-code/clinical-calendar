@@ -3,6 +3,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../date_input.dart';
+import '../coastal_light_theme.dart';
 import '../theme_contract.dart';
 
 typedef AcademicAssignmentSave =
@@ -36,6 +37,9 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
         onPressed: onAddAssignment,
       ),
       federation2399ThemeId => _Federation2399AssignmentControlHousing(
+        onPressed: onAddAssignment,
+      ),
+      coastalCalmThemeId => _CoastalLightAssignmentControlHousing(
         onPressed: onAddAssignment,
       ),
       _ => Align(
@@ -75,6 +79,41 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
       },
     );
   }
+}
+
+final class _CoastalLightAssignmentControlHousing extends StatelessWidget {
+  const _CoastalLightAssignmentControlHousing({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('coastal-light-assignment-control-housing'),
+    constraints: const BoxConstraints(minHeight: 52),
+    padding: const EdgeInsets.fromLTRB(5, 4, 8, 4),
+    decoration: BoxDecoration(
+      color: CoastalLightColors.surface.withValues(alpha: .96),
+      border: Border.all(color: CoastalLightColors.insetBorder),
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(18),
+        topRight: Radius.circular(7),
+        bottomLeft: Radius.circular(7),
+        bottomRight: Radius.circular(18),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: CoastalLightColors.clinical.withValues(alpha: .18),
+          blurRadius: 8,
+        ),
+      ],
+    ),
+    child: TextButton.icon(
+      key: const Key('add-academic-assignment'),
+      onPressed: onPressed,
+      icon: const Icon(Icons.assignment_add),
+      label: const Text('Add Assignment'),
+    ),
+  );
 }
 
 final class _GraphiteAssignmentControlHousing extends StatelessWidget {

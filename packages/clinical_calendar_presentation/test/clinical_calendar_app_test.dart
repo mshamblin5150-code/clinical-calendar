@@ -1333,6 +1333,42 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'Coastal Light owns shared live workflow housings without forking slots',
+    (tester) async {
+      final repositories = _Repositories(seedLifecycle: true);
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: coastalCalmThemeId,
+        initialRevision: 1,
+      );
+      addTearDown(preview.dispose);
+
+      await _pumpAt(
+        tester,
+        const Size(1586, 992),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: preview,
+      );
+
+      expect(find.byType(CalendarPeriodView), findsOneWidget);
+      expect(find.byType(PlacementDock), findsOneWidget);
+      expect(find.byType(PlacementProgressRail), findsOneWidget);
+      expect(find.byType(AttentionRail), findsOneWidget);
+      expect(find.text('Add Assignment'), findsOneWidget);
+      for (final key in const [
+        'coastal-light-placements-housing',
+        'coastal-light-planning-housing',
+        'coastal-light-clinical-placement-housing',
+        'coastal-light-needs-attention-housing',
+      ]) {
+        expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+      }
+      expect(find.byType(VariantFTacticalFrame), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Future<void> _expectAppGolden(

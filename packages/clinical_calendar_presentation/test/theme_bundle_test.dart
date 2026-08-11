@@ -1500,14 +1500,11 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Open menu'));
-    await tester.tap(find.byTooltip('Coastal Light actions'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Add schedule'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Coastal Light actions'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Help'));
-    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Add schedule'));
+    await tester.tap(
+      find.byKey(const Key('coastal-light-add-placement-action')),
+    );
+    await tester.tap(find.byKey(const Key('coastal-light-help-action')));
     await tester.tap(find.byKey(const Key('coastal-calm-navigation-2')));
     await tester.tap(find.byKey(const Key('coastal-calm-navigation-3')));
     await tester.tap(find.byKey(const Key('coastal-calm-navigation-4')));
@@ -1516,6 +1513,7 @@ void main() {
     expect(addCount, 1);
     expect(attentionCount, 1);
     expect(destinations, [
+      ClinicalCalendarDestination.clinicalPlacements,
       ClinicalCalendarDestination.help,
       ClinicalCalendarDestination.clinicalPlacements,
       ClinicalCalendarDestination.settings,
@@ -1783,13 +1781,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(VariantFNineSliceFrame), findsNothing);
+    expect(find.byType(CoastalLightNineSliceFrame), findsNothing);
     expect(
-      tester
-          .widget<CoastalLightNineSliceFrame>(
-            find.byType(CoastalLightNineSliceFrame),
-          )
-          .chromeInsets,
-      coastalLightCompactDestinationInsets,
+      find.byKey(const Key('coastal-light-destination-crown')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('coastal-light-destination-housing')),
+      findsOneWidget,
     );
     expect(tester.takeException(), isNull);
   });
