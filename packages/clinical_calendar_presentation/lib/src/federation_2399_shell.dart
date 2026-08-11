@@ -560,20 +560,23 @@ final class _Federation2399CommandCrown extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18),
         child: Row(
           children: [
-            IconButton(
-              key: const Key('application-menu-action'),
-              tooltip: 'Open menu',
-              onPressed: onOpenMenu,
-              icon: const Icon(Icons.grid_view_outlined),
-            ),
-            if (!enlargedText) ...[
-              const SizedBox(width: 8),
-              SizedBox.square(
-                dimension: compact ? 34 : 42,
-                child: const CanonicalDeltaMark(semanticLabel: 'Axion delta'),
+            Semantics(
+              label: 'Open menu',
+              button: true,
+              excludeSemantics: true,
+              onTap: onOpenMenu,
+              child: IconButton(
+                key: const Key('application-menu-action'),
+                tooltip: 'Open menu',
+                onPressed: onOpenMenu,
+                padding: EdgeInsets.zero,
+                icon: SizedBox.square(
+                  dimension: compact ? 34 : 42,
+                  child: const ExcludeSemantics(child: CanonicalDeltaMark()),
+                ),
               ),
-              const SizedBox(width: 10),
-            ],
+            ),
+            const SizedBox(width: 8),
             Expanded(
               child: enlargedText
                   ? const SizedBox.shrink()

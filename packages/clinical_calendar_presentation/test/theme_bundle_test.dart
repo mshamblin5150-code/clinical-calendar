@@ -1305,6 +1305,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final applicationMenu = find.byKey(const Key('application-menu-action'));
+    expect(
+      find.descendant(
+        of: applicationMenu,
+        matching: find.byType(CanonicalDeltaMark),
+      ),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel('Open menu'), findsOneWidget);
+    expect(find.bySemanticsLabel('Axion delta'), findsNothing);
     await tester.tap(find.byTooltip('Open menu'));
     await tester.tap(find.byTooltip('Add Placement'));
     await tester.tap(find.byTooltip('Help'));

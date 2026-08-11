@@ -198,7 +198,7 @@ void main() {
     await _pumpAt(
       tester,
       const Size(3200, 2800),
-      dependencies: _graphiteDependencies(),
+      dependencies: _themeDependencies(graphiteThemeId),
       themePreviewController: preview,
       themeId: graphiteThemeId,
     );
@@ -230,7 +230,7 @@ void main() {
     await _pumpAt(
       tester,
       const Size(3200, 2800),
-      dependencies: _graphiteDependencies(),
+      dependencies: _themeDependencies(graphiteThemeId),
       themePreviewController: preview,
       themeId: graphiteThemeId,
     );
@@ -253,6 +253,110 @@ void main() {
     expect(tester.takeException(), isNull);
     semantics.dispose();
   });
+
+  for (final enhanced in const [false, true]) {
+    for (final viewport in const [Size(1536, 1024), Size(900, 1440)]) {
+      testWidgets(
+        'Federation 2399 delta opens the ${enhanced ? 'Enhanced' : 'Standard'} '
+        'menu at ${viewport.width.toInt()}x${viewport.height.toInt()}',
+        (tester) async {
+          final preview = ThemePreviewController(
+            registry: ClinicalCalendarThemeBundleRegistry.standard,
+            authoritativeThemeId: federation2399ThemeId,
+            initialRevision: 1,
+          );
+          final accessibility = EnhancedAccessibilityController(
+            initialValue: enhanced,
+          );
+          addTearDown(preview.dispose);
+          addTearDown(accessibility.dispose);
+          await _pumpAt(
+            tester,
+            viewport,
+            dependencies: _themeDependencies(federation2399ThemeId),
+            themePreviewController: preview,
+            enhancedAccessibilityController: accessibility,
+            themeId: federation2399ThemeId,
+          );
+
+          await tester.tap(find.byKey(const Key('application-menu-action')));
+          await tester.pumpAndSettle();
+
+          expect(find.byKey(const Key('application-menu')), findsOneWidget);
+          for (final destination in applicationMenuDestinations) {
+            expect(find.text(destination.label), findsOneWidget);
+          }
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
+  testWidgets(
+    'Federation 2399 delta opens the production menu from keyboard traversal',
+    (tester) async {
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: federation2399ThemeId,
+        initialRevision: 1,
+      );
+      addTearDown(preview.dispose);
+      await _pumpAt(
+        tester,
+        const Size(1536, 1024),
+        dependencies: _themeDependencies(federation2399ThemeId),
+        themePreviewController: preview,
+        themeId: federation2399ThemeId,
+      );
+
+      final delta = find.byKey(const Key('application-menu-action'));
+      await focusWithKeyboard(tester, delta);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('application-menu')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Federation 2399 delta exposes one accessible menu-button action',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: federation2399ThemeId,
+        initialRevision: 1,
+      );
+      addTearDown(preview.dispose);
+      await _pumpAt(
+        tester,
+        const Size(900, 1440),
+        dependencies: _themeDependencies(federation2399ThemeId),
+        themePreviewController: preview,
+        themeId: federation2399ThemeId,
+      );
+
+      final node = tester.getSemantics(find.bySemanticsLabel('Open menu'));
+      final data = node.getSemanticsData();
+      expect(data.label, 'Open menu');
+      expect(data.hasAction(ui.SemanticsAction.tap), isTrue);
+      expect(data.flagsCollection.isButton, isTrue);
+
+      tester.platformDispatcher.onSemanticsActionEvent!(
+        ui.SemanticsActionEvent(
+          type: ui.SemanticsAction.tap,
+          viewId: tester.view.viewId,
+          nodeId: node.id,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('application-menu')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
+    },
+  );
 
   testWidgets('mobile navigation matches the accepted Variant F order', (
     tester,
@@ -1606,10 +1710,10 @@ Future<void> _pumpAcceptedRenderAt(
   );
 }
 
-ApplicationDependencies _graphiteDependencies() {
+ApplicationDependencies _themeDependencies(String themeId) {
   final repositories = _Repositories();
   repositories.settings.value = StoredDomainRecord(
-    value: StudentSettings(themeId: graphiteThemeId),
+    value: StudentSettings(themeId: themeId),
     studentId: studentId,
     revision: 1,
     createdAtUtc: DateTime.utc(2026, 8, 1),

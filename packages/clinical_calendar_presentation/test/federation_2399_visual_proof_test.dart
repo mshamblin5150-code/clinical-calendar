@@ -34,7 +34,15 @@ void main() {
       greaterThanOrEqualTo(48),
       reason: 'The END field must clear the Federation planning chrome.',
     );
-    expect(find.bySemanticsLabel('Axion delta'), findsOneWidget);
+    expect(find.bySemanticsLabel('Open menu'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('application-menu-action')),
+        matching: find.byType(CanonicalDeltaMark),
+      ),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel('Axion delta'), findsNothing);
     expect(
       find.byKey(const Key('federation-2399-live-planning-housing')),
       findsOneWidget,
