@@ -361,7 +361,13 @@ final class _AcademicAssignmentEditorState
     super.initState();
     final assignment = widget.record?.value;
     _title = TextEditingController(text: assignment?.title);
-    _courseId = assignment?.courseId;
+    _courseId =
+        assignment?.courseId != null &&
+            widget.catalogEntries.any(
+              (entry) => entry.value.id == assignment!.courseId,
+            )
+        ? assignment!.courseId
+        : null;
     if (_courseId == null && assignment != null) {
       for (final entry in widget.catalogEntries) {
         if (entry.value.name.toLowerCase() == assignment.course.toLowerCase()) {

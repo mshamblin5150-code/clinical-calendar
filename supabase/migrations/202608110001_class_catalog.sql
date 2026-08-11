@@ -96,40 +96,23 @@ declare
   v_definition text;
   v_updated text;
   v_needle text := '''academic_assignment''';
+  v_target regprocedure;
 begin
-  select pg_get_functiondef(
-    'public.apply_sync_operation_for_active_device(uuid,text,uuid,text,bigint,jsonb)'::regprocedure
-  ) into v_definition;
-  v_updated := replace(
-    v_definition,
-    v_needle,
-    '''academic_assignment'', ''class_catalog_entry'''
-  );
-  if v_updated = v_definition then
-    raise exception 'sync operation entity allowlist did not match';
-  end if;
-  execute v_updated;
-end
-$$;
-
-do $$
-declare
-  v_definition text;
-  v_updated text;
-  v_needle text := '''academic_assignment''';
-begin
-  select pg_get_functiondef(
+  foreach v_target in array array[
+    'public.apply_sync_operation_for_active_device(uuid,text,uuid,text,bigint,jsonb)'::regprocedure,
     'clinical_calendar_sync.apply_permanent_purge(uuid,uuid,text,uuid,bigint,jsonb)'::regprocedure
-  ) into v_definition;
-  v_updated := replace(
-    v_definition,
-    v_needle,
-    '''academic_assignment'', ''class_catalog_entry'''
-  );
-  if v_updated = v_definition then
-    raise exception 'permanent purge entity allowlist did not match';
-  end if;
-  execute v_updated;
+  ] loop
+    select pg_get_functiondef(v_target) into v_definition;
+    v_updated := replace(
+      v_definition,
+      v_needle,
+      '''academic_assignment'', ''class_catalog_entry'''
+    );
+    if v_updated = v_definition then
+      raise exception 'entity allowlist did not match for %', v_target;
+    end if;
+    execute v_updated;
+  end loop;
 end
 $$;
 

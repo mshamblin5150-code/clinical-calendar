@@ -697,7 +697,8 @@ final Map<int, List<String>> _statements = {
       ON class_catalog_entries(student_id, lower(name))
       WHERE deleted_at_utc IS NULL''',
     '''ALTER TABLE academic_assignments
-      ADD COLUMN course_id TEXT REFERENCES class_catalog_entries(id)''',
+      ADD COLUMN course_id TEXT
+      CHECK (course_id IS NULL OR length(course_id) = 36)''',
     '''INSERT INTO class_catalog_entries
       (id, student_id, revision, created_at_utc, updated_at_utc,
        deleted_at_utc, name, archived)

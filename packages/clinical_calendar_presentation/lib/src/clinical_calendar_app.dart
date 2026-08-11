@@ -968,7 +968,10 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   }
 
   Future<void> _openClassCatalog() async {
-    var entries = await _classCatalogService.list(includeArchived: true);
+    Future<List<StoredDomainRecord<ClassCatalogEntry>>> reload() =>
+        _classCatalogService.list(includeArchived: true);
+
+    var entries = await reload();
     if (!mounted) return;
     await showDialog<void>(
       context: context,
@@ -984,9 +987,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
               onClose: () => Navigator.pop(dialogContext),
               onAdd: (name) async {
                 await _classCatalogService.create(name: name);
-                entries = await _classCatalogService.list(
-                  includeArchived: true,
-                );
+                entries = await reload();
                 return entries;
               },
               onRename: (record, name) async {
@@ -995,9 +996,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
                   expectedRevision: record.revision,
                   name: name,
                 );
-                entries = await _classCatalogService.list(
-                  includeArchived: true,
-                );
+                entries = await reload();
                 return entries;
               },
               onSetArchived: (record, archived) async {
@@ -1006,9 +1005,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
                   expectedRevision: record.revision,
                   archived: archived,
                 );
-                entries = await _classCatalogService.list(
-                  includeArchived: true,
-                );
+                entries = await reload();
                 return entries;
               },
             ),

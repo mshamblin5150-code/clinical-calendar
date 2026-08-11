@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
@@ -185,14 +187,23 @@ void main() {
       find.byKey(const Key('academic-assignment-title')),
       'Evidence review',
     );
-    await tester.tap(find.byKey(const Key('academic-assignment-course')));
+    await focusWithKeyboard(
+      tester,
+      find.byKey(const Key('academic-assignment-course')),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('NURS 702').last);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.enterText(
       find.byKey(const Key('academic-assignment-due-date')),
       '09-14-2026',
     );
-    await tester.tap(find.byKey(const Key('save-academic-assignment')));
+    await focusWithKeyboard(
+      tester,
+      find.byKey(const Key('save-academic-assignment')),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
 
     expect(saved?.title, 'Evidence review');
@@ -207,6 +218,7 @@ void main() {
   testWidgets('class catalog surface adds, renames, archives, and restores', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     tester.view.physicalSize = const Size(900, 1440);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -214,6 +226,7 @@ void main() {
     var entries = [_catalogRecord('course-1', 'NURS 702')];
     await tester.pumpWidget(
       MaterialApp(
+        theme: buildGraphiteTheme(enhancedAccessibility: true),
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
             context,
@@ -258,7 +271,17 @@ void main() {
     );
 
     await tester.enterText(find.byKey(const Key('new-class-name')), 'NURS 703');
-    await tester.tap(find.byKey(const Key('add-class')));
+    final addNode = tester.getSemantics(find.byKey(const Key('add-class')));
+    final addData = addNode.getSemanticsData();
+    expect(addData.hasAction(ui.SemanticsAction.tap), isTrue);
+    expect(addData.flagsCollection.isButton, isTrue);
+    tester.platformDispatcher.onSemanticsActionEvent!(
+      ui.SemanticsActionEvent(
+        type: ui.SemanticsAction.tap,
+        viewId: tester.view.viewId,
+        nodeId: addNode.id,
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('NURS 703'), findsOneWidget);
 
@@ -276,12 +299,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('NURS 701'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('archive-class-course-1')));
+    await focusWithKeyboard(
+      tester,
+      find.byKey(const Key('archive-class-course-1')),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.text('Archived'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('restore-class-course-1')));
+    await focusWithKeyboard(
+      tester,
+      find.byKey(const Key('restore-class-course-1')),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.text('Archived'), findsNothing);
+    semantics.dispose();
   });
 
   testWidgets('existing assignment exposes status and confirmed delete', (
@@ -341,6 +373,45 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(deleted, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('missing catalog row keeps a legacy course readable', (
+    tester,
+  ) async {
+    final record = StoredDomainRecord(
+      value: AcademicAssignment(
+        id: 'assignment-legacy',
+        title: 'Evidence review',
+        course: 'NURS 702',
+        courseId: 'course-not-yet-synchronized',
+        dueDate: LocalDate(2026, 9, 14),
+      ),
+      studentId: 'student-1',
+      revision: 1,
+      createdAtUtc: DateTime.utc(2026, 8, 11),
+      updatedAtUtc: DateTime.utc(2026, 8, 11),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AcademicAssignmentEditor(
+            record: record,
+            onClose: () {},
+            onSave:
+                ({
+                  required title,
+                  required course,
+                  required courseId,
+                  required dueDate,
+                  required status,
+                }) async {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('NURS 702 (legacy)'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
