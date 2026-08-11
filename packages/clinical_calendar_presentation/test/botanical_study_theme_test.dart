@@ -309,6 +309,45 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Botanical Study keeps every compact destination title complete at 200 percent text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final destination in applicationMenuDestinations) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: botanical.standardPresentation.createThemeData(),
+            home: MediaQuery(
+              data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+              child: botanical.shellRenderer.buildDestination(
+                destination: destination,
+                entry: DestinationEntry.applicationMenu,
+                onExit: _noop,
+                child: const Text('Fictional shared workflow content'),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final crown = tester.getRect(
+          find.byKey(const Key('botanical-study-destination-crown')),
+        );
+        final title = tester.getRect(find.text(destination.label));
+        final titleWidget = tester.widget<Text>(find.text(destination.label));
+        expect(titleWidget.maxLines, isNull, reason: destination.label);
+        expect(title.left, greaterThanOrEqualTo(crown.left));
+        expect(title.top, greaterThanOrEqualTo(crown.top));
+        expect(title.right, lessThanOrEqualTo(crown.right));
+        expect(title.bottom, lessThanOrEqualTo(crown.bottom));
+        expect(find.byTooltip('Back'), findsOneWidget);
+        expect(tester.takeException(), isNull, reason: destination.label);
+      }
+    },
+  );
+
   testWidgets('Botanical Study portrait has explicit calendar-first order', (
     tester,
   ) async {

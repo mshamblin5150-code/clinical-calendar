@@ -103,6 +103,48 @@ final class _BotanicalStudyDestinationCrown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enteredFromMenu = entry == DestinationEntry.applicationMenu;
+    final compact = MediaQuery.sizeOf(context).width < 560;
+    final exitControl = compact
+        ? IconButton(
+            key: Key(enteredFromMenu ? 'back-action' : 'close-action'),
+            tooltip: enteredFromMenu ? 'Back' : 'Close',
+            onPressed: onExit,
+            icon: Icon(enteredFromMenu ? Icons.arrow_back : Icons.close),
+          )
+        : TextButton.icon(
+            key: Key(enteredFromMenu ? 'back-action' : 'close-action'),
+            onPressed: onExit,
+            icon: Icon(enteredFromMenu ? Icons.arrow_back : Icons.close),
+            label: Text(enteredFromMenu ? 'Back' : 'Close'),
+          );
+    final title = Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          destination.label,
+          softWrap: true,
+          style:
+              (compact
+                      ? Theme.of(context).textTheme.titleLarge
+                      : Theme.of(context).textTheme.headlineSmall)
+                  ?.copyWith(
+                    color: BotanicalStudyColors.focus,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: .8,
+                  ),
+        ),
+        if (!enlargedText)
+          Text(
+            'CLINICAL CALENDAR  /  BOTANICAL STUDY',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: context.clinicalColors.secondaryText,
+              letterSpacing: 1.1,
+            ),
+          ),
+      ],
+    );
     return CustomPaint(
       key: const Key('botanical-study-destination-crown'),
       painter: _BotanicalStudyCrownPainter(
@@ -118,52 +160,39 @@ final class _BotanicalStudyDestinationCrown extends StatelessWidget {
             horizontal: enlargedText ? 12 : 20,
             vertical: 8,
           ),
-          child: Row(
-            children: [
-              TextButton.icon(
-                key: Key(enteredFromMenu ? 'back-action' : 'close-action'),
-                onPressed: onExit,
-                icon: Icon(enteredFromMenu ? Icons.arrow_back : Icons.close),
-                label: Text(enteredFromMenu ? 'Back' : 'Close'),
-              ),
-              SizedBox(width: enlargedText ? 8 : 18),
-              _BotanicalStudyAxionDeltaMark(size: enlargedText ? 40 : 46),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: compact
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      destination.label,
-                      maxLines: 2,
-                      overflow: TextOverflow.clip,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: BotanicalStudyColors.focus,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: .8,
-                          ),
-                    ),
-                    if (!enlargedText)
-                      Text(
-                        'CLINICAL CALENDAR  /  BOTANICAL STUDY',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: context.clinicalColors.secondaryText,
-                          letterSpacing: 1.1,
+                    Row(
+                      children: [
+                        exitControl,
+                        const Spacer(),
+                        _BotanicalStudyAxionDeltaMark(
+                          size: enlargedText ? 40 : 46,
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    title,
+                  ],
+                )
+              : Row(
+                  children: [
+                    exitControl,
+                    SizedBox(width: enlargedText ? 8 : 18),
+                    _BotanicalStudyAxionDeltaMark(size: enlargedText ? 40 : 46),
+                    const SizedBox(width: 12),
+                    Expanded(child: title),
+                    if (!enlargedText)
+                      const SizedBox(
+                        width: 190,
+                        height: 34,
+                        child: _BotanicalStudyScale(),
                       ),
                   ],
                 ),
-              ),
-              if (!enlargedText)
-                const SizedBox(
-                  width: 190,
-                  height: 34,
-                  child: _BotanicalStudyScale(),
-                ),
-            ],
-          ),
         ),
       ),
     );
