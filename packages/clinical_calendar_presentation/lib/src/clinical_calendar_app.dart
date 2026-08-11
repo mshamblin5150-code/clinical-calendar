@@ -542,6 +542,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   late final SchedulingCalendarDataSource _schedulingCalendarDataSource;
   late final AcademicAssignmentCalendarDataSource _assignmentCalendarDataSource;
   late final AcademicAssignmentApplicationService _academicAssignmentService;
+  late final ClassCatalogApplicationService _classCatalogService;
   late final PlacementProgressController _placementController;
   late final CommitmentLifecycleController _commitmentController;
   late final EvaluationAttentionController _attentionController;
@@ -578,6 +579,12 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       _schedulingService,
     );
     _academicAssignmentService = AcademicAssignmentApplicationService(
+      repositories: dependencies.repositories,
+      clock: dependencies.clock,
+      identifiers: dependencies.identifiers,
+      studentId: widget.studentId,
+    );
+    _classCatalogService = ClassCatalogApplicationService(
       repositories: dependencies.repositories,
       clock: dependencies.clock,
       identifiers: dependencies.identifiers,
@@ -893,6 +900,13 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         return;
       }
     }
+    var catalogEntries = await _classCatalogService.list(includeArchived: true);
+    if (record == null &&
+        !catalogEntries.any((entry) => !entry.value.isArchived)) {
+      await _openClassCatalog();
+      catalogEntries = await _classCatalogService.list(includeArchived: true);
+      if (!catalogEntries.any((entry) => !entry.value.isArchived)) return;
+    }
     if (!mounted) return;
     final current = record;
     await showDialog<void>(
@@ -906,18 +920,20 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             height: size.height * .9,
             child: AcademicAssignmentEditor(
               record: current,
+              catalogEntries: catalogEntries,
               onClose: () => Navigator.pop(dialogContext),
               onSave:
                   ({
                     required title,
                     required course,
+                    required courseId,
                     required dueDate,
                     required status,
                   }) async {
                     if (current == null) {
                       await _academicAssignmentService.create(
                         title: title,
-                        course: course,
+                        courseId: courseId!,
                         dueDate: dueDate,
                       );
                     } else {
@@ -925,7 +941,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
                         assignmentId: current.value.id,
                         expectedRevision: current.revision,
                         title: title,
-                        course: course,
+                        courseId: courseId,
                         dueDate: dueDate,
                         status: status,
                       );
@@ -941,6 +957,55 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
                       );
                       if (dialogContext.mounted) Navigator.pop(dialogContext);
                     },
+            ),
+          ),
+        );
+      },
+    );
+    if (mounted) setState(() => _calendarRevision++);
+  }
+
+  Future<void> _openClassCatalog() async {
+    Future<List<StoredDomainRecord<ClassCatalogEntry>>> reload() =>
+        _classCatalogService.list(includeArchived: true);
+
+    var entries = await reload();
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final size = MediaQuery.sizeOf(dialogContext);
+        return Dialog(
+          insetPadding: const EdgeInsets.all(12),
+          child: SizedBox(
+            width: size.width < 720 ? size.width - 24 : 620,
+            height: size.height * .9,
+            child: ClassCatalogManager(
+              initialEntries: entries,
+              onClose: () => Navigator.pop(dialogContext),
+              onAdd: (name) async {
+                await _classCatalogService.create(name: name);
+                entries = await reload();
+                return entries;
+              },
+              onRename: (record, name) async {
+                await _classCatalogService.rename(
+                  entryId: record.value.id,
+                  expectedRevision: record.revision,
+                  name: name,
+                );
+                entries = await reload();
+                return entries;
+              },
+              onSetArchived: (record, archived) async {
+                await _classCatalogService.setArchived(
+                  entryId: record.value.id,
+                  expectedRevision: record.revision,
+                  archived: archived,
+                );
+                entries = await reload();
+                return entries;
+              },
             ),
           ),
         );
@@ -1499,6 +1564,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
           child: AcademicAssignmentCalendarWorkspace(
             themeId: widget.themeBundle.id,
             onAddAssignment: _openAcademicAssignment,
+            onManageClasses: _openClassCatalog,
             calendar: CalendarPeriodView(
               key: ValueKey('calendar-period-view-$_calendarRevision'),
               dataSource: widget.themeBundle.id == variantFThemeId

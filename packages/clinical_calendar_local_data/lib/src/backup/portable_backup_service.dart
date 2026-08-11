@@ -21,6 +21,7 @@ const _logicalTables = <String>[
   'evaluation_plans',
   'evaluation_requirements',
   'schedule_templates',
+  'class_catalog_entries',
   'academic_assignments',
   'settings',
   'reminder_state',
@@ -39,6 +40,7 @@ const _primaryKeys = <String, List<String>>{
   'evaluation_requirements': ['id'],
   'schedule_templates': ['id'],
   'academic_assignments': ['id'],
+  'class_catalog_entries': ['id'],
   'settings': ['id'],
   'reminder_state': ['id'],
   'trash': ['id'],
@@ -498,6 +500,7 @@ final class PortableBackupService {
       'evaluation_plans' => 'evaluation_plan',
       'schedule_templates' => 'schedule_template',
       'academic_assignments' => 'academic_assignment',
+      'class_catalog_entries' => 'class_catalog_entry',
       'reminder_state' => 'reminder_state',
       _ => null,
     };

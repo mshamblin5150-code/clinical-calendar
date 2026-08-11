@@ -11,8 +11,10 @@ void main() {
       final repository = _MemoryRepository<AcademicAssignment>(
         (value) => value.id,
       );
+      final catalog = _MemoryRepository<ClassCatalogEntry>((value) => value.id);
+      _seedCatalog(catalog, 'course-1', 'NURS 702');
       final service = AcademicAssignmentApplicationService(
-        repositories: _Registry(_Repositories(repository)),
+        repositories: _Registry(_Repositories(repository, catalog)),
         clock: _Clock(),
         identifiers: _Identifiers(),
         studentId: _studentId,
@@ -20,7 +22,7 @@ void main() {
 
       final created = await service.create(
         title: 'Evidence review',
-        course: 'NURS 702',
+        courseId: 'course-1',
         dueDate: LocalDate(2026, 9, 14),
       );
       expect(created.revision, 1);
@@ -30,7 +32,7 @@ void main() {
         assignmentId: created.value.id,
         expectedRevision: created.revision,
         title: 'Final evidence review',
-        course: 'NURS 702',
+        courseId: 'course-1',
         dueDate: LocalDate(2026, 9, 21),
         status: AcademicAssignmentStatus.completed,
       );
@@ -42,7 +44,7 @@ void main() {
           assignmentId: created.value.id,
           expectedRevision: created.revision,
           title: 'Stale edit',
-          course: 'NURS 702',
+          courseId: 'course-1',
           dueDate: LocalDate(2026, 9, 21),
         ),
         throwsA(
@@ -68,20 +70,23 @@ void main() {
       final repository = _MemoryRepository<AcademicAssignment>(
         (value) => value.id,
       );
+      final catalog = _MemoryRepository<ClassCatalogEntry>((value) => value.id);
+      _seedCatalog(catalog, 'course-1', 'NURS 702');
+      _seedCatalog(catalog, 'course-2', 'NURS 703');
       final service = AcademicAssignmentApplicationService(
-        repositories: _Registry(_Repositories(repository)),
+        repositories: _Registry(_Repositories(repository, catalog)),
         clock: _Clock(),
         identifiers: _Identifiers(),
         studentId: _studentId,
       );
       await service.create(
         title: 'In period',
-        course: 'NURS 702',
+        courseId: 'course-1',
         dueDate: LocalDate(2026, 9, 14),
       );
       await service.create(
         title: 'Outside period',
-        course: 'NURS 703',
+        courseId: 'course-2',
         dueDate: LocalDate(2026, 10, 1),
       );
 
@@ -116,14 +121,31 @@ final class _Registry implements RepositoryRegistry {
 final class _Repositories
     implements
         LocalWriteRepositories,
-        AcademicAssignmentLocalWriteRepositories {
-  const _Repositories(this.academicAssignments);
+        AcademicAssignmentLocalWriteRepositories,
+        ClassCatalogLocalWriteRepositories {
+  const _Repositories(this.academicAssignments, this.classCatalogEntries);
 
   @override
   final MutableRepository<AcademicAssignment> academicAssignments;
+  @override
+  final MutableRepository<ClassCatalogEntry> classCatalogEntries;
 
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+void _seedCatalog(
+  _MemoryRepository<ClassCatalogEntry> repository,
+  String id,
+  String name,
+) {
+  repository.records[id] = StoredDomainRecord(
+    value: ClassCatalogEntry(id: id, name: name),
+    studentId: _studentId,
+    revision: 1,
+    createdAtUtc: DateTime.utc(2026, 8, 10, 12),
+    updatedAtUtc: DateTime.utc(2026, 8, 10, 12),
+  );
 }
 
 final class _MemoryRepository<T> implements MutableRepository<T> {

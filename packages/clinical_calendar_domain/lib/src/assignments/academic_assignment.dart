@@ -13,12 +13,16 @@ final class AcademicAssignment {
     required String id,
     required String title,
     required String course,
+    String? courseId,
     required LocalDate dueDate,
     AcademicAssignmentStatus status = AcademicAssignmentStatus.pending,
   }) => AcademicAssignment._(
     id: requireIdentifier(id, 'Academic Assignment id'),
     title: _requiredText(title, 'Assignment title', 200),
     course: _requiredText(course, 'Class or course', 120),
+    courseId: courseId == null
+        ? null
+        : requireIdentifier(courseId, 'Class catalog entry id'),
     dueDate: dueDate,
     status: status,
   );
@@ -27,6 +31,7 @@ final class AcademicAssignment {
     required this.id,
     required this.title,
     required this.course,
+    required this.courseId,
     required this.dueDate,
     required this.status,
   });
@@ -34,6 +39,9 @@ final class AcademicAssignment {
   final String id;
   final String title;
   final String course;
+
+  /// Stable catalog identity. Null only for records created before the catalog.
+  final String? courseId;
   final LocalDate dueDate;
   final AcademicAssignmentStatus status;
 
@@ -43,12 +51,14 @@ final class AcademicAssignment {
   AcademicAssignment copyWith({
     String? title,
     String? course,
+    String? courseId,
     LocalDate? dueDate,
     AcademicAssignmentStatus? status,
   }) => AcademicAssignment(
     id: id,
     title: title ?? this.title,
     course: course ?? this.course,
+    courseId: courseId ?? this.courseId,
     dueDate: dueDate ?? this.dueDate,
     status: status ?? this.status,
   );

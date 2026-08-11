@@ -12,6 +12,10 @@ _Avoid_: User, learner
 A course deliverable owned by the Student with a title, class or course, required Due Date, and Pending or Completed status. It is distinct from assigning a Clinical Session to a Clinical Placement and Preceptor.
 _Avoid_: Assignment alone, clinical assignment, placement assignment
 
+**Class Catalog Entry**:
+A reusable class or course owned by the Student and selected by Academic Assignments. Archiving removes it from new selections without erasing it from existing Academic Assignments; renaming it updates linked assignment projections.
+_Avoid_: Course record, subject, Academic Assignment class
+
 **Clinical Placement**:
 A program requirement with a defined target number of hours, Start Date, and Completion Deadline, such as Family Medicine with a 270-hour target. It persists independently of any particular Preceptor or clinical site, so changing either never resets its progress.
 _Avoid_: Preceptorship, rotation

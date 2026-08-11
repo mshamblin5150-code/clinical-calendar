@@ -77,33 +77,39 @@ final class AcademicAssignmentApplicationService
 
   Future<StoredDomainRecord<AcademicAssignment>> create({
     required String title,
-    required String course,
+    required String courseId,
     required LocalDate dueDate,
   }) async {
     final occurredAt = _now();
-    final assignment = AcademicAssignment(
-      id: _identifiers.nextIdentifier(),
-      title: title,
-      course: course,
-      dueDate: dueDate,
-    );
-    return _repositories.mutate(
-      (repositories) => _writeRepositories(repositories).academicAssignments
+    return _repositories.mutate((repositories) {
+      final catalogEntry = _catalogEntry(
+        repositories,
+        courseId,
+        requireActive: true,
+      );
+      final assignment = AcademicAssignment(
+        id: _identifiers.nextIdentifier(),
+        title: title,
+        course: catalogEntry.name,
+        courseId: catalogEntry.id,
+        dueDate: dueDate,
+      );
+      return _writeRepositories(repositories).academicAssignments
           .put(
             studentId: _studentId,
             value: assignment,
             expectedRevision: 0,
             mutation: _mutation(occurredAt),
           )
-          .record,
-    );
+          .record;
+    });
   }
 
   Future<StoredDomainRecord<AcademicAssignment>> update({
     required String assignmentId,
     required int expectedRevision,
     required String title,
-    required String course,
+    required String? courseId,
     required LocalDate dueDate,
     AcademicAssignmentStatus? status,
   }) async {
@@ -128,10 +134,21 @@ final class AcademicAssignmentApplicationService
           'The Academic Assignment changed before the edit was saved.',
         );
       }
+      final selectedCourse = courseId == null
+          ? (id: current.value.courseId, name: current.value.course)
+          : () {
+              final entry = _catalogEntry(
+                repositories,
+                courseId,
+                requireActive: courseId != current.value.courseId,
+              );
+              return (id: entry.id as String?, name: entry.name);
+            }();
       final assignment = AcademicAssignment(
         id: current.value.id,
         title: title,
-        course: course,
+        course: selectedCourse.name,
+        courseId: selectedCourse.id,
         dueDate: dueDate,
         status: status ?? current.value.status,
       );
@@ -170,6 +187,30 @@ final class AcademicAssignmentApplicationService
     throw const RepositoryException(
       RepositoryFailureKind.uninitialized,
       'Academic Assignment persistence is unavailable.',
+    );
+  }
+
+  ClassCatalogEntry _catalogEntry(
+    LocalReadRepositories repositories,
+    String courseId, {
+    required bool requireActive,
+  }) {
+    if (repositories case ClassCatalogLocalReadRepositories capable) {
+      final record = capable.classCatalogEntries.find(
+        studentId: _studentId,
+        id: courseId,
+      );
+      if (record == null || requireActive && record.value.isArchived) {
+        throw const RepositoryException(
+          RepositoryFailureKind.notFound,
+          'Select an active class or course from the catalog.',
+        );
+      }
+      return record.value;
+    }
+    throw const RepositoryException(
+      RepositoryFailureKind.uninitialized,
+      'Class catalog persistence is unavailable.',
     );
   }
 

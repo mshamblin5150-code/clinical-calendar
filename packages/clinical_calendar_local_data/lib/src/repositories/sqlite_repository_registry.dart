@@ -395,6 +395,7 @@ final class SqliteRepositoryRegistry
       'evaluation_plan' => 'evaluation_plans',
       'reminder_state' => 'reminder_state',
       'academic_assignment' => 'academic_assignments',
+      'class_catalog_entry' => 'class_catalog_entries',
       _ => throw const RecoveryException(
         RecoveryFailureKind.invariantViolation,
         'This type of Trash entry cannot be permanently deleted.',
@@ -720,6 +721,13 @@ void _restoreTombstone(
         entityId,
         mutation,
       );
+    case 'class_catalog_entry':
+      _restoreRecord(
+        repositories.classCatalogEntries,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
     default:
       throw const RecoveryException(
         RecoveryFailureKind.invariantViolation,
@@ -825,6 +833,7 @@ final class _RestoreOutboxIntentSink
       'evaluation_plans' => 'evaluation_plan',
       'schedule_templates' => 'schedule_template',
       'academic_assignments' => 'academic_assignment',
+      'class_catalog_entries' => 'class_catalog_entry',
       'settings' => 'settings',
       _ => throw StateError('Unmapped portable restore table: $table'),
     };
@@ -908,7 +917,8 @@ final class _RestoreOutboxTarget {
     'preceptor' ||
     'protected_day' ||
     'work_shift' ||
-    'academic_assignment' => 1,
+    'class_catalog_entry' => 1,
+    'academic_assignment' => 2,
     'clinical_placement' => 2,
     'evaluation_plan' ||
     'clinical_session' ||
@@ -956,6 +966,9 @@ Map<String, Object?> _restorePayloadValue(
   'academic_assignments' => _encodeAcademicAssignment(
     _decodeAcademicAssignment(row),
   ),
+  'class_catalog_entries' => _encodeClassCatalogEntry(
+    _decodeClassCatalogEntry(row),
+  ),
   'settings' => {
     'week_start': _int(row, 'week_start'),
     'time_display': _text(row, 'time_display'),
@@ -976,7 +989,8 @@ final class _Repositories
         SupportLocalWriteRepositories,
         ReminderLocalWriteRepositories,
         SynchronizationLocalWriteRepositories,
-        AcademicAssignmentLocalWriteRepositories {
+        AcademicAssignmentLocalWriteRepositories,
+        ClassCatalogLocalWriteRepositories {
   _Repositories(this.registry, {required this.writable});
 
   final SqliteRepositoryRegistry registry;
@@ -1078,6 +1092,16 @@ final class _Repositories
     idOf: (value) => value.id,
     encode: _encodeAcademicAssignment,
     decode: _decodeAcademicAssignment,
+  );
+  @override
+  late final classCatalogEntries = _EntityRepository<ClassCatalogEntry>(
+    this,
+    table: 'class_catalog_entries',
+    entityType: 'class_catalog_entry',
+    idOf: (value) => value.id,
+    encode: _encodeClassCatalogEntry,
+    decode: _decodeClassCatalogEntry,
+    payloadEncode: _encodeClassCatalogEntryPayload,
   );
 
   void requireWritable() {
@@ -1791,6 +1815,7 @@ Preceptor _decodePreceptor(Map<String, Object?> row) => Preceptor(
 Map<String, Object?> _encodeAcademicAssignment(AcademicAssignment value) => {
   'title': value.title,
   'course': value.course,
+  'course_id': value.courseId,
   'due_date': value.dueDate.toString(),
   'status': value.status.name,
 };
@@ -1800,8 +1825,24 @@ AcademicAssignment _decodeAcademicAssignment(Map<String, Object?> row) =>
       id: _identifier(_text(row, 'id')),
       title: _text(row, 'title'),
       course: _text(row, 'course'),
+      courseId: _nullableText(row, 'course_id'),
       dueDate: _localDate(_text(row, 'due_date')),
       status: AcademicAssignmentStatus.values.byName(_text(row, 'status')),
+    );
+
+Map<String, Object?> _encodeClassCatalogEntry(ClassCatalogEntry value) => {
+  'name': value.name,
+  'archived': value.isArchived ? 1 : 0,
+};
+
+Map<String, Object?> _encodeClassCatalogEntryPayload(ClassCatalogEntry value) =>
+    {'name': value.name, 'archived': value.isArchived};
+
+ClassCatalogEntry _decodeClassCatalogEntry(Map<String, Object?> row) =>
+    ClassCatalogEntry(
+      id: _identifier(_text(row, 'id')),
+      name: _text(row, 'name'),
+      isArchived: _int(row, 'archived') == 1,
     );
 
 Map<String, Object?> _encodeReminderState(ReminderState value) => {

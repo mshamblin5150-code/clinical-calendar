@@ -1,8 +1,13 @@
+import 'dart:ui' as ui;
+
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/keyboard_focus.dart';
 
 void main() {
   testWidgets(
@@ -25,6 +30,11 @@ void main() {
         await tester.pumpWidget(_workspace(themeId));
         expect(
           find.byKey(const Key('add-academic-assignment')),
+          findsOneWidget,
+          reason: themeId,
+        );
+        expect(
+          find.byKey(const Key('manage-class-catalog')),
           findsOneWidget,
           reason: themeId,
         );
@@ -63,6 +73,7 @@ void main() {
 
       await tester.pumpWidget(_workspace(variantFThemeId));
       expect(find.byKey(const Key('add-academic-assignment')), findsNothing);
+      expect(find.byKey(const Key('manage-class-catalog')), findsNothing);
 
       await tester.pumpWidget(_workspace('unknown-theme'));
       expect(find.byKey(const Key('add-academic-assignment')), findsNothing);
@@ -151,11 +162,13 @@ void main() {
         ),
         home: Scaffold(
           body: AcademicAssignmentEditor(
+            catalogEntries: [_catalogRecord('course-1', 'NURS 702')],
             onClose: () {},
             onSave:
                 ({
                   required title,
                   required course,
+                  required courseId,
                   required dueDate,
                   required status,
                 }) async {
@@ -174,15 +187,23 @@ void main() {
       find.byKey(const Key('academic-assignment-title')),
       'Evidence review',
     );
-    await tester.enterText(
+    await focusWithKeyboard(
+      tester,
       find.byKey(const Key('academic-assignment-course')),
-      'NURS 702',
     );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.enterText(
       find.byKey(const Key('academic-assignment-due-date')),
       '09-14-2026',
     );
-    await tester.tap(find.byKey(const Key('save-academic-assignment')));
+    await focusWithKeyboard(
+      tester,
+      find.byKey(const Key('save-academic-assignment')),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
 
     expect(saved?.title, 'Evidence review');
@@ -192,6 +213,107 @@ void main() {
     expect(find.bySemanticsLabel(RegExp('Class or course')), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('Due date')), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('class catalog surface adds, renames, archives, and restores', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    tester.view.physicalSize = const Size(900, 1440);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var entries = [_catalogRecord('course-1', 'NURS 702')];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildGraphiteTheme(enhancedAccessibility: true),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: ClassCatalogManager(
+            initialEntries: entries,
+            onAdd: (name) async {
+              entries = [...entries, _catalogRecord('course-2', name)];
+              return entries;
+            },
+            onRename: (record, name) async {
+              entries = [
+                for (final entry in entries)
+                  if (entry.value.id == record.value.id)
+                    _catalogRecord(entry.value.id, name)
+                  else
+                    entry,
+              ];
+              return entries;
+            },
+            onSetArchived: (record, archived) async {
+              entries = [
+                for (final entry in entries)
+                  if (entry.value.id == record.value.id)
+                    _catalogRecord(
+                      entry.value.id,
+                      entry.value.name,
+                      archived: archived,
+                    )
+                  else
+                    entry,
+              ];
+              return entries;
+            },
+            onClose: () {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byKey(const Key('new-class-name')), 'NURS 703');
+    final addNode = tester.getSemantics(find.byKey(const Key('add-class')));
+    final addData = addNode.getSemanticsData();
+    expect(addData.hasAction(ui.SemanticsAction.tap), isTrue);
+    expect(addData.flagsCollection.isButton, isTrue);
+    tester.platformDispatcher.onSemanticsActionEvent!(
+      ui.SemanticsActionEvent(
+        type: ui.SemanticsAction.tap,
+        viewId: tester.view.viewId,
+        nodeId: addNode.id,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('NURS 703'), findsOneWidget);
+
+    await focusWithKeyboard(
+      tester,
+      find.byKey(const Key('edit-class-course-1')),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('edit-class-name')),
+      'NURS 701',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+    expect(find.text('NURS 701'), findsOneWidget);
+
+    await focusWithKeyboard(
+      tester,
+      find.byKey(const Key('archive-class-course-1')),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.text('Archived'), findsOneWidget);
+    await focusWithKeyboard(
+      tester,
+      find.byKey(const Key('restore-class-course-1')),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.text('Archived'), findsNothing);
+    semantics.dispose();
   });
 
   testWidgets('existing assignment exposes status and confirmed delete', (
@@ -230,6 +352,7 @@ void main() {
                 ({
                   required title,
                   required course,
+                  required courseId,
                   required dueDate,
                   required status,
                 }) async {},
@@ -252,7 +375,58 @@ void main() {
     expect(deleted, isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('missing catalog row keeps a legacy course readable', (
+    tester,
+  ) async {
+    final record = StoredDomainRecord(
+      value: AcademicAssignment(
+        id: 'assignment-legacy',
+        title: 'Evidence review',
+        course: 'NURS 702',
+        courseId: 'course-not-yet-synchronized',
+        dueDate: LocalDate(2026, 9, 14),
+      ),
+      studentId: 'student-1',
+      revision: 1,
+      createdAtUtc: DateTime.utc(2026, 8, 11),
+      updatedAtUtc: DateTime.utc(2026, 8, 11),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AcademicAssignmentEditor(
+            record: record,
+            onClose: () {},
+            onSave:
+                ({
+                  required title,
+                  required course,
+                  required courseId,
+                  required dueDate,
+                  required status,
+                }) async {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('NURS 702 (legacy)'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
+
+StoredDomainRecord<ClassCatalogEntry> _catalogRecord(
+  String id,
+  String name, {
+  bool archived = false,
+}) => StoredDomainRecord(
+  value: ClassCatalogEntry(id: id, name: name, isArchived: archived),
+  studentId: 'student-1',
+  revision: 1,
+  createdAtUtc: DateTime.utc(2026, 8, 11),
+  updatedAtUtc: DateTime.utc(2026, 8, 11),
+);
 
 Widget _workspace(String themeId) => MaterialApp(
   home: Scaffold(
@@ -261,6 +435,7 @@ Widget _workspace(String themeId) => MaterialApp(
       child: AcademicAssignmentCalendarWorkspace(
         themeId: themeId,
         onAddAssignment: () {},
+        onManageClasses: () {},
         calendar: const ColoredBox(color: Colors.black),
       ),
     ),

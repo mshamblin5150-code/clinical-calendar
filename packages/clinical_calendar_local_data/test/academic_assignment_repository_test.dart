@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
@@ -30,6 +31,22 @@ void main() {
       );
       await registry.initialize();
 
+      final catalogEntry = await registry.mutate((repositories) {
+        final catalog = (repositories as ClassCatalogLocalWriteRepositories)
+            .classCatalogEntries;
+        return catalog
+            .put(
+              studentId: _studentId,
+              value: ClassCatalogEntry(
+                id: '00000000-0000-4000-8000-000000000009',
+                name: 'NURS 702',
+              ),
+              expectedRevision: 0,
+              mutation: _mutation(0),
+            )
+            .record;
+      });
+
       final created = await registry.mutate((repositories) {
         final assignments =
             (repositories as AcademicAssignmentLocalWriteRepositories)
@@ -41,6 +58,7 @@ void main() {
                 id: '00000000-0000-4000-8000-000000000010',
                 title: 'Evidence review',
                 course: 'NURS 702',
+                courseId: catalogEntry.value.id,
                 dueDate: LocalDate(2026, 9, 14),
               ),
               expectedRevision: 0,
@@ -59,6 +77,7 @@ void main() {
       );
       expect(loaded.value.title, 'Evidence review');
       expect(loaded.value.course, 'NURS 702');
+      expect(loaded.value.courseId, catalogEntry.value.id);
       expect(loaded.value.dueDate, LocalDate(2026, 9, 14));
       expect(
         database.select(
@@ -67,6 +86,47 @@ void main() {
         ).single['entity_type'],
         'academic_assignment',
       );
+      expect(
+        database.select(
+          "SELECT entity_type FROM outbox_operations WHERE entity_id = ?",
+          [catalogEntry.value.id],
+        ).single['entity_type'],
+        'class_catalog_entry',
+      );
+
+      const remoteId = '00000000-0000-4000-8000-000000000011';
+      await registry.mutate((repositories) {
+        final sync = repositories as SynchronizationLocalWriteRepositories;
+        return sync.synchronization.applyRemoteAndAdvanceCursor(
+          studentId: _studentId,
+          remoteScope: 'account',
+          change: RemoteSynchronizationChange(
+            cursor: 1,
+            entityType: 'class_catalog_entry',
+            entityId: remoteId,
+            revision: 1,
+            operationType: OutboxOperationType.upsert,
+            payloadJson: jsonEncode({
+              'schema_version': 1,
+              'entity_type': 'class_catalog_entry',
+              'entity_id': remoteId,
+              'student_id': _studentId,
+              'revision': 1,
+              'created_at_utc': '2026-08-11T12:00:00.000Z',
+              'updated_at_utc': '2026-08-11T12:00:00.000Z',
+              'deleted_at_utc': null,
+              'value': {'name': 'NURS 703', 'archived': false},
+            }),
+          ),
+          appliedAtUtc: DateTime.utc(2026, 8, 11, 12),
+        );
+      });
+      final catalog = await registry.read(
+        (repositories) => (repositories as ClassCatalogLocalReadRepositories)
+            .classCatalogEntries
+            .list(studentId: _studentId),
+      );
+      expect(catalog.map((record) => record.value.name), contains('NURS 703'));
     },
   );
 }

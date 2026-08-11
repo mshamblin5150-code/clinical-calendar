@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 15;
+  static const latestVersion = 16;
 
   final MigrationTestHook? _testHook;
 
@@ -683,5 +683,82 @@ final Map<int, List<String>> _statements = {
     '''CREATE INDEX academic_assignments_due_index
       ON academic_assignments(student_id, due_date)
       WHERE deleted_at_utc IS NULL''',
+  ],
+  16: [
+    '''CREATE TABLE class_catalog_entries (
+      $_syncColumns,
+      name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 120),
+      archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1)),
+      PRIMARY KEY (id),
+      UNIQUE (id, student_id),
+      FOREIGN KEY (student_id) REFERENCES student_profiles(student_id)
+    ) STRICT''',
+    '''CREATE UNIQUE INDEX class_catalog_entries_name_index
+      ON class_catalog_entries(student_id, lower(name))
+      WHERE deleted_at_utc IS NULL''',
+    '''ALTER TABLE academic_assignments
+      ADD COLUMN course_id TEXT
+      CHECK (course_id IS NULL OR length(course_id) = 36)''',
+    '''INSERT INTO class_catalog_entries
+      (id, student_id, revision, created_at_utc, updated_at_utc,
+       deleted_at_utc, name, archived)
+      SELECT lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) ||
+             '-4' || substr(lower(hex(randomblob(2))), 2) || '-' ||
+             substr('89ab', abs(random()) % 4 + 1, 1) ||
+             substr(lower(hex(randomblob(2))), 2) || '-' ||
+             lower(hex(randomblob(6))),
+             student_id, 1, min(created_at_utc), max(updated_at_utc),
+             NULL, trim(course), 0
+      FROM academic_assignments
+      WHERE deleted_at_utc IS NULL
+      GROUP BY student_id, lower(trim(course))''',
+    '''UPDATE academic_assignments
+      SET course_id = (
+        SELECT catalog.id FROM class_catalog_entries AS catalog
+        WHERE catalog.student_id = academic_assignments.student_id
+          AND lower(catalog.name) = lower(trim(academic_assignments.course))
+          AND catalog.deleted_at_utc IS NULL
+      )
+      WHERE course_id IS NULL''',
+    '''UPDATE outbox_operations
+      SET payload_json = json_set(
+        payload_json, '\$.value.course_id',
+        (SELECT assignment.course_id FROM academic_assignments AS assignment
+         WHERE assignment.student_id = outbox_operations.student_id
+           AND assignment.id = outbox_operations.entity_id)
+      )
+      WHERE entity_type = 'academic_assignment'
+        AND operation_type = 'upsert'
+        AND acknowledged_at_utc IS NULL
+        AND terminal_rejected_at_utc IS NULL
+        AND json_valid(payload_json)''',
+    '''INSERT INTO outbox_operations
+      (id, student_id, idempotency_key, entity_type, entity_id,
+       operation_type, base_revision, payload_json, created_at_utc)
+      SELECT lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) ||
+             '-4' || substr(lower(hex(randomblob(2))), 2) || '-' ||
+             substr('89ab', abs(random()) % 4 + 1, 1) ||
+             substr(lower(hex(randomblob(2))), 2) || '-' ||
+             lower(hex(randomblob(6))),
+             student_id,
+             lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) ||
+             '-4' || substr(lower(hex(randomblob(2))), 2) || '-' ||
+             substr('89ab', abs(random()) % 4 + 1, 1) ||
+             substr(lower(hex(randomblob(2))), 2) || '-' ||
+             lower(hex(randomblob(6))),
+             'class_catalog_entry', id, 'upsert', 0,
+             json_object(
+               'schema_version', 1,
+               'entity_type', 'class_catalog_entry',
+               'entity_id', id,
+               'student_id', student_id,
+               'revision', revision,
+               'created_at_utc', created_at_utc,
+               'updated_at_utc', updated_at_utc,
+               'deleted_at_utc', NULL,
+               'value', json_object('name', name, 'archived', json('false'))
+             ),
+             updated_at_utc
+      FROM class_catalog_entries''',
   ],
 };

@@ -213,10 +213,18 @@ void _validateCorrectedVersion({
           id: conflict.record.entityId,
           title: _text(corrected, 'title'),
           course: _text(corrected, 'course'),
+          courseId: _nullableText(corrected, 'course_id'),
           dueDate: _localDate(_text(corrected, 'due_date')),
           status: AcademicAssignmentStatus.values.byName(
             _text(corrected, 'status'),
           ),
+        );
+      case 'class_catalog_entry':
+        ClassCatalogEntry(
+          id: conflict.record.entityId,
+          name: _text(corrected, 'name'),
+          isArchived:
+              corrected['archived'] == true || corrected['archived'] == 1,
         );
       case 'student_profile':
         StudentProfile(
