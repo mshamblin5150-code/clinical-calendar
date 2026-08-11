@@ -2,7 +2,9 @@
 
 Issue: [#163](https://github.com/mshamblin5150-code/clinical-calendar/issues/163)
 
-Status: **IMPLEMENTATION COMPLETE; PHYSICAL SM-X920 REVIEW PENDING**.
+Status: **Accepted on the physical SM-X920.** The maintainer explicitly
+accepted Coastal Light from the signed `b91f5f7` catalog candidate under #139
+after the complete objective matrix passed.
 
 This proof supersedes Coastal Light v4 only for the #163 repair. The approved
 1586×992 concept remains the normative visual target. These files are
@@ -52,5 +54,13 @@ Focused tests cover crown routing, destination Back/Close chrome, canonical
 delta consumption, separate Calendar legend geometry, 200% reachability, and
 the four Coastal-owned shared live workflow housings. The complete repository
 quality gate passes. Independent Standards/Spec review is recorded with the
-implementation handoff. Physical review remains Pending on #139 until the
-maintainer explicitly records an Accepted decision.
+implementation handoff.
+
+## Physical Android-tablet acceptance
+
+State: **Accepted for Android tablet under #139.** The private
+original-resolution physical matrix and signed-candidate provenance are
+recorded in the
+[#139 objective checkpoint](https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237).
+The files in this directory remain deterministic proof renders rather than
+physical captures. No Windows or physical-phone acceptance is claimed.

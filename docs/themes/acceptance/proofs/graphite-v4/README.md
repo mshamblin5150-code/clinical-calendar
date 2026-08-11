@@ -2,10 +2,11 @@
 
 Issue: [#160](https://github.com/mshamblin5150-code/clinical-calendar/issues/160)
 
-Status: **Pending explicit maintainer visual approval.** This package replaces
-the rejected physical build-43 Graphite result and supersedes `graphite-v3`
-for the next review. Passing automation does not approve it. Physical
-SM-X920 review remains **Pending** under #139.
+Status: **Pending after physical SM-X920 review.** The maintainer reviewed the
+signed `b91f5f7` catalog candidate under #139 and kept Graphite Pending. #174
+owns the required follow-up: make the canonical delta the Application Menu
+trigger and stop the preceptor-expanded wheel and Needs Attention chrome from
+painting across the ownership boundary between their upper and lower boxes.
 
 Graphite continues to declare **1536 by 1024** as its exact landscape golden
 viewport. Renderer contract: `graphite-owned-responsive-instrument-v4`.
@@ -88,8 +89,11 @@ d0265a70aa47d3632cda43c322dd49f3231ffc339b28ce6d6aa6850a11f615b9  runtime-landsc
 
 ## Physical Android-tablet acceptance
 
-State: **Pending — maintainer action required on #139.**
+State: **Pending — follow-up #174 blocks a new decision on #139.**
 
-No physical build was installed and no signing material was accessed during
-this implementation. The next signed candidate must be reviewed on the
-physical SM-X920 with fictional data before Graphite can be marked Accepted.
+The signed `b91f5f7` candidate was reviewed on the physical SM-X920 using the
+private original-resolution matrix recorded in the
+[#139 objective checkpoint](https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237).
+The evidence passed the objective gates, but the maintainer explicitly kept
+Graphite Pending for the delta routing and box-ownership defects above. No
+Windows or physical-phone acceptance is claimed.

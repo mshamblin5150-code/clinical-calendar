@@ -2,10 +2,11 @@
 
 Issue: [#164](https://github.com/mshamblin5150-code/clinical-calendar/issues/164)
 
-Status: **implementation candidate awaiting physical SM-X920 review**. The
-approved issue #115 landscape remains the normative visual target, amended by
-the maintainer decisions in #159 and #164. Automated evidence does not grant
-physical acceptance. The decision on parent issue #139 remains **Pending**.
+Status: **Pending after physical SM-X920 review.** The maintainer reviewed the
+signed `b91f5f7` catalog candidate under #139 and kept Botanical Study
+Pending. #176 owns the required follow-up: make the canonical delta the
+Application Menu trigger and optically center it with the `CLINICAL CALENDAR`
+title.
 
 ## Repair evidence
 
@@ -62,5 +63,11 @@ unchanged.
 
 ## Physical Android-tablet acceptance
 
-State: **not performed - Pending on #139**. No file in this package is a
-physical-device capture, and no Accepted decision is inferred.
+State: **Pending — follow-up #176 blocks a new decision on #139.**
+
+The signed `b91f5f7` candidate was reviewed on the physical SM-X920 using the
+private original-resolution matrix recorded in the
+[#139 objective checkpoint](https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237).
+The evidence passed the objective gates, but the maintainer explicitly kept
+Botanical Study Pending for the delta routing and title-centering defects
+above. No Windows or physical-phone acceptance is claimed.

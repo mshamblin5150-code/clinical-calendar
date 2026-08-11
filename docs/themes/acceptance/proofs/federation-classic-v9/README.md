@@ -2,8 +2,9 @@
 
 Issue: [#161](https://github.com/mshamblin5150-code/clinical-calendar/issues/161)
 
-Status: **deterministic candidate; physical SM-X920 review Pending**. Passing
-tests and these captures do not grant visual acceptance.
+Status: **Accepted on the physical SM-X920.** The maintainer explicitly
+accepted Federation Classic from the signed `b91f5f7` catalog candidate under
+#139 after the complete objective matrix passed.
 
 This repair preserves the maintainer-approved v8 Calendar composition and its
 1586 by 992 landscape exemplar while completing the application-wide
@@ -60,5 +61,12 @@ c3b7fa5c8dd8aba0303c69851c098ab313f9092eab1061156ac1a189dd4188e8  runtime-portra
 
 ## Physical Android-tablet acceptance
 
-State: **not performed — Pending under #139**. No image in this directory is
-a physical-device capture, and no maintainer Accepted decision is inferred.
+State: **Accepted for Android tablet under #139.**
+
+The private original-resolution physical matrix and signed-candidate
+provenance are recorded in the
+[#139 objective checkpoint](https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237).
+The files in this directory remain deterministic proof renders rather than
+physical captures. The explicit decision applies to the Samsung SM-X920
+Android-tablet target only; no Windows or physical-phone acceptance is
+claimed.

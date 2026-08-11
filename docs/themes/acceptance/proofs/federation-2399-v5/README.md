@@ -2,9 +2,10 @@
 
 Issue: [#162](https://github.com/mshamblin5150-code/clinical-calendar/issues/162)
 
-Status: **candidate awaiting physical SM-X920 review**. The deterministic
-proofs pass automation, but Federation 2399 remains **Pending** until the
-maintainer explicitly records an Accepted decision on #139.
+Status: **Pending after physical SM-X920 review.** The maintainer reviewed the
+signed `b91f5f7` catalog candidate under #139 and kept Federation 2399
+Pending. #175 owns the required follow-up: the canonical delta must become the
+Application Menu trigger.
 
 This candidate retains the approved issue #114 silhouette and v4 bay geometry
 while repairing the physical-review findings from #162:
@@ -54,9 +55,11 @@ dbf77fe24adf80c91b62e6aec36f1cf21fef0ec134513faba68dd0ae1d08e466  runtime-landsc
 
 ## Physical Android-tablet acceptance
 
-State: **Pending — maintainer action required on #139**.
+State: **Pending — follow-up #175 blocks a new decision on #139.**
 
-No build was installed and no physical-device acceptance is inferred by this
-proof package. The next signed candidate must be reviewed on the approved
-Samsung SM-X920 with fictional data before the maintainer may mark Federation
-2399 Accepted.
+The signed `b91f5f7` candidate was reviewed on the physical SM-X920 using the
+private original-resolution matrix recorded in the
+[#139 objective checkpoint](https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237).
+The evidence passed the objective gates, but the maintainer explicitly kept
+Federation 2399 Pending because the delta is not the Application Menu trigger.
+No Windows or physical-phone acceptance is claimed.

@@ -2,11 +2,12 @@
 
 Issue: [#165](https://github.com/mshamblin5150-code/clinical-calendar/issues/165)
 
-Status: **Pending maintainer visual review**. This package refreshes the
-deterministic evidence after the crown, border, flat-field, destination, and
-Attention composition repair. It does not replace the untouched approved
-issue #118 concept or retroactively alter the maintainer-approved #137 proof.
-Physical Android-tablet acceptance remains **Pending** under #139.
+Status: **Accepted on the physical SM-X920.** The maintainer explicitly
+accepted Field Archive from the signed `b91f5f7` catalog candidate under #139
+after the complete objective matrix passed. This package remains the
+deterministic evidence for the crown, border, flat-field, destination, and
+Attention composition repair and does not replace the untouched approved
+issue #118 concept.
 
 Every runtime capture uses fictional data.
 
@@ -70,8 +71,11 @@ e096f55397d8bb352137e0522e5fa7c01d3c0d02d21a1c25528368d754757e36  runtime-portra
 
 ## Physical Android-tablet acceptance
 
-State: **Pending — final catalog device acceptance remains #139**.
+State: **Accepted for Android tablet under #139.**
 
-No file in this package is a physical-device capture. No physical build was
-installed and no signing material was accessed. The maintainer remains the
-sole visual approver.
+The private original-resolution physical matrix and signed-candidate
+provenance are recorded in the
+[#139 objective checkpoint](https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237).
+No file in this package is a physical-device capture. The explicit decision
+applies to the Samsung SM-X920 Android-tablet target only; no Windows or
+physical-phone acceptance is claimed.
