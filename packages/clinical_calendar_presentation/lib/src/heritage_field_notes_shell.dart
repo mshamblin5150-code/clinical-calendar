@@ -160,7 +160,7 @@ final class _HeritageFieldNotesDestinationCrown extends StatelessWidget {
                 label: Text(enteredFromMenu ? 'Back' : 'Close'),
               ),
               const SizedBox(width: 12),
-              const _HeritageFieldNotesDeltaMark(size: 46),
+              const CanonicalDeltaMark(size: 46),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -910,7 +910,7 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
                 tooltip: 'Open menu',
                 onPressed: onOpenMenu,
                 padding: EdgeInsets.all(compact ? 4 : 2),
-                icon: _HeritageFieldNotesDeltaMark(size: compact ? 36 : 46),
+                icon: CanonicalDeltaMark(size: compact ? 36 : 46),
               ),
             ),
             const SizedBox(width: 12),
@@ -1019,15 +1019,6 @@ final class _HeritageFieldNotesCommandCrown extends StatelessWidget {
       child: content,
     );
   }
-}
-
-class _HeritageFieldNotesDeltaMark extends StatelessWidget {
-  const _HeritageFieldNotesDeltaMark({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => CanonicalDeltaMark(size: size);
 }
 
 final class _HeritageFieldNotesCrownPainter extends CustomPainter {

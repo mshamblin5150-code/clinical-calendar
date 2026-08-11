@@ -443,7 +443,7 @@ final class HeritageFieldNotesShellRenderer
   String get themeId => heritageFieldNotesThemeId;
 
   @override
-  String get rendererId => 'heritage-field-notes-owned-archive-v1';
+  String get rendererId => 'heritage-field-notes-owned-archive-v2';
 
   @override
   Widget build({
@@ -1865,7 +1865,7 @@ final class HeritageFieldNotesThemeBundle
   @override
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: heritageFieldNotesThemeId,
-    rendererId: 'heritage-field-notes-owned-archive-v1',
+    rendererId: 'heritage-field-notes-owned-archive-v2',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [
