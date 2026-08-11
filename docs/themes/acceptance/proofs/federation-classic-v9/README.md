@@ -66,6 +66,8 @@ State: **Accepted for Android tablet under #139.**
 The private original-resolution physical matrix and signed-candidate
 provenance are recorded in the
 [#139 objective checkpoint](https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237).
+The maintainer's **Accepted** decision is recorded separately in the
+[#139 decision checkpoint](https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256590790).
 The files in this directory remain deterministic proof renders rather than
 physical captures. The explicit decision applies to the Samsung SM-X920
 Android-tablet target only; no Windows or physical-phone acceptance is

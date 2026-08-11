@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateCommit": "b91f5f7fc4f58e41049ff9e8c72ea9c1801a168f",
+  "candidateBuild": 43,
+  "themeId": "federation-2399",
+  "displayName": "Federation 2399",
+  "fixture": "catalog-acceptance-fictional-v1",
+  "evidenceDate": "2026-08-11",
+  "physicalTarget": "Samsung SM-X920 Android tablet",
+  "assetHashes": {"assets/federation_2399_raster/panel-nine-slice-v1.png": "1a11f86edb76286e6bf35c58188b23fee0a4414c0d173c8bd28f602732ec49aa"},
+  "objectiveEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237",
+  "decisionEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256590790",
+  "visualDecision": "Pending",
+  "followUpIssue": "https://github.com/mshamblin5150-code/clinical-calendar/issues/175",
+  "catalogAcceptanceState": "Pending",
+  "scope": "Android tablet only; no Windows or physical-phone acceptance"
+}

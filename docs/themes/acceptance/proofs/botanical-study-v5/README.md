@@ -68,6 +68,8 @@ State: **Pending — follow-up #176 blocks a new decision on #139.**
 The signed `b91f5f7` candidate was reviewed on the physical SM-X920 using the
 private original-resolution matrix recorded in the
 [#139 objective checkpoint](https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237).
+The maintainer's **Pending** decision is recorded separately in the
+[#139 decision checkpoint](https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256590790).
 The evidence passed the objective gates, but the maintainer explicitly kept
 Botanical Study Pending for the delta routing and title-centering defects
 above. No Windows or physical-phone acceptance is claimed.

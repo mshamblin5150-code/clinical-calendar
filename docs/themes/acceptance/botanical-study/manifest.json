@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateCommit": "b91f5f7fc4f58e41049ff9e8c72ea9c1801a168f",
+  "candidateBuild": 43,
+  "themeId": "botanical-study",
+  "displayName": "Botanical Study",
+  "fixture": "catalog-acceptance-fictional-v1",
+  "evidenceDate": "2026-08-11",
+  "physicalTarget": "Samsung SM-X920 Android tablet",
+  "assetHashes": {"assets/botanical_study_raster/panel-nine-slice-v1.png": "d8dd1c290cd87789ebc01a46d15f2a1fbb32b50c4c0c9afd9da89367b16542df"},
+  "objectiveEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237",
+  "decisionEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256590790",
+  "visualDecision": "Pending",
+  "followUpIssue": "https://github.com/mshamblin5150-code/clinical-calendar/issues/176",
+  "catalogAcceptanceState": "Pending",
+  "scope": "Android tablet only; no Windows or physical-phone acceptance"
+}

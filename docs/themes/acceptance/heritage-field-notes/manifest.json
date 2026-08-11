@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateCommit": "b91f5f7fc4f58e41049ff9e8c72ea9c1801a168f",
+  "candidateBuild": 43,
+  "themeId": "heritage-field-notes",
+  "displayName": "Field Archive",
+  "fixture": "catalog-acceptance-fictional-v1",
+  "evidenceDate": "2026-08-11",
+  "physicalTarget": "Samsung SM-X920 Android tablet",
+  "assetHashes": {"assets/heritage_field_notes_raster/panel-nine-slice-v1.png": "5bdc8587d9e35595868e5ee6e983c2cfb35d06bc110bd5cbf5885345c1f2645b"},
+  "objectiveEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237",
+  "decisionEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256590790",
+  "visualDecision": "Accepted",
+  "catalogAcceptanceState": "Pending",
+  "catalogAcceptanceReason": "The seven-theme catalog cannot be accepted while any theme remains Pending.",
+  "scope": "Android tablet only; no Windows or physical-phone acceptance"
+}

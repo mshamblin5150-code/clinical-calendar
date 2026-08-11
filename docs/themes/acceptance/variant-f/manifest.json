@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateCommit": "b91f5f7fc4f58e41049ff9e8c72ea9c1801a168f",
+  "candidateBuild": 43,
+  "themeId": "variant-f",
+  "displayName": "Containment Drone 47-Alpha",
+  "fixture": "catalog-acceptance-fictional-v1",
+  "evidenceDate": "2026-08-11",
+  "physicalTarget": "Samsung SM-X920 Android tablet",
+  "assetHashes": {"assets/variant_f_raster/panel-nine-slice-v2.png": "9ff3968a94d497dc6f76f2b14f370c5a24c3bb4969397ee220da005093c15ad7"},
+  "objectiveEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237",
+  "decisionEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256590790",
+  "visualDecision": "Accepted",
+  "catalogAcceptanceState": "Pending",
+  "catalogAcceptanceReason": "Issue 139 remains blocked by pending theme follow-ups 174 through 176.",
+  "scope": "Android tablet only; no Windows or physical-phone acceptance"
+}

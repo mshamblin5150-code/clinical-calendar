@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateCommit": "b91f5f7fc4f58e41049ff9e8c72ea9c1801a168f",
+  "candidateBuild": 43,
+  "themeId": "coastal-calm",
+  "displayName": "Coastal Light",
+  "fixture": "catalog-acceptance-fictional-v1",
+  "evidenceDate": "2026-08-11",
+  "physicalTarget": "Samsung SM-X920 Android tablet",
+  "assetHashes": {"assets/coastal_light_raster/panel-nine-slice-v1.png": "449bee6b6097389d0fc860069160f20def2425043c20bb1e3daf29fe3f55e22f"},
+  "objectiveEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256232237",
+  "decisionEvidence": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5256590790",
+  "visualDecision": "Accepted",
+  "catalogAcceptanceState": "Pending",
+  "catalogAcceptanceReason": "The seven-theme catalog cannot be accepted while any theme remains Pending.",
+  "scope": "Android tablet only; no Windows or physical-phone acceptance"
+}
