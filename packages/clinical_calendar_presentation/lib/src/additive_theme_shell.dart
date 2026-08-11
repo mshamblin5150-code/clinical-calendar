@@ -117,6 +117,7 @@ final class AdditiveThemeApplicationShell extends StatelessWidget {
     required this.placementsSafeInsets,
     required this.planningSafeInsets,
     required this.statusSafeInsets,
+    this.applicationMenuAction,
     this.mobileIndex = 1,
     super.key,
   });
@@ -132,6 +133,7 @@ final class AdditiveThemeApplicationShell extends StatelessWidget {
   final EdgeInsets placementsSafeInsets;
   final EdgeInsets planningSafeInsets;
   final EdgeInsets statusSafeInsets;
+  final Widget? applicationMenuAction;
   final int mobileIndex;
 
   @override
@@ -155,6 +157,7 @@ final class AdditiveThemeApplicationShell extends StatelessWidget {
             onAddSchedule: onAddSchedule,
             onOpenDestination: onOpenDestination,
             profileAvatar: slots.profileAvatar,
+            applicationMenuAction: applicationMenuAction,
           ),
           Expanded(
             child: Padding(
@@ -210,11 +213,10 @@ final class AdditiveThemeApplicationShell extends StatelessWidget {
 
   Widget _mobile() => Scaffold(
     appBar: AppBar(
-      leading: IconButton(
-        key: const Key('application-menu-action'),
-        tooltip: 'Open menu',
-        onPressed: onOpenMenu,
-        icon: const Icon(Icons.menu),
+      leading: _resolveApplicationMenuAction(
+        applicationMenuAction: applicationMenuAction,
+        onOpenMenu: onOpenMenu,
+        fallbackIcon: Icons.menu,
       ),
       title: const Text('Clinical Calendar'),
       actions: [
@@ -314,6 +316,7 @@ final class _AdditiveThemeHeader extends StatelessWidget {
     required this.onAddSchedule,
     required this.onOpenDestination,
     required this.profileAvatar,
+    this.applicationMenuAction,
   });
 
   final String environmentName;
@@ -321,6 +324,7 @@ final class _AdditiveThemeHeader extends StatelessWidget {
   final VoidCallback onAddSchedule;
   final ValueChanged<ClinicalCalendarDestination> onOpenDestination;
   final Widget profileAvatar;
+  final Widget? applicationMenuAction;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -328,11 +332,10 @@ final class _AdditiveThemeHeader extends StatelessWidget {
     child: Row(
       children: [
         const SizedBox(width: 12),
-        IconButton(
-          key: const Key('application-menu-action'),
-          tooltip: 'Open menu',
-          onPressed: onOpenMenu,
-          icon: const Icon(Icons.grid_view_outlined),
+        _resolveApplicationMenuAction(
+          applicationMenuAction: applicationMenuAction,
+          onOpenMenu: onOpenMenu,
+          fallbackIcon: Icons.grid_view_outlined,
         ),
         const SizedBox(width: 8),
         const Icon(Icons.calendar_month_outlined),
@@ -365,3 +368,16 @@ final class _AdditiveThemeHeader extends StatelessWidget {
     ),
   );
 }
+
+Widget _resolveApplicationMenuAction({
+  required Widget? applicationMenuAction,
+  required VoidCallback onOpenMenu,
+  required IconData fallbackIcon,
+}) =>
+    applicationMenuAction ??
+    IconButton(
+      key: const Key('application-menu-action'),
+      tooltip: 'Open menu',
+      onPressed: onOpenMenu,
+      icon: Icon(fallbackIcon),
+    );

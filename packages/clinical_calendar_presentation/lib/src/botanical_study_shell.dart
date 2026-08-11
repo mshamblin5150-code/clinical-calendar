@@ -475,6 +475,10 @@ final class BotanicalStudyApplicationShell extends StatelessWidget {
     placementsSafeInsets: botanicalStudyPlacementsSafeInsets,
     planningSafeInsets: botanicalStudyPlanningSafeInsets,
     statusSafeInsets: botanicalStudyStatusSafeInsets,
+    applicationMenuAction: _BotanicalStudyApplicationMenuButton(
+      size: 36,
+      onPressed: onOpenMenu,
+    ),
   );
 }
 
@@ -731,29 +735,19 @@ final class _BotanicalStudyCommandCrown extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(29, 8, 10, 7),
           child: Row(
             children: [
-              const _BotanicalStudyAxionDeltaMark(size: 42),
+              _BotanicalStudyApplicationMenuButton(
+                size: 42,
+                onPressed: onOpenMenu,
+              ),
               const SizedBox(width: 8),
-              Tooltip(
-                message: 'Open menu',
-                child: Transform.translate(
-                  offset: const Offset(0, 5),
-                  child: TextButton(
-                    key: const Key('application-menu-action'),
-                    onPressed: onOpenMenu,
-                    style: TextButton.styleFrom(
-                      foregroundColor: BotanicalStudyColors.focus,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      minimumSize: const Size(44, 44),
-                    ),
-                    child: const Text(
-                      'CLINICAL CALENDAR',
-                      style: TextStyle(
-                        fontSize: 29,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: .5,
-                      ),
-                    ),
-                  ),
+              const Text(
+                'CLINICAL CALENDAR',
+                key: Key('botanical-study-application-title'),
+                style: TextStyle(
+                  color: BotanicalStudyColors.focus,
+                  fontSize: 29,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: .5,
                 ),
               ),
               const Spacer(),
@@ -816,14 +810,11 @@ final class _BotanicalStudyCommandCrown extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18),
         child: Row(
           children: [
-            IconButton(
-              key: const Key('application-menu-action'),
-              tooltip: 'Open menu',
+            _BotanicalStudyApplicationMenuButton(
+              size: compact ? 36 : 42,
               onPressed: onOpenMenu,
-              icon: const Icon(Icons.grid_view_outlined),
             ),
             const SizedBox(width: 6),
-            _BotanicalStudyAxionDeltaMark(size: compact ? 36 : 42),
             if (!enlargedText) ...[
               const SizedBox(width: 8),
               const Icon(Icons.calendar_month_outlined),
@@ -887,6 +878,37 @@ final class _BotanicalStudyCommandCrown extends StatelessWidget {
       child: content,
     );
   }
+}
+
+final class _BotanicalStudyApplicationMenuButton extends StatelessWidget {
+  const _BotanicalStudyApplicationMenuButton({
+    required this.size,
+    required this.onPressed,
+  });
+
+  final double size;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    key: const Key('application-menu-action'),
+    label: 'Open menu',
+    button: true,
+    excludeSemantics: true,
+    onTap: onPressed,
+    child: IconButton(
+      tooltip: 'Open menu',
+      onPressed: onPressed,
+      padding: EdgeInsets.zero,
+      icon: Transform.translate(
+        // The canonical asset's visible alpha bounds are top-biased inside
+        // its square canvas. Offset the unchanged mark so its visible center,
+        // not its canvas center, aligns with the title line.
+        offset: Offset(0, size * 59 / 1254),
+        child: _BotanicalStudyAxionDeltaMark(size: size),
+      ),
+    ),
+  );
 }
 
 final class _BotanicalStudyAxionDeltaMark extends StatelessWidget {
