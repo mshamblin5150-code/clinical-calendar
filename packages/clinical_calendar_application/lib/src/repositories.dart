@@ -141,6 +141,17 @@ abstract interface class AcademicAssignmentLocalWriteRepositories
   MutableRepository<AcademicAssignment> get academicAssignments;
 }
 
+/// Optional reusable class-catalog capability.
+abstract interface class ClassCatalogLocalReadRepositories {
+  ReadRepository<ClassCatalogEntry> get classCatalogEntries;
+}
+
+abstract interface class ClassCatalogLocalWriteRepositories
+    implements ClassCatalogLocalReadRepositories {
+  @override
+  MutableRepository<ClassCatalogEntry> get classCatalogEntries;
+}
+
 enum OutboxOperationType { upsert, delete, resolveConflict, purge }
 
 /// A mutation waiting to be delivered to synchronization infrastructure.

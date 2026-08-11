@@ -11,6 +11,7 @@ typedef AcademicAssignmentSave =
     Future<void> Function({
       required String title,
       required String course,
+      required String? courseId,
       required LocalDate dueDate,
       required AcademicAssignmentStatus status,
     });
@@ -20,12 +21,14 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
     required this.themeId,
     required this.calendar,
     required this.onAddAssignment,
+    this.onManageClasses,
     super.key,
   });
 
   final String themeId;
   final Widget calendar;
   final VoidCallback onAddAssignment;
+  final VoidCallback? onManageClasses;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +64,21 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
         ),
       ),
     };
+    final controls = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (onManageClasses != null) ...[
+          IconButton.filledTonal(
+            key: const Key('manage-class-catalog'),
+            tooltip: 'Manage classes and courses',
+            onPressed: onManageClasses,
+            icon: const Icon(Icons.school_outlined),
+          ),
+          const SizedBox(width: 8),
+        ],
+        addButton,
+      ],
+    );
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.hasBoundedHeight) {
@@ -68,7 +86,7 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               calendar,
-              PositionedDirectional(end: 8, bottom: 8, child: addButton),
+              PositionedDirectional(end: 8, bottom: 8, child: controls),
             ],
           );
         }
@@ -76,7 +94,7 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            addButton,
+            controls,
             Flexible(fit: FlexFit.loose, child: calendar),
           ],
         );
@@ -311,11 +329,15 @@ final class AcademicAssignmentEditor extends StatefulWidget {
     required this.onSave,
     required this.onClose,
     this.record,
+    this.catalogEntries = const [],
+    this.onManageCatalog,
     this.onDelete,
     super.key,
   });
 
   final StoredDomainRecord<AcademicAssignment>? record;
+  final List<StoredDomainRecord<ClassCatalogEntry>> catalogEntries;
+  final VoidCallback? onManageCatalog;
   final AcademicAssignmentSave onSave;
   final Future<void> Function()? onDelete;
   final VoidCallback onClose;
@@ -328,9 +350,9 @@ final class AcademicAssignmentEditor extends StatefulWidget {
 final class _AcademicAssignmentEditorState
     extends State<AcademicAssignmentEditor> {
   late final TextEditingController _title;
-  late final TextEditingController _course;
   late final TextEditingController _dueDate;
   late AcademicAssignmentStatus _status;
+  String? _courseId;
   String? _error;
   bool _busy = false;
 
@@ -339,7 +361,16 @@ final class _AcademicAssignmentEditorState
     super.initState();
     final assignment = widget.record?.value;
     _title = TextEditingController(text: assignment?.title);
-    _course = TextEditingController(text: assignment?.course);
+    _courseId = assignment?.courseId;
+    if (_courseId == null && assignment != null) {
+      for (final entry in widget.catalogEntries) {
+        if (entry.value.name.toLowerCase() == assignment.course.toLowerCase()) {
+          _courseId = entry.value.id;
+          break;
+        }
+      }
+      _courseId ??= _legacyCourseValue;
+    }
     _dueDate = TextEditingController(
       text: assignment == null ? '' : formatUsDate(assignment.dueDate),
     );
@@ -349,7 +380,6 @@ final class _AcademicAssignmentEditorState
   @override
   void dispose() {
     _title.dispose();
-    _course.dispose();
     _dueDate.dispose();
     super.dispose();
   }
@@ -367,12 +397,19 @@ final class _AcademicAssignmentEditorState
 
   Future<void> _save() async {
     LocalDate dueDate;
+    final selectedCourse = _selectedCourse();
     try {
+      if (selectedCourse == null) {
+        throw const DomainValidationException(
+          'Select a stored class or course before saving.',
+        );
+      }
       dueDate = parseUsDate(_dueDate.text);
       AcademicAssignment(
         id: widget.record?.value.id ?? 'validation-assignment',
         title: _title.text,
-        course: _course.text,
+        course: selectedCourse.name,
+        courseId: selectedCourse.id,
         dueDate: dueDate,
         status: _status,
       );
@@ -387,7 +424,8 @@ final class _AcademicAssignmentEditorState
     try {
       await widget.onSave(
         title: _title.text,
-        course: _course.text,
+        course: selectedCourse.name,
+        courseId: selectedCourse.id,
         dueDate: dueDate,
         status: _status,
       );
@@ -396,6 +434,19 @@ final class _AcademicAssignmentEditorState
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  ({String? id, String name})? _selectedCourse() {
+    if (_courseId == _legacyCourseValue) {
+      final legacy = widget.record?.value.course;
+      return legacy == null ? null : (id: null, name: legacy);
+    }
+    for (final entry in widget.catalogEntries) {
+      if (entry.value.id == _courseId) {
+        return (id: entry.value.id, name: entry.value.name);
+      }
+    }
+    return null;
   }
 
   Future<void> _delete() async {
@@ -480,15 +531,42 @@ final class _AcademicAssignmentEditorState
                     ),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
+                  DropdownButtonFormField<String>(
                     key: const Key('academic-assignment-course'),
-                    controller: _course,
-                    enabled: !_busy,
-                    textInputAction: TextInputAction.next,
+                    initialValue: _courseId,
                     decoration: const InputDecoration(
                       labelText: 'Class or course',
                     ),
+                    items: [
+                      for (final entry in widget.catalogEntries)
+                        if (!entry.value.isArchived ||
+                            entry.value.id == widget.record?.value.courseId)
+                          DropdownMenuItem(
+                            value: entry.value.id,
+                            child: Text(entry.value.name),
+                          ),
+                      if (_courseId == _legacyCourseValue)
+                        DropdownMenuItem(
+                          value: _legacyCourseValue,
+                          child: Text(
+                            '${widget.record!.value.course} (legacy)',
+                          ),
+                        ),
+                    ],
+                    onChanged: _busy
+                        ? null
+                        : (value) => setState(() => _courseId = value),
                   ),
+                  if (widget.onManageCatalog != null)
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton.icon(
+                        key: const Key('manage-class-catalog'),
+                        onPressed: _busy ? null : widget.onManageCatalog,
+                        icon: const Icon(Icons.school_outlined),
+                        label: const Text('Manage classes'),
+                      ),
+                    ),
                   const SizedBox(height: 12),
                   TextField(
                     key: const Key('academic-assignment-due-date'),
@@ -549,6 +627,214 @@ final class _AcademicAssignmentEditorState
                   ],
                 ],
               ),
+            ),
+          ),
+          if (_busy) const LinearProgressIndicator(),
+        ],
+      ),
+    ),
+  );
+}
+
+const _legacyCourseValue = '__legacy_course__';
+
+typedef ClassCatalogMutation =
+    Future<List<StoredDomainRecord<ClassCatalogEntry>>> Function(String name);
+typedef ClassCatalogRecordMutation =
+    Future<List<StoredDomainRecord<ClassCatalogEntry>>> Function(
+      StoredDomainRecord<ClassCatalogEntry> record,
+      String name,
+    );
+typedef ClassCatalogArchiveMutation =
+    Future<List<StoredDomainRecord<ClassCatalogEntry>>> Function(
+      StoredDomainRecord<ClassCatalogEntry> record,
+      bool archived,
+    );
+
+final class ClassCatalogManager extends StatefulWidget {
+  const ClassCatalogManager({
+    required this.initialEntries,
+    required this.onAdd,
+    required this.onRename,
+    required this.onSetArchived,
+    required this.onClose,
+    super.key,
+  });
+
+  final List<StoredDomainRecord<ClassCatalogEntry>> initialEntries;
+  final ClassCatalogMutation onAdd;
+  final ClassCatalogRecordMutation onRename;
+  final ClassCatalogArchiveMutation onSetArchived;
+  final VoidCallback onClose;
+
+  @override
+  State<ClassCatalogManager> createState() => _ClassCatalogManagerState();
+}
+
+final class _ClassCatalogManagerState extends State<ClassCatalogManager> {
+  late List<StoredDomainRecord<ClassCatalogEntry>> _entries;
+  final _newName = TextEditingController();
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _entries = widget.initialEntries;
+  }
+
+  @override
+  void dispose() {
+    _newName.dispose();
+    super.dispose();
+  }
+
+  Future<void> _run(
+    Future<List<StoredDomainRecord<ClassCatalogEntry>>> Function() action,
+  ) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final entries = await action();
+      if (mounted) setState(() => _entries = entries);
+    } on Object catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _add() => _run(() async {
+    final entries = await widget.onAdd(_newName.text);
+    _newName.clear();
+    return entries;
+  });
+
+  Future<void> _rename(StoredDomainRecord<ClassCatalogEntry> record) async {
+    final controller = TextEditingController(text: record.value.name);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit class or course'),
+        content: TextField(
+          key: const Key('edit-class-name'),
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Class or course'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (name != null) await _run(() => widget.onRename(record, name));
+  }
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Theme.of(context).colorScheme.surface,
+    child: SafeArea(
+      child: Column(
+        key: const Key('class-catalog-manager'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ListTile(
+            title: const Text('CLASSES & COURSES'),
+            trailing: IconButton(
+              tooltip: 'Close class catalog',
+              onPressed: _busy ? null : widget.onClose,
+              icon: const Icon(Icons.close),
+            ),
+          ),
+          if (_error != null)
+            Semantics(
+              liveRegion: true,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  _error!,
+                  key: const Key('class-catalog-error'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('new-class-name'),
+                    controller: _newName,
+                    enabled: !_busy,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _add(),
+                    decoration: const InputDecoration(
+                      labelText: 'New class or course',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  key: const Key('add-class'),
+                  onPressed: _busy ? null : _add,
+                  child: const Text('Add'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              children: [
+                for (final record in _entries)
+                  ListTile(
+                    title: Text(record.value.name),
+                    subtitle: record.value.isArchived
+                        ? const Text('Archived')
+                        : null,
+                    trailing: Wrap(
+                      children: [
+                        IconButton(
+                          key: Key('edit-class-${record.value.id}'),
+                          tooltip: 'Edit ${record.value.name}',
+                          onPressed: _busy ? null : () => _rename(record),
+                          icon: const Icon(Icons.edit_outlined),
+                        ),
+                        IconButton(
+                          key: Key(
+                            '${record.value.isArchived ? 'restore' : 'archive'}-class-${record.value.id}',
+                          ),
+                          tooltip: record.value.isArchived
+                              ? 'Restore ${record.value.name}'
+                              : 'Archive ${record.value.name}',
+                          onPressed: _busy
+                              ? null
+                              : () => _run(
+                                  () => widget.onSetArchived(
+                                    record,
+                                    !record.value.isArchived,
+                                  ),
+                                ),
+                          icon: Icon(
+                            record.value.isArchived
+                                ? Icons.unarchive_outlined
+                                : Icons.archive_outlined,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
           if (_busy) const LinearProgressIndicator(),

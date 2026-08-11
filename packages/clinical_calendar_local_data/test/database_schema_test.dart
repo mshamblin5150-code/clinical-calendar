@@ -67,6 +67,7 @@ void main() {
         'evaluation_requirements',
         'schedule_templates',
         'academic_assignments',
+        'class_catalog_entries',
         'settings',
         'reminder_state',
         'device_metadata',
@@ -396,6 +397,48 @@ void main() {
       expect(settings['theme'], 'variant-f');
     },
   );
+
+  test('class catalog migration links legacy Academic Assignments safely', () async {
+    await _createFixture(databasePath, version: 15);
+    final legacy = _openRaw(databasePath);
+    legacy.execute(
+      '''INSERT INTO academic_assignments
+        (id, student_id, revision, created_at_utc, updated_at_utc,
+         title, course, due_date, status)
+        VALUES ('00000000-0000-4000-8000-000000000090', ?, 1, ?, ?,
+                'Evidence review', 'NURS 702', '2026-09-14', 'pending')''',
+      [_studentId, _createdAt, _createdAt],
+    );
+    legacy.close();
+
+    final database = await ClinicalCalendarDatabase.open(
+      path: databasePath,
+      secureStorage: MemorySecureStorage(_key),
+    );
+    addTearDown(database.close);
+
+    final entry = database.select(
+      'SELECT id, name, archived FROM class_catalog_entries WHERE student_id = ?',
+      [_studentId],
+    ).single;
+    final assignment = database.select(
+      'SELECT course, course_id FROM academic_assignments WHERE student_id = ?',
+      [_studentId],
+    ).single;
+    expect(entry['name'], 'NURS 702');
+    expect(entry['archived'], 0);
+    expect(assignment['course'], 'NURS 702');
+    expect(assignment['course_id'], entry['id']);
+    final operation = database
+        .select(
+          "SELECT payload_json FROM outbox_operations WHERE entity_type = 'class_catalog_entry'",
+        )
+        .single;
+    expect(
+      jsonDecode(operation['payload_json'] as String),
+      containsPair('entity_id', entry['id']),
+    );
+  });
 
   test('repeated open is idempotent', () async {
     final keys = MemorySecureStorage(_key);

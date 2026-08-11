@@ -78,6 +78,7 @@ final class AcademicAssignmentApplicationService
   Future<StoredDomainRecord<AcademicAssignment>> create({
     required String title,
     required String course,
+    String? courseId,
     required LocalDate dueDate,
   }) async {
     final occurredAt = _now();
@@ -85,6 +86,7 @@ final class AcademicAssignmentApplicationService
       id: _identifiers.nextIdentifier(),
       title: title,
       course: course,
+      courseId: courseId,
       dueDate: dueDate,
     );
     return _repositories.mutate(
@@ -104,6 +106,7 @@ final class AcademicAssignmentApplicationService
     required int expectedRevision,
     required String title,
     required String course,
+    String? courseId,
     required LocalDate dueDate,
     AcademicAssignmentStatus? status,
   }) async {
@@ -132,6 +135,7 @@ final class AcademicAssignmentApplicationService
         id: current.value.id,
         title: title,
         course: course,
+        courseId: courseId ?? current.value.courseId,
         dueDate: dueDate,
         status: status ?? current.value.status,
       );

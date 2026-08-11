@@ -410,6 +410,7 @@ void main() {
         'evaluation_requirements',
         'schedule_templates',
         'academic_assignments',
+        'class_catalog_entries',
         'settings',
         'reminder_state',
         'trash',
