@@ -933,6 +933,8 @@ final class _GraphiteCommandCrown extends StatelessWidget {
           Semantics(
             label: 'Open menu',
             button: true,
+            excludeSemantics: true,
+            onTap: onOpenMenu,
             child: IconButton(
               key: const Key('application-menu-action'),
               tooltip: 'Open menu',

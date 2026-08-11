@@ -121,6 +121,11 @@ void main() {
         const Offset(0, -300),
       );
       await tester.pumpAndSettle();
+      await _focusWithKeyboard(
+        tester,
+        find.byKey(const Key('toggle-preceptor-breakdown')),
+      );
+      expect(FocusManager.instance.primaryFocus, isNotNull);
       await expectLater(
         find.byKey(const Key('graphite-proof')),
         matchesGoldenFile(
@@ -852,3 +857,22 @@ final class _ProofAssetBundle extends CachingAssetBundle {
 void _noop() {}
 
 void _ignoreDestination(ClinicalCalendarDestination _) {}
+
+Future<void> _focusWithKeyboard(WidgetTester tester, Finder control) async {
+  final target = control.evaluate().single;
+  for (var attempt = 0; attempt < 200; attempt += 1) {
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    final focused = FocusManager.instance.primaryFocus?.context as Element?;
+    var reached = identical(focused, target);
+    focused?.visitAncestorElements((ancestor) {
+      reached = identical(ancestor, target);
+      return !reached;
+    });
+    if (reached) return;
+  }
+  fail(
+    'Keyboard traversal did not reach '
+    '${control.describeMatch(Plurality.one)}.',
+  );
+}

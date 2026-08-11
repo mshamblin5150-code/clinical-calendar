@@ -1442,6 +1442,38 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     }
 
     final settings = _support?.settings.value ?? StudentSettings();
+    final placementProgress = _PlacementLoadState(
+      controller: _placementController,
+      onRetry: _placementController.load,
+      child: PlacementProgressRail(
+        controller: _placementController,
+        studentId: widget.studentId,
+      ),
+    );
+    final attention = AttentionRail(
+      controller: _attentionController,
+      onOpenAction: _openAttentionItem,
+      onOpenAll: _openAttentionCenter,
+    );
+    final insightRail = widget.themeBundle.id == graphiteThemeId
+        ? GraphiteInsightRailSlots(
+            key: _insightRailContentKey,
+            placementProgress: placementProgress,
+            attention: attention,
+          )
+        : KeyedSubtree(
+            key: _insightRailContentKey,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  placementProgress,
+                  const SizedBox(height: 10),
+                  attention,
+                ],
+              ),
+            ),
+          );
     return widget.themeBundle.shellRenderer.build(
       environmentName: widget.environmentName,
       onOpenMenu: _showMenu,
@@ -1483,47 +1515,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             ),
           ),
         ),
-        insightRail: widget.themeBundle.id == graphiteThemeId
-            ? GraphiteInsightRailSlots(
-                key: _insightRailContentKey,
-                placementProgress: _PlacementLoadState(
-                  controller: _placementController,
-                  onRetry: _placementController.load,
-                  child: PlacementProgressRail(
-                    controller: _placementController,
-                    studentId: widget.studentId,
-                  ),
-                ),
-                attention: AttentionRail(
-                  controller: _attentionController,
-                  onOpenAction: _openAttentionItem,
-                  onOpenAll: _openAttentionCenter,
-                ),
-              )
-            : KeyedSubtree(
-                key: _insightRailContentKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _PlacementLoadState(
-                        controller: _placementController,
-                        onRetry: _placementController.load,
-                        child: PlacementProgressRail(
-                          controller: _placementController,
-                          studentId: widget.studentId,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      AttentionRail(
-                        controller: _attentionController,
-                        onOpenAction: _openAttentionItem,
-                        onOpenAll: _openAttentionCenter,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+        insightRail: insightRail,
         mobilePlacementSummary: KeyedSubtree(
           key: _mobilePlacementContentKey,
           child: _PlacementLoadState(

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
@@ -182,6 +183,74 @@ void main() {
       );
     }
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Graphite delta opens the production menu from the keyboard', (
+    tester,
+  ) async {
+    final preview = ThemePreviewController(
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      authoritativeThemeId: graphiteThemeId,
+      initialRevision: 1,
+    );
+    addTearDown(preview.dispose);
+    await _pumpAt(
+      tester,
+      const Size(3200, 2800),
+      dependencies: _graphiteDependencies(),
+      themePreviewController: preview,
+      themeId: graphiteThemeId,
+    );
+
+    final delta = find.byKey(const Key('application-menu-action'));
+    expect(delta, findsOneWidget);
+    await _focusWithKeyboard(tester, delta);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('application-menu')), findsOneWidget);
+    for (final destination in applicationMenuDestinations) {
+      expect(find.text(destination.label), findsOneWidget);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Graphite delta exposes one accessible menu-button action', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final preview = ThemePreviewController(
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      authoritativeThemeId: graphiteThemeId,
+      initialRevision: 1,
+    );
+    addTearDown(preview.dispose);
+    await _pumpAt(
+      tester,
+      const Size(3200, 2800),
+      dependencies: _graphiteDependencies(),
+      themePreviewController: preview,
+      themeId: graphiteThemeId,
+    );
+
+    final node = tester.getSemantics(find.bySemanticsLabel('Open menu'));
+    final data = node.getSemanticsData();
+    expect(data.label, 'Open menu');
+    expect(data.hasAction(ui.SemanticsAction.tap), isTrue);
+    expect(data.flagsCollection.isButton, isTrue);
+
+    tester.platformDispatcher.onSemanticsActionEvent!(
+      ui.SemanticsActionEvent(
+        type: ui.SemanticsAction.tap,
+        viewId: tester.view.viewId,
+        nodeId: node.id,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('application-menu')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
   });
 
   testWidgets('mobile navigation matches the accepted Variant F order', (
@@ -1536,6 +1605,37 @@ Future<void> _pumpAcceptedRenderAt(
   );
 }
 
+ApplicationDependencies _graphiteDependencies() {
+  final repositories = _Repositories();
+  repositories.settings.value = StoredDomainRecord(
+    value: StudentSettings(themeId: graphiteThemeId),
+    studentId: studentId,
+    revision: 1,
+    createdAtUtc: DateTime.utc(2026, 8, 1),
+    updatedAtUtc: DateTime.utc(2026, 8, 1),
+  );
+  return _dependencies(repositories: repositories);
+}
+
+Future<void> _focusWithKeyboard(WidgetTester tester, Finder control) async {
+  final target = control.evaluate().single;
+  for (var attempt = 0; attempt < 40; attempt += 1) {
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    final focused = FocusManager.instance.primaryFocus?.context as Element?;
+    var reached = identical(focused, target);
+    focused?.visitAncestorElements((ancestor) {
+      reached = identical(ancestor, target);
+      return !reached;
+    });
+    if (reached) return;
+  }
+  fail(
+    'Keyboard traversal did not reach '
+    '${control.describeMatch(Plurality.one)}.',
+  );
+}
+
 Future<void> _pumpAt(
   WidgetTester tester,
   Size size, {
@@ -1552,6 +1652,7 @@ Future<void> _pumpAt(
   ThemePreviewController? themePreviewController,
   EnhancedAccessibilityController? enhancedAccessibilityController,
   CandidateThemePreflight? candidateThemePreflight,
+  String themeId = variantFThemeId,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -1560,6 +1661,7 @@ Future<void> _pumpAt(
       dependencies: dependencies ?? _dependencies(),
       environmentName: 'test',
       studentId: studentId,
+      themeId: themeId,
       notificationInteractions: notificationInteractions,
       recoveryStore: recoveryStore,
       recoveryService: recoveryService,
