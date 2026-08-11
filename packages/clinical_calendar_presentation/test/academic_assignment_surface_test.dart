@@ -51,6 +51,11 @@ void main() {
           themeId == coastalCalmThemeId ? findsOneWidget : findsNothing,
           reason: themeId,
         );
+        expect(
+          find.byKey(const Key('botanical-study-assignment-control-housing')),
+          themeId == botanicalStudyThemeId ? findsOneWidget : findsNothing,
+          reason: themeId,
+        );
         if (themeId == graphiteThemeId) {
           expect(find.byTooltip('Add Academic Assignment'), findsOneWidget);
         }

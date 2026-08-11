@@ -185,6 +185,9 @@ void main() {
     final axionDelta = tester.getRect(
       find.byKey(const Key('botanical-study-axion-delta')),
     );
+    final applicationTitle = tester.getRect(
+      find.byKey(const Key('application-menu-action')),
+    );
     final axionImage = tester.widget<Image>(
       find.byKey(const Key('botanical-study-axion-delta-image')),
     );
@@ -193,6 +196,7 @@ void main() {
     );
     _expectRectClose(crown, const Rect.fromLTWH(61, 0, 1494, 65));
     expect(axionDelta.size, const Size.square(42));
+    expect(axionDelta.right, lessThan(applicationTitle.left));
     expect(axionImage.color, isNull);
     expect(axionImage.errorBuilder, isNotNull);
     _expectRectClose(placements, const Rect.fromLTWH(61, 66, 307, 834));
@@ -218,6 +222,131 @@ void main() {
     ]);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Botanical Study owns one coherent border shell across all ten top-level destinations',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1586, 992));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final destination in applicationMenuDestinations) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: botanical.standardPresentation.createThemeData(),
+            home: botanical.shellRenderer.buildDestination(
+              destination: destination,
+              entry: DestinationEntry.applicationMenu,
+              onExit: _noop,
+              child: ShellPanel(
+                label: '${destination.label} fixture',
+                child: const Text('Fictional shared workflow content'),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('botanical-study-destination-shell')),
+          findsOneWidget,
+          reason: destination.label,
+        );
+        expect(
+          find.byKey(const Key('botanical-study-destination-crown')),
+          findsOneWidget,
+          reason: destination.label,
+        );
+        expect(
+          find.byKey(const Key('botanical-study-destination-bay')),
+          findsOneWidget,
+          reason: destination.label,
+        );
+        expect(find.byType(CanonicalDeltaMark), findsOneWidget);
+        expect(find.byType(AdditiveThemeDestinationSurface), findsNothing);
+        expect(find.byType(VariantFNineSliceFrame), findsNothing);
+        expect(tester.takeException(), isNull, reason: destination.label);
+      }
+    },
+  );
+
+  testWidgets(
+    'Botanical Study destination remains operable at 200 percent text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1440));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var exitCount = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: botanical.standardPresentation.createThemeData(),
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: botanical.shellRenderer.buildDestination(
+              destination: ClinicalCalendarDestination.clinicalPlacements,
+              entry: DestinationEntry.applicationMenu,
+              onExit: () => exitCount++,
+              child: const SingleChildScrollView(
+                child: SizedBox(
+                  height: 1800,
+                  child: Text('Fictional shared Clinical Placement content'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('botanical-study-destination-scroll')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('back-action')), findsOneWidget);
+      expect(find.text('Clinical Placements'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('back-action')));
+      expect(exitCount, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Botanical Study keeps every compact destination title complete at 200 percent text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final destination in applicationMenuDestinations) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: botanical.standardPresentation.createThemeData(),
+            home: MediaQuery(
+              data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+              child: botanical.shellRenderer.buildDestination(
+                destination: destination,
+                entry: DestinationEntry.applicationMenu,
+                onExit: _noop,
+                child: const Text('Fictional shared workflow content'),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final crown = tester.getRect(
+          find.byKey(const Key('botanical-study-destination-crown')),
+        );
+        final title = tester.getRect(find.text(destination.label));
+        final titleWidget = tester.widget<Text>(find.text(destination.label));
+        expect(titleWidget.maxLines, isNull, reason: destination.label);
+        expect(title.left, greaterThanOrEqualTo(crown.left));
+        expect(title.top, greaterThanOrEqualTo(crown.top));
+        expect(title.right, lessThanOrEqualTo(crown.right));
+        expect(title.bottom, lessThanOrEqualTo(crown.bottom));
+        expect(find.byTooltip('Back'), findsOneWidget);
+        expect(tester.takeException(), isNull, reason: destination.label);
+      }
+    },
+  );
 
   testWidgets('Botanical Study portrait has explicit calendar-first order', (
     tester,
