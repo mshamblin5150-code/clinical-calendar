@@ -3,6 +3,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/src/evaluation_attention/attention_surfaces.dart';
 import 'package:clinical_calendar_presentation/src/evaluation_attention/evaluation_attention_controller.dart';
 import 'package:clinical_calendar_presentation/src/evaluation_attention/evaluation_plan_surface.dart';
+import 'package:clinical_calendar_presentation/src/federation_2399_console_scope.dart';
 import 'package:clinical_calendar_presentation/src/graphite_theme.dart';
 import 'package:clinical_calendar_presentation/src/graphite_instrument_scope.dart';
 import 'package:clinical_calendar_presentation/src/theme_contract.dart';
@@ -40,6 +41,43 @@ void main() {
     expect(openedAll, 1);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Federation 2399 Attention count is one semantic unit at 200% text',
+    (tester) async {
+      final harness = _Harness(withEveryAttentionFamily: true);
+      await harness.controller.load();
+      await _pump(
+        tester,
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: Federation2399ConsoleScope(
+            child: SingleChildScrollView(
+              child: AttentionRail(
+                controller: harness.controller,
+                onOpenAction: (_) {},
+                onOpenAll: () {},
+              ),
+            ),
+          ),
+        ),
+        const Size(346, 791),
+      );
+
+      expect(
+        find.byKey(const Key('federation-2399-live-attention-housing')),
+        findsOneWidget,
+      );
+      final heading = tester.getSemantics(
+        find.byKey(const Key('federation-2399-attention-heading')),
+      );
+      expect(
+        heading.label,
+        'Needs Attention, ${harness.controller.attentionItems.length} items',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'checklist shows every state and documents with Medatrax default',

@@ -4,6 +4,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:flutter/material.dart';
 
 import '../graphite_instrument_scope.dart';
+import '../federation_2399_console_scope.dart';
 import '../insight_rail_presentation_policy.dart';
 import '../responsive_shell.dart';
 import '../theme_contract.dart';
@@ -126,6 +127,16 @@ final class AttentionRail extends StatelessWidget {
         ),
       );
     }
+    if (Federation2399ConsoleScope.isActive(context)) {
+      return AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) => _Federation2399AttentionRail(
+          controller: controller,
+          onOpenAction: onOpenAction,
+          onOpenAll: onOpenAll,
+        ),
+      );
+    }
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
@@ -172,6 +183,119 @@ final class AttentionRail extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+final class _Federation2399AttentionRail extends StatelessWidget {
+  const _Federation2399AttentionRail({
+    required this.controller,
+    required this.onOpenAction,
+    required this.onOpenAll,
+  });
+
+  final EvaluationAttentionController controller;
+  final AttentionAction onOpenAction;
+  final VoidCallback? onOpenAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = controller.attentionItems;
+    final signal = items.isEmpty
+        ? context.clinicalColors.clinical
+        : context.clinicalColors.urgent;
+    return Federation2399SectionHousing(
+      key: const Key('federation-2399-live-attention-housing'),
+      headingKey: const Key('federation-2399-attention-heading'),
+      label: 'Needs Attention',
+      count: items.length,
+      accent: signal,
+      child: Column(
+        key: const Key('attention-rail'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (controller.isBusy && controller.snapshot == null)
+            const Center(child: CircularProgressIndicator())
+          else if (controller.error != null && controller.snapshot == null)
+            OutlinedButton(
+              onPressed: controller.load,
+              child: const Text('Retry attention'),
+            )
+          else if (items.isEmpty)
+            const Text('No unresolved items need attention.')
+          else
+            for (final item in items.take(4))
+              _Federation2399AttentionRow(
+                item: item,
+                onOpen: () => onOpenAction(item),
+              ),
+          if (items.length > 4 || onOpenAll != null)
+            TextButton(
+              key: const Key('open-attention-center-action'),
+              onPressed: onOpenAll,
+              child: const Text('OPEN ATTENTION CENTER'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _Federation2399AttentionRow extends StatelessWidget {
+  const _Federation2399AttentionRow({required this.item, required this.onOpen});
+
+  final AttentionItem item;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final urgency = _urgencyColor(context, item.urgency);
+    return InkWell(
+      key: Key('attention-item-${item.id}'),
+      onTap: onOpen,
+      child: Container(
+        key: const Key('federation-2399-live-attention-item'),
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(color: urgency, width: 3),
+            bottom: BorderSide(
+              color: context.clinicalColors.insetBorder.withValues(alpha: .5),
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(_kindIcon(item), color: urgency, size: 20),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title.toUpperCase(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: urgency,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    item.detail,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 18),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1300,6 +1300,39 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'Federation 2399 owns live Planning and Needs Attention housing',
+    (tester) async {
+      final repositories = _Repositories(seedLifecycle: true);
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: federation2399ThemeId,
+        initialRevision: 1,
+      );
+      addTearDown(preview.dispose);
+
+      await _pumpAt(
+        tester,
+        const Size(1536, 1024),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: preview,
+      );
+      expect(
+        find.byKey(const Key('federation-2399-live-planning-housing')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('federation-2399-live-attention-housing')),
+        findsOneWidget,
+      );
+      final headerSemantics = tester.getSemantics(
+        find.byKey(const Key('federation-2399-attention-heading')),
+      );
+      expect(headerSemantics.label, startsWith('Needs Attention, '));
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Future<void> _expectAppGolden(

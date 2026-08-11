@@ -20,6 +20,7 @@ import 'evaluation_attention/attention_surfaces.dart';
 import 'evaluation_attention/evaluation_attention_controller.dart';
 import 'evaluation_attention/evaluation_plan_surface.dart';
 import 'exports/export_surface.dart';
+import 'federation_2399_console_scope.dart';
 import 'enhanced_accessibility_controller.dart';
 import 'enhanced_focus_perimeter.dart';
 import 'graphite_frame.dart';
@@ -1919,10 +1920,8 @@ final class _PlanningRegionState extends State<_PlanningRegion> {
   }
 
   @override
-  Widget build(BuildContext context) => ShellPanel(
-    label: 'Planning',
-    accent: context.clinicalColors.scheduled,
-    child: Column(
+  Widget build(BuildContext context) {
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text('Build the monthly plan in this in-flow region.'),
@@ -1981,8 +1980,21 @@ final class _PlanningRegionState extends State<_PlanningRegion> {
           StagedBatchSchedulingTray(controller: widget.controller!),
         ],
       ],
-    ),
-  );
+    );
+    if (Federation2399ConsoleScope.isActive(context)) {
+      return Federation2399SectionHousing(
+        key: const Key('federation-2399-live-planning-housing'),
+        label: 'Planning',
+        accent: context.clinicalColors.scheduled,
+        child: content,
+      );
+    }
+    return ShellPanel(
+      label: 'Planning',
+      accent: context.clinicalColors.scheduled,
+      child: content,
+    );
+  }
 }
 
 String _batchTypeLabel(BatchCommitmentType type) => switch (type) {

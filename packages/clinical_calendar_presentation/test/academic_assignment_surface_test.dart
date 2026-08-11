@@ -41,6 +41,11 @@ void main() {
           themeId == federationClassicThemeId ? findsOneWidget : findsNothing,
           reason: themeId,
         );
+        expect(
+          find.byKey(const Key('federation-2399-assignment-control-housing')),
+          themeId == federation2399ThemeId ? findsOneWidget : findsNothing,
+          reason: themeId,
+        );
         if (themeId == graphiteThemeId) {
           expect(find.byTooltip('Add Academic Assignment'), findsOneWidget);
         }
@@ -107,6 +112,13 @@ void main() {
         findsOneWidget,
         reason: themeId,
       );
+      if (themeId == federation2399ThemeId) {
+        expect(
+          find.byKey(const Key('federation-2399-assignment-control-housing')),
+          findsOneWidget,
+        );
+        expect(find.byTooltip('Add Academic Assignment'), findsOneWidget);
+      }
       expect(tester.takeException(), isNull, reason: themeId);
     }
   });

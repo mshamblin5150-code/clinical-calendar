@@ -35,6 +35,9 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
       federationClassicThemeId => _FederationClassicAssignmentControlHousing(
         onPressed: onAddAssignment,
       ),
+      federation2399ThemeId => _Federation2399AssignmentControlHousing(
+        onPressed: onAddAssignment,
+      ),
       _ => Align(
         alignment: AlignmentDirectional.centerEnd,
         widthFactor: 1,
@@ -150,6 +153,42 @@ final class _FederationClassicAssignmentControlHousing extends StatelessWidget {
         onPressed: onPressed,
         icon: const Icon(Icons.assignment_add),
       ),
+    ),
+  );
+}
+
+final class _Federation2399AssignmentControlHousing extends StatelessWidget {
+  const _Federation2399AssignmentControlHousing({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('federation-2399-assignment-control-housing'),
+    width: 56,
+    height: 56,
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      color: const Color(0xFF090B12).withValues(alpha: .96),
+      border: Border.all(
+        color: Theme.of(context).colorScheme.primary,
+        width: 2,
+      ),
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(4),
+        topRight: Radius.circular(18),
+        bottomLeft: Radius.circular(14),
+        bottomRight: Radius.circular(4),
+      ),
+      boxShadow: const [
+        BoxShadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 2)),
+      ],
+    ),
+    child: IconButton(
+      key: const Key('add-academic-assignment'),
+      tooltip: 'Add Academic Assignment',
+      onPressed: onPressed,
+      icon: const Icon(Icons.assignment_add),
     ),
   );
 }
