@@ -293,11 +293,11 @@ void main() {
   }
 
   for (final activation in const [
-    (LogicalKeyboardKey.enter, 'keyboard Enter'),
-    (LogicalKeyboardKey.space, 'switch-style Space'),
+    (key: LogicalKeyboardKey.enter, label: 'keyboard Enter'),
+    (key: LogicalKeyboardKey.space, label: 'switch-style Space'),
   ]) {
     testWidgets(
-      'Federation 2399 delta opens the production menu with ${activation.$2}',
+      'Federation 2399 delta opens the production menu with ${activation.label}',
       (tester) async {
         final preview = ThemePreviewController(
           registry: ClinicalCalendarThemeBundleRegistry.standard,
@@ -315,7 +315,7 @@ void main() {
 
         final delta = find.byKey(const Key('application-menu-action'));
         await focusWithKeyboard(tester, delta);
-        await tester.sendKeyEvent(activation.$1);
+        await tester.sendKeyEvent(activation.key);
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('application-menu')), findsOneWidget);
