@@ -1987,7 +1987,8 @@ final class _ReadRepositories
     implements
         SupportLocalReadRepositories,
         SynchronizationLocalReadRepositories,
-        AcademicAssignmentLocalReadRepositories {
+        AcademicAssignmentLocalReadRepositories,
+        ClassCatalogLocalReadRepositories {
   _ReadRepositories({
     required bool seedLifecycle,
     required bool seedSynchronization,
@@ -2011,6 +2012,15 @@ final class _ReadRepositories
                _evaluationPlanRecord(),
              ], (value) => value.id)
            : _EmptyReadRepository(),
+       _classCatalogEntries = _StaticReadRepository([
+         StoredDomainRecord(
+           value: ClassCatalogEntry(id: 'course-1', name: 'NURS 702'),
+           studentId: studentId,
+           revision: 1,
+           createdAtUtc: DateTime.utc(2026, 8, 11),
+           updatedAtUtc: DateTime.utc(2026, 8, 11),
+         ),
+       ], (value) => value.id),
        _outbox = seedSynchronization ? _PendingOutbox() : const _EmptyOutbox();
 
   final ReadRepository<WorkShift> _workShifts;
@@ -2025,6 +2035,7 @@ final class _ReadRepositories
   final ReadRepository<EvaluationPlan> _evaluationPlans;
   final _EmptyReadRepository<AcademicAssignment> _academicAssignments =
       _EmptyReadRepository();
+  final ReadRepository<ClassCatalogEntry> _classCatalogEntries;
 
   @override
   final SynchronizationLocalRepository synchronization;
@@ -2060,6 +2071,10 @@ final class _ReadRepositories
   @override
   ReadRepository<AcademicAssignment> get academicAssignments =>
       _academicAssignments;
+
+  @override
+  ReadRepository<ClassCatalogEntry> get classCatalogEntries =>
+      _classCatalogEntries;
 
   @override
   OutboxReadRepository get outbox => _outbox;

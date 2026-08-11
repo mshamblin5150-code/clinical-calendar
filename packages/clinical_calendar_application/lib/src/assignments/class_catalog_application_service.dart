@@ -31,9 +31,9 @@ final class ClassCatalogApplicationService {
   Future<List<StoredDomainRecord<ClassCatalogEntry>>> list({
     bool includeArchived = false,
   }) => _repositories.read((repositories) {
-    final entries = _read(
-      repositories,
-    ).classCatalogEntries.list(studentId: _studentId);
+    final entries = List<StoredDomainRecord<ClassCatalogEntry>>.of(
+      _read(repositories).classCatalogEntries.list(studentId: _studentId),
+    );
     entries.removeWhere(
       (record) => !includeArchived && record.value.isArchived,
     );

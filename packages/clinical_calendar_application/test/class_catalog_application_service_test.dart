@@ -144,7 +144,7 @@ final class _MemoryRepository<T> implements MutableRepository<T> {
             record.studentId == studentId &&
             (includeDeleted || !record.isDeleted),
       )
-      .toList();
+      .toList(growable: false);
 
   @override
   MutationReceipt<T> put({

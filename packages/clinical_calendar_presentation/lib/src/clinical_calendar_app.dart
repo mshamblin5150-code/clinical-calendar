@@ -933,8 +933,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
                     if (current == null) {
                       await _academicAssignmentService.create(
                         title: title,
-                        course: course,
-                        courseId: courseId,
+                        courseId: courseId!,
                         dueDate: dueDate,
                       );
                     } else {
@@ -942,7 +941,6 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
                         assignmentId: current.value.id,
                         expectedRevision: current.revision,
                         title: title,
-                        course: course,
                         courseId: courseId,
                         dueDate: dueDate,
                         status: status,
