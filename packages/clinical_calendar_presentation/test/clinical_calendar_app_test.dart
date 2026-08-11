@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/keyboard_focus.dart';
 import 'support/proof_fonts.dart';
 
 const studentId = '00000000-0000-4000-8000-000000000001';
@@ -204,7 +205,7 @@ void main() {
 
     final delta = find.byKey(const Key('application-menu-action'));
     expect(delta, findsOneWidget);
-    await _focusWithKeyboard(tester, delta);
+    await focusWithKeyboard(tester, delta);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
@@ -1615,25 +1616,6 @@ ApplicationDependencies _graphiteDependencies() {
     updatedAtUtc: DateTime.utc(2026, 8, 1),
   );
   return _dependencies(repositories: repositories);
-}
-
-Future<void> _focusWithKeyboard(WidgetTester tester, Finder control) async {
-  final target = control.evaluate().single;
-  for (var attempt = 0; attempt < 40; attempt += 1) {
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    await tester.pump();
-    final focused = FocusManager.instance.primaryFocus?.context as Element?;
-    var reached = identical(focused, target);
-    focused?.visitAncestorElements((ancestor) {
-      reached = identical(ancestor, target);
-      return !reached;
-    });
-    if (reached) return;
-  }
-  fail(
-    'Keyboard traversal did not reach '
-    '${control.describeMatch(Plurality.one)}.',
-  );
 }
 
 Future<void> _pumpAt(

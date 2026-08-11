@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
+import 'support/keyboard_focus.dart';
 import 'support/proof_fonts.dart';
 import 'support/placement_progress_harness.dart';
 
@@ -121,7 +122,7 @@ void main() {
         const Offset(0, -300),
       );
       await tester.pumpAndSettle();
-      await _focusWithKeyboard(
+      await focusWithKeyboard(
         tester,
         find.byKey(const Key('toggle-preceptor-breakdown')),
       );
@@ -857,22 +858,3 @@ final class _ProofAssetBundle extends CachingAssetBundle {
 void _noop() {}
 
 void _ignoreDestination(ClinicalCalendarDestination _) {}
-
-Future<void> _focusWithKeyboard(WidgetTester tester, Finder control) async {
-  final target = control.evaluate().single;
-  for (var attempt = 0; attempt < 200; attempt += 1) {
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    await tester.pump();
-    final focused = FocusManager.instance.primaryFocus?.context as Element?;
-    var reached = identical(focused, target);
-    focused?.visitAncestorElements((ancestor) {
-      reached = identical(ancestor, target);
-      return !reached;
-    });
-    if (reached) return;
-  }
-  fail(
-    'Keyboard traversal did not reach '
-    '${control.describeMatch(Plurality.one)}.',
-  );
-}
