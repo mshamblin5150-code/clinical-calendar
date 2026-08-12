@@ -49,7 +49,9 @@ if ($manifest.Contains('android:process=":restart"') -or
     $mainActivity.Contains('restartProcess')) {
     throw 'Android release must preserve the live application host and unsaved planning state.'
 }
-if (-not $mainActivity.Contains('TRIM_MEMORY_COMPLETE') -or
+if (-not $mainActivity.Contains('notifyLowMemoryWarning') -or
+    -not $mainActivity.Contains('sendMemoryPressureWarning') -or
+    -not $mainActivity.Contains('postDelayed') -or
     -not $mainActivity.Contains('trimGallery')) {
     throw 'Gallery cleanup must notify the live Android host of releasable memory.'
 }

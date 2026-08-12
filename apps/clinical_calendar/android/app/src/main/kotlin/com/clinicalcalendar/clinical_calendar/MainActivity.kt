@@ -1,6 +1,5 @@
 package com.clinicalcalendar.clinical_calendar
 
-import android.content.ComponentCallbacks2
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.FlutterSurfaceView
 import io.flutter.embedding.engine.FlutterEngine
@@ -24,14 +23,19 @@ class MainActivity : FlutterActivity() {
                 result.notImplemented()
                 return@setMethodCallHandler
             }
-            window.decorView.post {
+            // The engine's low-memory cleanup is asynchronous on the raster
+            // task runner and requires a current rendering surface. Notify it
+            // first; detaching immediately makes the rasterizer skip cleanup
+            // because no surface/graphics context is available.
+            flutterEngine.dartExecutor.notifyLowMemoryWarning()
+            flutterEngine.systemChannel.sendMemoryPressureWarning()
+            window.decorView.postDelayed({
                 val surfaceView = flutterSurfaceView
                 surfaceView?.detachFromRenderer()
-                onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
                 Runtime.getRuntime().gc()
                 surfaceView?.attachToRenderer(flutterEngine.renderer)
                 result.success(null)
-            }
+            }, 250)
         }
     }
 }
