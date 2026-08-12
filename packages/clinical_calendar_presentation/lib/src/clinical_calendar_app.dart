@@ -81,6 +81,7 @@ Future<void> evictInactiveThemeFrameAssets({
   required BuildContext context,
   required ClinicalCalendarThemeBundleRegistry registry,
   required String activeThemeId,
+  bool clearLiveImages = true,
 }) async {
   final configuration = createLocalImageConfiguration(context);
   final cache = PaintingBinding.instance.imageCache;
@@ -97,7 +98,7 @@ Future<void> evictInactiveThemeFrameAssets({
   // it does not evict the active Calendar frame from the cache, so that frame
   // remains available without a second decode.
   cache.clear();
-  cache.clearLiveImages();
+  if (clearLiveImages) cache.clearLiveImages();
 }
 
 final class ClinicalCalendarApp extends StatefulWidget {
@@ -330,6 +331,17 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
     final host = _applicationHostKey.currentState;
     if (host == null) return;
     await host.applyThemePreview();
+    if (!_themePreview.isPreviewing) {
+      await host.releaseThemeTransitionMemory();
+    }
+  }
+
+  void _revertThemePreview() {
+    _themePreview.revert();
+    final host = _applicationHostKey.currentState;
+    if (host != null) {
+      unawaited(host.releaseThemeTransitionMemory());
+    }
   }
 
   Future<void> _launchOrResume() async {
@@ -372,6 +384,7 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
                     child: ThemePreviewControl(
                       controller: _themePreview,
                       onApply: _applyThemePreview,
+                      onRevert: _revertThemePreview,
                     ),
                   ),
                 ),
@@ -1552,6 +1565,24 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       // catches resources released by the first pass without replacing the
       // Activity, Flutter engine, Dart isolate, or user-owned planning state.
       await Future<void>.delayed(const Duration(milliseconds: 750));
+      await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
+    } on MissingPluginException {
+      // Widget and non-Android hosts have no native memory lifecycle.
+    }
+  }
+
+  Future<void> releaseThemeTransitionMemory() async {
+    final activeThemeId = widget.themePreviewController.effectiveBundle.id;
+    if (!mounted) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    await evictInactiveThemeFrameAssets(
+      context: context,
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      activeThemeId: activeThemeId,
+      clearLiveImages: false,
+    );
+    try {
       await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
     } on MissingPluginException {
       // Widget and non-Android hosts have no native memory lifecycle.
