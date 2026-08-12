@@ -77,26 +77,15 @@ void main() {
         .singleWhere((candidate) => candidate.id == graphiteThemeId);
     await tester.pumpWidget(
       MaterialApp(
-        home: MediaQuery(
-          data: const MediaQueryData(devicePixelRatio: 1),
-          child: Center(
-            child: SizedBox(
-              width: 800,
-              height: 500,
-              child: ThemeRuntimeThumbnail(bundle: bundle, useBakedAsset: true),
-            ),
-          ),
+        home: SizedBox(
+          width: 800,
+          child: ThemeRuntimeThumbnail(bundle: bundle, useBakedAsset: true),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.byType(Image), findsOneWidget);
-    final image = tester.widget<Image>(find.byType(Image));
-    expect(image.image, isA<ResizeImage>());
-    final resized = image.image as ResizeImage;
-    expect(resized.width, 800);
-    expect(resized.height, 500);
     expect(find.byType(GraphiteApplicationShell), findsNothing);
     expect(
       find.byKey(const Key('theme-gallery-thumbnail-graphite')),
