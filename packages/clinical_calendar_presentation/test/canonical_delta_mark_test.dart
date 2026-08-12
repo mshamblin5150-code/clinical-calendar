@@ -168,6 +168,28 @@ void main() {
     },
   );
 
+  testWidgets('runtime mark decodes at its physical display width', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(devicePixelRatio: 2),
+          child: Center(
+            child: SizedBox.square(
+              dimension: 50,
+              child: CanonicalDeltaMark(resizeForRuntime: true),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final provider = tester.widget<Image>(find.byType(Image)).image;
+    expect(provider, isA<ResizeImage>());
+    expect((provider as ResizeImage).width, 100);
+  });
+
   testWidgets('Containment Drone does not consume the canonical delta', (
     tester,
   ) async {
