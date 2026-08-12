@@ -55,9 +55,9 @@ if (-not $mainActivity.Contains('notifyLowMemoryWarning') -or
     -not $mainActivity.Contains('trimGallery')) {
     throw 'Gallery cleanup must notify the live Android host of releasable memory.'
 }
-if (-not $mainActivity.Contains('detachFromRenderer') -or
-    -not $mainActivity.Contains('attachToRenderer')) {
-    throw 'Gallery cleanup must recycle only renderer buffers while preserving the Flutter host.'
+if ($mainActivity.Contains('detachFromRenderer') -or
+    $mainActivity.Contains('attachToRenderer')) {
+    throw 'Gallery cleanup must keep the live rendering surface attached.'
 }
 $packager = Get-Content -Raw (Join-Path $repositoryRoot 'tool/android/package_signed_apk.ps1')
 if (-not $packager.Contains('Get-ClinicalCalendarReleaseFlutterArguments')) {
