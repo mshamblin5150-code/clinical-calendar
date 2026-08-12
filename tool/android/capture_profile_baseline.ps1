@@ -160,8 +160,15 @@ try {
         $nativeWidth = if ($nativeGeometry.Success) { [int]$nativeGeometry.Groups[1].Value } else { 0 }
         $nativeHeight = if ($nativeGeometry.Success) { [int]$nativeGeometry.Groups[2].Value } else { 0 }
         $nativeDimensions = @($nativeWidth, $nativeHeight) | Sort-Object
+        $overrideGeometry = [regex]::Match(
+            $displayInfo,
+            'mOverrideDisplayInfo=DisplayInfo\{.*?rotation (\d+)',
+            [Text.RegularExpressions.RegexOptions]::Singleline
+        )
+        $currentRotation = if ($overrideGeometry.Success) { [int]$overrideGeometry.Groups[1].Value } else { -1 }
         if (-not $displayInfo.Contains('mOverrideDisplayInfo=DisplayInfo') -or
-            $nativeDimensions -join 'x' -ne '1848x2960') {
+            $nativeDimensions -join 'x' -ne '1848x2960' -or
+            $currentRotation % 2 -ne 1) {
             throw 'The automated focused flow requires the 2960x1848 landscape tablet profile rig.'
         }
         Start-Sleep -Seconds 1

@@ -36,6 +36,8 @@ foreach ($required in @(
     'AutomateFocusedFlow',
     'nativeWidth',
     'nativeHeight',
+    'currentRotation',
+    "currentRotation % 2",
     'pidof',
     'RedirectStandardInput',
     'StandardInput.WriteLine',

@@ -287,6 +287,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
 
   void _navigate(int direction) {
     setState(() {
+      _snapshotCache.clear();
       _anchor = switch (_period) {
         CalendarPeriod.week => _anchor.addDays(7 * direction),
         CalendarPeriod.month ||

@@ -509,6 +509,14 @@ void main() {
       hasLength(1),
       reason: 'Returning to a loaded period must not repeat storage queries.',
     );
+
+    await tester.tap(find.byKey(const Key('calendar-next')));
+    await tester.pumpAndSettle();
+    expect(
+      source.requests,
+      hasLength(2),
+      reason: 'Navigating to a new period must replace the bounded cache.',
+    );
   });
 }
 
