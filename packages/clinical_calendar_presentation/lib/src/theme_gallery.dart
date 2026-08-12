@@ -308,6 +308,8 @@ final class _ThemeDetail extends StatelessWidget {
 String themeRuntimeThumbnailAssetPath(String themeId) =>
     'assets/theme_gallery_runtime/$themeId.png';
 
+const _themeGalleryRuntimeDecodeSize = Size(1280, 800);
+
 /// The deterministic real-bundle renderer used by gallery cards and evidence.
 final class ThemeRuntimeThumbnail extends StatelessWidget {
   const ThemeRuntimeThumbnail({
@@ -373,10 +375,10 @@ final class ThemeRuntimeThumbnail extends StatelessWidget {
                 final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
                 final cacheWidth = (constraints.maxWidth * devicePixelRatio)
                     .ceil()
-                    .clamp(1, bundle.gallery.thumbnailViewport.width.toInt());
+                    .clamp(1, _themeGalleryRuntimeDecodeSize.width.toInt());
                 final cacheHeight = (constraints.maxHeight * devicePixelRatio)
                     .ceil()
-                    .clamp(1, bundle.gallery.thumbnailViewport.height.toInt());
+                    .clamp(1, _themeGalleryRuntimeDecodeSize.height.toInt());
                 return Image.asset(
                   themeRuntimeThumbnailAssetPath(bundle.id),
                   key: captureKey,

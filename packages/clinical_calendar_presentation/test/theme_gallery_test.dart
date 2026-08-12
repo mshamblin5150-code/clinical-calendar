@@ -78,7 +78,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MediaQuery(
-          data: const MediaQueryData(devicePixelRatio: 1),
+          data: const MediaQueryData(devicePixelRatio: 2),
           child: Center(
             child: SizedBox(
               width: 800,
@@ -95,8 +95,8 @@ void main() {
     final image = tester.widget<Image>(find.byType(Image));
     expect(image.image, isA<ResizeImage>());
     final resized = image.image as ResizeImage;
-    expect(resized.width, 800);
-    expect(resized.height, 500);
+    expect(resized.width, 1280);
+    expect(resized.height, 800);
     expect(find.byType(GraphiteApplicationShell), findsNothing);
     expect(
       find.byKey(const Key('theme-gallery-thumbnail-graphite')),
