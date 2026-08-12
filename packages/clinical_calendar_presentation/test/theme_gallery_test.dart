@@ -68,6 +68,31 @@ void main() {
     expect(find.byKey(const Key('theme-thumbnail-day-cell-42')), findsNothing);
   });
 
+  testWidgets('profile thumbnail replaces the live renderer with a snapshot', (
+    tester,
+  ) async {
+    final bundle = ClinicalCalendarThemeBundleRegistry
+        .standard
+        .selectableBundles
+        .singleWhere((candidate) => candidate.id == graphiteThemeId);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 800,
+          child: ThemeRuntimeThumbnail(bundle: bundle, profileSnapshot: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RawImage), findsOneWidget);
+    expect(find.byType(GraphiteApplicationShell), findsNothing);
+    expect(
+      find.byKey(const Key('theme-gallery-thumbnail-graphite')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
     'every 200 percent landscape thumbnail keeps all seven weekdays visible',
     (tester) async {

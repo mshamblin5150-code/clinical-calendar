@@ -310,9 +310,16 @@ final class _ThemeDetail extends StatelessWidget {
 
 /// The deterministic real-bundle renderer used by gallery cards and evidence.
 final class ThemeRuntimeThumbnail extends StatefulWidget {
-  const ThemeRuntimeThumbnail({required this.bundle, super.key});
+  const ThemeRuntimeThumbnail({
+    required this.bundle,
+    this.profileSnapshot = !kDebugMode,
+    super.key,
+  });
 
   final ClinicalCalendarThemeBundle bundle;
+
+  @visibleForTesting
+  final bool profileSnapshot;
 
   @override
   State<ThemeRuntimeThumbnail> createState() => _ThemeRuntimeThumbnailState();
@@ -343,7 +350,11 @@ final class _ThemeRuntimeThumbnailState extends State<ThemeRuntimeThumbnail> {
   }
 
   void _scheduleProfileCapture() {
-    if (kDebugMode || _captureScheduled || _profileSnapshot != null) return;
+    if (!widget.profileSnapshot ||
+        _captureScheduled ||
+        _profileSnapshot != null) {
+      return;
+    }
     _captureScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
@@ -412,14 +423,14 @@ final class _ThemeRuntimeThumbnailState extends State<ThemeRuntimeThumbnail> {
       ),
     );
     final captureKey = Key('theme-gallery-thumbnail-${bundle.id}');
-    final renderedThumbnail = kDebugMode
-        ? RepaintBoundary(key: captureKey, child: thumbnail)
-        : KeyedSubtree(
+    final renderedThumbnail = widget.profileSnapshot
+        ? KeyedSubtree(
             key: captureKey,
             child: _profileSnapshot == null
                 ? RepaintBoundary(key: _profileCaptureKey, child: thumbnail)
                 : RawImage(image: _profileSnapshot, fit: BoxFit.fill),
-          );
+          )
+        : RepaintBoundary(key: captureKey, child: thumbnail);
     return Semantics(
       label:
           '${bundle.metadata.displayName} deterministic Calendar thumbnail, '
