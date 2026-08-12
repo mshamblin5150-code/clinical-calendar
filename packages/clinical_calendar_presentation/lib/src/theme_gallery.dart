@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'responsive_shell.dart';
@@ -306,10 +309,64 @@ final class _ThemeDetail extends StatelessWidget {
 }
 
 /// The deterministic real-bundle renderer used by gallery cards and evidence.
-final class ThemeRuntimeThumbnail extends StatelessWidget {
+final class ThemeRuntimeThumbnail extends StatefulWidget {
   const ThemeRuntimeThumbnail({required this.bundle, super.key});
 
   final ClinicalCalendarThemeBundle bundle;
+
+  @override
+  State<ThemeRuntimeThumbnail> createState() => _ThemeRuntimeThumbnailState();
+}
+
+final class _ThemeRuntimeThumbnailState extends State<ThemeRuntimeThumbnail> {
+  final _profileCaptureKey = GlobalKey();
+  ui.Image? _profileSnapshot;
+  bool _captureScheduled = false;
+
+  ClinicalCalendarThemeBundle get bundle => widget.bundle;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleProfileCapture();
+  }
+
+  @override
+  void didUpdateWidget(ThemeRuntimeThumbnail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.bundle.id != widget.bundle.id) {
+      _profileSnapshot?.dispose();
+      _profileSnapshot = null;
+      _captureScheduled = false;
+      _scheduleProfileCapture();
+    }
+  }
+
+  void _scheduleProfileCapture() {
+    if (kDebugMode || _captureScheduled || _profileSnapshot != null) return;
+    _captureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final boundary = _profileCaptureKey.currentContext?.findRenderObject();
+      if (boundary is! RenderRepaintBoundary) {
+        _captureScheduled = false;
+        _scheduleProfileCapture();
+        return;
+      }
+      final snapshot = await boundary.toImage();
+      if (!mounted) {
+        snapshot.dispose();
+        return;
+      }
+      setState(() => _profileSnapshot = snapshot);
+    });
+  }
+
+  @override
+  void dispose() {
+    _profileSnapshot?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -355,6 +412,14 @@ final class ThemeRuntimeThumbnail extends StatelessWidget {
       ),
     );
     final captureKey = Key('theme-gallery-thumbnail-${bundle.id}');
+    final renderedThumbnail = kDebugMode
+        ? RepaintBoundary(key: captureKey, child: thumbnail)
+        : KeyedSubtree(
+            key: captureKey,
+            child: _profileSnapshot == null
+                ? RepaintBoundary(key: _profileCaptureKey, child: thumbnail)
+                : RawImage(image: _profileSnapshot, fit: BoxFit.fill),
+          );
     return Semantics(
       label:
           '${bundle.metadata.displayName} deterministic Calendar thumbnail, '
@@ -362,13 +427,7 @@ final class ThemeRuntimeThumbnail extends StatelessWidget {
           '${bundle.gallery.rendererId}',
       image: true,
       child: ExcludeSemantics(
-        child: ExcludeFocus(
-          child: IgnorePointer(
-            child: kDebugMode
-                ? RepaintBoundary(key: captureKey, child: thumbnail)
-                : KeyedSubtree(key: captureKey, child: thumbnail),
-          ),
-        ),
+        child: ExcludeFocus(child: IgnorePointer(child: renderedThumbnail)),
       ),
     );
   }
