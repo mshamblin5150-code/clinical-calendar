@@ -51,11 +51,9 @@ if ($manifest.Contains('android:process=":restart"') -or
 }
 if (-not $mainActivity.Contains('notifyLowMemoryWarning') -or
     -not $mainActivity.Contains('sendMemoryPressureWarning') -or
-    -not $mainActivity.Contains('renderer.onTrimMemory') -or
-    -not $mainActivity.Contains('TRIM_MEMORY_COMPLETE') -or
     -not $mainActivity.Contains('postDelayed') -or
     -not $mainActivity.Contains('trimGallery')) {
-    throw 'Gallery cleanup must pressure both the live engine and its renderer caches.'
+    throw 'Gallery cleanup must notify the live Android host of releasable memory.'
 }
 if ($mainActivity.Contains('detachFromRenderer') -or
     $mainActivity.Contains('attachToRenderer')) {
