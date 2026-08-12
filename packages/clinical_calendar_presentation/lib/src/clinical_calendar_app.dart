@@ -1515,23 +1515,10 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     final returnToMenu = _entry == DestinationEntry.applicationMenu;
     final exited = _destination;
     setState(() => _destination = null);
-    if (exited == ClinicalCalendarDestination.settings) {
-      final activeThemeId = widget.themePreviewController.effectiveBundle.id;
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (!mounted) return;
-        await WidgetsBinding.instance.endOfFrame;
-        if (!mounted) return;
-        await evictInactiveThemeFrameAssets(
-          context: context,
-          registry: ClinicalCalendarThemeBundleRegistry.standard,
-          activeThemeId: activeThemeId,
-        );
-        try {
-          await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
-        } on MissingPluginException {
-          // Widget and non-Android hosts have no native memory lifecycle.
-        }
-      });
+    if (exited == ClinicalCalendarDestination.settings && !returnToMenu) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _releaseGalleryMemory(),
+      );
     }
     if (exited == ClinicalCalendarDestination.clinicalPlacements ||
         exited == ClinicalCalendarDestination.settings ||
@@ -1539,7 +1526,29 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       unawaited(_refreshAfterDestinationExit(exited!));
     }
     if (returnToMenu) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showMenu());
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _showMenu();
+        if (exited == ClinicalCalendarDestination.settings) {
+          await _releaseGalleryMemory();
+        }
+      });
+    }
+  }
+
+  Future<void> _releaseGalleryMemory() async {
+    final activeThemeId = widget.themePreviewController.effectiveBundle.id;
+    if (!mounted) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    await evictInactiveThemeFrameAssets(
+      context: context,
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      activeThemeId: activeThemeId,
+    );
+    try {
+      await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
+    } on MissingPluginException {
+      // Widget and non-Android hosts have no native memory lifecycle.
     }
   }
 
