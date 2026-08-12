@@ -432,7 +432,7 @@ final class _ThemeRuntimeThumbnailState extends State<ThemeRuntimeThumbnail> {
                 ? RepaintBoundary(key: _profileCaptureKey, child: thumbnail)
                 : RawImage(image: _profileSnapshot, fit: BoxFit.fill),
           )
-        : RepaintBoundary(key: captureKey, child: thumbnail);
+        : KeyedSubtree(key: captureKey, child: thumbnail);
     return Semantics(
       label:
           '${bundle.metadata.displayName} deterministic Calendar thumbnail, '
