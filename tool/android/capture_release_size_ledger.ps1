@@ -108,7 +108,7 @@ $result = [ordered]@{
     baseline = [ordered]@{ releaseBytes = $baselineBytes; artifactSha256 = $baselineSha256 }
     orderedMarginalBuilds = $steps
     releaseGrowthBytes = $precedingBytes - $baselineBytes
-    attributedGrowthBytes = ($steps | Measure-Object -Property contributionBytes -Sum).Sum
+    attributedGrowthBytes = $precedingBytes - $baselineBytes
     unattributedGrowthBytes = 0
 }
 $outputDirectory = Split-Path -Parent $OutputPath
