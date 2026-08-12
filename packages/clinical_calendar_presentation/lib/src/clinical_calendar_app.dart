@@ -93,9 +93,11 @@ Future<void> evictInactiveThemeFrameAssets({
   }
   // The Gallery's resized thumbnails use derived cache keys rather than the
   // source-provider keys evicted above. Clear those non-live entries after the
-  // route disposes, but retain the live-image registry so the active Calendar
-  // frame is not decoded and allocated a second time.
+  // route disposes. Clearing live-image bookkeeping removes listener handles;
+  // it does not evict the active Calendar frame from the cache, so that frame
+  // remains available without a second decode.
   cache.clear();
+  cache.clearLiveImages();
 }
 
 final class ClinicalCalendarApp extends StatefulWidget {
@@ -1545,6 +1547,11 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       activeThemeId: activeThemeId,
     );
     try {
+      await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
+      // Raster cleanup is asynchronous in the engine. A second pressure pass
+      // catches resources released by the first pass without replacing the
+      // Activity, Flutter engine, Dart isolate, or user-owned planning state.
+      await Future<void>.delayed(const Duration(milliseconds: 750));
       await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
     } on MissingPluginException {
       // Widget and non-Android hosts have no native memory lifecycle.
