@@ -2,6 +2,7 @@ package com.clinicalcalendar.clinical_calendar
 
 import android.content.ComponentCallbacks2
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterView
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
@@ -18,8 +19,11 @@ class MainActivity : FlutterActivity() {
             }
             result.success(null)
             window.decorView.post {
+                val flutterView = findViewById<FlutterView>(FLUTTER_VIEW_ID)
+                flutterView.detachFromFlutterEngine()
                 onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
                 Runtime.getRuntime().gc()
+                flutterView.attachToFlutterEngine(flutterEngine)
             }
         }
     }
