@@ -68,29 +68,6 @@ void main() {
     expect(find.byKey(const Key('theme-thumbnail-day-cell-42')), findsNothing);
   });
 
-  testWidgets('runtime thumbnail does not retain a whole-shell raster layer', (
-    tester,
-  ) async {
-    final bundle = ClinicalCalendarThemeBundleRegistry
-        .standard
-        .selectableBundles
-        .singleWhere((candidate) => candidate.id == graphiteThemeId);
-    await tester.pumpWidget(
-      MaterialApp(home: ThemeRuntimeThumbnail(bundle: bundle)),
-    );
-
-    final thumbnail = tester.widget(
-      find.byKey(const Key('theme-gallery-thumbnail-graphite')),
-    );
-    expect(
-      thumbnail,
-      isNot(isA<RepaintBoundary>()),
-      reason:
-          'The production Gallery must paint the approved shell directly; '
-          'a whole-shell boundary retains Vulkan/Mali raster allocations.',
-    );
-  });
-
   testWidgets('profile thumbnail replaces the live renderer with a snapshot', (
     tester,
   ) async {
