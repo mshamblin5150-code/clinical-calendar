@@ -1412,6 +1412,7 @@ Future<ThemeTokenAuditReport> auditRuntimeThemeData(
   await tester.pumpWidget(
     MaterialApp(
       theme: theme,
+      themeAnimationDuration: Duration.zero,
       home: Material(
         child: Column(
           children: [

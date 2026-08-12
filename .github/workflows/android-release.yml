@@ -72,6 +72,21 @@ jobs:
             -FlutterExecutable (Get-Command flutter).Source `
             -ExpectedSignerSha256 $env:ANDROID_SIGNING_CERT_SHA256
 
+      - name: Build and verify signer-matched profile APK
+        shell: pwsh
+        env:
+          CLINICAL_CALENDAR_ENVIRONMENT: private-release
+          CLINICAL_CALENDAR_SUPABASE_URL: ${{ vars.CLINICAL_CALENDAR_SUPABASE_URL }}
+          CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY }}
+          CLINICAL_CALENDAR_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CLINICAL_CALENDAR_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          CLINICAL_CALENDAR_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_SIGNING_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
+        run: |
+          ./tool/android/package_signed_profile_apk.ps1 `
+            -FlutterExecutable (Get-Command flutter).Source `
+            -ExpectedSignerSha256 $env:ANDROID_SIGNING_CERT_SHA256
+
       - name: Upload signed private release
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -79,6 +94,8 @@ jobs:
           path: |
             apps/clinical_calendar/build/app/outputs/flutter-apk/app-release.apk
             apps/clinical_calendar/build/app/outputs/flutter-apk/app-release.apk.sha256
+            apps/clinical_calendar/build/app/outputs/flutter-apk/app-profile.apk
+            apps/clinical_calendar/build/app/outputs/flutter-apk/app-profile.apk.sha256
           if-no-files-found: error
           retention-days: 14
 

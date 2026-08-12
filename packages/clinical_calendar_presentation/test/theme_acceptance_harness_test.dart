@@ -133,6 +133,38 @@ void main() {
       }
     }
 
+    testWidgets('sequential bundle audits inspect the settled runtime theme', (
+      tester,
+    ) async {
+      final registry = ClinicalCalendarThemeBundleRegistry.standard;
+      final containmentDrone = registry.galleryBundles.singleWhere(
+        (bundle) => bundle.id == variantFThemeId,
+      );
+      final coastalLight = registry.galleryBundles.singleWhere(
+        (bundle) => bundle.id == coastalCalmThemeId,
+      );
+
+      await auditRuntimeBundle(
+        tester,
+        containmentDrone,
+        ThemeAccessibilityMode.standard,
+      );
+      final coastalReport = await auditRuntimeBundle(
+        tester,
+        coastalLight,
+        ThemeAccessibilityMode.standard,
+      );
+
+      final textDefault = coastalReport.entries.singleWhere(
+        (entry) => entry.pairingId == 'text-default',
+      );
+      expect(
+        textDefault.compositedForeground,
+        CoastalLightColors.accentPrimary,
+      );
+      expect(coastalReport.passed, isTrue);
+    });
+
     test('alpha is composited over the surface actually painted', () {
       final report = ThemeRuntimeTokenAuditor.auditPairings(
         themeId: 'fixture',

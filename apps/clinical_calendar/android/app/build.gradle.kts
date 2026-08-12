@@ -57,6 +57,11 @@ android {
     }
 
     buildTypes {
+        getByName("profile") {
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
         }

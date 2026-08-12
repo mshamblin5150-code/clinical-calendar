@@ -26,7 +26,9 @@ $requiredWorkflowFragments = @(
     'vars.CLINICAL_CALENDAR_SUPABASE_URL',
     'secrets.CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY',
     'package_signed_apk.ps1',
-    'app-release.apk.sha256'
+    'package_signed_profile_apk.ps1',
+    'app-release.apk.sha256',
+    'app-profile.apk.sha256'
 )
 foreach ($fragment in $requiredWorkflowFragments) {
     if (-not $workflow.Contains($fragment)) {
@@ -46,8 +48,28 @@ if (-not $packager.Contains('Get-ClinicalCalendarReleaseFlutterArguments')) {
     throw 'Android release packaging must resolve protected Supabase compile-time configuration.'
 }
 
+$profilePackagerPath = Join-Path $repositoryRoot 'tool/android/package_signed_profile_apk.ps1'
+if (-not (Test-Path -LiteralPath $profilePackagerPath -PathType Leaf)) {
+    throw 'Protected Android profile packaging script is missing.'
+}
+$profilePackager = Get-Content -Raw $profilePackagerPath
+foreach ($fragment in @(
+    'build apk --profile',
+    'Get-ClinicalCalendarReleaseFlutterArguments',
+    'verify_signed_apk.ps1',
+    'app-profile.apk.sha256'
+)) {
+    if (-not $profilePackager.Contains($fragment)) {
+        throw "Android profile packaging is missing required fragment: $fragment"
+    }
+}
+
 if ($gradle.Contains('signingConfigs.getByName("debug")')) {
     throw 'Android release build must not use the debug signing configuration.'
+}
+if (-not $gradle.Contains('getByName("profile")') -or
+    -not $gradle.Contains('signingConfigs.getByName("release")')) {
+    throw 'Protected Android profile builds must use the approved release signer when configured.'
 }
 foreach ($name in @(
     'CLINICAL_CALENDAR_ANDROID_KEYSTORE_PATH',
