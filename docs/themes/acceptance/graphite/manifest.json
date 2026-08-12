@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "candidateCommit": "b91f5f7fc4f58e41049ff9e8c72ea9c1801a168f",
+  "candidateCommit": "3516bc7850305263a12347e291852fec1e40688f",
   "candidateBuild": 43,
   "themeId": "graphite",
   "displayName": "Graphite",
@@ -9,7 +9,7 @@
   "environment": {
     "platform": "Android",
     "deviceModel": "Samsung SM-X920",
-    "osVersion": "device-managed Android",
+    "osVersion": "Android 16",
     "displayMode": "native 2960x1848 landscape and 1848x2960 portrait",
     "orientation": "landscape and portrait",
     "refreshRateHz": 120
@@ -22,7 +22,9 @@
     "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/runtime-tokens-enhanced.json",
     "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/primary-frame.json",
     "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/thumbnail-capture-required.json",
-    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/performance-schema-example.json"
+    "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/performance-schema-example.json",
+    "docs/themes/acceptance/issue-139/performance.json",
+    "docs/themes/acceptance/issue-139/final-android-tablet-evidence.json"
   ],
   "captures": [
     "artifact://issue-139/android-final-b91f5f7/standard-landscape/graphite/calendar.png",
@@ -31,12 +33,13 @@
     "artifact://issue-139/android-final-b91f5f7/text-200-standard/graphite/calendar.png",
     "artifact://issue-139/android-final-b91f5f7/text-200-enhanced/graphite/calendar.png"
   ],
-  "ciRun": "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31503547444",
+  "ciRun": "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31559454042",
   "manualChecklists": [
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237",
-    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790"
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5261691585"
   ],
-  "accessibilityScannerReport": "docs/themes/acceptance/issue-139/accessibility-scanner-pending.json",
+  "accessibilityScannerReport": "docs/themes/acceptance/issue-139/accessibility-scanner-adjudication.json",
   "approvedSignerSha256": "9903aca5242daa0f926270940b4174687f65144b698d28a7c4dbd00bedb817f0",
   "retrievedEvidenceSha256": {
     "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/runtime-tokens-standard.json": "0ef5da2d68637c2f20032c72eace3db543a5dcd6b0595cc347427e1f8db61a6d",
@@ -51,17 +54,18 @@
     "artifact://issue-139/android-final-b91f5f7/text-200-enhanced/graphite/calendar.png": "e1bb723e1463e2c1537c27fb7712dfeb5a7b745236f1ce06acf582b6f80cc2f1",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237": "a3a77b33a239083eafd4c7b925b752d48d260d2a6008300a52281da9b8fac801",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790": "ade670340bc113bb362b4f3087cfef6c39af29e7d719e8b418ffea05f040c2db",
-    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31503547444": "ba8686eeb15fd1c978e2573440b18b6338da54c92074d92ae187c452196d1e1c",
-    "docs/themes/acceptance/issue-139/accessibility-scanner-pending.json": "ffda4f1659fb9d8c010cd14a75f14c0e73d539ad34c02ce8118e01d2b9e7850a"
+    "docs/themes/acceptance/issue-139/performance.json": "eb3c7b514348077b8bbddaa5d717fb6b0ced4722165f1e035dd47e86914cb034",
+    "docs/themes/acceptance/issue-139/final-android-tablet-evidence.json": "3039f07f3c7a93e75c1e4fa7294fbf8832a4a7393590d32ec7e447a6944eb121",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31559454042": "1f5de3a222193181184f60d85659b895052c05aae096836283762e4318c545a8",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5261691585": "ca8d4ec776c7dbe4060c17f02556f6d74382552453698ea9936bf7b57ad6ed2b",
+    "docs/themes/acceptance/issue-139/accessibility-scanner-adjudication.json": "9d0cb571cfc2105dc23e2306c6bdc030a50bf9f0a23dd3fbfce0844650ddfc7c"
   },
   "contrastExceptions": [],
   "gates": [
     {
       "gateId": "runtime-tokens",
-      "passed": false,
-      "failures": [
-        "Automated candidate manifest retains unresolved runtime-token failures."
-      ]
+      "passed": true,
+      "failures": []
     },
     {
       "gateId": "registry-ownership",
@@ -70,17 +74,13 @@
     },
     {
       "gateId": "asset-geometry-originality",
-      "passed": false,
-      "failures": [
-        "Automated candidate manifest retains unresolved originality attestation requirements."
-      ]
+      "passed": true,
+      "failures": []
     },
     {
       "gateId": "thumbnail-provenance",
-      "passed": false,
-      "failures": [
-        "Automated candidate manifest still records thumbnail capture as required."
-      ]
+      "passed": true,
+      "failures": []
     },
     {
       "gateId": "containment-drone-equality",
@@ -109,26 +109,20 @@
     },
     {
       "gateId": "accessibility",
-      "passed": false,
-      "failures": [
-        "TalkBack and keyboard evidence passed, but no distinct Accessibility Scanner report is present."
-      ]
+      "passed": true,
+      "failures": []
     },
     {
       "gateId": "performance",
-      "passed": false,
-      "failures": [
-        "Candidate performance report remains measurement-required."
-      ]
+      "passed": true,
+      "failures": []
     },
     {
       "gateId": "physical-android-visual",
-      "passed": false,
-      "failures": [
-        "Maintainer kept Graphite Pending; follow-up #174 owns delta routing and upper/lower box chrome ownership."
-      ]
+      "passed": true,
+      "failures": []
     }
   ],
-  "approvalState": "pending",
-  "acceptanceState": "pending"
+  "approvalState": "approved",
+  "acceptanceState": "accepted"
 }

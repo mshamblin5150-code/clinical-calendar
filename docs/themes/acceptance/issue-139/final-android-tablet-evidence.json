@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "issue": 139,
+  "scope": "Android tablet only",
+  "candidateCommit": "3516bc7850305263a12347e291852fec1e40688f",
+  "candidateBuild": 43,
+  "candidateVersion": "0.1.0",
+  "protectedRun": "https://github.com/mshamblin5150-code/clinical-calendar/actions/runs/31559454042",
+  "device": {
+    "model": "Samsung SM-X920",
+    "androidVersion": "16",
+    "physical": true
+  },
+  "upgrade": {
+    "releaseArtifactSha256": "ba9c76ec012adb20eb8a93de5b84de28024bd8b1cff9cb84154606b50d390f58",
+    "profileArtifactSha256": "1a6974fb7ee7f1dbced897e7068293fa91298d0edcd62c9edfc72136194fab63",
+    "approvedSignerSha256": "9903aca5242daa0f926270940b4174687f65144b698d28a7c4dbd00bedb817f0",
+    "primaryFirstInstallTimePreserved": "2026-08-09 17:20:56"
+  },
+  "visualMatrix": {
+    "fixture": "catalog-acceptance-fictional-v1",
+    "themes": 7,
+    "topLevelDestinationsPerTheme": 11,
+    "nativePngAndUiTreePairs": 200,
+    "standardLandscape": 77,
+    "standardPortrait": 28,
+    "enhancedLandscape": 49,
+    "text200Percent": 28,
+    "assignmentSurfaces": 18,
+    "originalResolution": true,
+    "privacyReviewed": true
+  },
+  "interactionAndAccessibility": {
+    "previewApplyRevert": true,
+    "themeRoundTrips": true,
+    "talkBackBindingAndFocus": true,
+    "hardwareKeyboardTraversal": true,
+    "text200Percent": true,
+    "standardAndEnhancedRedundantCues": true,
+    "scannerAdjudication": "docs/themes/acceptance/issue-139/accessibility-scanner-adjudication.json"
+  },
+  "performance": "docs/themes/acceptance/issue-139/performance.json",
+  "maintainerDecision": {
+    "decision": "all accepted — it ships",
+    "recordedAtUtc": "2026-08-12T03:00:22Z",
+    "uri": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5261691585",
+    "themes": {
+      "variant-f": "accepted",
+      "graphite": "accepted",
+      "federation-classic": "accepted",
+      "federation-2399": "accepted",
+      "coastal-calm": "accepted",
+      "botanical-study": "accepted",
+      "heritage-field-notes": "accepted"
+    }
+  },
+  "redesignBoundary": {
+    "issue": 146,
+    "handoff": "https://github.com/mshamblin5150-code/clinical-calendar/issues/146#issuecomment-5261619696",
+    "shippingBaselineFrozen": true,
+    "replacementRequiresApprovedConceptAndContractAmendment": true
+  },
+  "limitations": [
+    "No Windows visual acceptance is claimed.",
+    "No physical-phone visual acceptance is claimed.",
+    "The official Accessibility Scanner service bound, but Android 16 produced no scan record; the explicit tool-compatibility adjudication is retained."
+  ],
+  "accepted": true
+}

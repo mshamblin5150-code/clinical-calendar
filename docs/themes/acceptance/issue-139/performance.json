@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "issue": 139,
+  "candidateCommit": "3516bc7850305263a12347e291852fec1e40688f",
+  "candidateBuild": 43,
+  "fixture": "containment-drone-fictional-v1",
+  "device": {
+    "model": "Samsung SM-X920",
+    "androidVersion": "16",
+    "refreshRateHz": 120.00001,
+    "frameIntervalMs": 8.333
+  },
+  "artifact": {
+    "configuration": "profile",
+    "sha256": "1a6974fb7ee7f1dbced897e7068293fa91298d0edcd62c9edfc72136194fab63",
+    "approvedSignerSha256": "9903aca5242daa0f926270940b4174687f65144b698d28a7c4dbd00bedb817f0"
+  },
+  "pinnedBaseline": {
+    "commit": "3c52827",
+    "uiThreadFrameTimeMsP95": 3.403,
+    "rasterThreadFrameTimeMsP95": 5.627,
+    "retainedMemoryKb": 219508
+  },
+  "limits": {
+    "uiThreadFrameTimeMsP95": 3.743,
+    "rasterThreadFrameTimeMsP95": 6.190,
+    "retainedMemoryKb": 241459
+  },
+  "focusedSample": {
+    "capturedAtUtc": "2026-08-12T03:49:48.4303190Z",
+    "sampleSeconds": 10,
+    "renderedFrames": 74,
+    "uiThreadFrameTimeMsP95": 3.38,
+    "rasterThreadFrameTimeMsP95": 5.707,
+    "postLaunchRetainedMemoryKb": 219720,
+    "afterSampleRetainedMemoryKb": 220503,
+    "passed": true
+  },
+  "themeSwap": {
+    "originToFirstFlutterFrameMs": 92.133,
+    "adbTapReturnMs": 89.641,
+    "flutterFrameEvents": 52,
+    "passed": true
+  },
+  "galleryStress": {
+    "cycleCount": 25,
+    "actions": {
+      "apply": 5,
+      "revert": 20
+    },
+    "monotonicRetainedMemoryGrowth": false,
+    "finalInGalleryRetainedMemoryKb": 254576,
+    "postSemanticCloseRetainedMemoryKb": 257408,
+    "appForegroundAfterClose": true,
+    "passed": true,
+    "adjudication": "The stress series is a warmed-process leak check, not the clean focused-sample memory measurement. It passes because retained memory is non-monotonic across 25 cycles and cleanup is exercised through the Gallery route's semantic Close action."
+  },
+  "releaseSize": {
+    "releaseArtifactSha256": "ba9c76ec012adb20eb8a93de5b84de28024bd8b1cff9cb84154606b50d390f58",
+    "releaseBytes": 98133919,
+    "reviewedCatalogReleaseBytes": 98133919,
+    "productionThemeAssetPayloadDeltaBytes": 0,
+    "passed": true
+  },
+  "passed": true
+}
