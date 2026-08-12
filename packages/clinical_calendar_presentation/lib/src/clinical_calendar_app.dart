@@ -91,12 +91,10 @@ Future<void> evictInactiveThemeFrameAssets({
     final key = await provider.obtainKey(configuration);
     cache.evict(key, includeLive: true);
   }
-  // The Gallery's profile snapshots are disposed when its route leaves the
-  // tree. Drop only the cache's stale bookkeeping after that disposal so the
-  // raster resources can be reclaimed without replacing the application host
-  // or any user-owned planning state.
-  cache.clear();
-  cache.clearLiveImages();
+  // Gallery-only providers were evicted above after the route disposed. Keep
+  // the active bundle's live images intact: clearing the global cache here
+  // forces the Calendar to decode and allocate a second active frame after
+  // every Gallery visit.
 }
 
 final class ClinicalCalendarApp extends StatefulWidget {
