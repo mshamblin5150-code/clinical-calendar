@@ -42,6 +42,7 @@ flutter:
     - assets/heritage_field_notes_fonts/OFL.txt
     - assets/heritage_field_notes_materials/field-archive-chassis.png
     - assets/heritage_field_notes_raster/panel-nine-slice-v1.png
+    - assets/theme_gallery_runtime/
   fonts:
     - family: FieldArchiveCondensed
       fonts:
