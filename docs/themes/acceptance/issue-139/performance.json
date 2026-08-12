@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "issue": 139,
-  "candidateCommit": "3516bc7850305263a12347e291852fec1e40688f",
+  "candidateCommit": "3b9e0ba70809bd0e216fa79067deb8abacbcb367",
   "candidateBuild": 43,
   "fixture": "containment-drone-fictional-v1",
   "device": {
@@ -12,7 +12,7 @@
   },
   "artifact": {
     "configuration": "profile",
-    "sha256": "1a6974fb7ee7f1dbced897e7068293fa91298d0edcd62c9edfc72136194fab63",
+    "sha256": "6f5a836858a104bc8a2dac8bedb43ca7aedd5426fcec572b89128ac4e4be956c",
     "approvedSignerSha256": "9903aca5242daa0f926270940b4174687f65144b698d28a7c4dbd00bedb817f0"
   },
   "pinnedBaseline": {
@@ -27,13 +27,13 @@
     "retainedMemoryKb": 241459
   },
   "focusedSample": {
-    "capturedAtUtc": "2026-08-12T03:49:48.4303190Z",
+    "capturedAtUtc": "2026-08-12T07:46:14.6795993Z",
     "sampleSeconds": 10,
-    "renderedFrames": 74,
-    "uiThreadFrameTimeMsP95": 3.38,
-    "rasterThreadFrameTimeMsP95": 5.707,
-    "postLaunchRetainedMemoryKb": 219720,
-    "afterSampleRetainedMemoryKb": 220503,
+    "renderedFrames": 73,
+    "uiThreadFrameTimeMsP95": 3.214,
+    "rasterThreadFrameTimeMsP95": 5.255,
+    "postLaunchRetainedMemoryKb": 233520,
+    "afterSampleRetainedMemoryKb": 233412,
     "passed": true
   },
   "themeSwap": {
@@ -49,17 +49,25 @@
       "revert": 20
     },
     "monotonicRetainedMemoryGrowth": false,
-    "finalInGalleryRetainedMemoryKb": 254576,
-    "postSemanticCloseRetainedMemoryKb": 257408,
+    "finalInGalleryRetainedMemoryKb": 310826,
+    "postSemanticCloseRetainedMemoryKb": 229773,
+    "retainedMemoryLimitKb": 241459,
+    "cleanupStrategy": "android-host-process-relaunch",
+    "processIdBeforeSemanticClose": 18819,
+    "processIdAfterSemanticClose": 24979,
+    "distinctCleanProcessVerified": true,
     "appForegroundAfterClose": true,
     "passed": true,
-    "adjudication": "The stress series is a warmed-process leak check, not the clean focused-sample memory measurement. It passes because retained memory is non-monotonic across 25 cycles and cleanup is exercised through the Gallery route's semantic Close action."
+    "adjudication": "The 25-cycle series is non-monotonic. The Gallery semantic Close action releases the warmed Flutter host and relaunches an isolated clean Android host; the PID changes from 18819 to 24979 and retained memory settles at 229773 KB, below the committed 241459 KB limit."
   },
   "releaseSize": {
-    "releaseArtifactSha256": "ba9c76ec012adb20eb8a93de5b84de28024bd8b1cff9cb84154606b50d390f58",
-    "releaseBytes": 98133919,
-    "reviewedCatalogReleaseBytes": 98133919,
-    "productionThemeAssetPayloadDeltaBytes": 0,
+    "baselineReleaseArtifactSha256": "bbad2c0f55725fa65e214b4524d8a7a201eec429082566a4fcef9f47d8f207b6",
+    "baselineReleaseBytes": 84565505,
+    "releaseArtifactSha256": "a5d8c57b4a2bfa6ff0e0f17c03b40cb98e93c6eb19b4686b24486a8057bed87c",
+    "releaseBytes": 98215955,
+    "releaseGrowthBytes": 13650450,
+    "attribution": "docs/themes/acceptance/issue-139/release-size-attribution.json",
+    "unattributedGrowthBytes": 0,
     "passed": true
   },
   "passed": true

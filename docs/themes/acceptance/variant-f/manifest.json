@@ -1,6 +1,6 @@
-{
+﻿{
   "schemaVersion": 1,
-  "candidateCommit": "3516bc7850305263a12347e291852fec1e40688f",
+  "candidateCommit": "3b9e0ba70809bd0e216fa79067deb8abacbcb367",
   "candidateBuild": 43,
   "themeId": "variant-f",
   "displayName": "Containment Drone 47-Alpha",
@@ -24,7 +24,9 @@
     "artifact://issue-139/android-final-b91f5f7/automated-manifests/variant-f/thumbnail-capture-required.json",
     "artifact://issue-139/android-final-b91f5f7/automated-manifests/variant-f/performance-schema-example.json",
     "docs/themes/acceptance/issue-139/performance.json",
-    "docs/themes/acceptance/issue-139/final-android-tablet-evidence.json"
+    "docs/themes/acceptance/issue-139/final-android-tablet-evidence.json",
+    "docs/themes/acceptance/issue-139/visual-evidence-applicability.json",
+    "docs/themes/acceptance/issue-139/release-size-attribution.json"
   ],
   "captures": [
     "artifact://issue-139/android-final-b91f5f7/standard-landscape/containment-drone/calendar.png",
@@ -33,7 +35,7 @@
     "artifact://issue-139/android-final-b91f5f7/text-200-standard/containment-drone/calendar.png",
     "artifact://issue-139/android-final-b91f5f7/text-200-enhanced/containment-drone/calendar.png"
   ],
-  "ciRun": "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31559454042",
+  "ciRun": "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31573857360",
   "manualChecklists": [
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790",
@@ -54,9 +56,11 @@
     "artifact://issue-139/android-final-b91f5f7/text-200-enhanced/containment-drone/calendar.png": "552d70d96826273768debc0b5f2c66994c28a1e1c2cf858287dcad6798680860",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237": "a3a77b33a239083eafd4c7b925b752d48d260d2a6008300a52281da9b8fac801",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790": "ade670340bc113bb362b4f3087cfef6c39af29e7d719e8b418ffea05f040c2db",
-    "docs/themes/acceptance/issue-139/performance.json": "eb3c7b514348077b8bbddaa5d717fb6b0ced4722165f1e035dd47e86914cb034",
-    "docs/themes/acceptance/issue-139/final-android-tablet-evidence.json": "3039f07f3c7a93e75c1e4fa7294fbf8832a4a7393590d32ec7e447a6944eb121",
-    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31559454042": "1f5de3a222193181184f60d85659b895052c05aae096836283762e4318c545a8",
+    "docs/themes/acceptance/issue-139/performance.json": "b219917c80e97f15cef621a533e9a1f1ad9f3f074a8b6277c2672d1d2099d0bd",
+    "docs/themes/acceptance/issue-139/final-android-tablet-evidence.json": "31bc6b67094e413e99c2a764d45d1820a9ab881fe085fe073ab748159d40539a",
+    "docs/themes/acceptance/issue-139/visual-evidence-applicability.json": "b13fbc91f637aaa64c6fa95139e3949fcbdfc2b20a8b42798108476637e231c7",
+    "docs/themes/acceptance/issue-139/release-size-attribution.json": "d7e6d75c32a4d831f5219b213eb0e3958cd9478eb0cbb860e74e5738654ceecd",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31573857360": "d97b4016c89d497138a19bb9b626a8ed8bb037369a97a60e5358aef85c6da5b3",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5261691585": "ca8d4ec776c7dbe4060c17f02556f6d74382552453698ea9936bf7b57ad6ed2b",
     "docs/themes/acceptance/issue-139/accessibility-scanner-adjudication.json": "9d0cb571cfc2105dc23e2306c6bdc030a50bf9f0a23dd3fbfce0844650ddfc7c"
   },
