@@ -312,7 +312,7 @@ final class _ThemeDetail extends StatelessWidget {
 final class ThemeRuntimeThumbnail extends StatefulWidget {
   const ThemeRuntimeThumbnail({
     required this.bundle,
-    this.profileSnapshot = !kDebugMode,
+    this.profileSnapshot = false,
     super.key,
   });
 
