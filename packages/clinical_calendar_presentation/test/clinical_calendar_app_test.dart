@@ -39,8 +39,11 @@ void main() {
       activeThemeId: active.id,
     );
     expect(
-      providers.map((provider) => provider.assetName),
-      isNot(contains(active.frame.primaryAsset)),
+      providers.toSet().intersection({
+        for (final assetPath in active.frame.assetPaths)
+          AssetImage(assetPath, package: active.frame.assetPackage),
+      }),
+      isEmpty,
     );
     expect(
       providers.map((provider) => provider.assetName),

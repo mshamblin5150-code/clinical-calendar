@@ -55,12 +55,22 @@ typedef CandidateThemePreflight =
 List<AssetImage> inactiveThemeFrameProviders({
   required ClinicalCalendarThemeBundleRegistry registry,
   required String activeThemeId,
-}) => [
-  for (final bundle in registry.galleryBundles)
-    if (bundle.id != activeThemeId)
-      for (final assetPath in bundle.frame.assetPaths)
-        AssetImage(assetPath, package: bundle.frame.assetPackage),
-];
+}) {
+  final active = registry.resolveApplied(activeThemeId).bundle;
+  final activeProviders = {
+    for (final assetPath in active.frame.assetPaths)
+      AssetImage(assetPath, package: active.frame.assetPackage),
+  };
+  return [
+    for (final bundle in registry.galleryBundles)
+      if (bundle.id != activeThemeId)
+        for (final assetPath in bundle.frame.assetPaths)
+          if (!activeProviders.contains(
+            AssetImage(assetPath, package: bundle.frame.assetPackage),
+          ))
+            AssetImage(assetPath, package: bundle.frame.assetPackage),
+  ];
+}
 
 @visibleForTesting
 Future<void> evictInactiveThemeFrameAssets({
