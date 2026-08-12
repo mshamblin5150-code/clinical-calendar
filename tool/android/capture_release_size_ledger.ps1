@@ -38,9 +38,9 @@ $catalogAssets = @(
 )
 
 function Set-AssetSlice([int] $Count) {
-    $flutterIndex = $originalPubspec.IndexOf("flutter:`r`n")
-    if ($flutterIndex -lt 0) { $flutterIndex = $originalPubspec.IndexOf("flutter:`n") }
-    if ($flutterIndex -lt 0) { throw 'Presentation pubspec has no Flutter section.' }
+    $flutterSection = [regex]::Match($originalPubspec, '(?m)^flutter:\r?$')
+    if (-not $flutterSection.Success) { throw 'Presentation pubspec has no Flutter section.' }
+    $flutterIndex = $flutterSection.Index
     $header = $originalPubspec.Substring(0, $flutterIndex)
     $selectedAssetPaths = @($catalogAssets[0..($Count - 1)].Path) |
         Where-Object { $_ -ne 'assets/heritage_field_notes_fonts/RobotoCondensed-Variable.ttf' }
