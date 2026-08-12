@@ -509,6 +509,30 @@ void main() {
         ).evaluate(manifest: manifest);
         expect(passing.passed, isTrue);
 
+        final catalogManifests = ClinicalCalendarThemeBundleRegistry
+            .standard
+            .galleryBundles
+            .map(_performanceManifest)
+            .toList(growable: false);
+        final otherManifest = catalogManifests.firstWhere(
+          (item) => item.themeId != manifest.themeId,
+        );
+        final otherApprovedAssetHash = themeRasterAcceptanceFixture(
+          otherManifest.themeId,
+        ).expectedSha256;
+        final catalogAttribution = ThemePerformanceEvidence(
+          baseline: baseline,
+          candidate: passingCandidate,
+          swapLatencyMs: 180,
+          retainedMemoryAfterCyclesBytes: 221000000,
+          monotonicRetainedMemoryGrowth: false,
+          releaseSizeAttributionByAssetSha256: {
+            approvedAssetHash: 400000,
+            otherApprovedAssetHash: 600000,
+          },
+        ).evaluate(manifest: manifest, catalogManifests: catalogManifests);
+        expect(catalogAttribution.passed, isTrue);
+
         final failed = ThemePerformanceEvidence(
           baseline: baseline,
           candidate: passingCandidate,

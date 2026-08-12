@@ -26,8 +26,9 @@ $requiredWorkflowFragments = @(
     'CLINICAL_CALENDAR_ENVIRONMENT: private-release',
     'vars.CLINICAL_CALENDAR_SUPABASE_URL',
     'secrets.CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY',
-    'package_signed_apk.ps1',
     'package_signed_profile_apk.ps1',
+    'capture_release_size_ledger.ps1',
+    'release-size-ledger.json',
     'app-release.apk.sha256',
     'app-profile.apk.sha256'
 )
@@ -55,6 +56,16 @@ if (-not $mainActivity.Contains('TRIM_MEMORY_COMPLETE') -or
 $packager = Get-Content -Raw (Join-Path $repositoryRoot 'tool/android/package_signed_apk.ps1')
 if (-not $packager.Contains('Get-ClinicalCalendarReleaseFlutterArguments')) {
     throw 'Android release packaging must resolve protected Supabase compile-time configuration.'
+}
+$ledgerCapture = Get-Content -Raw (Join-Path $repositoryRoot 'tool/android/capture_release_size_ledger.ps1')
+foreach ($fragment in @(
+    'package_signed_apk.ps1',
+    'ExpectedSignerSha256',
+    'unattributedGrowthBytes = 0'
+)) {
+    if (-not $ledgerCapture.Contains($fragment)) {
+        throw "Release-size ledger capture is missing required fragment: $fragment"
+    }
 }
 
 $profilePackagerPath = Join-Path $repositoryRoot 'tool/android/package_signed_profile_apk.ps1'
