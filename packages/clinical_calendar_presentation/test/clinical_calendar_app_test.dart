@@ -650,6 +650,31 @@ void main() {
     expect(find.byKey(const Key('back-action')), findsOneWidget);
   });
 
+  testWidgets('closing Settings preserves staged Calendar planning state', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(1024, 768));
+
+    await tester.tap(
+      find.byKey(const Key('calendar-day-2026-01-02')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('1 selected date · Clinical Session'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('desktop-menu-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('back-action')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('application-menu')), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 selected date · Clinical Session'), findsOneWidget);
+  });
+
   testWidgets('menu routes backup and exports to production surfaces', (
     tester,
   ) async {

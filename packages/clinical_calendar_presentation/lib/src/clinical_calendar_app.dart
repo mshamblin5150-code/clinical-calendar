@@ -51,10 +51,6 @@ typedef ScheduleDateFactory = ZonedScheduleDate Function(LocalDate date);
 typedef CandidateThemePreflight =
     Future<void> Function(ClinicalCalendarThemeBundle candidate);
 
-const _androidHostLifecycle = MethodChannel(
-  'com.clinicalcalendar.clinical_calendar/host_lifecycle',
-);
-
 @visibleForTesting
 List<AssetImage> inactiveThemeFrameProviders({
   required ClinicalCalendarThemeBundleRegistry registry,
@@ -91,6 +87,12 @@ Future<void> evictInactiveThemeFrameAssets({
     final key = await provider.obtainKey(configuration);
     cache.evict(key, includeLive: true);
   }
+  // The Gallery's profile snapshots are disposed when its route leaves the
+  // tree. Drop only the cache's stale bookkeeping after that disposal so the
+  // raster resources can be reclaimed without replacing the application host
+  // or any user-owned planning state.
+  cache.clear();
+  cache.clearLiveImages();
 }
 
 final class ClinicalCalendarApp extends StatefulWidget {
@@ -1511,9 +1513,15 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     setState(() => _destination = null);
     if (exited == ClinicalCalendarDestination.settings) {
       final activeThemeId = widget.themePreviewController.effectiveBundle.id;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
-        unawaited(_releaseGalleryRenderer(activeThemeId));
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return;
+        await evictInactiveThemeFrameAssets(
+          context: context,
+          registry: ClinicalCalendarThemeBundleRegistry.standard,
+          activeThemeId: activeThemeId,
+        );
       });
     }
     if (exited == ClinicalCalendarDestination.clinicalPlacements ||
@@ -1523,20 +1531,6 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     }
     if (returnToMenu) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _showMenu());
-    }
-  }
-
-  Future<void> _releaseGalleryRenderer(String activeThemeId) async {
-    await evictInactiveThemeFrameAssets(
-      context: context,
-      registry: ClinicalCalendarThemeBundleRegistry.standard,
-      activeThemeId: activeThemeId,
-    );
-    if (!mounted) return;
-    try {
-      await _androidHostLifecycle.invokeMethod<void>('restartProcess');
-    } on MissingPluginException {
-      // Widget and non-Android hosts have no activity lifecycle to recreate.
     }
   }
 

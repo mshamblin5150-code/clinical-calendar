@@ -6,7 +6,6 @@ $workflow = Get-Content -Raw (Join-Path $repositoryRoot '.github/workflows/andro
 $gradle = Get-Content -Raw (Join-Path $repositoryRoot 'apps/clinical_calendar/android/app/build.gradle.kts')
 $manifest = Get-Content -Raw (Join-Path $repositoryRoot 'apps/clinical_calendar/android/app/src/main/AndroidManifest.xml')
 $mainActivity = Get-Content -Raw (Join-Path $repositoryRoot 'apps/clinical_calendar/android/app/src/main/kotlin/com/clinicalcalendar/clinical_calendar/MainActivity.kt')
-$restartActivityPath = Join-Path $repositoryRoot 'apps/clinical_calendar/android/app/src/main/kotlin/com/clinicalcalendar/clinical_calendar/RestartActivity.kt'
 
 $requiredWorkflowFragments = @(
     'actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
@@ -44,15 +43,11 @@ if ($workflow.Contains('AllowUnconfiguredAcceptanceBuild')) {
 if (-not $manifest.Contains('android.permission.INTERNET')) {
     throw 'Android release manifest must grant network access for authentication and synchronization.'
 }
-if (-not (Test-Path -LiteralPath $restartActivityPath -PathType Leaf) -or
-    -not $manifest.Contains('android:process=":restart"') -or
-    -not $mainActivity.Contains('Intent(this, RestartActivity::class.java)')) {
-    throw 'Gallery cleanup must relaunch through the isolated Android restart process.'
+if ($manifest.Contains('android:process=":restart"') -or
+    $mainActivity.Contains('exitProcess') -or
+    $mainActivity.Contains('restartProcess')) {
+    throw 'Android release must preserve the live application host and unsaved planning state.'
 }
-if ($mainActivity.Contains('AlarmManager')) {
-    throw 'Gallery cleanup must not depend on permission-gated exact alarms.'
-}
-
 $packager = Get-Content -Raw (Join-Path $repositoryRoot 'tool/android/package_signed_apk.ps1')
 if (-not $packager.Contains('Get-ClinicalCalendarReleaseFlutterArguments')) {
     throw 'Android release packaging must resolve protected Supabase compile-time configuration.'

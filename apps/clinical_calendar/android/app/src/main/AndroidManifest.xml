@@ -37,13 +37,6 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <activity
-            android:name=".RestartActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:process=":restart"
-            android:taskAffinity="com.clinicalcalendar.clinical_calendar.restart"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
