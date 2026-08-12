@@ -51,6 +51,10 @@ typedef ScheduleDateFactory = ZonedScheduleDate Function(LocalDate date);
 typedef CandidateThemePreflight =
     Future<void> Function(ClinicalCalendarThemeBundle candidate);
 
+const _androidMemoryLifecycle = MethodChannel(
+  'com.clinicalcalendar.clinical_calendar/memory_lifecycle',
+);
+
 @visibleForTesting
 List<AssetImage> inactiveThemeFrameProviders({
   required ClinicalCalendarThemeBundleRegistry registry,
@@ -1522,6 +1526,11 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
           registry: ClinicalCalendarThemeBundleRegistry.standard,
           activeThemeId: activeThemeId,
         );
+        try {
+          await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
+        } on MissingPluginException {
+          // Widget and non-Android hosts have no native memory lifecycle.
+        }
       });
     }
     if (exited == ClinicalCalendarDestination.clinicalPlacements ||

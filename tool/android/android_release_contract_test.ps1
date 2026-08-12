@@ -48,6 +48,10 @@ if ($manifest.Contains('android:process=":restart"') -or
     $mainActivity.Contains('restartProcess')) {
     throw 'Android release must preserve the live application host and unsaved planning state.'
 }
+if (-not $mainActivity.Contains('TRIM_MEMORY_COMPLETE') -or
+    -not $mainActivity.Contains('trimGallery')) {
+    throw 'Gallery cleanup must notify the live Android host of releasable memory.'
+}
 $packager = Get-Content -Raw (Join-Path $repositoryRoot 'tool/android/package_signed_apk.ps1')
 if (-not $packager.Contains('Get-ClinicalCalendarReleaseFlutterArguments')) {
     throw 'Android release packaging must resolve protected Supabase compile-time configuration.'
