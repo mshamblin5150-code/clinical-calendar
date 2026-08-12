@@ -1534,7 +1534,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     );
     if (!mounted) return;
     try {
-      await _androidHostLifecycle.invokeMethod<void>('recreateActivity');
+      await _androidHostLifecycle.invokeMethod<void>('restartProcess');
     } on MissingPluginException {
       // Widget and non-Android hosts have no activity lifecycle to recreate.
     }
