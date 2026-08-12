@@ -366,12 +366,28 @@ final class ThemeRuntimeThumbnail extends StatelessWidget {
     );
     final captureKey = Key('theme-gallery-thumbnail-${bundle.id}');
     final renderedThumbnail = useBakedAsset
-        ? Image.asset(
-            themeRuntimeThumbnailAssetPath(bundle.id),
-            key: captureKey,
-            package: 'clinical_calendar_presentation',
-            fit: BoxFit.fill,
-            filterQuality: FilterQuality.high,
+        ? AspectRatio(
+            aspectRatio: bundle.gallery.thumbnailViewport.aspectRatio,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+                final cacheWidth = (constraints.maxWidth * devicePixelRatio)
+                    .ceil()
+                    .clamp(1, bundle.gallery.thumbnailViewport.width.toInt());
+                final cacheHeight = (constraints.maxHeight * devicePixelRatio)
+                    .ceil()
+                    .clamp(1, bundle.gallery.thumbnailViewport.height.toInt());
+                return Image.asset(
+                  themeRuntimeThumbnailAssetPath(bundle.id),
+                  key: captureKey,
+                  package: 'clinical_calendar_presentation',
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.high,
+                  cacheWidth: cacheWidth,
+                  cacheHeight: cacheHeight,
+                );
+              },
+            ),
           )
         : RepaintBoundary(key: captureKey, child: thumbnail);
     return Semantics(
