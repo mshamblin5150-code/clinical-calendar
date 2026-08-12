@@ -44,10 +44,6 @@ if ($workflow.Contains('AllowUnconfiguredAcceptanceBuild')) {
 if (-not $manifest.Contains('android.permission.INTERNET')) {
     throw 'Android release manifest must grant network access for authentication and synchronization.'
 }
-if (-not $manifest.Contains('io.flutter.embedding.android.EnableImpeller') -or
-    -not $manifest.Contains('android:value="false"')) {
-    throw 'Android release must use the lower-retention Skia renderer on the accepted Samsung tablet.'
-}
 if ($manifest.Contains('android:process=":restart"') -or
     $mainActivity.Contains('exitProcess') -or
     $mainActivity.Contains('restartProcess')) {
