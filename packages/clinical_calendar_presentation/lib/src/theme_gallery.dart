@@ -358,13 +358,16 @@ final class _ThemeRuntimeThumbnailState extends State<ThemeRuntimeThumbnail> {
     _captureScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      final boundary = _profileCaptureKey.currentContext?.findRenderObject();
+      final captureContext = _profileCaptureKey.currentContext;
+      final boundary = captureContext?.findRenderObject();
       if (boundary is! RenderRepaintBoundary) {
         _captureScheduled = false;
         _scheduleProfileCapture();
         return;
       }
-      final snapshot = await boundary.toImage();
+      final snapshot = await boundary.toImage(
+        pixelRatio: MediaQuery.devicePixelRatioOf(captureContext!),
+      );
       if (!mounted) {
         snapshot.dispose();
         return;
