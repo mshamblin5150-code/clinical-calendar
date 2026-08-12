@@ -51,6 +51,10 @@ typedef ScheduleDateFactory = ZonedScheduleDate Function(LocalDate date);
 typedef CandidateThemePreflight =
     Future<void> Function(ClinicalCalendarThemeBundle candidate);
 
+const _androidHostLifecycle = MethodChannel(
+  'com.clinicalcalendar.clinical_calendar/host_lifecycle',
+);
+
 @visibleForTesting
 List<AssetImage> inactiveThemeFrameProviders({
   required ClinicalCalendarThemeBundleRegistry registry,
@@ -1509,13 +1513,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       final activeThemeId = widget.themePreviewController.effectiveBundle.id;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        unawaited(
-          evictInactiveThemeFrameAssets(
-            context: context,
-            registry: ClinicalCalendarThemeBundleRegistry.standard,
-            activeThemeId: activeThemeId,
-          ),
-        );
+        unawaited(_releaseGalleryRenderer(activeThemeId));
       });
     }
     if (exited == ClinicalCalendarDestination.clinicalPlacements ||
@@ -1525,6 +1523,20 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     }
     if (returnToMenu) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _showMenu());
+    }
+  }
+
+  Future<void> _releaseGalleryRenderer(String activeThemeId) async {
+    await evictInactiveThemeFrameAssets(
+      context: context,
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      activeThemeId: activeThemeId,
+    );
+    if (!mounted) return;
+    try {
+      await _androidHostLifecycle.invokeMethod<void>('recreateActivity');
+    } on MissingPluginException {
+      // Widget and non-Android hosts have no activity lifecycle to recreate.
     }
   }
 
