@@ -246,6 +246,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
   late CalendarPeriod _period;
   late Set<LocalDate> _selectedDates;
   late Future<CalendarSnapshot> _snapshot;
+  final Map<_CalendarQueryKey, Future<CalendarSnapshot>> _snapshotCache = {};
 
   @override
   void initState() {
@@ -262,6 +263,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
     if (oldWidget.dataSource != widget.dataSource ||
         oldWidget.studentId != widget.studentId ||
         oldWidget.weekStartsOn != widget.weekStartsOn) {
+      _snapshotCache.clear();
       _snapshot = _loadSnapshot();
     }
     if (oldWidget.initialSelectedDates != widget.initialSelectedDates) {
@@ -270,6 +272,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
   }
 
   Future<void> reload() async {
+    _snapshotCache.clear();
     setState(() => _snapshot = _loadSnapshot());
     await _snapshot;
   }
@@ -296,10 +299,21 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
 
   Future<CalendarSnapshot> _loadSnapshot() {
     final bounds = _periodBounds(_anchor, _period, widget.weekStartsOn);
-    return widget.dataSource.load(
+    final key = _CalendarQueryKey(
       studentId: widget.studentId,
       firstDate: bounds.first,
       lastDate: bounds.last,
+    );
+    for (final entry in _snapshotCache.entries) {
+      if (entry.key.contains(key)) return entry.value;
+    }
+    return _snapshotCache.putIfAbsent(
+      key,
+      () => widget.dataSource.load(
+        studentId: widget.studentId,
+        firstDate: bounds.first,
+        lastDate: bounds.last,
+      ),
     );
   }
 
@@ -487,6 +501,33 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
       );
     },
   );
+}
+
+final class _CalendarQueryKey {
+  const _CalendarQueryKey({
+    required this.studentId,
+    required this.firstDate,
+    required this.lastDate,
+  });
+
+  final String studentId;
+  final LocalDate firstDate;
+  final LocalDate lastDate;
+
+  bool contains(_CalendarQueryKey other) =>
+      studentId == other.studentId &&
+      !firstDate.isAfter(other.firstDate) &&
+      !lastDate.isBefore(other.lastDate);
+
+  @override
+  bool operator ==(Object other) =>
+      other is _CalendarQueryKey &&
+      studentId == other.studentId &&
+      firstDate == other.firstDate &&
+      lastDate == other.lastDate;
+
+  @override
+  int get hashCode => Object.hash(studentId, firstDate, lastDate);
 }
 
 final class _InstrumentCalendarLegend extends StatelessWidget {

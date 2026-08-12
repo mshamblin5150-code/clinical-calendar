@@ -34,6 +34,8 @@ foreach ($required in @(
     'force-stop',
     'SkipRestart',
     'AutomateFocusedFlow',
+    'nativeWidth',
+    'nativeHeight',
     'pidof',
     'RedirectStandardInput',
     'StandardInput.WriteLine',
