@@ -1,11 +1,20 @@
 package com.clinicalcalendar.clinical_calendar
 
 import android.content.ComponentCallbacks2
+import android.view.View
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterSurfaceView
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    private var flutterSurfaceView: FlutterSurfaceView? = null
+
+    override fun onFlutterSurfaceViewCreated(flutterSurfaceView: FlutterSurfaceView) {
+        super.onFlutterSurfaceViewCreated(flutterSurfaceView)
+        this.flutterSurfaceView = flutterSurfaceView
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(
@@ -17,10 +26,13 @@ class MainActivity : FlutterActivity() {
                 return@setMethodCallHandler
             }
             result.success(null)
-            window.decorView.post {
+            val surfaceView = flutterSurfaceView
+            surfaceView?.visibility = View.INVISIBLE
+            window.decorView.postDelayed({
                 onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
                 Runtime.getRuntime().gc()
-            }
+                surfaceView?.visibility = View.VISIBLE
+            }, 100)
         }
     }
 }

@@ -53,6 +53,11 @@ if (-not $mainActivity.Contains('TRIM_MEMORY_COMPLETE') -or
     -not $mainActivity.Contains('trimGallery')) {
     throw 'Gallery cleanup must notify the live Android host of releasable memory.'
 }
+if (-not $mainActivity.Contains('FlutterSurfaceView') -or
+    -not $mainActivity.Contains('View.INVISIBLE') -or
+    -not $mainActivity.Contains('View.VISIBLE')) {
+    throw 'Gallery cleanup must recycle the Android rendering surface without replacing the Flutter engine.'
+}
 $packager = Get-Content -Raw (Join-Path $repositoryRoot 'tool/android/package_signed_apk.ps1')
 if (-not $packager.Contains('Get-ClinicalCalendarReleaseFlutterArguments')) {
     throw 'Android release packaging must resolve protected Supabase compile-time configuration.'
