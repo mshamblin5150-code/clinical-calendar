@@ -41,6 +41,7 @@ import 'support/student_profile_onboarding_dialog.dart';
 import 'support/student_profile_surface.dart';
 import 'support/support_help_surface.dart';
 import 'theme_contract.dart';
+import 'theme_gallery.dart';
 import 'theme_preview_control.dart';
 import 'theme_preview_controller.dart';
 import 'variant_f_theme.dart';
@@ -84,6 +85,14 @@ Future<void> evictInactiveThemeFrameAssets({
     registry: registry,
     activeThemeId: activeThemeId,
   )) {
+    final key = await provider.obtainKey(configuration);
+    cache.evict(key, includeLive: true);
+  }
+  for (final bundle in registry.galleryBundles) {
+    final provider = AssetImage(
+      themeRuntimeThumbnailAssetPath(bundle.id),
+      package: 'clinical_calendar_presentation',
+    );
     final key = await provider.obtainKey(configuration);
     cache.evict(key, includeLive: true);
   }
