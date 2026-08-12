@@ -30,6 +30,24 @@ void main() {
     Size(1440, 900),
   ];
 
+  test('leaving Gallery targets only inactive decoded theme frames', () {
+    final registry = ClinicalCalendarThemeBundleRegistry.standard;
+    final active = registry.resolveApplied('graphite').bundle;
+    final inactive = registry.resolveApplied('coastal-calm').bundle;
+    final providers = inactiveThemeFrameProviders(
+      registry: registry,
+      activeThemeId: active.id,
+    );
+    expect(
+      providers.map((provider) => provider.assetName),
+      isNot(contains(active.frame.primaryAsset)),
+    );
+    expect(
+      providers.map((provider) => provider.assetName),
+      contains(inactive.frame.primaryAsset),
+    );
+  });
+
   group('accepted Variant F and catalog Settings renders', () {
     setUpAll(() async {
       final font = await File(

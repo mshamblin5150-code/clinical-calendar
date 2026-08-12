@@ -51,6 +51,34 @@ typedef ScheduleDateFactory = ZonedScheduleDate Function(LocalDate date);
 typedef CandidateThemePreflight =
     Future<void> Function(ClinicalCalendarThemeBundle candidate);
 
+@visibleForTesting
+List<AssetImage> inactiveThemeFrameProviders({
+  required ClinicalCalendarThemeBundleRegistry registry,
+  required String activeThemeId,
+}) => [
+  for (final bundle in registry.galleryBundles)
+    if (bundle.id != activeThemeId)
+      for (final assetPath in bundle.frame.assetPaths)
+        AssetImage(assetPath, package: bundle.frame.assetPackage),
+];
+
+@visibleForTesting
+Future<void> evictInactiveThemeFrameAssets({
+  required BuildContext context,
+  required ClinicalCalendarThemeBundleRegistry registry,
+  required String activeThemeId,
+}) async {
+  final configuration = createLocalImageConfiguration(context);
+  final cache = PaintingBinding.instance.imageCache;
+  for (final provider in inactiveThemeFrameProviders(
+    registry: registry,
+    activeThemeId: activeThemeId,
+  )) {
+    final key = await provider.obtainKey(configuration);
+    cache.evict(key, includeLive: true);
+  }
+}
+
 final class ClinicalCalendarApp extends StatefulWidget {
   const ClinicalCalendarApp({
     required this.dependencies,
@@ -1467,6 +1495,19 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     final returnToMenu = _entry == DestinationEntry.applicationMenu;
     final exited = _destination;
     setState(() => _destination = null);
+    if (exited == ClinicalCalendarDestination.settings) {
+      final activeThemeId = widget.themePreviewController.effectiveBundle.id;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(
+          evictInactiveThemeFrameAssets(
+            context: context,
+            registry: ClinicalCalendarThemeBundleRegistry.standard,
+            activeThemeId: activeThemeId,
+          ),
+        );
+      });
+    }
     if (exited == ClinicalCalendarDestination.clinicalPlacements ||
         exited == ClinicalCalendarDestination.settings ||
         exited == ClinicalCalendarDestination.backupRestore) {
