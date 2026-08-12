@@ -12,6 +12,7 @@ Set-StrictMode -Version Latest
 
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $pubspecPath = Join-Path $repositoryRoot 'packages/clinical_calendar_presentation/pubspec.yaml'
+$applicationPath = Join-Path $repositoryRoot 'apps/clinical_calendar'
 $apkPath = Join-Path $repositoryRoot 'apps/clinical_calendar/build/app/outputs/flutter-apk/app-release.apk'
 $originalPubspec = [IO.File]::ReadAllText($pubspecPath)
 $baselineBytes = 84565505
@@ -53,11 +54,30 @@ function Set-AssetSlice([int] $Count) {
     [IO.File]::WriteAllText($pubspecPath, $content, [Text.UTF8Encoding]::new($false))
 }
 
+function Remove-GeneratedAssetOutputs {
+    $generatedPaths = @(
+        'build/app/intermediates/flutter/release',
+        'build/app/intermediates/assets/release',
+        'build/app/intermediates/compressed_assets/release'
+    )
+    $applicationRoot = [IO.Path]::GetFullPath($applicationPath) + [IO.Path]::DirectorySeparatorChar
+    foreach ($relativePath in $generatedPaths) {
+        $targetPath = [IO.Path]::GetFullPath((Join-Path $applicationPath $relativePath))
+        if (-not $targetPath.StartsWith($applicationRoot, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing to clear generated output outside the application: $targetPath"
+        }
+        if (Test-Path -LiteralPath $targetPath) {
+            Remove-Item -LiteralPath $targetPath -Recurse -Force
+        }
+    }
+}
+
 $steps = @()
 $precedingBytes = $baselineBytes
 try {
     for ($index = 0; $index -lt $catalogAssets.Count; $index++) {
         Set-AssetSlice ($index + 1)
+        if ($index -gt 0) { Remove-GeneratedAssetOutputs }
         & (Join-Path $PSScriptRoot 'package_signed_apk.ps1') `
             -FlutterExecutable $FlutterExecutable `
             -ExpectedSignerSha256 $ExpectedSignerSha256
