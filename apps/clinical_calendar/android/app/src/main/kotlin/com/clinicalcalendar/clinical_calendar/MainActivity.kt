@@ -19,6 +19,7 @@ class MainActivity : FlutterActivity() {
             result.success(null)
             window.decorView.post {
                 onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
+                Runtime.getRuntime().gc()
             }
         }
     }
