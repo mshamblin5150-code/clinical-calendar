@@ -1,5 +1,8 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'responsive_shell.dart';
@@ -305,21 +308,79 @@ final class _ThemeDetail extends StatelessWidget {
   );
 }
 
-String themeRuntimeThumbnailAssetPath(String themeId) =>
-    'assets/theme_gallery_runtime/$themeId.png';
-
 /// The deterministic real-bundle renderer used by gallery cards and evidence.
-final class ThemeRuntimeThumbnail extends StatelessWidget {
+final class ThemeRuntimeThumbnail extends StatefulWidget {
   const ThemeRuntimeThumbnail({
     required this.bundle,
-    this.useBakedAsset = !kDebugMode,
+    this.profileSnapshot = !kDebugMode,
     super.key,
   });
 
   final ClinicalCalendarThemeBundle bundle;
 
   @visibleForTesting
-  final bool useBakedAsset;
+  final bool profileSnapshot;
+
+  @override
+  State<ThemeRuntimeThumbnail> createState() => _ThemeRuntimeThumbnailState();
+}
+
+final class _ThemeRuntimeThumbnailState extends State<ThemeRuntimeThumbnail> {
+  final _profileCaptureKey = GlobalKey();
+  ui.Image? _profileSnapshot;
+  bool _captureScheduled = false;
+
+  ClinicalCalendarThemeBundle get bundle => widget.bundle;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleProfileCapture();
+  }
+
+  @override
+  void didUpdateWidget(ThemeRuntimeThumbnail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.bundle.id != widget.bundle.id) {
+      _profileSnapshot?.dispose();
+      _profileSnapshot = null;
+      _captureScheduled = false;
+      _scheduleProfileCapture();
+    }
+  }
+
+  void _scheduleProfileCapture() {
+    if (!widget.profileSnapshot ||
+        _captureScheduled ||
+        _profileSnapshot != null) {
+      return;
+    }
+    _captureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final captureContext = _profileCaptureKey.currentContext;
+      final boundary = captureContext?.findRenderObject();
+      if (boundary is! RenderRepaintBoundary) {
+        _captureScheduled = false;
+        _scheduleProfileCapture();
+        return;
+      }
+      final snapshot = await boundary.toImage(
+        pixelRatio: MediaQuery.devicePixelRatioOf(captureContext!),
+      );
+      if (!mounted) {
+        snapshot.dispose();
+        return;
+      }
+      setState(() => _profileSnapshot = snapshot);
+    });
+  }
+
+  @override
+  void dispose() {
+    _profileSnapshot?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -365,13 +426,12 @@ final class ThemeRuntimeThumbnail extends StatelessWidget {
       ),
     );
     final captureKey = Key('theme-gallery-thumbnail-${bundle.id}');
-    final renderedThumbnail = useBakedAsset
-        ? Image.asset(
-            themeRuntimeThumbnailAssetPath(bundle.id),
+    final renderedThumbnail = widget.profileSnapshot
+        ? KeyedSubtree(
             key: captureKey,
-            package: 'clinical_calendar_presentation',
-            fit: BoxFit.fill,
-            filterQuality: FilterQuality.high,
+            child: _profileSnapshot == null
+                ? RepaintBoundary(key: _profileCaptureKey, child: thumbnail)
+                : RawImage(image: _profileSnapshot, fit: BoxFit.fill),
           )
         : RepaintBoundary(key: captureKey, child: thumbnail);
     return Semantics(

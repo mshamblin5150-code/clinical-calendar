@@ -68,7 +68,7 @@ void main() {
     expect(find.byKey(const Key('theme-thumbnail-day-cell-42')), findsNothing);
   });
 
-  testWidgets('profile thumbnail uses the pinned renderer-generated asset', (
+  testWidgets('profile thumbnail replaces the live renderer with a snapshot', (
     tester,
   ) async {
     final bundle = ClinicalCalendarThemeBundleRegistry
@@ -79,13 +79,13 @@ void main() {
       MaterialApp(
         home: SizedBox(
           width: 800,
-          child: ThemeRuntimeThumbnail(bundle: bundle, useBakedAsset: true),
+          child: ThemeRuntimeThumbnail(bundle: bundle, profileSnapshot: true),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(Image), findsOneWidget);
+    expect(find.byType(RawImage), findsOneWidget);
     expect(find.byType(GraphiteApplicationShell), findsNothing);
     expect(
       find.byKey(const Key('theme-gallery-thumbnail-graphite')),

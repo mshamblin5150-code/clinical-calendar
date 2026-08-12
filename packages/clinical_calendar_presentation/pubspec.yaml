@@ -39,7 +39,6 @@ flutter:
     - assets/heritage_field_notes_raster/
     - assets/placement_icons/
     - assets/shared_brand/axion-delta-mark.png
-    - assets/theme_gallery_runtime/
     - assets/variant_f_raster/
   fonts:
     - family: FieldArchiveCondensed
