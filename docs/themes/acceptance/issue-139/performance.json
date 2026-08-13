@@ -26,14 +26,19 @@
     "rasterThreadFrameTimeMsP95": 6.190,
     "retainedMemoryKb": 241459
   },
-  "focusedSample": {
-    "capturedAtUtc": "2026-08-13T01:31:20.8290707Z",
-    "sampleSeconds": 10,
-    "renderedFrames": 73,
-    "uiThreadFrameTimeMsP95": 3.626,
-    "rasterThreadFrameTimeMsP95": 6.21,
-    "postLaunchRetainedMemoryKb": 235843,
-    "afterSampleRetainedMemoryKb": 237615,
+  "focusedSamples": {
+    "measurement": "steady-state scroll in the production Calendar Agenda surface",
+    "themes": {
+      "variant-f": { "sampleSeconds": 10, "renderedFrames": 76, "uiThreadFrameTimeMsP95": 1.504, "rasterThreadFrameTimeMsP95": 3.817 },
+      "graphite": { "sampleSeconds": 25, "renderedFrames": 287, "uiThreadFrameTimeMsP95": 3.664, "rasterThreadFrameTimeMsP95": 5.023 },
+      "federation-classic": { "sampleSeconds": 25, "renderedFrames": 277, "uiThreadFrameTimeMsP95": 2.395, "rasterThreadFrameTimeMsP95": 4.418 },
+      "federation-2399": { "sampleSeconds": 10, "renderedFrames": 313, "uiThreadFrameTimeMsP95": 3.411, "rasterThreadFrameTimeMsP95": 5.334 },
+      "coastal-calm": { "sampleSeconds": 25, "renderedFrames": 249, "uiThreadFrameTimeMsP95": 2.152, "rasterThreadFrameTimeMsP95": 4.537 },
+      "botanical-study": { "sampleSeconds": 25, "renderedFrames": 264, "uiThreadFrameTimeMsP95": 1.234, "rasterThreadFrameTimeMsP95": 4.714 },
+      "heritage-field-notes": { "sampleSeconds": 25, "renderedFrames": 310, "uiThreadFrameTimeMsP95": 2.727, "rasterThreadFrameTimeMsP95": 4.222 }
+    },
+    "maximumUiThreadFrameTimeMsP95": 3.664,
+    "maximumRasterThreadFrameTimeMsP95": 5.334,
     "passed": true
   },
   "themeSwap": {

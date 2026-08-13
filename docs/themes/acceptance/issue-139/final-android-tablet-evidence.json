@@ -36,6 +36,8 @@
   "freshFinalGalleryProof": {
     "artifact": "artifact://issue-139/android-final-05e3630/issue139-final-gallery.png",
     "sha256": "2e1c16a28ff0be743ed38e28096a003439926835ce82412b15676f658ddc21cf",
+    "uiTreeArtifact": "artifact://issue-139/android-final-05e3630/issue139-final-gallery.xml",
+    "uiTreeSha256": "c3bccae880f51166fefa5b49f4380c644185f05f35ad79076fd7ed7eefa66a98",
     "resolution": "2960x1848",
     "privacyReviewed": true
   },
