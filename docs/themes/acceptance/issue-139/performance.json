@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "issue": 139,
-  "candidateCommit": "3b9e0ba70809bd0e216fa79067deb8abacbcb367",
+  "candidateCommit": "05e3630c128819ccfec81d5e41b0ea4dce76d87c",
   "candidateBuild": 43,
   "fixture": "containment-drone-fictional-v1",
   "device": {
@@ -12,7 +12,7 @@
   },
   "artifact": {
     "configuration": "profile",
-    "sha256": "6f5a836858a104bc8a2dac8bedb43ca7aedd5426fcec572b89128ac4e4be956c",
+    "sha256": "bbaeafce0f4213e31cdd243ce21be140b28b94562a5d9ae0ed3cbb73a7063c96",
     "approvedSignerSha256": "9903aca5242daa0f926270940b4174687f65144b698d28a7c4dbd00bedb817f0"
   },
   "pinnedBaseline": {
@@ -27,13 +27,13 @@
     "retainedMemoryKb": 241459
   },
   "focusedSample": {
-    "capturedAtUtc": "2026-08-12T07:46:14.6795993Z",
+    "capturedAtUtc": "2026-08-13T01:31:20.8290707Z",
     "sampleSeconds": 10,
     "renderedFrames": 73,
-    "uiThreadFrameTimeMsP95": 3.214,
-    "rasterThreadFrameTimeMsP95": 5.255,
-    "postLaunchRetainedMemoryKb": 233520,
-    "afterSampleRetainedMemoryKb": 233412,
+    "uiThreadFrameTimeMsP95": 3.626,
+    "rasterThreadFrameTimeMsP95": 6.21,
+    "postLaunchRetainedMemoryKb": 235843,
+    "afterSampleRetainedMemoryKb": 237615,
     "passed": true
   },
   "themeSwap": {
@@ -49,23 +49,23 @@
       "revert": 20
     },
     "monotonicRetainedMemoryGrowth": false,
-    "finalInGalleryRetainedMemoryKb": 310826,
-    "postSemanticCloseRetainedMemoryKb": 229773,
+    "finalInGalleryRetainedMemoryKb": 253807,
+    "postSemanticCloseRetainedMemoryKb": 235719,
     "retainedMemoryLimitKb": 241459,
-    "cleanupStrategy": "android-host-process-relaunch",
-    "processIdBeforeSemanticClose": 18819,
-    "processIdAfterSemanticClose": 24979,
-    "distinctCleanProcessVerified": true,
+    "cleanupStrategy": "live-host-image-cache-eviction-trim-gc-and-native-allocator-purge",
+    "processIdBeforeSemanticClose": 32371,
+    "processIdAfterSemanticClose": 32371,
+    "sameLiveProcessVerified": true,
     "appForegroundAfterClose": true,
     "passed": true,
-    "adjudication": "The 25-cycle series is non-monotonic. The Gallery semantic Close action releases the warmed Flutter host and relaunches an isolated clean Android host; the PID changes from 18819 to 24979 and retained memory settles at 229773 KB, below the committed 241459 KB limit."
+    "adjudication": "The 25-cycle series is non-monotonic. The Gallery semantic Close action releases decoded frames and asks the live Android host to trim managed and native allocator pages; PID 32371 is retained and memory settles at 235719 KB, below the committed 241459 KB limit."
   },
   "releaseSize": {
     "baselineReleaseArtifactSha256": "bbad2c0f55725fa65e214b4524d8a7a201eec429082566a4fcef9f47d8f207b6",
     "baselineReleaseBytes": 84565505,
-    "releaseArtifactSha256": "a5d8c57b4a2bfa6ff0e0f17c03b40cb98e93c6eb19b4686b24486a8057bed87c",
-    "releaseBytes": 98215955,
-    "releaseGrowthBytes": 13650450,
+    "releaseArtifactSha256": "668ab68b8154d9b565f03f01db45725d1d970c90f541e0ddd2f68e66654d8051",
+    "releaseBytes": 101308644,
+    "releaseGrowthBytes": 16743139,
     "attribution": "docs/themes/acceptance/issue-139/release-size-attribution.json",
     "unattributedGrowthBytes": 0,
     "passed": true

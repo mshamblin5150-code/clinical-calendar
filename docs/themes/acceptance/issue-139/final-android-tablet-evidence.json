@@ -2,18 +2,18 @@
   "schemaVersion": 1,
   "issue": 139,
   "scope": "Android tablet only",
-  "candidateCommit": "3b9e0ba70809bd0e216fa79067deb8abacbcb367",
+  "candidateCommit": "05e3630c128819ccfec81d5e41b0ea4dce76d87c",
   "candidateBuild": 43,
   "candidateVersion": "0.1.0",
-  "protectedRun": "https://github.com/mshamblin5150-code/clinical-calendar/actions/runs/31573857360",
+  "protectedRun": "https://github.com/mshamblin5150-code/clinical-calendar/actions/runs/31655878327",
   "device": {
     "model": "Samsung SM-X920",
     "androidVersion": "16",
     "physical": true
   },
   "upgrade": {
-    "releaseArtifactSha256": "a5d8c57b4a2bfa6ff0e0f17c03b40cb98e93c6eb19b4686b24486a8057bed87c",
-    "profileArtifactSha256": "6f5a836858a104bc8a2dac8bedb43ca7aedd5426fcec572b89128ac4e4be956c",
+    "releaseArtifactSha256": "668ab68b8154d9b565f03f01db45725d1d970c90f541e0ddd2f68e66654d8051",
+    "profileArtifactSha256": "bbaeafce0f4213e31cdd243ce21be140b28b94562a5d9ae0ed3cbb73a7063c96",
     "approvedSignerSha256": "9903aca5242daa0f926270940b4174687f65144b698d28a7c4dbd00bedb817f0",
     "primaryFirstInstallTimePreserved": "2026-08-09 17:20:56"
   },
@@ -32,6 +32,12 @@
     "broadMatrixCandidateCommit": "b91f5f7fc4f58e41049ff9e8c72ea9c1801a168f",
     "refreshedVisualCandidateCommit": "5eb0a979cc3d206b8bffafa2a7b682988f64419b",
     "productionApplicability": "docs/themes/acceptance/issue-139/visual-evidence-applicability.json"
+  },
+  "freshFinalGalleryProof": {
+    "artifact": "artifact://issue-139/android-final-05e3630/issue139-final-gallery.png",
+    "sha256": "2e1c16a28ff0be743ed38e28096a003439926835ce82412b15676f658ddc21cf",
+    "resolution": "2960x1848",
+    "privacyReviewed": true
   },
   "interactionAndAccessibility": {
     "previewApplyRevert": true,

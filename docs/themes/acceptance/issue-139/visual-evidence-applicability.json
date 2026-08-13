@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "issue": 139,
-  "productionCandidateCommit": "3b9e0ba70809bd0e216fa79067deb8abacbcb367",
+  "productionCandidateCommit": "05e3630c128819ccfec81d5e41b0ea4dce76d87c",
   "broadMatrixCandidateCommit": "b91f5f7fc4f58e41049ff9e8c72ea9c1801a168f",
   "refreshedVisualCandidateCommit": "5eb0a979cc3d206b8bffafa2a7b682988f64419b",
   "broadMatrix": {
@@ -68,8 +68,12 @@
       "Post-Gallery decoded-frame cache eviction after route exit without layout, paint, token, semantics, or content changes.",
       "Profile and release Gallery thumbnails omit a whole-thumbnail RepaintBoundary while debug golden rendering retains it; layout, paint commands, tokens, semantics, and content are unchanged.",
       "Protected signed-profile packaging and acceptance tooling/documents.",
-      "Android host cleanup relaunch through a separate process after Gallery exit; no layout, paint, token, semantics, or content changes."
+      "Android host memory pressure after Gallery exit, including managed collection and runtime-resolved Scudo allocator purge while retaining the same process; no layout, paint, token, semantics, or content changes."
     ],
+    "freshFinalGalleryProof": {
+      "artifact": "artifact://issue-139/android-final-05e3630/issue139-final-gallery.png",
+      "sha256": "2e1c16a28ff0be743ed38e28096a003439926835ce82412b15676f658ddc21cf"
+    },
     "visualReviewRemainsApplicable": true
   },
   "maintainerDecisionUri": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5261691585",

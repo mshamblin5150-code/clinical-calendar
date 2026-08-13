@@ -1,6 +1,6 @@
 ﻿{
   "schemaVersion": 1,
-  "candidateCommit": "3b9e0ba70809bd0e216fa79067deb8abacbcb367",
+  "candidateCommit": "05e3630c128819ccfec81d5e41b0ea4dce76d87c",
   "candidateBuild": 43,
   "themeId": "graphite",
   "displayName": "Graphite",
@@ -16,7 +16,8 @@
   },
   "assetHashes": {
     "assets/graphite_raster/panel-nine-slice-v1.png": "4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15",
-    "assets/shared_brand/axion-delta-mark.png": "9e5c841e8781d518fe4b8052f7febe921a3a26899cc1deb769ddf0feacfeacc7"
+    "assets/shared_brand/axion-delta-mark.png": "9e5c841e8781d518fe4b8052f7febe921a3a26899cc1deb769ddf0feacfeacc7",
+    "assets/theme_gallery_runtime/graphite.png": "f351730b147dae255b4416e7221248c5a5973e11a944b07394197691d2a3e1ac"
   },
   "reports": [
     "artifact://issue-139/android-final-b91f5f7/automated-manifests/graphite/runtime-tokens-standard.json",
@@ -36,7 +37,7 @@
     "artifact://issue-139/android-refreshed-5eb0a97/graphite-text-200-standard-calendar.png",
     "artifact://issue-139/android-refreshed-5eb0a97/graphite-text-200-enhanced-calendar.png"
   ],
-  "ciRun": "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31573857360",
+  "ciRun": "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31655878327",
   "manualChecklists": [
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790",
@@ -62,11 +63,11 @@
     "artifact://issue-139/android-final-b91f5f7/text-200-enhanced/graphite/calendar.png": "e1bb723e1463e2c1537c27fb7712dfeb5a7b745236f1ce06acf582b6f80cc2f1",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256232237": "a3a77b33a239083eafd4c7b925b752d48d260d2a6008300a52281da9b8fac801",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5256590790": "ade670340bc113bb362b4f3087cfef6c39af29e7d719e8b418ffea05f040c2db",
-    "docs/themes/acceptance/issue-139/performance.json": "b219917c80e97f15cef621a533e9a1f1ad9f3f074a8b6277c2672d1d2099d0bd",
-    "docs/themes/acceptance/issue-139/final-android-tablet-evidence.json": "31bc6b67094e413e99c2a764d45d1820a9ab881fe085fe073ab748159d40539a",
-    "docs/themes/acceptance/issue-139/visual-evidence-applicability.json": "b13fbc91f637aaa64c6fa95139e3949fcbdfc2b20a8b42798108476637e231c7",
-    "docs/themes/acceptance/issue-139/release-size-attribution.json": "d7e6d75c32a4d831f5219b213eb0e3958cd9478eb0cbb860e74e5738654ceecd",
-    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31573857360": "d97b4016c89d497138a19bb9b626a8ed8bb037369a97a60e5358aef85c6da5b3",
+    "docs/themes/acceptance/issue-139/performance.json": "60b5d9c6c0c1da289ea6bf023b781ae3d48b0cf54619d1082921303fe0543810",
+    "docs/themes/acceptance/issue-139/final-android-tablet-evidence.json": "e6eb86ebe1a167e733f8e6747169ffeaaff031e2d0bd0e4011a980702c5ef9c0",
+    "docs/themes/acceptance/issue-139/visual-evidence-applicability.json": "8927ad7657bfaef69307b0a9dba0ac1905d72b8ca84a2cdd3cabbcab5ed7a3a6",
+    "docs/themes/acceptance/issue-139/release-size-attribution.json": "3afc8eea55e609981c6a8fa0ba69f4e7e637b125022c4936269f7f289a1fd2c5",
+    "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/actions/runs/31655878327": "fdc528b93e22e1da72b3ac4e6d23b8c39d4d49928e3495ec94d8c9b0bb5aa702",
     "https://api.github.com/repos/mshamblin5150-code/clinical-calendar/issues/comments/5261691585": "ca8d4ec776c7dbe4060c17f02556f6d74382552453698ea9936bf7b57ad6ed2b",
     "docs/themes/acceptance/issue-139/accessibility-scanner-adjudication.json": "9d0cb571cfc2105dc23e2306c6bdc030a50bf9f0a23dd3fbfce0844650ddfc7c"
   },
