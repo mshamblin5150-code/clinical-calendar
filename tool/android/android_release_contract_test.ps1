@@ -60,6 +60,7 @@ if (-not $mainActivity.Contains('notifyLowMemoryWarning') -or
 }
 if (-not $gradle.Contains('externalNativeBuild') -or
     -not $nativeBuild.Contains('clinical_calendar_memory') -or
+    -not $nativeAllocator.Contains('dlsym') -or
     -not $nativeAllocator.Contains('M_PURGE') -or
     -not $nativeAllocator.Contains('M_PURGE_ALL')) {
     throw 'Gallery cleanup must return unused native allocator pages to Android.'

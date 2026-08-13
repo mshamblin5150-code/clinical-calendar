@@ -9,3 +9,4 @@ add_library(
 )
 
 target_compile_features(clinical_calendar_memory PRIVATE cxx_std_17)
+target_link_libraries(clinical_calendar_memory PRIVATE dl)
