@@ -1584,8 +1584,6 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     );
     try {
       await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
-      await Future<void>.delayed(const Duration(milliseconds: 750));
-      await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
     } on MissingPluginException {
       // Widget and non-Android hosts have no native memory lifecycle.
     }
