@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "issue": 146,
+  "status": "pre-change-shipping-baseline",
+  "repositoryCommit": "1d5f278761669f30ae06bbc06023c65bc90cd92f",
+  "themeId": "variant-f",
+  "displayName": "Containment Drone 47-Alpha",
+  "acceptedPhysicalManifest": "docs/themes/acceptance/variant-f/manifest.json",
+  "geometry": {
+    "nineSliceCuts": [120, 145, 120, 170],
+    "safeInsets": {
+      "calendar": [38, 46, 38, 46],
+      "placements": [30, 44, 30, 44],
+      "planning": [34, 46, 34, 42],
+      "status": [30, 44, 34, 44]
+    }
+  },
+  "files": [
+    {"path": "packages/clinical_calendar_presentation/assets/variant_f_raster/panel-nine-slice-v2.png", "bytes": 1217635, "sha256": "9ff3968a94d497dc6f76f2b14f370c5a24c3bb4969397ee220da005093c15ad7", "role": "protected-asset"},
+    {"path": "packages/clinical_calendar_presentation/assets/variant_f_raster/hardware-atlas.png", "bytes": 628620, "sha256": "0abc02903e8fb954fe80fb91e71aaaa7ee5a5020160e7138cb8b75e516f949e1", "role": "protected-asset"},
+    {"path": "packages/clinical_calendar_presentation/assets/variant_f_raster/panel-atlas.png", "bytes": 1019583, "sha256": "01df9ab1ee87dc41852dd61c8193a7b453eb92695e323bf1861ba891120d65ae", "role": "protected-asset"},
+    {"path": "packages/clinical_calendar_presentation/assets/variant_f_raster/rail-atlas.png", "bytes": 406490, "sha256": "2acf4e26ad10db07a49fadcf78064e24d04724ad680390508593f06761cb2649", "role": "protected-asset"},
+    {"path": "packages/clinical_calendar_presentation/lib/src/variant_f_theme.dart", "bytes": 18915, "sha256": "1aa6159e309264deecea853524c41388b63e70e7a480da96b44e2b41c71ab7ed", "role": "protected-renderer-source"},
+    {"path": "packages/clinical_calendar_presentation/lib/src/variant_f_raster_assets.dart", "bytes": 10545, "sha256": "a65b68882750d51f363a4c929359562deda0e7080338072a7a49ce81fd0a3f96", "role": "protected-renderer-source"},
+    {"path": "packages/clinical_calendar_presentation/lib/src/mechanical_pixel_tiles.dart", "bytes": 8549, "sha256": "fd606234cd8e5db4b136efc4d28e3010c934369e803da0d497bdb03ba2aa9e11", "role": "protected-renderer-source"},
+    {"path": "packages/clinical_calendar_presentation/lib/src/tactical_frame.dart", "bytes": 15699, "sha256": "e1fd72c18e74bb29730483df7a4f8ca6c13030190da86f0597273cf8e140ea34", "role": "protected-renderer-source"},
+    {"path": "packages/clinical_calendar_presentation/lib/src/responsive_shell.dart", "bytes": 27344, "sha256": "929479569b72e8b9a78d0963a1c1bdccca7afd1daa4aefb270e0f36ba144be44", "role": "protected-renderer-source"},
+    {"path": "packages/clinical_calendar_presentation/assets/theme_gallery_runtime/variant-f.png", "bytes": 96794, "sha256": "a20ed9191ddfec95d1273ea52b02e4c20bf85d54be471b6bb6898d9c55ba6205", "role": "accepted-standard-runtime"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/calendar-compact.png", "bytes": 313583, "sha256": "9f1b7468f2cff36a44c363d6ba49bd26efd1c45264ad43119b67252d7a11776c", "role": "responsive-standard-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/calendar-landscape-desktop.png", "bytes": 1433754, "sha256": "4b6158fd19e4ef139b38aa587a35b4983a3880c51ed86b3d860c97113f2d6c90", "role": "responsive-standard-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/calendar-portrait-tablet.png", "bytes": 831895, "sha256": "5a6f06cfdc5fa033f6340dac8281c0afb53db71ff7112c06e34a6dd3b81bb11a", "role": "responsive-standard-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-help.png", "bytes": 2411955, "sha256": "f8ad4ec7ef7a97b98a6773490c26154d37ae9a8a61360e389c9bc5b9b699883f", "role": "help-standard-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/settings-320.png", "bytes": 525956, "sha256": "ddafe0b5985d02e293e205c75c40a91944b418c952ea81c73da8c0517ef78d89", "role": "responsive-standard-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/calendar-compact.png", "bytes": 295900, "sha256": "83468d29d8b94ee819e04776ae6ba349fee3fee634564d39f5a028a54375cda7", "role": "responsive-standard-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/calendar-landscape-desktop.png", "bytes": 1404133, "sha256": "8520c6f2e1cffc96a914e95a56757f7fe8f19e7b935011186dbd8e95fe3c699b", "role": "responsive-standard-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/calendar-portrait-tablet.png", "bytes": 816673, "sha256": "f56d293f131465164f50a643a3cc0122623a8b7147c9a19c18eee7affbbf1327", "role": "responsive-standard-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-help.png", "bytes": 2279917, "sha256": "9941e5dddba7cbdda21f60ffc26e73c0a9e26271e20523a70d24662ec643bb38", "role": "help-standard-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/settings-320.png", "bytes": 511916, "sha256": "bb6c84d27256f1d81f7941e865efa5408d6bbfcb5a4518f01508da36c4e62cc8", "role": "responsive-standard-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/variant_f_baseline_contract_test.dart", "bytes": 4119, "sha256": "c90dbd128be73f554e5cf49f58052c567ce2cef23b6e69cb565e5bdfe6297afa", "role": "asset-and-render-contract"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_asset_manifest.json", "bytes": 1384, "sha256": "16def6864ab1a0e505431f8907fcd46af27fb05b52bbec36ae6b86779e526d5d", "role": "asset-and-geometry-contract"},
+    {"path": "docs/themes/acceptance/variant-f/manifest.json", "bytes": 7138, "sha256": "f75d11e7768fd2d0f1e6aff933256efb309fb99cea6f0a09e6b9d444096c3f01", "role": "accepted-physical-and-enhanced-restoration-evidence"}
+  ],
+  "proposedConcept": {
+    "path": "docs/themes/acceptance/proofs/containment-drone-47-alpha-redesign-v1/proposed-concept-landscape-1536x1024.png",
+    "width": 1536,
+    "height": 1024,
+    "sha256": "2a0ffc89be54d47a2c837e3ded8ba8fdd8e0e80531f488f602fef2e677f59915",
+    "approvalState": "pending"
+  }
+}
