@@ -7,12 +7,12 @@
   "displayName": "Containment Drone 47-Alpha",
   "acceptedPhysicalManifest": "docs/themes/acceptance/variant-f/manifest.json",
   "geometry": {
-    "nineSliceCuts": [120, 145, 120, 170],
+    "nineSliceCuts": {"left": 120, "top": 145, "right": 120, "bottom": 170},
     "safeInsets": {
-      "calendar": [38, 46, 38, 46],
-      "placements": [30, 44, 30, 44],
-      "planning": [34, 46, 34, 42],
-      "status": [30, 44, 34, 44]
+      "calendar": {"left": 38, "top": 46, "right": 38, "bottom": 46},
+      "placements": {"left": 30, "top": 44, "right": 30, "bottom": 44},
+      "planning": {"left": 34, "top": 46, "right": 34, "bottom": 42},
+      "status": {"left": 30, "top": 44, "right": 34, "bottom": 44}
     }
   },
   "files": [
@@ -26,16 +26,34 @@
     {"path": "packages/clinical_calendar_presentation/lib/src/tactical_frame.dart", "bytes": 15699, "sha256": "e1fd72c18e74bb29730483df7a4f8ca6c13030190da86f0597273cf8e140ea34", "role": "protected-renderer-source"},
     {"path": "packages/clinical_calendar_presentation/lib/src/responsive_shell.dart", "bytes": 27344, "sha256": "929479569b72e8b9a78d0963a1c1bdccca7afd1daa4aefb270e0f36ba144be44", "role": "protected-renderer-source"},
     {"path": "packages/clinical_calendar_presentation/assets/theme_gallery_runtime/variant-f.png", "bytes": 96794, "sha256": "a20ed9191ddfec95d1273ea52b02e4c20bf85d54be471b6bb6898d9c55ba6205", "role": "accepted-standard-runtime"},
-    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/calendar-compact.png", "bytes": 313583, "sha256": "9f1b7468f2cff36a44c363d6ba49bd26efd1c45264ad43119b67252d7a11776c", "role": "responsive-standard-baseline"},
-    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/calendar-landscape-desktop.png", "bytes": 1433754, "sha256": "4b6158fd19e4ef139b38aa587a35b4983a3880c51ed86b3d860c97113f2d6c90", "role": "responsive-standard-baseline"},
-    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/calendar-portrait-tablet.png", "bytes": 831895, "sha256": "5a6f06cfdc5fa033f6340dac8281c0afb53db71ff7112c06e34a6dd3b81bb11a", "role": "responsive-standard-baseline"},
-    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-help.png", "bytes": 2411955, "sha256": "f8ad4ec7ef7a97b98a6773490c26154d37ae9a8a61360e389c9bc5b9b699883f", "role": "help-standard-baseline"},
-    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/settings-320.png", "bytes": 525956, "sha256": "ddafe0b5985d02e293e205c75c40a91944b418c952ea81c73da8c0517ef78d89", "role": "responsive-standard-baseline"},
-    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/calendar-compact.png", "bytes": 295900, "sha256": "83468d29d8b94ee819e04776ae6ba349fee3fee634564d39f5a028a54375cda7", "role": "responsive-standard-baseline"},
-    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/calendar-landscape-desktop.png", "bytes": 1404133, "sha256": "8520c6f2e1cffc96a914e95a56757f7fe8f19e7b935011186dbd8e95fe3c699b", "role": "responsive-standard-baseline"},
-    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/calendar-portrait-tablet.png", "bytes": 816673, "sha256": "f56d293f131465164f50a643a3cc0122623a8b7147c9a19c18eee7affbbf1327", "role": "responsive-standard-baseline"},
-    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-help.png", "bytes": 2279917, "sha256": "9941e5dddba7cbdda21f60ffc26e73c0a9e26271e20523a70d24662ec643bb38", "role": "help-standard-baseline"},
-    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/settings-320.png", "bytes": 511916, "sha256": "bb6c84d27256f1d81f7941e865efa5408d6bbfcb5a4518f01508da36c4e62cc8", "role": "responsive-standard-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/calendar-compact.png", "bytes": 313583, "sha256": "9f1b7468f2cff36a44c363d6ba49bd26efd1c45264ad43119b67252d7a11776c", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/calendar-landscape-desktop.png", "bytes": 1433754, "sha256": "4b6158fd19e4ef139b38aa587a35b4983a3880c51ed86b3d860c97113f2d6c90", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/calendar-portrait-tablet.png", "bytes": 831895, "sha256": "5a6f06cfdc5fa033f6340dac8281c0afb53db71ff7112c06e34a6dd3b81bb11a", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-backupRestore.png", "bytes": 1950282, "sha256": "c63384cc950940b86b57c7ab485ff88983ebb1ef34d40cfc8eea5c4399ec4056", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-clinicalPlacements.png", "bytes": 397133, "sha256": "da605a07c583fbe06cc5109c40b7d38a02540bf08700500217df2d31d932575a", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-connectedDevices.png", "bytes": 1637056, "sha256": "b05610b3d3508004d79d3a5faf371caa53a151d5d4d56a5f4b9bd8e0ab2bdbdd", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-exports.png", "bytes": 1948059, "sha256": "9ad9684ccbc9ce4149c765c90ffca4ef9a64de1bdc269327570d139e174dba2b", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-help.png", "bytes": 2411955, "sha256": "f8ad4ec7ef7a97b98a6773490c26154d37ae9a8a61360e389c9bc5b9b699883f", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-notifications.png", "bytes": 1569294, "sha256": "94cfb4f03f756d36702435ff4e4b780dcef5ff0a3803cd9bef471ca51e45f49d", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-settings.png", "bytes": 1765978, "sha256": "7a5594ecbf5b6886eabcf0d3a7691f838f0f842be5c4302cd9533f9e63d908df", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-studentProfile.png", "bytes": 1516156, "sha256": "953b7884cf577040f78f14066b0b50bd71fd7c646497823980767923af767571", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-synchronization.png", "bytes": 1802956, "sha256": "34d8cece7de2c90a77533f1098450e506db625f4364a60c8133723cc0432ca58", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/destination-trashRecovery.png", "bytes": 1637079, "sha256": "cca58e86aea9293207948f82c7e0bb936b7e8098c08714be58f2219b9ad5ad0a", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/linux/settings-320.png", "bytes": 525956, "sha256": "ddafe0b5985d02e293e205c75c40a91944b418c952ea81c73da8c0517ef78d89", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/calendar-compact.png", "bytes": 295900, "sha256": "83468d29d8b94ee819e04776ae6ba349fee3fee634564d39f5a028a54375cda7", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/calendar-landscape-desktop.png", "bytes": 1404133, "sha256": "8520c6f2e1cffc96a914e95a56757f7fe8f19e7b935011186dbd8e95fe3c699b", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/calendar-portrait-tablet.png", "bytes": 816673, "sha256": "f56d293f131465164f50a643a3cc0122623a8b7147c9a19c18eee7affbbf1327", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-backupRestore.png", "bytes": 1946399, "sha256": "bc7718a85bbc8a9fc5a857528e0697d259066f1eb671cd1e411b5fa48d9b9fa5", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-clinicalPlacements.png", "bytes": 395229, "sha256": "6741d1e94b678e745e754eac923c1d90b93c34c9c8b357f1305af3a3ba363d33", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-connectedDevices.png", "bytes": 1632733, "sha256": "2e515fb54eacc6793a241db8fe56b7ba4399b00fd7e443a20bdc6699abb3053d", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-exports.png", "bytes": 1943534, "sha256": "3c9a8007c77595f12d588c95fd7952da9efd5bfb39fc3653c1c3b6362179070c", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-help.png", "bytes": 2279917, "sha256": "9941e5dddba7cbdda21f60ffc26e73c0a9e26271e20523a70d24662ec643bb38", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-notifications.png", "bytes": 1544300, "sha256": "173408e869c88183c6f1f164e2c19d1e19b53481ebf50bea684ef00076b97a7d", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-settings.png", "bytes": 1738690, "sha256": "01bc9b2607593060504a6fa9aa958dea396dcd8eb457fa75d6ee37f5472e997e", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-studentProfile.png", "bytes": 1506406, "sha256": "ba8a152ae2b752b285780a71000350d518481d9b168dc8f9ae81add89536eefa", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-synchronization.png", "bytes": 1790156, "sha256": "062a10bc7eb5d4ba0d1428b3abf6785342f1880df4f0df6882d3fc6e96ed5f01", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/destination-trashRecovery.png", "bytes": 1632765, "sha256": "4644c86a18146cf5f6c99a57e669faead3ba34d6dec19039020108773e5d3931", "role": "frozen-standard-render-baseline"},
+    {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_renders/windows/settings-320.png", "bytes": 511916, "sha256": "bb6c84d27256f1d81f7941e865efa5408d6bbfcb5a4518f01508da36c4e62cc8", "role": "frozen-standard-render-baseline"},
     {"path": "packages/clinical_calendar_presentation/test/variant_f_baseline_contract_test.dart", "bytes": 4119, "sha256": "c90dbd128be73f554e5cf49f58052c567ce2cef23b6e69cb565e5bdfe6297afa", "role": "asset-and-render-contract"},
     {"path": "packages/clinical_calendar_presentation/test/baselines/variant_f_asset_manifest.json", "bytes": 1384, "sha256": "16def6864ab1a0e505431f8907fcd46af27fb05b52bbec36ae6b86779e526d5d", "role": "asset-and-geometry-contract"},
     {"path": "docs/themes/acceptance/variant-f/manifest.json", "bytes": 7138, "sha256": "f75d11e7768fd2d0f1e6aff933256efb309fb99cea6f0a09e6b9d444096c3f01", "role": "accepted-physical-and-enhanced-restoration-evidence"}
@@ -45,6 +63,6 @@
     "width": 1536,
     "height": 1024,
     "sha256": "2a0ffc89be54d47a2c837e3ded8ba8fdd8e0e80531f488f602fef2e677f59915",
-    "approvalState": "pending"
+    "approvalState": "rejected"
   }
 }
