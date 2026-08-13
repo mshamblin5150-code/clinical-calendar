@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "issue": 139,
+  "productionCandidateCommit": "05e3630c128819ccfec81d5e41b0ea4dce76d87c",
+  "broadMatrixCandidateCommit": "b91f5f7fc4f58e41049ff9e8c72ea9c1801a168f",
+  "refreshedVisualCandidateCommit": "5eb0a979cc3d206b8bffafa2a7b682988f64419b",
+  "broadMatrix": {
+    "nativePngAndUiTreePairs": 200,
+    "themes": 7,
+    "topLevelDestinationsPerTheme": 11,
+    "purpose": "Breadth, alternate orientation, Enhanced, 200 percent text, assignment, and privacy coverage."
+  },
+  "refreshedVisuals": {
+    "themes": [
+      "graphite",
+      "federation-classic",
+      "federation-2399",
+      "coastal-calm",
+      "botanical-study",
+      "heritage-field-notes"
+    ],
+    "surfacesPerTheme": [
+      "standard-calendar",
+      "portrait-calendar",
+      "enhanced-calendar",
+      "text-200-standard-calendar",
+      "text-200-enhanced-calendar"
+    ],
+    "purpose": "Fresh signed-candidate coverage after the final concept-fidelity repairs. Graphite, Federation 2399, and Botanical Study additionally received full Standard destination recaptures.",
+    "captureSha256": {
+      "graphite-standard-calendar.png": "2fed590636ddc18001d46125eb2abcd4730d54d82cc30a0c6de529965373bda2",
+      "graphite-portrait-calendar.png": "6f0b12f2a6c79dff1dbc685a84188e1cf489e5ab78c9a2b8aa8e7a2b1d163756",
+      "graphite-enhanced-calendar.png": "c353d567c2a9f12221654213d5b895c4e6ef5b4ef22ae2407a5b44646e756043",
+      "graphite-text-200-standard-calendar.png": "4d885e20331a26221787597f62a4115d8ac25358a10955d3d35a476d78954e5a",
+      "graphite-text-200-enhanced-calendar.png": "9353c1bb606206480b21886fb9c9a0905888ca3f626cfbe83755afaa04b46676",
+      "federation-classic-standard-calendar.png": "b5025248811059e58f955503669edf2f9a3da2233f0478dd2bedee05aca28e57",
+      "federation-classic-portrait-calendar.png": "6e750f8fd33b61c58e75357da87343542a95401d0ac1c0fd5de466b2854ee79f",
+      "federation-classic-enhanced-calendar.png": "fdaa9244a2909012bcbe8b6cd474f57fec796eb7d59b7d749b31da879826609f",
+      "federation-classic-text-200-standard-calendar.png": "fe7171f6e864cab330cbe968d2abd36940c4285726ac8e293012415aa3cb7bc2",
+      "federation-classic-text-200-enhanced-calendar.png": "4c4fc9fc93a036126e17179be9a890fa25c19d28f5a5f03320b5d00c3f28f044",
+      "federation-2399-standard-calendar.png": "c5bc4f14734096ac232c3c2788d775e8557c93ef079369a5f7931b760c45e02e",
+      "federation-2399-portrait-calendar.png": "a85293bc4bc8034bbb6b68a84cef9dca430e02c07be225e8487bc85f448345fe",
+      "federation-2399-enhanced-calendar.png": "8168249aeb0c6debb95ad1d4fd43dad3cdd7eda09f9e75f97a8e537a1b9eb76b",
+      "federation-2399-text-200-standard-calendar.png": "93d497f54b445d191273b2649e1a0f9f4e084cb2536accc65fda960d9c83d181",
+      "federation-2399-text-200-enhanced-calendar.png": "6921e9d6edf6df11f6c48a43db56823b00f131742e60a1630dfde38e90a95583",
+      "coastal-light-standard-calendar.png": "130fe1fe329d917cd914470e16f63463f3c12ef916778084b18d19dd15e66689",
+      "coastal-light-portrait-calendar.png": "36884c00d51b480e0114e1419c0bdaa4ece99683c7e75c5fbfcb0f1666a982c7",
+      "coastal-light-enhanced-calendar.png": "676d3be0847f93c41af0220a58470296a7c9e2f5d06a8a7556c092f2a6b0903b",
+      "coastal-light-text-200-standard-calendar.png": "c7ca7ee943e3b888bcb4ef5a2f42b47a3be4d66af8be4a6da76c1dce2d1204db",
+      "coastal-light-text-200-enhanced-calendar.png": "6ad39d354c6543b198173f63bd5df1e0af23656bde283c2c10011e1c00e3c512",
+      "botanical-study-standard-calendar.png": "5b3e6a80088c051b80ca15b2744ce616638a11f630732b8a3e99aaa78ad34d88",
+      "botanical-study-portrait-calendar.png": "fa80f31a5d6acfb658886dd0d2f57ca12ab00da4b662fd8e71f0800ba6b6dc5f",
+      "botanical-study-enhanced-calendar.png": "3fc9f72db7154389287eaddf001950455c0b8a9b1f5956b08fadee3b0e3e9947",
+      "botanical-study-text-200-standard-calendar.png": "0892434dff39bac56abff0e2cfbff354e8f5d9bba9fdce6a9acc32e5c334e831",
+      "botanical-study-text-200-enhanced-calendar.png": "a220ef3b044b118a964bfc8a1c3cd3ec5d22fd612d12386a6639e2d3d9f3ecb3",
+      "field-archive-standard-calendar.png": "70ae5c715c3f829dd6e91b450c21faa7a8eb6d481f2ad3d43906416d51b09813",
+      "field-archive-portrait-calendar.png": "596d89cde9a72215f9b273938e982a6c3ff1ff70f9366a4de2b6141fe5e071b6",
+      "field-archive-enhanced-calendar.png": "7e426d1941ad325c013f21aaaeebd03cbf1ada508068b0408b8b427cf7029423",
+      "field-archive-text-200-standard-calendar.png": "b4386cee5a0c4d7e2e7c1afdafc8e6fbf0c6b07d63ff058f86c29486744648eb",
+      "field-archive-text-200-enhanced-calendar.png": "50600fe1ab6bcfa3cf2286ad6aa9a1766f2b7660ef8bc1061af3d17c87df82bb"
+    }
+  },
+  "applicabilityToProductionCandidate": {
+    "scopedThemeAssetDiffFromRefreshedCandidate": [],
+    "scopedThemeRendererDiffFromRefreshedCandidate": [],
+    "hostChanges": [
+      "Calendar period query-future reuse without layout, paint, token, semantics, or content changes.",
+      "Post-Gallery decoded-frame cache eviction after route exit without layout, paint, token, semantics, or content changes.",
+      "Profile and release Gallery thumbnails omit a whole-thumbnail RepaintBoundary while debug golden rendering retains it; layout, paint commands, tokens, semantics, and content are unchanged.",
+      "Protected signed-profile packaging and acceptance tooling/documents.",
+      "Android host memory pressure after Gallery exit, including managed collection and runtime-resolved Scudo allocator purge while retaining the same process; no layout, paint, token, semantics, or content changes."
+    ],
+    "freshFinalGalleryProof": {
+      "artifact": "artifact://issue-139/android-final-05e3630/issue139-final-gallery.png",
+      "sha256": "2e1c16a28ff0be743ed38e28096a003439926835ce82412b15676f658ddc21cf",
+      "uiTreeArtifact": "artifact://issue-139/android-final-05e3630/issue139-final-gallery.xml",
+      "uiTreeSha256": "c3bccae880f51166fefa5b49f4380c644185f05f35ad79076fd7ed7eefa66a98"
+    },
+    "visualReviewRemainsApplicable": true
+  },
+  "maintainerDecisionUri": "https://github.com/mshamblin5150-code/clinical-calendar/issues/139#issuecomment-5261691585",
+  "scope": "Android tablet only"
+}

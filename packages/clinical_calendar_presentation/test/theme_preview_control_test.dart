@@ -14,6 +14,7 @@ void main() {
     addTearDown(controller.dispose);
     await controller.preview(graphiteThemeId, preflight: (_) async {});
     var applied = 0;
+    var reverted = 0;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -21,6 +22,10 @@ void main() {
           body: ThemePreviewControl(
             controller: controller,
             onApply: () async => applied++,
+            onRevert: () {
+              reverted++;
+              controller.revert();
+            },
           ),
         ),
       ),
@@ -41,6 +46,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('revert-theme-preview')));
     await tester.pump();
+    expect(reverted, 1);
     expect(controller.isPreviewing, isFalse);
   });
 
@@ -64,6 +70,7 @@ void main() {
           body: ThemePreviewControl(
             controller: controller,
             onApply: () async {},
+            onRevert: controller.revert,
           ),
         ),
       ),
@@ -95,6 +102,7 @@ void main() {
             body: ThemePreviewControl(
               controller: controller,
               onApply: () async {},
+              onRevert: controller.revert,
             ),
           ),
         ),

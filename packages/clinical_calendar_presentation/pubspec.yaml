@@ -27,19 +27,22 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/botanical_study_raster/
-    - assets/botanical_study_raster/dashboard-chassis-landscape-v2.png
+    - assets/placement_icons/
+    - assets/variant_f_raster/
+    - assets/shared_brand/axion-delta-mark.png
+    - assets/graphite_raster/panel-nine-slice-v1.png
+    - assets/federation_classic_raster/panel-nine-slice-v1.png
+    - assets/federation_classic_raster/lcars-rail-nine-slice-v2.png
     - assets/federation_2399_raster/panel-nine-slice-v1.png
     - assets/federation_2399_raster/dashboard-chassis-landscape-v1.png
-    - assets/coastal_light_raster/
-    - assets/federation_classic_raster/
-    - assets/graphite_raster/
+    - assets/coastal_light_raster/panel-nine-slice-v1.png
+    - assets/coastal_light_raster/dashboard-chassis-landscape-v1.png
+    - assets/botanical_study_raster/panel-nine-slice-v1.png
+    - assets/botanical_study_raster/dashboard-chassis-landscape-v2.png
     - assets/heritage_field_notes_fonts/OFL.txt
-    - assets/heritage_field_notes_materials/
-    - assets/heritage_field_notes_raster/
-    - assets/placement_icons/
-    - assets/shared_brand/axion-delta-mark.png
-    - assets/variant_f_raster/
+    - assets/heritage_field_notes_materials/field-archive-chassis.png
+    - assets/heritage_field_notes_raster/panel-nine-slice-v1.png
+    - assets/theme_gallery_runtime/
   fonts:
     - family: FieldArchiveCondensed
       fonts:

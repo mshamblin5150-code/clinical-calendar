@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "issue": 139,
+  "candidateCommit": "05e3630c128819ccfec81d5e41b0ea4dce76d87c",
+  "candidateBuild": 43,
+  "fixture": "containment-drone-fictional-v1",
+  "device": {
+    "model": "Samsung SM-X920",
+    "androidVersion": "16",
+    "refreshRateHz": 120.00001,
+    "frameIntervalMs": 8.333
+  },
+  "artifact": {
+    "configuration": "profile",
+    "sha256": "bbaeafce0f4213e31cdd243ce21be140b28b94562a5d9ae0ed3cbb73a7063c96",
+    "approvedSignerSha256": "9903aca5242daa0f926270940b4174687f65144b698d28a7c4dbd00bedb817f0"
+  },
+  "pinnedBaseline": {
+    "commit": "3c52827",
+    "uiThreadFrameTimeMsP95": 3.403,
+    "rasterThreadFrameTimeMsP95": 5.627,
+    "retainedMemoryKb": 219508
+  },
+  "limits": {
+    "uiThreadFrameTimeMsP95": 3.743,
+    "rasterThreadFrameTimeMsP95": 6.190,
+    "retainedMemoryKb": 241459
+  },
+  "focusedSamples": {
+    "measurement": "steady-state scroll in the production Calendar Agenda surface",
+    "themes": {
+      "variant-f": { "sampleSeconds": 10, "renderedFrames": 76, "uiThreadFrameTimeMsP95": 1.504, "rasterThreadFrameTimeMsP95": 3.817 },
+      "graphite": { "sampleSeconds": 25, "renderedFrames": 287, "uiThreadFrameTimeMsP95": 3.664, "rasterThreadFrameTimeMsP95": 5.023 },
+      "federation-classic": { "sampleSeconds": 25, "renderedFrames": 277, "uiThreadFrameTimeMsP95": 2.395, "rasterThreadFrameTimeMsP95": 4.418 },
+      "federation-2399": { "sampleSeconds": 10, "renderedFrames": 313, "uiThreadFrameTimeMsP95": 3.411, "rasterThreadFrameTimeMsP95": 5.334 },
+      "coastal-calm": { "sampleSeconds": 25, "renderedFrames": 249, "uiThreadFrameTimeMsP95": 2.152, "rasterThreadFrameTimeMsP95": 4.537 },
+      "botanical-study": { "sampleSeconds": 25, "renderedFrames": 264, "uiThreadFrameTimeMsP95": 1.234, "rasterThreadFrameTimeMsP95": 4.714 },
+      "heritage-field-notes": { "sampleSeconds": 25, "renderedFrames": 310, "uiThreadFrameTimeMsP95": 2.727, "rasterThreadFrameTimeMsP95": 4.222 }
+    },
+    "maximumUiThreadFrameTimeMsP95": 3.664,
+    "maximumRasterThreadFrameTimeMsP95": 5.334,
+    "passed": true
+  },
+  "themeSwap": {
+    "originToFirstFlutterFrameMs": 92.133,
+    "adbTapReturnMs": 89.641,
+    "flutterFrameEvents": 52,
+    "passed": true
+  },
+  "galleryStress": {
+    "cycleCount": 25,
+    "actions": {
+      "apply": 5,
+      "revert": 20
+    },
+    "monotonicRetainedMemoryGrowth": false,
+    "finalInGalleryRetainedMemoryKb": 253807,
+    "postSemanticCloseRetainedMemoryKb": 235719,
+    "retainedMemoryLimitKb": 241459,
+    "cleanupStrategy": "live-host-image-cache-eviction-trim-gc-and-native-allocator-purge",
+    "processIdBeforeSemanticClose": 32371,
+    "processIdAfterSemanticClose": 32371,
+    "sameLiveProcessVerified": true,
+    "appForegroundAfterClose": true,
+    "passed": true,
+    "adjudication": "The 25-cycle series is non-monotonic. The Gallery semantic Close action releases decoded frames and asks the live Android host to trim managed and native allocator pages; PID 32371 is retained and memory settles at 235719 KB, below the committed 241459 KB limit."
+  },
+  "releaseSize": {
+    "baselineReleaseArtifactSha256": "bbad2c0f55725fa65e214b4524d8a7a201eec429082566a4fcef9f47d8f207b6",
+    "baselineReleaseBytes": 84565505,
+    "releaseArtifactSha256": "668ab68b8154d9b565f03f01db45725d1d970c90f541e0ddd2f68e66654d8051",
+    "releaseBytes": 101308644,
+    "releaseGrowthBytes": 16743139,
+    "attribution": "docs/themes/acceptance/issue-139/release-size-attribution.json",
+    "unattributedGrowthBytes": 0,
+    "passed": true
+  },
+  "passed": true
+}

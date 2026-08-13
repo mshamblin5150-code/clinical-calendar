@@ -756,8 +756,29 @@ final class ThemePerformanceEvidence {
 
   ThemeAcceptanceGateResult evaluate({
     required ThemeEvidenceManifest manifest,
+    Iterable<ThemeEvidenceManifest>? catalogManifests,
   }) {
     final failures = <String>[];
+    final catalogManifestList = catalogManifests?.toList(growable: false);
+    if (catalogManifestList != null &&
+        catalogManifestList
+            .map((item) => item.themeId)
+            .toSet()
+            .difference(_acceptedCatalogThemeIds)
+            .isNotEmpty) {
+      failures.add('Release-size catalog contains an unknown theme manifest.');
+    }
+    if (catalogManifestList != null &&
+        _acceptedCatalogThemeIds
+            .difference(catalogManifestList.map((item) => item.themeId).toSet())
+            .isNotEmpty) {
+      failures.add(
+        'Release-size catalog is missing an accepted theme manifest.',
+      );
+    }
+    final approvedAssetSha256 = catalogManifestList == null
+        ? manifest.assetHashes.values.toSet()
+        : catalogManifestList.expand((item) => item.assetHashes.values).toSet();
     if (baseline.frameIntervalMs <= 0 ||
         baseline.uiThreadFrameTimeMsP95 <= 0 ||
         baseline.rasterThreadFrameTimeMsP95 <= 0 ||
@@ -813,7 +834,7 @@ final class ThemePerformanceEvidence {
           (entry) =>
               !RegExp(r'^[0-9a-f]{64}$').hasMatch(entry.key) ||
               entry.value <= 0 ||
-              !manifest.assetHashes.values.contains(entry.key),
+              !approvedAssetSha256.contains(entry.key),
         ) ||
         attributedGrowth != math.max(0, releaseGrowth)) {
       failures.add(
@@ -827,7 +848,10 @@ final class ThemePerformanceEvidence {
     );
   }
 
-  Map<String, Object> toJson({required ThemeEvidenceManifest manifest}) => {
+  Map<String, Object> toJson({
+    required ThemeEvidenceManifest manifest,
+    Iterable<ThemeEvidenceManifest>? catalogManifests,
+  }) => {
     'baseline': baseline.toJson(),
     'candidate': candidate.toJson(),
     'swapLatencyMs': swapLatencyMs,
@@ -835,7 +859,10 @@ final class ThemePerformanceEvidence {
     'monotonicRetainedMemoryGrowth': monotonicRetainedMemoryGrowth,
     'releaseSizeAttributionByAssetSha256': releaseSizeAttributionByAssetSha256,
     'manifestAssetSha256': manifest.assetHashes.values.toList()..sort(),
-    'gate': evaluate(manifest: manifest).toJson(),
+    'gate': evaluate(
+      manifest: manifest,
+      catalogManifests: catalogManifests,
+    ).toJson(),
   };
 }
 
@@ -1412,6 +1439,7 @@ Future<ThemeTokenAuditReport> auditRuntimeThemeData(
   await tester.pumpWidget(
     MaterialApp(
       theme: theme,
+      themeAnimationDuration: Duration.zero,
       home: Material(
         child: Column(
           children: [

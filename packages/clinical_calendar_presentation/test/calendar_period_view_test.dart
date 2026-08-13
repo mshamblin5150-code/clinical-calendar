@@ -459,7 +459,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('query bounds include six-week Month and cross-month Week', (
+  testWidgets('loaded bounds cover six-week Month and cross-month Week', (
     tester,
   ) async {
     final source = _MemoryCalendarDataSource(_snapshot());
@@ -469,8 +469,54 @@ void main() {
 
     await tester.tap(find.text('Week'));
     await tester.pumpAndSettle();
-    expect(source.requests.last.firstDate, LocalDate(2026, 8, 2));
-    expect(source.requests.last.lastDate, LocalDate(2026, 8, 8));
+    expect(
+      source.requests.last.firstDate.isAfter(LocalDate(2026, 8, 2)),
+      isFalse,
+    );
+    expect(
+      source.requests.last.lastDate.isBefore(LocalDate(2026, 8, 8)),
+      isFalse,
+    );
+  });
+
+  testWidgets('period switches reuse snapshots for previously loaded bounds', (
+    tester,
+  ) async {
+    final source = _MemoryCalendarDataSource(_snapshot());
+    await _pumpCalendar(tester, source: source);
+    expect(source.requests, hasLength(1));
+
+    await tester.tap(find.text('Agenda'));
+    await tester.pumpAndSettle();
+    expect(
+      source.requests,
+      hasLength(1),
+      reason: 'Month and Agenda share the same monthly query bounds.',
+    );
+
+    await tester.tap(find.text('Week'));
+    await tester.pumpAndSettle();
+    expect(
+      source.requests,
+      hasLength(1),
+      reason: 'The loaded six-week Month snapshot also contains this Week.',
+    );
+
+    await tester.tap(find.text('Month'));
+    await tester.pumpAndSettle();
+    expect(
+      source.requests,
+      hasLength(1),
+      reason: 'Returning to a loaded period must not repeat storage queries.',
+    );
+
+    await tester.tap(find.byKey(const Key('calendar-next')));
+    await tester.pumpAndSettle();
+    expect(
+      source.requests,
+      hasLength(2),
+      reason: 'Navigating to a new period must replace the bounded cache.',
+    );
   });
 }
 

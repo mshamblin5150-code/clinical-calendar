@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "issue": 139,
+  "measurement": "signed release APK byte length and ZIP compressed-entry deltas",
+  "baseline": {
+    "commit": "3c52827",
+    "artifactSha256": "bbad2c0f55725fa65e214b4524d8a7a201eec429082566a4fcef9f47d8f207b6",
+    "releaseBytes": 84565505
+  },
+  "candidate": {
+    "commit": "05e3630c128819ccfec81d5e41b0ea4dce76d87c",
+    "protectedRun": "https://github.com/mshamblin5150-code/clinical-calendar/actions/runs/31655878327",
+    "artifactSha256": "668ab68b8154d9b565f03f01db45725d1d970c90f541e0ddd2f68e66654d8051",
+    "releaseBytes": 101308644
+  },
+  "releaseGrowthBytes": 16743139,
+  "categories": {
+    "orderedApprovedAssetMarginalBuildBytes": 16743139,
+    "unattributedBytes": 0
+  },
+  "methodology": "The protected workflow starts from the signed release candidate with the approved catalog assets excluded, then adds the 21 approved assets one at a time in a fixed order. Each entry is the exact signed APK byte delta from its preceding build, so the marginal contributions include each asset's compressed content and its associated manifest, ZIP, alignment, and signing effects without estimation or double counting.",
+  "releaseSizeAttributionByAssetSha256": {
+    "a20ed9191ddfec95d1273ea52b02e4c20bf85d54be471b6bb6898d9c55ba6205": 2900807,
+    "9e5c841e8781d518fe4b8052f7febe921a3a26899cc1deb769ddf0feacfeacc7": 637124,
+    "4865763bc6e0ab118ceda4f437d29595ed0d599078f9454724bb498b3fbc9a15": 1050606,
+    "f351730b147dae255b4416e7221248c5a5973e11a944b07394197691d2a3e1ac": 62201,
+    "d88711508354961c147c5d31064c48b205f3c71c511d2ee6500b0810da107689": 888512,
+    "7859e0b60dde47fa259c6eafe12b96b5ce59facb39487a5f2e8557c76cc10b77": 262725,
+    "478c6e01d43af4442e0e4c6750bb3c5a2710e620489c41940bed544f703da2f1": 38231,
+    "1a11f86edb76286e6bf35c58188b23fee0a4414c0d173c8bd28f602732ec49aa": 1207889,
+    "3fd166d137f73eb9c5f9e4136b02cabd6003bb92b484f11f72d599df93de9794": 956172,
+    "6a5382880b3c520beb991b9ccc4142aa3e77bd5cf858e2d23db881e8fb59d549": 788664,
+    "449bee6b6097389d0fc860069160f20def2425043c20bb1e3daf29fe3f55e22f": 946547,
+    "b308df3a6f1ed8049c23231d82add92e49d83ee9de8dec5ddd4717154f5cbb23": 1212746,
+    "0d752b46814cfbdcdbb94d3d68cd1edf251b09ec876cb8b231a9fbf3964879a6": 785165,
+    "d8dd1c290cd87789ebc01a46d15f2a1fbb32b50c4c0c9afd9da89367b16542df": 1018981,
+    "3476c3506680218e3c23939f1a42647890fcc8001be8ae9c8a3a4b6c1c509a4e": 1244320,
+    "4f1e491b56d0fa831eb04561e52bfde401f33841716d604aeb0f1bd5c589e478": 952864,
+    "0b3098464626138c0e2b29b95239e9f27ffbe322c6256305852018d8a9587ede": 2265,
+    "5b4001634b5ea68a49a2389021d1398499f6bd7cc30bc03372ba9ce841ccc83e": 424203,
+    "5bdc8587d9e35595868e5ee6e983c2cfb35d06bc110bd5cbf5885345c1f2645b": 764806,
+    "eba288dfb592b85f076a685e4d4e2ac35b9bfc168ac3a37840d89aeeac214c11": 384685,
+    "dace262afcee68a5276f200d8026c57221735c0118ab5fda8c2c0d3dc409a8d0": 213626
+  },
+  "unattributedGrowthBytes": 0,
+  "passed": true
+}

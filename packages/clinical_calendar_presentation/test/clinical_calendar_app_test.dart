@@ -30,6 +30,27 @@ void main() {
     Size(1440, 900),
   ];
 
+  test('leaving Gallery targets only inactive decoded theme frames', () {
+    final registry = ClinicalCalendarThemeBundleRegistry.standard;
+    final active = registry.resolveApplied('graphite').bundle;
+    final inactive = registry.resolveApplied('coastal-calm').bundle;
+    final providers = inactiveThemeFrameProviders(
+      registry: registry,
+      activeThemeId: active.id,
+    );
+    expect(
+      providers.toSet().intersection({
+        for (final assetPath in active.frame.assetPaths)
+          AssetImage(assetPath, package: active.frame.assetPackage),
+      }),
+      isEmpty,
+    );
+    expect(
+      providers.map((provider) => provider.assetName),
+      contains(inactive.frame.primaryAsset),
+    );
+  });
+
   group('accepted Variant F and catalog Settings renders', () {
     setUpAll(() async {
       final font = await File(
@@ -627,6 +648,31 @@ void main() {
 
     expect(find.byKey(const Key('settings-templates-surface')), findsOneWidget);
     expect(find.byKey(const Key('back-action')), findsOneWidget);
+  });
+
+  testWidgets('closing Settings preserves staged Calendar planning state', (
+    tester,
+  ) async {
+    await _pumpAt(tester, const Size(1024, 768));
+
+    await tester.tap(
+      find.byKey(const Key('calendar-day-2026-01-02')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('1 selected date · Clinical Session'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('desktop-menu-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('back-action')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('application-menu')), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 selected date · Clinical Session'), findsOneWidget);
   });
 
   testWidgets('menu routes backup and exports to production surfaces', (

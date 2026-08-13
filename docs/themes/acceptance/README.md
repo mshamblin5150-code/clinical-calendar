@@ -98,11 +98,18 @@ Originality remains a maintainer judgment. Every new frame needs a retrievable
 creation record and an explicit side-by-side approval against Containment
 Drone; the harness deliberately does not substitute a similarity score.
 
-Issue #139 manifests use `artifact://issue-139/android-final-b91f5f7/` only
-for the explicitly referenced, fictional-data files under the per-theme
+Issue #139's broad physical matrix uses
+`artifact://issue-139/android-final-b91f5f7/` only for the explicitly
+referenced, fictional-data files under the per-theme
 `automated-manifests`, `standard-landscape`, `standard-portrait`,
 `enhanced-landscape`, `text-200-standard`, and `text-200-enhanced` paths. This
 is a credential-free allowlist, not authority to expose or publish the whole
 private working directory described by the objective checkpoint. Each
 allowlisted reference carries its verified SHA-256; public GitHub API
-references carry retrieval hashes as well.
+references carry retrieval hashes as well. Fresh post-repair captures and the
+scoped source-diff applicability proof are recorded in
+`issue-139/visual-evidence-applicability.json`; later production-candidate
+changes are host performance, packaging, and evidence changes, not theme
+renderer or theme-asset changes. The broad-matrix candidate and the final
+production candidate are therefore recorded separately rather than relabeling
+older captures as current-candidate captures.

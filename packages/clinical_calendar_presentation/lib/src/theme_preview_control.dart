@@ -7,11 +7,13 @@ final class ThemePreviewControl extends StatelessWidget {
   const ThemePreviewControl({
     required this.controller,
     required this.onApply,
+    required this.onRevert,
     super.key,
   });
 
   final ThemePreviewController controller;
   final Future<void> Function() onApply;
+  final VoidCallback onRevert;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -68,7 +70,7 @@ final class ThemePreviewControl extends StatelessWidget {
                 ),
                 TextButton(
                   key: const Key('revert-theme-preview'),
-                  onPressed: controller.isApplying ? null : controller.revert,
+                  onPressed: controller.isApplying ? null : onRevert,
                   child: Text(unavailable ? 'Dismiss' : 'Revert'),
                 ),
               ],

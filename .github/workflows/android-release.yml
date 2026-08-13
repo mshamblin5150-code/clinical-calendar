@@ -9,7 +9,7 @@ permissions:
 jobs:
   build-sign-verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     environment: android-private-release
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -57,7 +57,7 @@ jobs:
           )
           "CLINICAL_CALENDAR_ANDROID_KEYSTORE_PATH=$keystorePath" >> $env:GITHUB_ENV
 
-      - name: Build and verify signed APK
+      - name: Capture protected-signer release-size ledger
         shell: pwsh
         env:
           CLINICAL_CALENDAR_ENVIRONMENT: private-release
@@ -68,7 +68,23 @@ jobs:
           CLINICAL_CALENDAR_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_SIGNING_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
         run: |
-          ./tool/android/package_signed_apk.ps1 `
+          ./tool/android/capture_release_size_ledger.ps1 `
+            -FlutterExecutable (Get-Command flutter).Source `
+            -ExpectedSignerSha256 $env:ANDROID_SIGNING_CERT_SHA256 `
+            -OutputPath (Join-Path $env:RUNNER_TEMP 'release-size-ledger.json')
+
+      - name: Build and verify signer-matched profile APK
+        shell: pwsh
+        env:
+          CLINICAL_CALENDAR_ENVIRONMENT: private-release
+          CLINICAL_CALENDAR_SUPABASE_URL: ${{ vars.CLINICAL_CALENDAR_SUPABASE_URL }}
+          CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY }}
+          CLINICAL_CALENDAR_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CLINICAL_CALENDAR_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          CLINICAL_CALENDAR_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_SIGNING_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
+        run: |
+          ./tool/android/package_signed_profile_apk.ps1 `
             -FlutterExecutable (Get-Command flutter).Source `
             -ExpectedSignerSha256 $env:ANDROID_SIGNING_CERT_SHA256
 
@@ -79,6 +95,9 @@ jobs:
           path: |
             apps/clinical_calendar/build/app/outputs/flutter-apk/app-release.apk
             apps/clinical_calendar/build/app/outputs/flutter-apk/app-release.apk.sha256
+            apps/clinical_calendar/build/app/outputs/flutter-apk/app-profile.apk
+            apps/clinical_calendar/build/app/outputs/flutter-apk/app-profile.apk.sha256
+            ${{ runner.temp }}/release-size-ledger.json
           if-no-files-found: error
           retention-days: 14
 

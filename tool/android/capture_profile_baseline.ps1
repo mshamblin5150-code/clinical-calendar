@@ -152,8 +152,23 @@ try {
     Write-Host "Sampling the focused flow for $SampleSeconds seconds."
     $sampleClock = [Diagnostics.Stopwatch]::StartNew()
     if ($AutomateFocusedFlow) {
+        $nativeGeometry = [regex]::Match(
+            $displayInfo,
+            'mBaseDisplayInfo=DisplayInfo\{.*?real (\d+) x (\d+)',
+            [Text.RegularExpressions.RegexOptions]::Singleline
+        )
+        $nativeWidth = if ($nativeGeometry.Success) { [int]$nativeGeometry.Groups[1].Value } else { 0 }
+        $nativeHeight = if ($nativeGeometry.Success) { [int]$nativeGeometry.Groups[2].Value } else { 0 }
+        $nativeDimensions = @($nativeWidth, $nativeHeight) | Sort-Object
+        $overrideGeometry = [regex]::Match(
+            $displayInfo,
+            'mOverrideDisplayInfo=DisplayInfo\{.*?rotation (\d+)',
+            [Text.RegularExpressions.RegexOptions]::Singleline
+        )
+        $currentRotation = if ($overrideGeometry.Success) { [int]$overrideGeometry.Groups[1].Value } else { -1 }
         if (-not $displayInfo.Contains('mOverrideDisplayInfo=DisplayInfo') -or
-            -not $displayInfo.Contains('real 2960 x 1848')) {
+            $nativeDimensions -join 'x' -ne '1848x2960' -or
+            $currentRotation % 2 -ne 1) {
             throw 'The automated focused flow requires the 2960x1848 landscape tablet profile rig.'
         }
         Start-Sleep -Seconds 1

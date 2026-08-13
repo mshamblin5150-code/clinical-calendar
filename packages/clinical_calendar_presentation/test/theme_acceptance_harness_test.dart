@@ -133,6 +133,38 @@ void main() {
       }
     }
 
+    testWidgets('sequential bundle audits inspect the settled runtime theme', (
+      tester,
+    ) async {
+      final registry = ClinicalCalendarThemeBundleRegistry.standard;
+      final containmentDrone = registry.galleryBundles.singleWhere(
+        (bundle) => bundle.id == variantFThemeId,
+      );
+      final coastalLight = registry.galleryBundles.singleWhere(
+        (bundle) => bundle.id == coastalCalmThemeId,
+      );
+
+      await auditRuntimeBundle(
+        tester,
+        containmentDrone,
+        ThemeAccessibilityMode.standard,
+      );
+      final coastalReport = await auditRuntimeBundle(
+        tester,
+        coastalLight,
+        ThemeAccessibilityMode.standard,
+      );
+
+      final textDefault = coastalReport.entries.singleWhere(
+        (entry) => entry.pairingId == 'text-default',
+      );
+      expect(
+        textDefault.compositedForeground,
+        CoastalLightColors.accentPrimary,
+      );
+      expect(coastalReport.passed, isTrue);
+    });
+
     test('alpha is composited over the surface actually painted', () {
       final report = ThemeRuntimeTokenAuditor.auditPairings(
         themeId: 'fixture',
@@ -476,6 +508,30 @@ void main() {
           releaseSizeAttributionByAssetSha256: {approvedAssetHash: 1000000},
         ).evaluate(manifest: manifest);
         expect(passing.passed, isTrue);
+
+        final catalogManifests = ClinicalCalendarThemeBundleRegistry
+            .standard
+            .galleryBundles
+            .map(_performanceManifest)
+            .toList(growable: false);
+        final otherManifest = catalogManifests.firstWhere(
+          (item) => item.themeId != manifest.themeId,
+        );
+        final otherApprovedAssetHash = themeRasterAcceptanceFixture(
+          otherManifest.themeId,
+        ).expectedSha256;
+        final catalogAttribution = ThemePerformanceEvidence(
+          baseline: baseline,
+          candidate: passingCandidate,
+          swapLatencyMs: 180,
+          retainedMemoryAfterCyclesBytes: 221000000,
+          monotonicRetainedMemoryGrowth: false,
+          releaseSizeAttributionByAssetSha256: {
+            approvedAssetHash: 400000,
+            otherApprovedAssetHash: 600000,
+          },
+        ).evaluate(manifest: manifest, catalogManifests: catalogManifests);
+        expect(catalogAttribution.passed, isTrue);
 
         final failed = ThemePerformanceEvidence(
           baseline: baseline,

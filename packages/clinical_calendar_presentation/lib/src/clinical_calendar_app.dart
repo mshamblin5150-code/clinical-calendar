@@ -51,6 +51,56 @@ typedef ScheduleDateFactory = ZonedScheduleDate Function(LocalDate date);
 typedef CandidateThemePreflight =
     Future<void> Function(ClinicalCalendarThemeBundle candidate);
 
+const _androidMemoryLifecycle = MethodChannel(
+  'com.clinicalcalendar.clinical_calendar/memory_lifecycle',
+);
+
+@visibleForTesting
+List<AssetImage> inactiveThemeFrameProviders({
+  required ClinicalCalendarThemeBundleRegistry registry,
+  required String activeThemeId,
+}) {
+  final active = registry.resolveApplied(activeThemeId).bundle;
+  final activeProviders = {
+    for (final assetPath in active.frame.assetPaths)
+      AssetImage(assetPath, package: active.frame.assetPackage),
+  };
+  return [
+    for (final bundle in registry.galleryBundles)
+      if (bundle.id != activeThemeId)
+        for (final assetPath in bundle.frame.assetPaths)
+          if (!activeProviders.contains(
+            AssetImage(assetPath, package: bundle.frame.assetPackage),
+          ))
+            AssetImage(assetPath, package: bundle.frame.assetPackage),
+  ];
+}
+
+@visibleForTesting
+Future<void> evictInactiveThemeFrameAssets({
+  required BuildContext context,
+  required ClinicalCalendarThemeBundleRegistry registry,
+  required String activeThemeId,
+  bool clearLiveImages = true,
+}) async {
+  final configuration = createLocalImageConfiguration(context);
+  final cache = PaintingBinding.instance.imageCache;
+  for (final provider in inactiveThemeFrameProviders(
+    registry: registry,
+    activeThemeId: activeThemeId,
+  )) {
+    final key = await provider.obtainKey(configuration);
+    cache.evict(key, includeLive: true);
+  }
+  // The Gallery's resized thumbnails use derived cache keys rather than the
+  // source-provider keys evicted above. Clear those non-live entries after the
+  // route disposes. Clearing live-image bookkeeping removes listener handles;
+  // it does not evict the active Calendar frame from the cache, so that frame
+  // remains available without a second decode.
+  cache.clear();
+  if (clearLiveImages) cache.clearLiveImages();
+}
+
 final class ClinicalCalendarApp extends StatefulWidget {
   const ClinicalCalendarApp({
     required this.dependencies,
@@ -281,6 +331,17 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
     final host = _applicationHostKey.currentState;
     if (host == null) return;
     await host.applyThemePreview();
+    if (!_themePreview.isPreviewing) {
+      await host.releaseThemeTransitionMemory();
+    }
+  }
+
+  void _revertThemePreview() {
+    _themePreview.revert();
+    final host = _applicationHostKey.currentState;
+    if (host != null) {
+      unawaited(host.releaseThemeTransitionMemory());
+    }
   }
 
   Future<void> _launchOrResume() async {
@@ -323,6 +384,7 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
                     child: ThemePreviewControl(
                       controller: _themePreview,
                       onApply: _applyThemePreview,
+                      onRevert: _revertThemePreview,
                     ),
                   ),
                 ),
@@ -1467,13 +1529,63 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     final returnToMenu = _entry == DestinationEntry.applicationMenu;
     final exited = _destination;
     setState(() => _destination = null);
+    if (exited == ClinicalCalendarDestination.settings && !returnToMenu) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _releaseGalleryMemory(),
+      );
+    }
     if (exited == ClinicalCalendarDestination.clinicalPlacements ||
         exited == ClinicalCalendarDestination.settings ||
         exited == ClinicalCalendarDestination.backupRestore) {
       unawaited(_refreshAfterDestinationExit(exited!));
     }
     if (returnToMenu) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showMenu());
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _showMenu();
+        if (exited == ClinicalCalendarDestination.settings) {
+          await _releaseGalleryMemory();
+        }
+      });
+    }
+  }
+
+  Future<void> _releaseGalleryMemory() async {
+    final activeThemeId = widget.themePreviewController.effectiveBundle.id;
+    if (!mounted) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    await evictInactiveThemeFrameAssets(
+      context: context,
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      activeThemeId: activeThemeId,
+    );
+    try {
+      await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
+      // Raster cleanup is asynchronous in the engine. A second pressure pass
+      // catches resources released by the first pass without replacing the
+      // Activity, Flutter engine, Dart isolate, or user-owned planning state.
+      await Future<void>.delayed(const Duration(milliseconds: 750));
+      await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
+    } on MissingPluginException {
+      // Widget and non-Android hosts have no native memory lifecycle.
+    }
+  }
+
+  Future<void> releaseThemeTransitionMemory() async {
+    final activeThemeId = widget.themePreviewController.effectiveBundle.id;
+    if (!mounted) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    await evictInactiveThemeFrameAssets(
+      context: context,
+      registry: ClinicalCalendarThemeBundleRegistry.standard,
+      activeThemeId: activeThemeId,
+      clearLiveImages: false,
+    );
+    try {
+      await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
+    } on MissingPluginException {
+      // Widget and non-Android hosts have no native memory lifecycle.
     }
   }
 

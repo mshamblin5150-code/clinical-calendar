@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "issue": 139,
+  "candidateCommit": "5eb0a979cc3d206b8bffafa2a7b682988f64419b",
+  "candidateBuild": 43,
+  "target": "Samsung SM-X920, Android 16",
+  "scanner": {
+    "packageId": "com.google.android.apps.accessibility.auditor",
+    "versionName": "2.5.1.896851528",
+    "versionCode": 331,
+    "targetSdk": 36
+  },
+  "status": "adjudicated-tool-compatibility-limitation",
+  "attempt": {
+    "serviceBound": true,
+    "floatingScanControlActivatedAgainstCandidate": true,
+    "scannerResult": "No scans yet",
+    "reportProduced": false,
+    "privateCaptureSha256": {
+      "png": "3f46bf453b79906343352c0b1e6030f798eb64507df7995e6ec3b31070b56cb8",
+      "uiTree": "85e695bbd9da41b78d7544e623d61f9a5ce01b543552bc73e0a4a851914fa566"
+    }
+  },
+  "adjudication": "The official Accessibility Scanner service bound on the approved Android 16 tablet, but its floating scan action did not create a scan record. This is recorded as an explicit scanner/tool compatibility limitation, not as a clean Scanner result. Candidate accessibility remains supported by the independent TalkBack binding/focus pass, hardware-keyboard focus traversal, native UI-tree semantics, 200 percent text inspection, and Standard/Enhanced redundant-cue evidence.",
+  "restoredState": {
+    "scannerServiceEnabled": false,
+    "talkBackEnabled": false,
+    "enabledAccessibilityServices": []
+  }
+}
