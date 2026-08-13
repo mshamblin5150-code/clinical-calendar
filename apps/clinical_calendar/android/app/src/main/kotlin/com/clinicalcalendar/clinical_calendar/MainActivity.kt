@@ -5,6 +5,8 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    private external fun purgeNativeAllocator(): Boolean
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(
@@ -23,8 +25,15 @@ class MainActivity : FlutterActivity() {
             flutterEngine.systemChannel.sendMemoryPressureWarning()
             window.decorView.postDelayed({
                 Runtime.getRuntime().gc()
+                purgeNativeAllocator()
                 result.success(null)
             }, 250)
+        }
+    }
+
+    companion object {
+        init {
+            System.loadLibrary("clinical_calendar_memory")
         }
     }
 }

@@ -4,6 +4,8 @@ Set-StrictMode -Version Latest
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $workflow = Get-Content -Raw (Join-Path $repositoryRoot '.github/workflows/android-release.yml')
 $gradle = Get-Content -Raw (Join-Path $repositoryRoot 'apps/clinical_calendar/android/app/build.gradle.kts')
+$nativeBuild = Get-Content -Raw (Join-Path $repositoryRoot 'apps/clinical_calendar/android/app/src/main/cpp/CMakeLists.txt')
+$nativeAllocator = Get-Content -Raw (Join-Path $repositoryRoot 'apps/clinical_calendar/android/app/src/main/cpp/native_allocator.cpp')
 $manifest = Get-Content -Raw (Join-Path $repositoryRoot 'apps/clinical_calendar/android/app/src/main/AndroidManifest.xml')
 $mainActivity = Get-Content -Raw (Join-Path $repositoryRoot 'apps/clinical_calendar/android/app/src/main/kotlin/com/clinicalcalendar/clinical_calendar/MainActivity.kt')
 
@@ -51,9 +53,16 @@ if ($manifest.Contains('android:process=":restart"') -or
 }
 if (-not $mainActivity.Contains('notifyLowMemoryWarning') -or
     -not $mainActivity.Contains('sendMemoryPressureWarning') -or
+    -not $mainActivity.Contains('purgeNativeAllocator') -or
     -not $mainActivity.Contains('postDelayed') -or
     -not $mainActivity.Contains('trimGallery')) {
     throw 'Gallery cleanup must notify the live Android host of releasable memory.'
+}
+if (-not $gradle.Contains('externalNativeBuild') -or
+    -not $nativeBuild.Contains('clinical_calendar_memory') -or
+    -not $nativeAllocator.Contains('M_PURGE') -or
+    -not $nativeAllocator.Contains('M_PURGE_ALL')) {
+    throw 'Gallery cleanup must return unused native allocator pages to Android.'
 }
 if ($mainActivity.Contains('detachFromRenderer') -or
     $mainActivity.Contains('attachToRenderer')) {
