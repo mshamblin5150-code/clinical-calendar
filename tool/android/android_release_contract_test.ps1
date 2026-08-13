@@ -51,6 +51,7 @@ if ($manifest.Contains('android:process=":restart"') -or
 }
 if (-not $mainActivity.Contains('notifyLowMemoryWarning') -or
     -not $mainActivity.Contains('sendMemoryPressureWarning') -or
+    -not $mainActivity.Contains('runFinalization') -or
     -not $mainActivity.Contains('postDelayed') -or
     -not $mainActivity.Contains('trimGallery')) {
     throw 'Gallery cleanup must notify the live Android host of releasable memory.'

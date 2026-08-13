@@ -23,6 +23,8 @@ class MainActivity : FlutterActivity() {
             flutterEngine.systemChannel.sendMemoryPressureWarning()
             window.decorView.postDelayed({
                 Runtime.getRuntime().gc()
+                System.runFinalization()
+                Runtime.getRuntime().gc()
                 result.success(null)
             }, 250)
         }
