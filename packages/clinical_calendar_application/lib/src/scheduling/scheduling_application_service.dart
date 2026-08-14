@@ -50,10 +50,8 @@ final class SchedulingApplicationService {
   Future<BatchValidationResult> previewClinicalSessionBatch(
     ClinicalSessionBatchRequest request,
   ) => _repositories.read((repositories) {
-    _requireNonempty(request.intervals);
-    _requireUniqueDates(
-      request.intervals.map((interval) => interval.startDate),
-    );
+    _requireNonempty(request.items);
+    _requireUniqueDates(request.items.map((item) => item.interval.startDate));
     final placement = _placement(
       repositories,
       request.studentId,
@@ -61,12 +59,12 @@ final class SchedulingApplicationService {
     ).value;
     _requirePlacementOpen(placement);
     final proposed = [
-      for (var index = 0; index < request.intervals.length; index++)
+      for (var index = 0; index < request.items.length; index++)
         ClinicalSession.schedule(
           id: 'preview-clinical-$index',
           clinicalPlacementId: request.clinicalPlacementId,
-          preceptorId: request.preceptorId,
-          plannedInterval: request.intervals[index],
+          preceptorId: request.items[index].preceptorId,
+          plannedInterval: request.items[index].interval,
           asOfUtc: _clock.nowUtc(),
         ),
     ];
@@ -136,10 +134,8 @@ final class SchedulingApplicationService {
   Future<SchedulingMutationResult<ClinicalSession>> createClinicalSessionBatch(
     ClinicalSessionBatchRequest request,
   ) => _repositories.mutate((repositories) {
-    _requireNonempty(request.intervals);
-    _requireUniqueDates(
-      request.intervals.map((interval) => interval.startDate),
-    );
+    _requireNonempty(request.items);
+    _requireUniqueDates(request.items.map((item) => item.interval.startDate));
     final placement = _placement(
       repositories,
       request.studentId,
@@ -148,12 +144,12 @@ final class SchedulingApplicationService {
     _requirePlacementOpen(placement.value);
     final now = _clock.nowUtc();
     final proposed = [
-      for (final interval in request.intervals)
+      for (final item in request.items)
         ClinicalSession.schedule(
           id: _identifiers.nextIdentifier(),
           clinicalPlacementId: request.clinicalPlacementId,
-          preceptorId: request.preceptorId,
-          plannedInterval: interval,
+          preceptorId: item.preceptorId,
+          plannedInterval: item.interval,
           asOfUtc: now,
         ),
     ];

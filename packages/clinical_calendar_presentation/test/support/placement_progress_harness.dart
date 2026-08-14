@@ -239,7 +239,8 @@ final class _Identifiers implements IdentifierGenerator {
       '90000000-0000-4000-8000-${(_next++).toString().padLeft(12, '0')}';
 }
 
-final class PlacementTestRegistry implements RepositoryRegistry {
+final class PlacementTestRegistry
+    implements RepositoryRegistry, ClinicalPlacementAggregateDeletionStore {
   const PlacementTestRegistry(this.repositories);
   final PlacementTestRepositories repositories;
 
@@ -255,6 +256,121 @@ final class PlacementTestRegistry implements RepositoryRegistry {
   Future<R> mutate<R>(
     R Function(LocalWriteRepositories repositories) callback,
   ) async => callback(repositories);
+
+  @override
+  Future<ClinicalPlacementDeletionPreview> previewClinicalPlacementDeletion({
+    required String clinicalPlacementId,
+    required int unsavedSchedulingDraftCount,
+  }) async {
+    final placement =
+        repositories.clinicalPlacements.records[clinicalPlacementId]!;
+    final plan =
+        repositories.evaluationPlans.records[placement.value.evaluationPlanId]!;
+    final sessions = repositories.clinicalSessions.records.values
+        .where(
+          (record) => record.value.clinicalPlacementId == clinicalPlacementId,
+        )
+        .toList();
+    final history = repositories.historicalHoursEntries.records.values
+        .where(
+          (record) => record.value.clinicalPlacementId == clinicalPlacementId,
+        )
+        .toList();
+    final templates = repositories.scheduleTemplates.records.values
+        .where(
+          (record) => record.value.clinicalPlacementId == clinicalPlacementId,
+        )
+        .toList();
+    int sessionCount(ClinicalSessionState state) =>
+        sessions.where((record) => record.value.state == state).length;
+    return ClinicalPlacementDeletionPreview(
+      clinicalPlacementId: clinicalPlacementId,
+      clinicalPlacementName: placement.value.name,
+      clinicalPlacementState: placement.value.state,
+      memberRevisions: {
+        'clinical_placement:$clinicalPlacementId': placement.revision,
+        'evaluation_plan:${plan.value.id}': plan.revision,
+        for (final record in sessions)
+          'clinical_session:${record.value.id}': record.revision,
+        for (final record in history)
+          'historical_hours_entry:${record.value.id}': record.revision,
+        for (final record in templates)
+          'schedule_template:${record.value.id}': record.revision,
+      },
+      scheduledClinicalSessionCount: sessionCount(
+        ClinicalSessionState.scheduled,
+      ),
+      awaitingConfirmationClinicalSessionCount: sessionCount(
+        ClinicalSessionState.awaitingConfirmation,
+      ),
+      completedClinicalSessionCount: sessionCount(
+        ClinicalSessionState.completed,
+      ),
+      cancelledClinicalSessionCount: sessionCount(
+        ClinicalSessionState.cancelled,
+      ),
+      missedClinicalSessionCount: sessionCount(ClinicalSessionState.missed),
+      clinicalSessionCompletedMinutes: sessions.fold(
+        0,
+        (sum, record) => sum + record.value.completedMinutes,
+      ),
+      historicalHoursEntryCount: history.length,
+      historicalCompletedMinutes: history.fold(
+        0,
+        (sum, record) => sum + record.value.completedMinutes,
+      ),
+      evaluationRequirementCount: plan.value.requirements.length,
+      documentedEvaluationRequirementCount: plan.value.requirements
+          .where((requirement) => requirement.documentation != null)
+          .length,
+      scheduleTemplateCount: templates.length,
+      reminderStateCount: 0,
+      attachedPreceptorRelationshipCount:
+          placement.value.attachedPreceptorIds.length,
+      unsavedSchedulingDraftCount: unsavedSchedulingDraftCount,
+      clearsActivePlacementSelection:
+          repositories.activePlacementSelection.record?.value ==
+          clinicalPlacementId,
+      hasUnresolvedSynchronizationConflicts: false,
+    );
+  }
+
+  @override
+  Future<void> moveClinicalPlacementAggregateToTrash({
+    required ClinicalPlacementDeletionPreview preview,
+    required String aggregateMutationId,
+    required DateTime deletedAtUtc,
+  }) async {
+    repositories.clinicalSessions.records.removeWhere(
+      (_, record) =>
+          record.value.clinicalPlacementId == preview.clinicalPlacementId,
+    );
+    repositories.historicalHoursEntries.records.removeWhere(
+      (_, record) =>
+          record.value.clinicalPlacementId == preview.clinicalPlacementId,
+    );
+    repositories.scheduleTemplates.records.removeWhere(
+      (_, record) =>
+          record.value.clinicalPlacementId == preview.clinicalPlacementId,
+    );
+    final placement = repositories.clinicalPlacements.records.remove(
+      preview.clinicalPlacementId,
+    )!;
+    repositories.evaluationPlans.records.remove(
+      placement.value.evaluationPlanId,
+    );
+    if (repositories.activePlacementSelection.record?.value ==
+        preview.clinicalPlacementId) {
+      repositories.activePlacementSelection.record = StoredDomainRecord(
+        value: null,
+        studentId: placementTestStudentId,
+        revision: repositories.activePlacementSelection.record!.revision + 1,
+        createdAtUtc:
+            repositories.activePlacementSelection.record!.createdAtUtc,
+        updatedAtUtc: deletedAtUtc,
+      );
+    }
+  }
 }
 
 final class PlacementTestRepositories implements LocalWriteRepositories {

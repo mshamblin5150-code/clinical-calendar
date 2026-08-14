@@ -535,6 +535,23 @@ abstract interface class SynchronizationLocalWriteRepositories
   SynchronizationLocalRepository get synchronization;
 }
 
+/// Optional local capability for surfacing an aggregate pull that cannot yet
+/// be committed without exposing a partial mutation.
+abstract interface class AggregateSynchronizationLocalRepository {
+  void recordIncompleteAggregatePull({
+    required String studentId,
+    required RemoteSynchronizationChange firstMember,
+    required String aggregateMutationId,
+    required DateTime detectedAtUtc,
+  });
+
+  void resolveIncompleteAggregatePull({
+    required String studentId,
+    required String aggregateMutationId,
+    required DateTime resolvedAtUtc,
+  });
+}
+
 /// The one persisted Clinical Placement selection shared by management,
 /// progress, and scheduling defaults. A null value means no active selection.
 abstract interface class ActivePlacementSelectionReadRepository {

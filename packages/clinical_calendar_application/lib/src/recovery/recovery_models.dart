@@ -24,6 +24,8 @@ final class TrashEntry {
     required this.entityId,
     required this.deletedAtUtc,
     required this.purgeAfterUtc,
+    this.displayName,
+    this.dependentRecordCount = 0,
   });
 
   final String id;
@@ -31,6 +33,8 @@ final class TrashEntry {
   final String entityId;
   final DateTime deletedAtUtc;
   final DateTime purgeAfterUtc;
+  final String? displayName;
+  final int dependentRecordCount;
 
   bool isExpiredAt(DateTime nowUtc) => !purgeAfterUtc.isAfter(nowUtc);
 }

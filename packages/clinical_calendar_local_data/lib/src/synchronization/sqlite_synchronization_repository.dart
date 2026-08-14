@@ -6,7 +6,9 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import '../database/clinical_calendar_database.dart';
 
 final class SqliteSynchronizationRepository
-    implements SynchronizationLocalRepository {
+    implements
+        SynchronizationLocalRepository,
+        AggregateSynchronizationLocalRepository {
   SqliteSynchronizationRepository({
     required this._database,
     required this._identifiers,
@@ -280,6 +282,63 @@ final class SqliteSynchronizationRepository
     }
     _putCursor(remoteScope, change.cursor, appliedAtUtc);
     return disposition;
+  }
+
+  @override
+  void recordIncompleteAggregatePull({
+    required String studentId,
+    required RemoteSynchronizationChange firstMember,
+    required String aggregateMutationId,
+    required DateTime detectedAtUtc,
+  }) {
+    _owner(studentId);
+    _requireUtc(detectedAtUtc, 'detectedAtUtc');
+    final table = _tableFor(firstMember.entityType);
+    final rows = _database.select(
+      'SELECT revision FROM $table WHERE student_id = ? AND id = ?',
+      [_studentId, firstMember.entityId],
+    );
+    _insertConflict(
+      entityType: firstMember.entityType,
+      entityId: firstMember.entityId,
+      localRevision: rows.isEmpty ? 0 : _integer(rows.single, 'revision'),
+      remoteRevision: firstMember.revision,
+      localSnapshotJson: _canonicalJson({
+        'aggregate_mutation_id': aggregateMutationId,
+        'state': 'prior_aggregate_preserved',
+      }),
+      remoteSnapshotJson: firstMember.payloadJson,
+      rejectionCode: 'incomplete_aggregate_batch',
+      rejectionJson: _canonicalJson({
+        'code': 'incomplete_aggregate_batch',
+        'aggregate_mutation_id': aggregateMutationId,
+      }),
+      detectedAtUtc: detectedAtUtc,
+    );
+  }
+
+  @override
+  void resolveIncompleteAggregatePull({
+    required String studentId,
+    required String aggregateMutationId,
+    required DateTime resolvedAtUtc,
+  }) {
+    _owner(studentId);
+    _requireUtc(resolvedAtUtc, 'resolvedAtUtc');
+    _database.execute(
+      '''UPDATE sync_conflicts SET revision = revision + 1,
+           updated_at_utc = ?, resolved_at_utc = ?, resolution_json = ?
+         WHERE student_id = ? AND resolved_at_utc IS NULL
+           AND rejection_code = 'incomplete_aggregate_batch'
+           AND json_extract(rejection_json, '\$.aggregate_mutation_id') = ?''',
+      [
+        resolvedAtUtc.toIso8601String(),
+        resolvedAtUtc.toIso8601String(),
+        _canonicalJson({'choice': 'complete_aggregate_received'}),
+        _studentId,
+        aggregateMutationId,
+      ],
+    );
   }
 
   @override
@@ -634,6 +693,20 @@ final class SqliteSynchronizationRepository
         'The remote purge entity type is unsupported.',
       ),
     };
+    if (entityType == 'evaluation_plan') {
+      _database.execute(
+        'DELETE FROM evaluation_requirements WHERE student_id = ? '
+        'AND evaluation_plan_id = ?',
+        [_studentId, entityId],
+      );
+    }
+    if (entityType == 'clinical_placement') {
+      _database.execute(
+        'DELETE FROM placement_preceptors WHERE student_id = ? '
+        'AND placement_id = ?',
+        [_studentId, entityId],
+      );
+    }
     _database.execute('DELETE FROM $table WHERE student_id = ? AND id = ?', [
       _studentId,
       entityId,
@@ -694,15 +767,20 @@ final class SqliteSynchronizationRepository
       '''INSERT INTO trash
         (id, student_id, revision, created_at_utc, updated_at_utc,
          deleted_at_utc, entity_type, entity_id, deleted_snapshot_json,
-         purge_after_utc, permanently_deleted_at_utc)
-        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL)
+         purge_after_utc, permanently_deleted_at_utc, aggregate_mutation_id,
+         aggregate_root_id, aggregate_manifest_json, aggregate_recovery_json)
+        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, ?, ?, ?, ?)
         ON CONFLICT(student_id, entity_type, entity_id) DO UPDATE SET
           revision = excluded.revision,
           updated_at_utc = excluded.updated_at_utc,
           deleted_at_utc = NULL,
           deleted_snapshot_json = excluded.deleted_snapshot_json,
           purge_after_utc = excluded.purge_after_utc,
-          permanently_deleted_at_utc = NULL''',
+          permanently_deleted_at_utc = NULL,
+          aggregate_mutation_id = excluded.aggregate_mutation_id,
+          aggregate_root_id = excluded.aggregate_root_id,
+          aggregate_manifest_json = excluded.aggregate_manifest_json,
+          aggregate_recovery_json = excluded.aggregate_recovery_json''',
       [
         id,
         _studentId,
@@ -713,6 +791,14 @@ final class SqliteSynchronizationRepository
         entityId,
         _canonicalJson(envelope),
         deletedAt.add(const Duration(days: 30)).toIso8601String(),
+        envelope['aggregate_mutation_id'],
+        envelope['aggregate_root_id'],
+        envelope['expected_member_manifest'] == null
+            ? null
+            : _canonicalJson(envelope['expected_member_manifest']),
+        envelope['aggregate_recovery'] == null
+            ? null
+            : _canonicalJson(envelope['aggregate_recovery']),
       ],
     );
   }

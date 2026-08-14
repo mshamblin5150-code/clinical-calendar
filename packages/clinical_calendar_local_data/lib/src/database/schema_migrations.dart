@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 16;
+  static const latestVersion = 17;
 
   final MigrationTestHook? _testHook;
 
@@ -760,5 +760,21 @@ final Map<int, List<String>> _statements = {
              ),
              updated_at_utc
       FROM class_catalog_entries''',
+  ],
+  17: [
+    '''ALTER TABLE trash
+      ADD COLUMN aggregate_mutation_id TEXT
+      CHECK (aggregate_mutation_id IS NULL OR length(aggregate_mutation_id) = 36)''',
+    '''ALTER TABLE trash
+      ADD COLUMN aggregate_root_id TEXT
+      CHECK (aggregate_root_id IS NULL OR length(aggregate_root_id) = 36)''',
+    '''ALTER TABLE trash
+      ADD COLUMN aggregate_manifest_json TEXT''',
+    '''ALTER TABLE trash
+      ADD COLUMN aggregate_recovery_json TEXT''',
+    '''CREATE INDEX trash_aggregate_index
+      ON trash(student_id, aggregate_mutation_id)
+      WHERE aggregate_mutation_id IS NOT NULL
+        AND permanently_deleted_at_utc IS NULL''',
   ],
 };

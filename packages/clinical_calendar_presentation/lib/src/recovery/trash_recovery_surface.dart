@@ -113,8 +113,11 @@ final class _TrashRecoverySurfaceState extends State<TrashRecoverySurface> {
               for (final entry in _trash)
                 ListTile(
                   key: Key('trash-${entry.id}'),
-                  title: Text(_entityLabel(entry.entityType)),
+                  title: Text(
+                    entry.displayName ?? _entityLabel(entry.entityType),
+                  ),
                   subtitle: Text(
+                    '${entry.dependentRecordCount > 0 ? '${entry.dependentRecordCount} dependent records · ' : ''}'
                     'Recoverable until '
                     '${formatUsDateFromDateTime(entry.purgeAfterUtc)}',
                   ),
@@ -351,6 +354,7 @@ String _entityLabel(String type) => switch (type) {
   'schedule_template' => 'Schedule Template',
   'preceptor' => 'Preceptor',
   'clinical_placement' => 'Clinical Placement',
+  'clinical_placement_aggregate' => 'Clinical Placement',
   'historical_hours_entry' => 'Historical Hours Entry',
   'evaluation_plan' => 'Evaluation Plan',
   'academic_assignment' => 'Academic Assignment',

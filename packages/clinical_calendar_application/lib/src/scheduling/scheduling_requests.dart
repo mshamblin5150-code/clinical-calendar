@@ -62,18 +62,26 @@ final class WorkShiftBatchRequest {
   final List<ZonedInterval> intervals;
 }
 
+final class ClinicalSessionBatchItem {
+  const ClinicalSessionBatchItem({
+    required this.interval,
+    required this.preceptorId,
+  });
+
+  final ZonedInterval interval;
+  final String preceptorId;
+}
+
 final class ClinicalSessionBatchRequest {
   ClinicalSessionBatchRequest({
     required this.studentId,
     required this.clinicalPlacementId,
-    required this.preceptorId,
-    required Iterable<ZonedInterval> intervals,
-  }) : intervals = List.unmodifiable(intervals);
+    required Iterable<ClinicalSessionBatchItem> items,
+  }) : items = List.unmodifiable(items);
 
   final String studentId;
   final String clinicalPlacementId;
-  final String preceptorId;
-  final List<ZonedInterval> intervals;
+  final List<ClinicalSessionBatchItem> items;
 }
 
 final class ProtectedDayBatchRequest {

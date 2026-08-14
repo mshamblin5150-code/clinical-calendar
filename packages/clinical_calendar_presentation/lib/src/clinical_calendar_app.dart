@@ -821,6 +821,12 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     ]);
   }
 
+  Future<void> _afterPlacementDeleted() async {
+    _selectedDates = const {};
+    await Future.wait([_loadSupport(), _reloadSchedulingSurfaces()]);
+    if (mounted) _replaceBatchController();
+  }
+
   Future<void> _reconcileNotifications() async {
     try {
       await widget.dependencies.notifications.reconcileScheduledNotifications();
@@ -1738,10 +1744,20 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   Widget _destinationBody(ClinicalCalendarDestination destination) {
     switch (destination) {
       case ClinicalCalendarDestination.clinicalPlacements:
+        final activePlacementId = _placementController.activePlacementId;
         return PlacementManagementSurface(
           controller: _placementController,
           studentId: widget.studentId,
           onOpenEvaluations: _openActivePlacementEvaluations,
+          unsavedSchedulingDraftCount: activePlacementId == null
+              ? 0
+              : _batchController?.unsavedDraftCountForPlacement(
+                      activePlacementId,
+                    ) ??
+                    0,
+          onDiscardUnsavedSchedulingDrafts: () {
+            unawaited(_afterPlacementDeleted());
+          },
         );
       case ClinicalCalendarDestination.studentProfile:
         return _supportBody(
@@ -1777,8 +1793,12 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         return TrashRecoverySurface(
           showAppBar: false,
           loadTrash: () => store.listTrash(nowUtc: now()),
-          restore: (trashId) =>
-              service.restoreTrash(trashId: trashId, nowUtc: now()),
+          restore: (trashId) async {
+            await service.restoreTrash(trashId: trashId, nowUtc: now());
+            await _reloadSchedulingSurfaces();
+            await _loadSupport();
+            if (mounted) _replaceBatchController();
+          },
           permanentlyDelete: (trashId) => service.permanentlyDelete(
             trashId: trashId,
             confirmed: true,

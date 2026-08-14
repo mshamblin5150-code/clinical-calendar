@@ -31,29 +31,71 @@ void main() {
     registry.repositories.clinicalPlacements.seed(_studentId, placement);
   });
 
+  test('creates a mixed-Preceptor Clinical Session batch atomically', () async {
+    final result = await service.createClinicalSessionBatch(
+      ClinicalSessionBatchRequest(
+        studentId: _studentId,
+        clinicalPlacementId: placement.id,
+        items: [
+          ClinicalSessionBatchItem(
+            interval: _interval(12, 9, 15),
+            preceptorId: primary.id,
+          ),
+          ClinicalSessionBatchItem(
+            interval: _interval(18, 9, 15),
+            preceptorId: alternate.id,
+          ),
+        ],
+      ),
+    );
+
+    expect(result.committed, isTrue);
+    expect(result.records, hasLength(2));
+    expect(
+      result.records.map((record) => record.value.plannedInterval.startDate),
+      [LocalDate(2026, 8, 12), LocalDate(2026, 8, 18)],
+    );
+    expect(result.records.map((record) => record.value.preceptorId), [
+      primary.id,
+      alternate.id,
+    ]);
+    expect(
+      result.records.every(
+        (record) =>
+            record.value.clinicalPlacementId == placement.id &&
+            record.value.plannedMinutes == 360,
+      ),
+      isTrue,
+    );
+    expect(registry.repositories.mutations, hasLength(2));
+    _expectDistinctMutationTokens(registry.repositories.mutations);
+  });
+
   test(
-    'creates a valid nonconsecutive Clinical Session batch atomically',
+    'staged per-date Preceptor assignments persist through one batch Apply',
     () async {
-      final result = await service.createClinicalSessionBatch(
-        ClinicalSessionBatchRequest(
+      final coordinator = SchedulingBatchCoordinator(service);
+      final result = await coordinator.apply(
+        BatchSchedulingDraft(
           studentId: _studentId,
+          type: BatchCommitmentType.clinicalSession,
+          dates: [_zonedDate(12), _zonedDate(18)],
+          startTime: LocalTime(9, 0),
+          endTime: LocalTime(15, 0),
           clinicalPlacementId: placement.id,
-          preceptorId: alternate.id,
-          intervals: [_interval(12, 9, 15), _interval(18, 9, 15)],
+          preceptorId: primary.id,
+          preceptorOverrides: {LocalDate(2026, 8, 18): alternate.id},
         ),
       );
 
-      expect(result.committed, isTrue);
-      expect(result.records, hasLength(2));
+      expect(result.applied, isTrue);
+      expect(result.persistedCount, 2);
       expect(
-        result.records.map((record) => record.value.plannedInterval.startDate),
-        [LocalDate(2026, 8, 12), LocalDate(2026, 8, 18)],
+        registry.repositories.clinicalSessions.values.map(
+          (session) => session.preceptorId,
+        ),
+        [primary.id, alternate.id],
       );
-      for (final record in result.records) {
-        expect(record.value.clinicalPlacementId, placement.id);
-        expect(record.value.preceptorId, alternate.id);
-        expect(record.value.plannedMinutes, 360);
-      }
       expect(registry.repositories.mutations, hasLength(2));
       _expectDistinctMutationTokens(registry.repositories.mutations);
     },
@@ -123,8 +165,16 @@ void main() {
         ClinicalSessionBatchRequest(
           studentId: _studentId,
           clinicalPlacementId: placement.id,
-          preceptorId: primary.id,
-          intervals: [_interval(12, 9, 15), _interval(18, 9, 15)],
+          items: [
+            ClinicalSessionBatchItem(
+              interval: _interval(12, 9, 15),
+              preceptorId: primary.id,
+            ),
+            ClinicalSessionBatchItem(
+              interval: _interval(18, 9, 15),
+              preceptorId: primary.id,
+            ),
+          ],
         ),
       );
 
@@ -462,8 +512,12 @@ void main() {
           ClinicalSessionBatchRequest(
             studentId: _studentId,
             clinicalPlacementId: placement.id,
-            preceptorId: primary.id,
-            intervals: [_interval(24, 9, 12)],
+            items: [
+              ClinicalSessionBatchItem(
+                interval: _interval(24, 9, 12),
+                preceptorId: primary.id,
+              ),
+            ],
           ),
         ),
         throwsA(
