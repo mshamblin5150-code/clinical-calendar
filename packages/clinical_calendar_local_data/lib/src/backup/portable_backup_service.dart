@@ -121,6 +121,8 @@ final class PortableBackupService {
     } on PortableBackupException {
       rethrow;
     } on Object catch (error) {
+      // ignore: avoid_print
+      print('portable restore diagnostic: $error');
       throw PortableBackupException(
         PortableBackupFailureKind.invalidRecord,
         'The recovery snapshot is invalid.',
@@ -171,7 +173,8 @@ final class PortableBackupService {
 
   PortableRestorePreview _previewDecoded(_DecodedBackup decoded) {
     final local = database.transaction(_readCurrentTables);
-    final items = <RestoreMergeItem>[];
+    final aggregateRoots = _aggregateRootsByIdentity(local, decoded.tables);
+    final rawItems = <RestoreMergeItem>[];
     for (final table in _logicalTables) {
       final localByIdentity = _byIdentity(table, local[table]!);
       final backupByIdentity = _byIdentity(table, decoded.tables[table]!);
@@ -184,16 +187,47 @@ final class PortableBackupService {
         final backupRow = backupByIdentity[identity];
         if (backupRow == null) continue;
         final disposition = _disposition(localRow, backupRow);
-        items.add(
+        rawItems.add(
           RestoreMergeItem(
             identity: identity,
             disposition: disposition,
             localRevision: _revision(localRow),
             backupRevision: _revision(backupRow),
+            aggregateRootId: aggregateRoots[identity.stableValue],
           ),
         );
       }
     }
+    final directions = <String, Set<String>>{};
+    for (final item in rawItems) {
+      final root = item.aggregateRootId;
+      if (root == null) continue;
+      directions.putIfAbsent(root, () => {}).add(switch (item.disposition) {
+        RestoreMergeDisposition.add ||
+        RestoreMergeDisposition.useBackup => 'backup',
+        RestoreMergeDisposition.keepLocal => 'local',
+        RestoreMergeDisposition.conflict => 'conflict',
+      });
+    }
+    final conflictedAggregates = {
+      for (final entry in directions.entries)
+        if (entry.value.contains('conflict') || entry.value.length > 1)
+          entry.key,
+    };
+    final items = [
+      for (final item in rawItems)
+        RestoreMergeItem(
+          identity: item.identity,
+          disposition:
+              item.aggregateRootId != null &&
+                  conflictedAggregates.contains(item.aggregateRootId)
+              ? RestoreMergeDisposition.conflict
+              : item.disposition,
+          localRevision: item.localRevision,
+          backupRevision: item.backupRevision,
+          aggregateRootId: item.aggregateRootId,
+        ),
+    ];
     return PortableRestorePreview.validated(
       studentId: decoded.studentId,
       createdAtUtc: decoded.createdAtUtc,
@@ -221,6 +255,12 @@ final class PortableBackupService {
         'Every genuine restore conflict requires a choice.',
       );
     }
+    final aggregateChoices = <String, RestoreConflictChoice>{};
+    for (final conflict in preview.conflicts) {
+      final root = conflict.aggregateRootId;
+      final choice = conflictChoices[conflict.identity];
+      if (root != null && choice != null) aggregateChoices[root] = choice;
+    }
 
     try {
       return database.transaction(() {
@@ -244,20 +284,36 @@ final class PortableBackupService {
             currentByIdentity[item.identity],
             source,
           );
+          final aggregateRoot = item.aggregateRootId;
+          if (aggregateRoot != null &&
+              item.disposition != RestoreMergeDisposition.conflict &&
+              liveDisposition != item.disposition) {
+            throw const PortableBackupException(
+              PortableBackupFailureKind.unresolvedConflicts,
+              'A Clinical Placement aggregate changed after preview.',
+            );
+          }
           if (liveDisposition == RestoreMergeDisposition.conflict &&
+              aggregateRoot == null &&
               !conflictChoices.containsKey(item.identity)) {
             throw const PortableBackupException(
               PortableBackupFailureKind.unresolvedConflicts,
               'Current data changed and now requires a restore choice.',
             );
           }
-          final useBackup = switch (liveDisposition) {
-            RestoreMergeDisposition.add ||
-            RestoreMergeDisposition.useBackup => true,
-            RestoreMergeDisposition.keepLocal => false,
-            RestoreMergeDisposition.conflict =>
-              conflictChoices[item.identity] == RestoreConflictChoice.useBackup,
-          };
+          final aggregateChoice = aggregateRoot == null
+              ? null
+              : aggregateChoices[aggregateRoot];
+          final useBackup = aggregateChoice != null
+              ? aggregateChoice == RestoreConflictChoice.useBackup
+              : switch (liveDisposition) {
+                  RestoreMergeDisposition.add ||
+                  RestoreMergeDisposition.useBackup => true,
+                  RestoreMergeDisposition.keepLocal => false,
+                  RestoreMergeDisposition.conflict =>
+                    conflictChoices[item.identity] ==
+                        RestoreConflictChoice.useBackup,
+                };
           if (!useBackup) {
             unchanged++;
             continue;
@@ -640,6 +696,73 @@ final class _BackupDecodeBudget {
     'The selected backup exceeds the supported safety limits.',
   );
 }
+
+Map<String, String> _aggregateRootsByIdentity(
+  Map<String, List<Map<String, Object?>>> local,
+  Map<String, List<Map<String, Object?>>> backup,
+) {
+  final result = <String, String>{};
+  for (final tables in [local, backup]) {
+    final trashRows = tables['trash']!;
+    for (final rootRow in trashRows) {
+      final root = rootRow['aggregate_root_id'];
+      final manifestJson = rootRow['aggregate_manifest_json'];
+      if (root is! String || root.isEmpty || manifestJson is! String) continue;
+      final manifest = jsonDecode(manifestJson);
+      if (manifest is! Map<String, dynamic>) continue;
+      for (final member in manifest.keys.whereType<String>()) {
+        final separator = member.indexOf(':');
+        if (separator < 1) continue;
+        final entityType = member.substring(0, separator);
+        final entityId = member.substring(separator + 1);
+        final table = _backupTableForEntityType(entityType);
+        if (table == null) continue;
+        for (final row in tables[table]!) {
+          final matches = entityType == 'settings'
+              ? row['student_id'] == entityId
+              : row['id'] == entityId;
+          if (matches) result[_identity(table, row).stableValue] = root;
+        }
+      }
+      for (final row in trashRows.where(
+        (row) => row['aggregate_root_id'] == root,
+      )) {
+        result[_identity('trash', row).stableValue] = root;
+      }
+      for (final row in tables['placement_preceptors']!.where(
+        (row) => row['placement_id'] == root,
+      )) {
+        result[_identity('placement_preceptors', row).stableValue] = root;
+      }
+      final planIds = manifest.keys
+          .whereType<String>()
+          .where((key) => key.startsWith('evaluation_plan:'))
+          .map((key) => key.substring('evaluation_plan:'.length))
+          .toSet();
+      for (final row in tables['evaluation_requirements']!.where(
+        (row) => planIds.contains(row['evaluation_plan_id']),
+      )) {
+        result[_identity('evaluation_requirements', row).stableValue] = root;
+      }
+    }
+  }
+  return result;
+}
+
+String? _backupTableForEntityType(String entityType) => switch (entityType) {
+  'clinical_placement' => 'clinical_placements',
+  'clinical_session' || 'work_shift' => 'commitments',
+  'historical_hours_entry' => 'historical_hours_entries',
+  'evaluation_plan' => 'evaluation_plans',
+  'schedule_template' => 'schedule_templates',
+  'reminder_state' => 'reminder_state',
+  'settings' => 'settings',
+  'preceptor' => 'preceptors',
+  'protected_day' => 'protected_days',
+  'academic_assignment' => 'academic_assignments',
+  'class_catalog_entry' => 'class_catalog_entries',
+  _ => null,
+};
 
 Map<BackupRecordIdentity, Map<String, Object?>> _byIdentity(
   String table,

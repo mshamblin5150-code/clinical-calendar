@@ -102,12 +102,14 @@ final class RestoreMergeItem {
     required this.disposition,
     required this.localRevision,
     required this.backupRevision,
+    this.aggregateRootId,
   });
 
   final BackupRecordIdentity identity;
   final RestoreMergeDisposition disposition;
   final int? localRevision;
   final int? backupRevision;
+  final String? aggregateRootId;
 }
 
 final class PortableRestorePreview {
@@ -130,9 +132,16 @@ final class PortableRestorePreview {
   final List<RestoreMergeItem> items;
   final Map<String, List<Map<String, Object?>>> decodedTables;
 
-  Iterable<RestoreMergeItem> get conflicts => items.where(
-    (item) => item.disposition == RestoreMergeDisposition.conflict,
-  );
+  Iterable<RestoreMergeItem> get conflicts sync* {
+    final emittedAggregates = <String>{};
+    for (final item in items) {
+      if (item.disposition != RestoreMergeDisposition.conflict) continue;
+      final aggregateRootId = item.aggregateRootId;
+      if (aggregateRootId == null || emittedAggregates.add(aggregateRootId)) {
+        yield item;
+      }
+    }
+  }
 
   int get additions => items
       .where((item) => item.disposition == RestoreMergeDisposition.add)

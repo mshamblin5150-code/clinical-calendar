@@ -43,17 +43,7 @@ final class PlacementProgressController extends ChangeNotifier {
   Object? get error => _error;
 
   Future<void> load() => _perform(() async {
-    final listed = await service.placements();
-    final active = await service.activePlacement();
-    _placements = listed;
-    _activePlacementId = active?.placement.id;
-    if (_activePlacementId == null && listed.isNotEmpty) {
-      await service.selectActivePlacement(listed.first.placement.id);
-      _activePlacementId = listed.first.placement.id;
-    }
-    _totalProgress = _progressEngine.deriveTotal(
-      listed.map((snapshot) => snapshot.progress),
-    );
+    await _reloadPlacementSelection();
     _editPreview = null;
     _deletionPreview = null;
   });
@@ -113,17 +103,7 @@ final class PlacementProgressController extends ChangeNotifier {
         completedPlacementNameConfirmation: completedPlacementName,
       );
       deleted = true;
-      final listed = await service.placements();
-      final active = await service.activePlacement();
-      _placements = listed;
-      _activePlacementId = active?.placement.id;
-      if (_activePlacementId == null && listed.isNotEmpty) {
-        await service.selectActivePlacement(listed.first.placement.id);
-        _activePlacementId = listed.first.placement.id;
-      }
-      _totalProgress = _progressEngine.deriveTotal(
-        listed.map((snapshot) => snapshot.progress),
-      );
+      await _reloadPlacementSelection();
       _editPreview = null;
       _deletionPreview = null;
     });
@@ -255,6 +235,20 @@ final class PlacementProgressController extends ChangeNotifier {
     _editPreview = null;
     _deletionPreview = null;
   });
+
+  Future<void> _reloadPlacementSelection() async {
+    final listed = await service.placements();
+    final active = await service.activePlacement();
+    _placements = listed;
+    _activePlacementId = active?.placement.id;
+    if (_activePlacementId == null && listed.isNotEmpty) {
+      await service.selectActivePlacement(listed.first.placement.id);
+      _activePlacementId = listed.first.placement.id;
+    }
+    _totalProgress = _progressEngine.deriveTotal(
+      listed.map((snapshot) => snapshot.progress),
+    );
+  }
 
   Future<void> _perform(Future<void> Function() operation) async {
     if (_isBusy) return;

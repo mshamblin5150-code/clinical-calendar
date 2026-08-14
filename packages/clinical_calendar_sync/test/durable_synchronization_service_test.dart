@@ -589,6 +589,14 @@ void main() {
       expect(incomplete.disposition, SynchronizationDisposition.deferred);
       expect(await _cursor(second.registry), 0);
       expect(await _preceptorName(second.registry), isNull);
+      expect(
+        (await _service(
+          second,
+          server,
+          clock,
+        ).health()).unresolvedConflictCount,
+        1,
+      );
 
       server.feed.add(
         _remoteChange(
@@ -601,9 +609,22 @@ void main() {
           aggregateManifest: manifest,
         ),
       );
-      final complete = await _service(second, server, clock).syncNow();
+      final complete = await _service(
+        second,
+        server,
+        clock,
+        pageSize: 1,
+      ).syncNow();
       expect(complete.disposition, SynchronizationDisposition.synchronized);
       expect(await _cursor(second.registry), 2);
+      expect(
+        (await _service(
+          second,
+          server,
+          clock,
+        ).health()).unresolvedConflictCount,
+        0,
+      );
       await second.registry.read((repositories) {
         expect(
           repositories.preceptors
@@ -662,6 +683,7 @@ DurableSynchronizationService _service(
   Clock clock, {
   SynchronizationRetryScheduler? scheduler,
   SynchronizationBoundaryObserver? boundary,
+  int pageSize = 100,
 }) => DurableSynchronizationService(
   repositories: device.registry,
   transport: transport,
@@ -669,6 +691,7 @@ DurableSynchronizationService _service(
   clock: clock,
   studentId: _studentId,
   boundaryObserver: boundary ?? const NoopSynchronizationBoundaryObserver(),
+  pageSize: pageSize,
 );
 
 Future<void> _putPreceptor(

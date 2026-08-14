@@ -1154,6 +1154,30 @@ void main() {
         isTrue,
       );
 
+      database.execute(
+        '''UPDATE historical_hours_entries SET revision = revision + 1
+           WHERE student_id = ? AND id = ?''',
+        [_studentId, history.id],
+      );
+      await expectLater(
+        registry.restoreTrash(
+          trashId: trash.single.id,
+          restoredAtUtc: _baseTime.add(const Duration(hours: 5)),
+          mutation: MutationToken(
+            operationId: _id(1890),
+            idempotencyKey: _id(1891),
+            occurredAtUtc: _baseTime.add(const Duration(hours: 5)),
+          ),
+        ),
+        throwsA(isA<RecoveryException>()),
+      );
+      expect(await service.placements(), isEmpty);
+      database.execute(
+        '''UPDATE historical_hours_entries SET revision = revision - 1
+           WHERE student_id = ? AND id = ?''',
+        [_studentId, history.id],
+      );
+
       try {
         await registry.restoreTrash(
           trashId: trash.single.id,
@@ -1231,6 +1255,30 @@ void main() {
       final trash = await registry.listTrash(nowUtc: _baseTime);
       expect(trash, hasLength(1));
       expect(trash.single.displayName, 'Pediatrics');
+
+      await registry.permanentlyDelete(
+        trashId: trash.single.id,
+        deletedAtUtc: _baseTime.add(const Duration(hours: 1)),
+        mutation: MutationToken(
+          operationId: _id(1950),
+          idempotencyKey: _id(1951),
+          occurredAtUtc: _baseTime.add(const Duration(hours: 1)),
+        ),
+      );
+      final purgePayload =
+          jsonDecode(
+                database
+                        .select(
+                          '''SELECT payload_json FROM outbox_operations
+                     WHERE operation_type = 'purge' AND entity_id = ?''',
+                          [created.placement.id],
+                        )
+                        .single['payload_json']
+                    as String,
+              )
+              as Map<String, Object?>;
+      expect(purgePayload['aggregate_mutation_id'], isA<String>());
+      expect(purgePayload['expected_member_manifest'], isA<Map>());
     },
   );
 }

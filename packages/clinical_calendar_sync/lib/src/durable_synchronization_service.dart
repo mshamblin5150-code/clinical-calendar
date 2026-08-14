@@ -27,8 +27,10 @@ final class DurableSynchronizationService
     SynchronizationBoundaryObserver boundaryObserver =
         const NoopSynchronizationBoundaryObserver(),
     bool initiallyConnected = true,
+    this.pageSize = 100,
   }) : _boundary = boundaryObserver,
        _connected = initiallyConnected {
+    if (pageSize <= 0) throw ArgumentError.value(pageSize, 'pageSize');
     if (_repositories is SynchronizationTriggeringRepositoryRegistry) {
       throw ArgumentError.value(
         _repositories,
@@ -38,7 +40,6 @@ final class DurableSynchronizationService
     }
   }
 
-  static const pageSize = 100;
   static const maximumBackoff = Duration(hours: 1);
 
   final RepositoryRegistry _repositories;
@@ -48,6 +49,7 @@ final class DurableSynchronizationService
   final String _studentId;
   final SynchronizationBoundaryObserver _boundary;
   final String remoteScope;
+  final int pageSize;
 
   bool _connected;
   bool _shutDown = false;
@@ -283,66 +285,99 @@ final class DurableSynchronizationService
   }
 
   Future<void> _pullAll() async {
+    final cursor = await _repositories.read(
+      (repositories) =>
+          repositories.syncCursors
+              .find(studentId: _studentId, remoteScope: remoteScope)
+              ?.serverCursor ??
+          0,
+    );
+    var fetchCursor = cursor;
+    final fetched = <RemoteSynchronizationChange>[];
     while (true) {
-      final cursor = await _repositories.read(
-        (repositories) =>
-            repositories.syncCursors
-                .find(studentId: _studentId, remoteScope: remoteScope)
-                ?.serverCursor ??
-            0,
-      );
       _boundary.reached(SynchronizationBoundary.beforePull);
-      final page = await _transport.pull(afterCursor: cursor, limit: pageSize);
+      final page = await _transport.pull(
+        afterCursor: fetchCursor,
+        limit: pageSize,
+      );
       _boundary.reached(SynchronizationBoundary.afterPullBeforeLocalCommit);
       final ordered =
           {for (final change in page) change.cursor: change}.values.toList()
             ..sort((left, right) => left.cursor.compareTo(right.cursor));
-      final pending = List<RemoteSynchronizationChange>.of(ordered);
-      while (pending.isNotEmpty) {
-        final first = pending.removeAt(0);
-        final aggregate = _aggregateEnvelope(first);
-        final batch = aggregate == null
-            ? [first]
-            : <RemoteSynchronizationChange>[
-                first,
-                ...pending.where(
-                  (change) =>
-                      _aggregateEnvelope(change)?.mutationId ==
-                      aggregate.mutationId,
-                ),
-              ];
-        if (aggregate != null) {
-          pending.removeWhere(
-            (change) =>
-                _aggregateEnvelope(change)?.mutationId == aggregate.mutationId,
+      fetched.addAll(ordered.where((change) => change.cursor > fetchCursor));
+      if (ordered.isNotEmpty) fetchCursor = ordered.last.cursor;
+      if (page.length < pageSize) break;
+    }
+
+    final pending = <RemoteSynchronizationChange>[
+      ...{for (final change in fetched) change.cursor: change}.values,
+    ]..sort((left, right) => left.cursor.compareTo(right.cursor));
+    while (pending.isNotEmpty) {
+      final first = pending.removeAt(0);
+      final aggregate = _aggregateEnvelope(first);
+      final batch = aggregate == null
+          ? [first]
+          : <RemoteSynchronizationChange>[
+              first,
+              ...pending.where(
+                (change) =>
+                    _aggregateEnvelope(change)?.mutationId ==
+                    aggregate.mutationId,
+              ),
+            ];
+      if (aggregate != null) {
+        pending.removeWhere(
+          (change) =>
+              _aggregateEnvelope(change)?.mutationId == aggregate.mutationId,
+        );
+        final actual = {
+          for (final change in batch) '${change.entityType}:${change.entityId}',
+        };
+        if (actual.length != aggregate.expectedMembers.length ||
+            !actual.containsAll(aggregate.expectedMembers)) {
+          await _repositories.mutate((repositories) {
+            final synchronization = _syncRepository(repositories);
+            if (synchronization
+                case final AggregateSynchronizationLocalRepository
+                    aggregateRepository) {
+              aggregateRepository.recordIncompleteAggregatePull(
+                studentId: _studentId,
+                firstMember: first,
+                aggregateMutationId: aggregate.mutationId,
+                detectedAtUtc: _now(),
+              );
+            }
+          });
+          throw const SynchronizationTransportException(
+            'incomplete_aggregate_batch',
+            offline: false,
           );
-          final actual = {
-            for (final change in batch)
-              '${change.entityType}:${change.entityId}',
-          };
-          if (actual.length != aggregate.expectedMembers.length ||
-              !actual.containsAll(aggregate.expectedMembers)) {
-            throw const SynchronizationTransportException(
-              'incomplete_aggregate_batch',
-              offline: false,
-            );
-          }
-          batch.sort(_aggregateDependencyOrder);
         }
-        await _repositories.mutate((repositories) {
-          final synchronization = _syncRepository(repositories);
-          for (final change in batch) {
-            synchronization.applyRemoteAndAdvanceCursor(
+        batch.sort(_aggregateDependencyOrder);
+      }
+      await _repositories.mutate((repositories) {
+        final synchronization = _syncRepository(repositories);
+        if (aggregate != null) {
+          if (synchronization
+              case final AggregateSynchronizationLocalRepository
+                  aggregateRepository) {
+            aggregateRepository.resolveIncompleteAggregatePull(
               studentId: _studentId,
-              remoteScope: remoteScope,
-              change: change,
-              appliedAtUtc: _now(),
+              aggregateMutationId: aggregate.mutationId,
+              resolvedAtUtc: _now(),
             );
           }
-        });
-        _boundary.reached(SynchronizationBoundary.afterPullLocalCommit);
-      }
-      if (page.length < pageSize) return;
+        }
+        for (final change in batch) {
+          synchronization.applyRemoteAndAdvanceCursor(
+            studentId: _studentId,
+            remoteScope: remoteScope,
+            change: change,
+            appliedAtUtc: _now(),
+          );
+        }
+      });
+      _boundary.reached(SynchronizationBoundary.afterPullLocalCommit);
     }
   }
 
