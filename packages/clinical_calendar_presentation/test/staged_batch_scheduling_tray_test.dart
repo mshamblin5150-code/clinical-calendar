@@ -61,6 +61,107 @@ void main() {
     expect(controller.durationMinutes, isNull);
   });
 
+  test(
+    'Review changes one or multiple dates without replacing the default',
+    () async {
+      final operations = _Operations();
+      final controller = _controller(operations: operations);
+      addTearDown(controller.dispose);
+
+      await controller.next();
+      await controller.next();
+      await controller.choosePreceptorForDate(
+        LocalDate(2026, 8, 3),
+        'preceptor-other',
+      );
+
+      expect(controller.preceptorId, 'preceptor-primary');
+      expect(
+        controller.preceptorIdFor(LocalDate(2026, 8, 3)),
+        'preceptor-other',
+      );
+      expect(
+        controller.preceptorIdFor(LocalDate(2026, 8, 4)),
+        'preceptor-primary',
+      );
+
+      await controller.choosePreceptorForDate(
+        LocalDate(2026, 8, 4),
+        'preceptor-other',
+      );
+
+      expect(controller.preceptorOverrides, {
+        LocalDate(2026, 8, 3): 'preceptor-other',
+        LocalDate(2026, 8, 4): 'preceptor-other',
+      });
+      expect(operations.reviewCalls, 3);
+    },
+  );
+
+  test('placement changes clear incompatible date overrides', () async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await controller.next();
+    await controller.next();
+    await controller.choosePreceptorForDate(
+      LocalDate(2026, 8, 3),
+      'preceptor-other',
+    );
+
+    controller.back();
+    controller.choosePlacement('placement-active');
+    expect(controller.preceptorOverrides, {
+      LocalDate(2026, 8, 3): 'preceptor-other',
+    });
+
+    controller.choosePlacement('placement-second');
+
+    expect(controller.clinicalPlacementId, 'placement-second');
+    expect(controller.preceptorId, 'preceptor-second-primary');
+    expect(controller.preceptorOverrides, isEmpty);
+    expect(controller.selectedPlacement?.preceptors.map((value) => value.id), [
+      'preceptor-second-primary',
+    ]);
+  });
+
+  test(
+    'Back and a same-placement template preserve valid date overrides',
+    () async {
+      final controller = _controller();
+      addTearDown(controller.dispose);
+      await controller.next();
+      await controller.next();
+      await controller.choosePreceptorForDate(
+        LocalDate(2026, 8, 3),
+        'preceptor-other',
+      );
+
+      controller.back();
+      controller.back();
+      controller.chooseTemplate('template-late');
+
+      expect(controller.preceptorId, 'preceptor-other');
+      expect(controller.preceptorOverrides, {
+        LocalDate(2026, 8, 3): 'preceptor-other',
+      });
+      expect(
+        controller.preceptorIdFor(LocalDate(2026, 8, 3)),
+        'preceptor-other',
+      );
+    },
+  );
+
+  test('a stale same-placement template preserves the valid batch default', () {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    controller.choosePreceptor('preceptor-other');
+
+    controller.chooseTemplate('template-stale');
+
+    expect(controller.clinicalPlacementId, 'placement-active');
+    expect(controller.preceptorId, 'preceptor-other');
+  });
+
   testWidgets('template, flexible time, Back, and overrides persist', (
     tester,
   ) async {
@@ -97,6 +198,84 @@ void main() {
     await tester.tap(find.byKey(const Key('batch-back')));
     await tester.pumpAndSettle();
     expect(controller.preceptorId, 'preceptor-other');
+  });
+
+  testWidgets('Review rows show and change each effective Preceptor', (
+    tester,
+  ) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_app(controller));
+
+    await tester.tap(find.byKey(const Key('batch-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('batch-next')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Family Medicine'), findsNWidgets(2));
+    final firstDateSelector = find.byKey(
+      const Key('batch-review-preceptor-2026-08-03-preceptor-primary'),
+    );
+    expect(firstDateSelector, findsOne);
+
+    await tester.tap(firstDateSelector);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Zoë Müller').last);
+    await tester.pumpAndSettle();
+
+    expect(controller.preceptorIdFor(LocalDate(2026, 8, 3)), 'preceptor-other');
+    expect(
+      find.byKey(
+        const Key('batch-review-preceptor-2026-08-03-preceptor-other'),
+      ),
+      findsOne,
+    );
+    expect(
+      controller.preceptorIdFor(LocalDate(2026, 8, 4)),
+      'preceptor-primary',
+    );
+  });
+
+  testWidgets('a Review override recalculates conflicts before Apply', (
+    tester,
+  ) async {
+    final operations = _Operations(conflictingPreceptorId: 'preceptor-primary');
+    final controller = _controller(
+      operations: operations,
+      selectedDates: [_date(3)],
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_app(controller));
+
+    await tester.tap(find.byKey(const Key('batch-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('batch-next')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Schedule Conflict'), findsOne);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('batch-apply')))
+          .onPressed,
+      isNull,
+    );
+
+    await tester.tap(
+      find.byKey(
+        const Key('batch-review-preceptor-2026-08-03-preceptor-primary'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Zoë Müller').last);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Schedule Conflict'), findsNothing);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('batch-apply')))
+          .onPressed,
+      isNotNull,
+    );
+    expect(operations.reviewCalls, 2);
   });
 
   testWidgets('every date and conflict is reviewed before one apply call', (
@@ -177,6 +356,37 @@ void main() {
       expect(find.byKey(const Key('batch-scheduling-tray')), findsOne);
     },
   );
+
+  testWidgets('Review overrides remain usable at compact width and 200% text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final semantics = tester.ensureSemantics();
+    final controller = _controller(selectedDates: [_date(3)]);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      _app(controller, textScaler: const TextScaler.linear(2)),
+    );
+    await controller.next();
+    await controller.next();
+    await tester.pumpAndSettle();
+
+    final selector = find.byKey(
+      const Key('batch-review-preceptor-2026-08-03-preceptor-primary'),
+    );
+    expect(selector, findsOne);
+    expect(tester.takeException(), isNull);
+    expect(tester.getSize(selector).height, greaterThanOrEqualTo(44));
+    expect(
+      tester.getSemantics(selector).label,
+      contains('Preceptor for 08-03-2026'),
+    );
+    semantics.dispose();
+  });
 }
 
 BatchSchedulingController _controller({
@@ -196,6 +406,17 @@ BatchSchedulingController _controller({
         BatchPreceptorOption(id: 'preceptor-other', name: 'Zoë Müller'),
       ],
     ),
+    BatchClinicalPlacementOption(
+      id: 'placement-second',
+      name: 'Pediatrics',
+      primaryPreceptorId: 'preceptor-second-primary',
+      preceptors: const [
+        BatchPreceptorOption(
+          id: 'preceptor-second-primary',
+          name: 'Avery Chen',
+        ),
+      ],
+    ),
   ],
   templates: [
     ScheduleTemplate(
@@ -207,19 +428,36 @@ BatchSchedulingController _controller({
       clinicalPlacementId: 'placement-active',
       preceptorId: 'preceptor-other',
     ),
+    ScheduleTemplate(
+      id: 'template-stale',
+      name: 'Former clinic',
+      type: ScheduleTemplateType.clinicalSession,
+      startTime: LocalTime(9, 0),
+      endTime: LocalTime(17, 0),
+      clinicalPlacementId: 'placement-active',
+      preceptorId: 'preceptor-detached',
+    ),
   ],
   selectedDates: selectedDates ?? [_date(3), _date(4)],
   useTwelveHourTime: useTwelveHourTime,
   activeClinicalPlacementId: 'placement-active',
 );
 
-Widget _app(BatchSchedulingController controller) => MaterialApp(
+Widget _app(
+  BatchSchedulingController controller, {
+  TextScaler textScaler = TextScaler.noScaling,
+}) => MaterialApp(
   theme: buildVariantFTheme(),
-  home: Scaffold(
-    body: SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(8),
-        child: StagedBatchSchedulingTray(controller: controller),
+  home: Builder(
+    builder: (context) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+      child: Scaffold(
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(8),
+            child: StagedBatchSchedulingTray(controller: controller),
+          ),
+        ),
       ),
     ),
   ),
@@ -233,38 +471,48 @@ ZonedScheduleDate _date(int day) => ZonedScheduleDate(
 );
 
 final class _Operations implements BatchSchedulingOperations {
-  _Operations({Set<LocalDate>? conflictingDates, this.failApply = false})
-    : conflictingDates = conflictingDates ?? {};
+  _Operations({
+    Set<LocalDate>? conflictingDates,
+    this.conflictingPreceptorId,
+    this.failApply = false,
+  }) : conflictingDates = conflictingDates ?? {};
 
   final Set<LocalDate> conflictingDates;
+  final String? conflictingPreceptorId;
   final bool failApply;
   int applyCalls = 0;
+  int reviewCalls = 0;
   BatchSchedulingDraft? lastAppliedDraft;
 
   @override
-  Future<BatchSchedulingReview> review(BatchSchedulingDraft draft) async =>
-      BatchSchedulingReview(
-        items: [
-          for (var index = 0; index < draft.dates.length; index++)
-            BatchSchedulingReviewItem(
-              date: draft.dates[index].date,
-              durationMinutes: draft.type == BatchCommitmentType.protectedDay
-                  ? null
-                  : draft.intervals[index].elapsedMinutes,
-              conflicts: conflictingDates.contains(draft.dates[index].date)
-                  ? [
-                      SchedulingError(
-                        violation: ScheduleInvariantViolation.commitmentOverlap,
-                        proposedId: 'preview-$index',
-                        proposedDate: draft.dates[index].date,
-                        conflictingId: 'existing-1',
-                        conflictDate: draft.dates[index].date,
-                      ),
-                    ]
-                  : const [],
-            ),
-        ],
-      );
+  Future<BatchSchedulingReview> review(BatchSchedulingDraft draft) async {
+    reviewCalls++;
+    return BatchSchedulingReview(
+      items: [
+        for (var index = 0; index < draft.dates.length; index++)
+          BatchSchedulingReviewItem(
+            date: draft.dates[index].date,
+            durationMinutes: draft.type == BatchCommitmentType.protectedDay
+                ? null
+                : draft.intervals[index].elapsedMinutes,
+            conflicts:
+                conflictingDates.contains(draft.dates[index].date) ||
+                    draft.preceptorIdFor(draft.dates[index].date) ==
+                        conflictingPreceptorId
+                ? [
+                    SchedulingError(
+                      violation: ScheduleInvariantViolation.commitmentOverlap,
+                      proposedId: 'preview-$index',
+                      proposedDate: draft.dates[index].date,
+                      conflictingId: 'existing-1',
+                      conflictDate: draft.dates[index].date,
+                    ),
+                  ]
+                : const [],
+          ),
+      ],
+    );
+  }
 
   @override
   Future<BatchSchedulingApplyResult> apply(BatchSchedulingDraft draft) async {

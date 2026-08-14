@@ -37,7 +37,9 @@ final class BatchSchedulingDraft {
     this.endTime,
     this.clinicalPlacementId,
     this.preceptorId,
-  }) : dates = List.unmodifiable(dates);
+    Map<LocalDate, String> preceptorOverrides = const {},
+  }) : dates = List.unmodifiable(dates),
+       preceptorOverrides = Map.unmodifiable(preceptorOverrides);
 
   final String studentId;
   final BatchCommitmentType type;
@@ -46,6 +48,10 @@ final class BatchSchedulingDraft {
   final LocalTime? endTime;
   final String? clinicalPlacementId;
   final String? preceptorId;
+  final Map<LocalDate, String> preceptorOverrides;
+
+  String? preceptorIdFor(LocalDate date) =>
+      preceptorOverrides[date] ?? preceptorId;
 
   List<ZonedInterval> get intervals {
     if (type == BatchCommitmentType.protectedDay) return const [];
@@ -130,8 +136,7 @@ final class SchedulingBatchCoordinator implements BatchSchedulingOperations {
               draft.clinicalPlacementId,
               'Clinical Placement',
             ),
-            preceptorId: _requiredAssignment(draft.preceptorId, 'Preceptor'),
-            intervals: draft.intervals,
+            items: _clinicalSessionItems(draft),
           ),
         ),
       BatchCommitmentType.protectedDay =>
@@ -175,8 +180,7 @@ final class SchedulingBatchCoordinator implements BatchSchedulingOperations {
               draft.clinicalPlacementId,
               'Clinical Placement',
             ),
-            preceptorId: _requiredAssignment(draft.preceptorId, 'Preceptor'),
-            intervals: draft.intervals,
+            items: _clinicalSessionItems(draft),
           ),
         ),
       BatchCommitmentType.protectedDay =>
@@ -192,6 +196,22 @@ final class SchedulingBatchCoordinator implements BatchSchedulingOperations {
       conflicts: result.conflicts,
     );
   }
+}
+
+List<ClinicalSessionBatchItem> _clinicalSessionItems(
+  BatchSchedulingDraft draft,
+) {
+  final intervals = draft.intervals;
+  return List.unmodifiable([
+    for (var index = 0; index < intervals.length; index++)
+      ClinicalSessionBatchItem(
+        interval: intervals[index],
+        preceptorId: _requiredAssignment(
+          draft.preceptorIdFor(draft.dates[index].date),
+          'Preceptor',
+        ),
+      ),
+  ]);
 }
 
 String _requiredAssignment(String? value, String label) {
