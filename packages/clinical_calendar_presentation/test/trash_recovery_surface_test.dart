@@ -48,6 +48,38 @@ void main() {
     expect(harness.merged, 1);
   });
 
+  testWidgets('Clinical Placement Trash is shown as one named aggregate', (
+    tester,
+  ) async {
+    final entry = TrashEntry(
+      id: '00000000-0000-4000-8000-000000000010',
+      entityType: 'clinical_placement_aggregate',
+      entityId: '00000000-0000-4000-8000-000000000011',
+      deletedAtUtc: _now,
+      purgeAfterUtc: _now.add(const Duration(days: 30)),
+      displayName: 'Family Medicine',
+      dependentRecordCount: 7,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildVariantFTheme(),
+        home: TrashRecoverySurface(
+          loadTrash: () async => [entry],
+          restore: (_) async {},
+          permanentlyDelete: (_) async {},
+          clearTrash: () async {},
+          loadSnapshots: () async => [],
+          previewSnapshot: (_) async => throw UnimplementedError(),
+          restoreSnapshot: (_, _) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Family Medicine'), findsOneWidget);
+    expect(find.textContaining('7 dependent records'), findsOneWidget);
+    expect(find.text('Clinical Placement'), findsNothing);
+  });
+
   for (final size in [const Size(320, 568), const Size(1024, 768)]) {
     testWidgets('responsive recovery surface fits ${size.width}', (
       tester,

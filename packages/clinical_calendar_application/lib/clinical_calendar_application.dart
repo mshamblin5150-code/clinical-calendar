@@ -13,6 +13,7 @@ export 'src/exports/export_data_service.dart';
 export 'src/exports/export_models.dart';
 export 'src/exports/export_workflow_service.dart';
 export 'src/placements/placement_application_service.dart';
+export 'src/placements/placement_deletion.dart';
 export 'src/placements/placement_models.dart';
 export 'src/ports.dart';
 export 'src/reminders/notification_reconciler.dart';
