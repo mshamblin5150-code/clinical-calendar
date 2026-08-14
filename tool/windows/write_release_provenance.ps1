@@ -11,7 +11,10 @@ param(
   [Parameter(Mandatory)][string]$RunAttempt,
   [Parameter(Mandatory)][string]$Publisher,
   [Parameter(Mandatory)][string]$SignerSha256,
-  [Parameter(Mandatory)][string]$Version
+  [Parameter(Mandatory)][string]$Version,
+  [Parameter(Mandatory)][string]$RunnerImage,
+  [Parameter(Mandatory)][string]$FlutterVersion,
+  [Parameter(Mandatory)][string]$WindowsSdkVersion
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +34,11 @@ if ($normalizedSigner -notmatch '^[a-f0-9]{64}$') {
 }
 if ($Version -notmatch '^\d+\.\d+\.\d+\.\d+$') {
   throw 'Version must be a four-component MSIX version.'
+}
+if ($FlutterVersion -notmatch '^\d+\.\d+\.\d+$' -or
+    $WindowsSdkVersion -notmatch '^\d+\.\d+\.\d+\.\d+$' -or
+    [string]::IsNullOrWhiteSpace($RunnerImage)) {
+  throw 'RunnerImage, FlutterVersion, and WindowsSdkVersion must identify the release toolchain.'
 }
 if ([string]::IsNullOrWhiteSpace($Publisher) -or
     [string]::IsNullOrWhiteSpace($Repository) -or
@@ -82,9 +90,9 @@ $provenance = [ordered]@{
     runAttempt = $RunAttempt
   }
   toolchain = [ordered]@{
-    runner = 'windows-2025'
-    flutter = '3.44.8'
-    windowsSdk = '10.0.26100.0'
+    runner = $RunnerImage
+    flutter = $FlutterVersion
+    windowsSdk = $WindowsSdkVersion
   }
   generatedAtUtc = [DateTime]::UtcNow.ToString('o')
 }

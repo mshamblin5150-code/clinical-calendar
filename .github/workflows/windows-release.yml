@@ -11,7 +11,14 @@ permissions:
 
 jobs:
   build-sign-verify:
-    runs-on: windows-2025
+    strategy:
+      matrix:
+        include:
+          - runner: windows-2025
+            flutter: 3.44.8
+            windows_sdk: 10.0.26100.0
+            timestamp_url: http://timestamp.digicert.com
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     environment: windows-private-release
     steps:
@@ -26,7 +33,7 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
-          flutter-version: 3.44.8
+          flutter-version: ${{ matrix.flutter }}
           cache: true
 
       - name: Require release signing secrets
@@ -86,8 +93,8 @@ jobs:
             -SigningThumbprint '${{ steps.certificate.outputs.thumbprint }}' `
             -ExpectedSignerSha256 $env:WINDOWS_SIGNING_CERT_SHA256 `
             -Publisher $env:WINDOWS_SIGNING_PUBLISHER `
-            -TimestampUrl 'http://timestamp.digicert.com' `
-            -WindowsSdkVersion '10.0.26100.0' `
+            -TimestampUrl '${{ matrix.timestamp_url }}' `
+            -WindowsSdkVersion '${{ matrix.windows_sdk }}' `
             -FlutterExecutable (Get-Command flutter).Source
 
       - name: Write and independently verify release provenance
@@ -119,14 +126,19 @@ jobs:
             -RunAttempt '${{ github.run_attempt }}' `
             -Publisher $env:WINDOWS_SIGNING_PUBLISHER `
             -SignerSha256 $env:WINDOWS_SIGNING_CERT_SHA256 `
-            -Version $Matches[1]
+            -Version $Matches[1] `
+            -RunnerImage '${{ matrix.runner }}' `
+            -FlutterVersion '${{ matrix.flutter }}' `
+            -WindowsSdkVersion '${{ matrix.windows_sdk }}'
           ./tool/windows/verify_release_bundle.ps1 `
             -BundlePath $releaseRoot `
             -ExpectedPublisher $env:WINDOWS_SIGNING_PUBLISHER `
             -ExpectedSignerSha256 $env:WINDOWS_SIGNING_CERT_SHA256 `
             -ExpectedRepository '${{ github.repository }}' `
             -ExpectedCommitSha '${{ github.sha }}' `
-            -WindowsSdkVersion '10.0.26100.0'
+            -ExpectedRunnerImage '${{ matrix.runner }}' `
+            -ExpectedFlutterVersion '${{ matrix.flutter }}' `
+            -WindowsSdkVersion '${{ matrix.windows_sdk }}'
 
       - name: Attest immutable release candidate
         id: attest

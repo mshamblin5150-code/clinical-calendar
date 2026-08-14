@@ -5,6 +5,8 @@ param(
   [Parameter(Mandatory)][string]$ExpectedSignerSha256,
   [Parameter(Mandatory)][string]$ExpectedRepository,
   [string]$ExpectedCommitSha,
+  [string]$ExpectedRunnerImage = 'windows-2025',
+  [string]$ExpectedFlutterVersion = '3.44.8',
   [string]$WindowsSdkVersion = '10.0.26100.0'
 )
 
@@ -24,11 +26,13 @@ function Get-OneFile {
   return $files[0]
 }
 
-function Resolve-SignTool {
+function Resolve-SdkTool {
+  param([Parameter(Mandatory)][string]$Name)
+
   $sdkBin = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
-  $path = Join-Path $sdkBin "$WindowsSdkVersion\x64\signtool.exe"
+  $path = Join-Path $sdkBin "$WindowsSdkVersion\x64\$Name"
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-    throw "Pinned SignTool was not found: $path"
+    throw "Pinned Windows SDK tool was not found: $path"
   }
   return $path
 }
@@ -38,6 +42,10 @@ $package = Get-OneFile -Root $resolvedBundle -Filter '*.msix' -Description 'sign
 if ($package.Name.EndsWith('.unsigned.msix', [StringComparison]::OrdinalIgnoreCase)) {
   throw 'Unsigned MSIX packages are never release candidates.'
 }
+if ($package.BaseName -notmatch '^ClinicalCalendar-(\d+\.\d+\.\d+\.\d+)-x64$') {
+  throw 'Release package file name must contain its four-component version and x64 architecture.'
+}
+$fileVersion = $Matches[1]
 $checksum = Get-OneFile -Root $resolvedBundle -Filter '*.msix.sha256' -Description 'MSIX checksum'
 $evidence = Get-OneFile -Root $resolvedBundle -Filter '*.msix.signature.txt' -Description 'signature evidence file'
 $provenanceFile = Get-OneFile -Root $resolvedBundle -Filter 'windows_release_provenance.json' -Description 'provenance record'
@@ -71,13 +79,17 @@ if ($provenance.schemaVersion -ne 1 -or
     $provenance.artifact.sha256 -ne $actualPackageHash -or
     $provenance.applicationIdentity.name -ne 'ClinicalCalendar' -or
     $provenance.applicationIdentity.publisher -ne $ExpectedPublisher -or
+    $provenance.applicationIdentity.version -ne $fileVersion -or
     $provenance.applicationIdentity.processorArchitecture -ne 'x64' -or
     $provenance.signer.certificateSha256 -ne $normalizedSigner -or
     $provenance.source.repository -ne $ExpectedRepository -or
     ($normalizedCommit -and $provenance.source.commitSha -ne $normalizedCommit) -or
     $provenance.signatureVerification.policy -ne '/pa /all /v /tw' -or
     $provenance.signatureVerification.result -ne 'passed' -or
-    $provenance.signatureVerification.evidenceFile -ne $evidence.Name) {
+    $provenance.signatureVerification.evidenceFile -ne $evidence.Name -or
+    $provenance.toolchain.runner -ne $ExpectedRunnerImage -or
+    $provenance.toolchain.flutter -ne $ExpectedFlutterVersion -or
+    $provenance.toolchain.windowsSdk -ne $WindowsSdkVersion) {
   throw 'Release provenance does not match the independently approved artifact identity.'
 }
 
@@ -95,10 +107,35 @@ if ($signature.SignerCertificate.Subject -ne $ExpectedPublisher -or
   throw 'MSIX signer does not match the independently approved certificate identity.'
 }
 
-$signTool = Resolve-SignTool
+$signTool = Resolve-SdkTool -Name 'signtool.exe'
 & $signTool verify /pa /all /v /tw $package.FullName
 if ($LASTEXITCODE -ne 0) {
   throw "Independent SignTool verification failed with exit code $LASTEXITCODE."
+}
+
+$unpackRoot = Join-Path ([IO.Path]::GetTempPath()) "clinical-calendar-msix-verify-$([Guid]::NewGuid().ToString('N'))"
+try {
+  $makeAppx = Resolve-SdkTool -Name 'makeappx.exe'
+  & $makeAppx unpack /p $package.FullName /d $unpackRoot /o
+  if ($LASTEXITCODE -ne 0) {
+    throw "MakeAppx inspection failed with exit code $LASTEXITCODE."
+  }
+  [xml]$manifest = Get-Content -Raw -LiteralPath (Join-Path $unpackRoot 'AppxManifest.xml')
+  $identity = $manifest.SelectSingleNode("/*[local-name()='Package']/*[local-name()='Identity']")
+  if (-not $identity -or
+      $identity.GetAttribute('Name') -ne 'ClinicalCalendar' -or
+      $identity.GetAttribute('Publisher') -ne $ExpectedPublisher -or
+      $identity.GetAttribute('Version') -ne $fileVersion -or
+      $identity.GetAttribute('ProcessorArchitecture') -ne 'x64') {
+    throw 'Signed MSIX manifest does not match the approved versioned application identity.'
+  }
+} finally {
+  $resolvedUnpackRoot = [IO.Path]::GetFullPath($unpackRoot)
+  $resolvedTempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+  if ($resolvedUnpackRoot.StartsWith($resolvedTempRoot, [StringComparison]::OrdinalIgnoreCase) -and
+      (Split-Path -Leaf $resolvedUnpackRoot).StartsWith('clinical-calendar-msix-verify-')) {
+    Remove-Item -LiteralPath $resolvedUnpackRoot -Recurse -Force -ErrorAction SilentlyContinue
+  }
 }
 
 Write-Host "Verified immutable Windows release candidate: $($package.Name)"

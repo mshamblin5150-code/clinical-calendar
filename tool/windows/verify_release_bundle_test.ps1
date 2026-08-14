@@ -49,7 +49,10 @@ try {
       -RunAttempt '1' `
       -Publisher $expectedPublisher `
       -SignerSha256 $expectedSigner `
-      -Version '1.2.3.4'
+      -Version '1.2.3.4' `
+      -RunnerImage 'windows-2025' `
+      -FlutterVersion '3.44.8' `
+      -WindowsSdkVersion '10.0.26100.0'
   }
 
   $hash = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -66,7 +69,10 @@ try {
     -RunAttempt '1' `
     -Publisher $expectedPublisher `
     -SignerSha256 ('c' * 64) `
-    -Version '1.2.3.4'
+    -Version '1.2.3.4' `
+    -RunnerImage 'windows-2025' `
+    -FlutterVersion '3.44.8' `
+    -WindowsSdkVersion '10.0.26100.0'
 
   Assert-FailsWith -ExpectedMessage 'does not match the independently approved artifact identity' -Operation {
     & $verifier `
