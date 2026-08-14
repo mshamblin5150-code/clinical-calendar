@@ -27,9 +27,27 @@ versioned upgrades, and clean Windows-managed uninstall behavior.
 - Never commit or attach the PFX, its password, a private key, database key,
   backup passphrase, Supabase privileged key, or test account credential.
 
+For this private release, create the maintainer-approved durable self-signed
+identity once on the maintainer's Windows machine:
+
+```powershell
+./tool/windows/create_private_release_certificate.ps1
+```
+
+The command creates a ten-year RSA-4096 code-signing certificate and stores its
+encrypted PFX, public CER, and generated password under the ignored,
+access-restricted `.secrets/windows-signing` directory. Keep an encrypted
+offline copy of that directory. Losing the PFX or its password prevents future
+packages from remaining in the same signing lineage. Only the public CER,
+subject, and SHA-256 fingerprint may be shared.
+
 The workflow imports the PFX into the ephemeral runner's Current User store
 without making the key exportable, deletes the temporary PFX in the same step,
-and removes the imported certificate in an `always()` cleanup step. It requires
+and removes the imported certificate in an `always()` cleanup step. After the
+subject and SHA-256 fingerprint match the approved values, it temporarily adds
+only that pinned public certificate to the runner's Current User Trusted People
+store so the self-signed chain can be verified, then removes that trust entry in
+the same cleanup. It requires
 the certificate subject and SHA-256 fingerprint to match the independently
 approved `WINDOWS_SIGNING_PUBLISHER` and `WINDOWS_SIGNING_CERT_SHA256` values.
 It never prints or uploads PFX bytes, passwords, private keys, or protected app
@@ -51,7 +69,7 @@ missing timestamp fails closed.
 3. Merge the reviewed candidate commit to the protected branch and run the
    `Windows private release` workflow from that exact commit.
 4. Download the immutable, commit-named artifact. It contains one signed x64
-   MSIX, its checksum, SignTool signature/timestamp evidence,
+   MSIX, its checksum, public signer CER, SignTool signature/timestamp evidence,
    `windows_release_provenance.json`, and the offline attestation bundle
    `windows_release_provenance.sigstore.json`.
 5. Independently verify the bundle as described below. Record the workflow URL,
@@ -72,10 +90,19 @@ release and must never be privately delivered.
 ## Verify before installation
 
 On a supported Windows machine, use approved Publisher and certificate values
-obtained separately from the downloaded artifact:
+obtained separately from the downloaded artifact. Verify the bundled CER's
+SHA-256 against that separate record, then trust only that public certificate
+before package verification:
 
 ```powershell
 $bundle = Resolve-Path .\clinical-calendar-windows-<commit-sha>
+$publicCertificate = Resolve-Path "$bundle\ClinicalCalendar-<version>-x64.msix.cer"
+$certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($publicCertificate)
+$certificate.GetCertHashString([Security.Cryptography.HashAlgorithmName]::SHA256)
+Import-Certificate `
+  -FilePath $publicCertificate `
+  -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+
 ./tool/windows/verify_release_bundle.ps1 `
   -BundlePath $bundle `
   -ExpectedPublisher '<approved certificate subject>' `
@@ -98,12 +125,11 @@ certificate SHA-256 with independently approved values, and reruns pinned-SDK
 SignTool verification. The GitHub CLI command binds those bytes to the protected
 workflow and source commit. Both commands must pass.
 
-The protected candidate requires a code-signing certificate whose chain is
-trusted by the GitHub-hosted runner and the verification machine. A self-signed
-certificate is suitable only for local packaging smoke tests; it is not the
-durable candidate proven by this workflow. When a private test package uses one,
-distribute only its public `.cer` through a separate authenticated channel and
-install it in Local Computer `Trusted People`. Never distribute the PFX.
+This certificate is approved only for authenticated private delivery. It does
+not carry public-CA trust and must not be represented as suitable for public
+distribution. Each target machine must verify its SHA-256 through a separate
+channel and trust only the public `.cer` in Local Computer `Trusted People`.
+Never distribute the PFX or its password.
 
 ## Clean install and offline verification
 

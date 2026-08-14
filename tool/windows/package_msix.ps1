@@ -191,6 +191,8 @@ if ($certificate) {
   if ($verificationExitCode -ne 0) {
     throw "SignTool verification failed with exit code $verificationExitCode."
   }
+  $signerCertificatePath = "$packagePath.cer"
+  Export-Certificate -Cert $certificate -FilePath $signerCertificatePath | Out-Null
 }
 
 $hash = Get-FileHash -LiteralPath $packagePath -Algorithm SHA256
@@ -208,4 +210,5 @@ Write-Output "MSIX_PUBLISHER=$Publisher"
 if ($certificate) {
   Write-Output "MSIX_SIGNER_SHA256=$actualSignerSha256"
   Write-Output "MSIX_SIGNATURE_EVIDENCE=$signatureEvidencePath"
+  Write-Output "MSIX_SIGNER_CERTIFICATE=$signerCertificatePath"
 }

@@ -28,6 +28,9 @@ $requiredWorkflowFragments = @(
     'windows_release_provenance.json',
     'verify_release_bundle_test.ps1',
     '*.signature.txt',
+    '*.cer',
+    'Cert:\CurrentUser\TrustedPeople',
+    'trust_thumbprint',
     'retention-days: 90'
 )
 foreach ($fragment in $requiredWorkflowFragments) {
@@ -43,7 +46,8 @@ foreach ($fragment in @(
     'ExpectedSignerSha256',
     'GetCertHashString',
     'verify /pa /all /v /tw',
-    'MSIX_SIGNATURE_EVIDENCE'
+    'MSIX_SIGNATURE_EVIDENCE',
+    'MSIX_SIGNER_CERTIFICATE'
 )) {
     if (-not $packager.Contains($fragment)) {
         throw "Windows MSIX packager is missing required fragment: $fragment"
@@ -52,7 +56,8 @@ foreach ($fragment in @(
 
 foreach ($relativePath in @(
     'tool/windows/write_release_provenance.ps1',
-    'tool/windows/verify_release_bundle.ps1'
+    'tool/windows/verify_release_bundle.ps1',
+    'tool/windows/create_private_release_certificate.ps1'
 )) {
     if (-not (Test-Path -LiteralPath (Join-Path $repositoryRoot $relativePath) -PathType Leaf)) {
         throw "Windows release contract file is missing: $relativePath"
@@ -70,6 +75,16 @@ foreach ($fragment in @(
 )) {
     if (-not $verifier.Contains($fragment)) {
         throw "Windows release verifier is missing manifest identity check: $fragment"
+    }
+}
+
+foreach ($fragment in @(
+    '*.msix.cer',
+    'certificateSha256',
+    'SignerCertificate.Subject'
+)) {
+    if (-not $verifier.Contains($fragment)) {
+        throw "Windows release verifier is missing public signer-certificate check: $fragment"
     }
 }
 

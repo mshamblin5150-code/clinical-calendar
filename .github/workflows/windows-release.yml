@@ -62,8 +62,11 @@ jobs:
         env:
           WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
           WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
+          WINDOWS_SIGNING_PUBLISHER: ${{ vars.WINDOWS_SIGNING_PUBLISHER }}
+          WINDOWS_SIGNING_CERT_SHA256: ${{ vars.WINDOWS_SIGNING_CERT_SHA256 }}
         run: |
           $pfxPath = Join-Path $env:RUNNER_TEMP 'clinical-calendar-signing.pfx'
+          $cerPath = Join-Path $env:RUNNER_TEMP 'clinical-calendar-signing.cer'
           try {
             [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_PFX_BASE64))
             $password = ConvertTo-SecureString $env:WINDOWS_SIGNING_PFX_PASSWORD -AsPlainText -Force
@@ -74,9 +77,24 @@ jobs:
             }
             $certificate = $signingCertificates[0]
             "thumbprint=$($certificate.Thumbprint)" >> $env:GITHUB_OUTPUT
+            $certificateSha256 = $certificate.GetCertHashString(
+              [Security.Cryptography.HashAlgorithmName]::SHA256
+            )
+            if ($certificateSha256 -ne $env:WINDOWS_SIGNING_CERT_SHA256.ToUpperInvariant() -or
+                $certificate.Subject -ne $env:WINDOWS_SIGNING_PUBLISHER) {
+              throw 'The imported certificate does not match the approved Publisher and SHA-256 identity.'
+            }
+            Export-Certificate -Cert $certificate -FilePath $cerPath | Out-Null
+            $trustedCertificate = Import-Certificate `
+              -FilePath $cerPath `
+              -CertStoreLocation Cert:\CurrentUser\TrustedPeople
+            "trust_thumbprint=$($trustedCertificate.Thumbprint)" >> $env:GITHUB_OUTPUT
           } finally {
             if (Test-Path -LiteralPath $pfxPath) {
               Remove-Item -LiteralPath $pfxPath -Force
+            }
+            if (Test-Path -LiteralPath $cerPath) {
+              Remove-Item -LiteralPath $cerPath -Force
             }
           }
 
@@ -160,16 +178,22 @@ jobs:
             apps/clinical_calendar/build/windows/msix/*.msix
             apps/clinical_calendar/build/windows/msix/*.sha256
             apps/clinical_calendar/build/windows/msix/*.signature.txt
+            apps/clinical_calendar/build/windows/msix/*.cer
             apps/clinical_calendar/build/windows/msix/windows_release_provenance.json
             apps/clinical_calendar/build/windows/msix/windows_release_provenance.sigstore.json
           if-no-files-found: error
           retention-days: 90
 
       - name: Remove ephemeral signing certificate
-        if: always() && steps.certificate.outputs.thumbprint != ''
+        if: always() && (steps.certificate.outputs.thumbprint != '' || steps.certificate.outputs.trust_thumbprint != '')
         shell: pwsh
         run: |
-          $certificatePath = "Cert:\CurrentUser\My\${{ steps.certificate.outputs.thumbprint }}"
-          if (Test-Path -LiteralPath $certificatePath) {
-            Remove-Item -LiteralPath $certificatePath -Force
+          $certificatePaths = @(
+            "Cert:\CurrentUser\My\${{ steps.certificate.outputs.thumbprint }}",
+            "Cert:\CurrentUser\TrustedPeople\${{ steps.certificate.outputs.trust_thumbprint }}"
+          )
+          foreach ($certificatePath in $certificatePaths) {
+            if (Test-Path -LiteralPath $certificatePath) {
+              Remove-Item -LiteralPath $certificatePath -Force
+            }
           }

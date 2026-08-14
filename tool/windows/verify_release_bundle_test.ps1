@@ -27,6 +27,7 @@ try {
   $packagePath = Join-Path $testRoot 'ClinicalCalendar-1.2.3.4-x64.msix'
   $checksumPath = "$packagePath.sha256"
   $evidencePath = "$packagePath.signature.txt"
+  $certificatePath = "$packagePath.cer"
   $provenancePath = Join-Path $testRoot 'windows_release_provenance.json'
   $expectedPublisher = 'CN=Clinical Calendar Release'
   $expectedSigner = 'a' * 64
@@ -34,6 +35,7 @@ try {
 
   [IO.File]::WriteAllBytes($packagePath, [Text.Encoding]::UTF8.GetBytes('synthetic unsigned package'))
   [IO.File]::WriteAllText($evidencePath, 'synthetic evidence for pre-signature validation')
+  [IO.File]::WriteAllBytes($certificatePath, [byte[]](1, 2, 3, 4))
   [IO.File]::WriteAllText($checksumPath, "$('0' * 64)  $([IO.Path]::GetFileName($packagePath))`n")
 
   Assert-FailsWith -ExpectedMessage 'Checksum does not match' -Operation {

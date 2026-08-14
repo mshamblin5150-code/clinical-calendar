@@ -379,11 +379,14 @@ void main() {
     );
     expect(workflow, contains('Import-PfxCertificate'));
     expect(workflow, contains('Remove ephemeral signing certificate'));
+    expect(workflow, contains(r'Cert:\CurrentUser\TrustedPeople'));
+    expect(workflow, contains('trust_thumbprint'));
     expect(workflow, isNot(contains('-AllowUnsigned')));
     expect(packager, contains("throw 'A CurrentUser signing certificate"));
     expect(packager, contains('Publisher must exactly match'));
     expect(packager, contains('signtool.exe'));
     expect(packager, contains('verify /pa /all /v'));
+    expect(packager, contains('MSIX_SIGNER_CERTIFICATE'));
     expect(packager, contains('Get-ClinicalCalendarReleaseFlutterArguments'));
     expect(
       packager,
@@ -395,6 +398,7 @@ void main() {
     expect(verifier, contains("GetAttribute('Publisher')"));
     expect(verifier, contains("GetAttribute('Version')"));
     expect(verifier, contains("GetAttribute('ProcessorArchitecture')"));
+    expect(verifier, contains('*.msix.cer'));
     expect(manifest, contains('Name="ClinicalCalendar"'));
     expect(manifest, contains('Version="__VERSION__"'));
     expect(manifest, contains('uap10:PackageIntegrity'));

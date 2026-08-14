@@ -48,6 +48,7 @@ if ($package.BaseName -notmatch '^ClinicalCalendar-(\d+\.\d+\.\d+\.\d+)-x64$') {
 $fileVersion = $Matches[1]
 $checksum = Get-OneFile -Root $resolvedBundle -Filter '*.msix.sha256' -Description 'MSIX checksum'
 $evidence = Get-OneFile -Root $resolvedBundle -Filter '*.msix.signature.txt' -Description 'signature evidence file'
+$publicCertificateFile = Get-OneFile -Root $resolvedBundle -Filter '*.msix.cer' -Description 'public signer certificate'
 $provenanceFile = Get-OneFile -Root $resolvedBundle -Filter 'windows_release_provenance.json' -Description 'provenance record'
 
 $checksumLine = (Get-Content -Raw -LiteralPath $checksum.FullName).Trim()
@@ -82,6 +83,7 @@ if ($provenance.schemaVersion -ne 1 -or
     $provenance.applicationIdentity.version -ne $fileVersion -or
     $provenance.applicationIdentity.processorArchitecture -ne 'x64' -or
     $provenance.signer.certificateSha256 -ne $normalizedSigner -or
+    $provenance.signer.publicCertificateFile -ne $publicCertificateFile.Name -or
     $provenance.source.repository -ne $ExpectedRepository -or
     ($normalizedCommit -and $provenance.source.commitSha -ne $normalizedCommit) -or
     $provenance.signatureVerification.policy -ne '/pa /all /v /tw' -or
@@ -91,6 +93,17 @@ if ($provenance.schemaVersion -ne 1 -or
     $provenance.toolchain.flutter -ne $ExpectedFlutterVersion -or
     $provenance.toolchain.windowsSdk -ne $WindowsSdkVersion) {
   throw 'Release provenance does not match the independently approved artifact identity.'
+}
+
+$publicCertificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new(
+  $publicCertificateFile.FullName
+)
+$publicCertificateSha256 = $publicCertificate.GetCertHashString(
+  [Security.Cryptography.HashAlgorithmName]::SHA256
+).ToLowerInvariant()
+if ($publicCertificateSha256 -ne $normalizedSigner -or
+    $publicCertificate.Subject -ne $ExpectedPublisher) {
+  throw 'Bundled public certificate does not match the independently approved signer identity.'
 }
 
 $signature = Get-AuthenticodeSignature -LiteralPath $package.FullName
@@ -103,7 +116,8 @@ $actualSigner = $signature.SignerCertificate.GetCertHashString(
   [Security.Cryptography.HashAlgorithmName]::SHA256
 ).ToLowerInvariant()
 if ($signature.SignerCertificate.Subject -ne $ExpectedPublisher -or
-    $actualSigner -ne $normalizedSigner) {
+    $actualSigner -ne $normalizedSigner -or
+    $actualSigner -ne $publicCertificateSha256) {
   throw 'MSIX signer does not match the independently approved certificate identity.'
 }
 

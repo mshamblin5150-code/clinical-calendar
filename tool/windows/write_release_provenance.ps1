@@ -23,6 +23,7 @@ Set-StrictMode -Version Latest
 $resolvedPackage = (Resolve-Path -LiteralPath $PackagePath).Path
 $resolvedChecksum = (Resolve-Path -LiteralPath $ChecksumPath).Path
 $resolvedEvidence = (Resolve-Path -LiteralPath $SignatureEvidencePath).Path
+$resolvedSignerCertificate = (Resolve-Path -LiteralPath "$resolvedPackage.cer").Path
 $normalizedCommit = $CommitSha.Trim().ToLowerInvariant()
 $normalizedSigner = $SignerSha256.Replace(':', '').Replace(' ', '').ToLowerInvariant()
 
@@ -73,6 +74,7 @@ $provenance = [ordered]@{
   }
   signer = [ordered]@{
     certificateSha256 = $normalizedSigner
+    publicCertificateFile = [IO.Path]::GetFileName($resolvedSignerCertificate)
   }
   signatureVerification = [ordered]@{
     tool = 'signtool.exe'
