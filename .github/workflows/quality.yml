@@ -19,6 +19,11 @@ jobs:
           channel: stable
           flutter-version: 3.44.8
           cache: true
+      - name: Verify Windows release contract
+        shell: pwsh
+        run: |
+          ./tool/windows/windows_release_contract_test.ps1
+          ./tool/windows/verify_release_bundle_test.ps1
       - name: Resolve workspace
         run: flutter pub get
       - name: Run shared quality gate
