@@ -490,6 +490,7 @@ final class PortableBackupService {
             ).single['count']
             as int;
     if (profiles != 1) throw const FormatException('Student Profile missing.');
+    _validatePlacementTrashAggregates(db);
     final foreignKeys = db.select('PRAGMA foreign_key_check');
     if (foreignKeys.isNotEmpty) {
       throw const FormatException('Foreign key failure.');
@@ -540,6 +541,80 @@ final class PortableBackupService {
          LIMIT 1''');
     if (protectedConflict.isNotEmpty) {
       throw const FormatException('Protected Day conflict.');
+    }
+  }
+
+  void _validatePlacementTrashAggregates(Database db) {
+    final rows = db.select(
+      '''SELECT * FROM trash WHERE student_id = ?
+         AND aggregate_mutation_id IS NOT NULL
+         AND permanently_deleted_at_utc IS NULL''',
+      [_studentId],
+    );
+    final groups = <String, List<Map<String, Object?>>>{};
+    for (final row in rows) {
+      final aggregateId = row['aggregate_mutation_id'];
+      if (aggregateId is! String || aggregateId.isEmpty) {
+        throw const FormatException('Invalid aggregate Trash identity.');
+      }
+      groups.putIfAbsent(aggregateId, () => []).add(row);
+    }
+    for (final group in groups.values) {
+      final first = group.first;
+      final root = first['aggregate_root_id'];
+      final manifestJson = first['aggregate_manifest_json'];
+      final recoveryJson = first['aggregate_recovery_json'];
+      final expiry = first['purge_after_utc'];
+      if (root is! String ||
+          manifestJson is! String ||
+          recoveryJson is! String ||
+          expiry is! String ||
+          group.any(
+            (row) =>
+                row['aggregate_root_id'] != root ||
+                row['aggregate_manifest_json'] != manifestJson ||
+                row['aggregate_recovery_json'] != recoveryJson ||
+                row['purge_after_utc'] != expiry,
+          )) {
+        throw const FormatException('Inconsistent aggregate Trash metadata.');
+      }
+      final manifest = jsonDecode(manifestJson);
+      final recovery = jsonDecode(recoveryJson);
+      if (manifest is! Map<String, dynamic> ||
+          recovery is! Map<String, dynamic> ||
+          !manifest.containsKey('clinical_placement:$root')) {
+        throw const FormatException('Invalid aggregate Trash manifest.');
+      }
+      final expectedTrashMembers = manifest.keys
+          .where((key) => !key.startsWith('settings:'))
+          .toSet();
+      final actualTrashMembers = {
+        for (final row in group) '${row['entity_type']}:${row['entity_id']}',
+      };
+      if (expectedTrashMembers.length != group.length ||
+          !actualTrashMembers.containsAll(expectedTrashMembers)) {
+        throw const FormatException('Incomplete aggregate Trash manifest.');
+      }
+      for (final entry in manifest.entries) {
+        final separator = entry.key.indexOf(':');
+        final entityType = entry.key.substring(0, separator);
+        if (entityType == 'settings') continue;
+        final entityId = entry.key.substring(separator + 1);
+        final table = _backupTableForEntityType(entityType);
+        if (table == null || entry.value is! int) {
+          throw const FormatException('Invalid aggregate Trash member.');
+        }
+        final entityRows = db.select(
+          'SELECT revision, deleted_at_utc FROM $table '
+          'WHERE student_id = ? AND id = ?',
+          [_studentId, entityId],
+        );
+        if (entityRows.length != 1 ||
+            entityRows.single['revision'] != (entry.value as int) + 1 ||
+            entityRows.single['deleted_at_utc'] == null) {
+          throw const FormatException('Stale aggregate Trash member.');
+        }
+      }
     }
   }
 
@@ -705,6 +780,7 @@ Map<String, String> _aggregateRootsByIdentity(
   for (final tables in [local, backup]) {
     final trashRows = tables['trash']!;
     for (final rootRow in trashRows) {
+      if (rootRow['permanently_deleted_at_utc'] != null) continue;
       final root = rootRow['aggregate_root_id'];
       final manifestJson = rootRow['aggregate_manifest_json'];
       if (root is! String || root.isEmpty || manifestJson is! String) continue;
@@ -725,7 +801,9 @@ Map<String, String> _aggregateRootsByIdentity(
         }
       }
       for (final row in trashRows.where(
-        (row) => row['aggregate_root_id'] == root,
+        (row) =>
+            row['aggregate_root_id'] == root &&
+            row['permanently_deleted_at_utc'] == null,
       )) {
         result[_identity('trash', row).stableValue] = root;
       }

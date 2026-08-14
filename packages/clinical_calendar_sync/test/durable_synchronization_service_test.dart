@@ -568,6 +568,7 @@ void main() {
     'incomplete aggregate pull stays invisible until its manifest is complete',
     () async {
       const secondPreceptorId = '00000000-0000-4000-8000-000000000099';
+      const interleavedPreceptorId = '00000000-0000-4000-8000-000000000097';
       const aggregateId = '00000000-0000-4000-8000-000000000098';
       final manifest = {
         'preceptor:$_preceptorId': 0,
@@ -598,9 +599,16 @@ void main() {
         1,
       );
 
-      server.feed.add(
+      server.feed.addAll([
         _remoteChange(
           cursor: 2,
+          entityType: 'preceptor',
+          entityId: interleavedPreceptorId,
+          revision: 1,
+          value: {'name': 'Interleaved independent member'},
+        ),
+        _remoteChange(
+          cursor: 3,
           entityType: 'preceptor',
           entityId: secondPreceptorId,
           revision: 1,
@@ -608,7 +616,7 @@ void main() {
           aggregateMutationId: aggregateId,
           aggregateManifest: manifest,
         ),
-      );
+      ]);
       final complete = await _service(
         second,
         server,
@@ -616,7 +624,7 @@ void main() {
         pageSize: 1,
       ).syncNow();
       expect(complete.disposition, SynchronizationDisposition.synchronized);
-      expect(await _cursor(second.registry), 2);
+      expect(await _cursor(second.registry), 3);
       expect(
         (await _service(
           second,
@@ -639,6 +647,13 @@ void main() {
               .value
               .name,
           'Second aggregate member',
+        );
+        expect(
+          repositories.preceptors
+              .find(studentId: _studentId, id: interleavedPreceptorId)!
+              .value
+              .name,
+          'Interleaved independent member',
         );
       });
     },

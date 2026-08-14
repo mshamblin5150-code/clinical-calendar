@@ -1154,6 +1154,27 @@ void main() {
         isTrue,
       );
 
+      final snapshotPayload = await registry.runPortableBackupExclusive(
+        (service) => service.createOperationalSnapshotPayload(
+          createdAtUtc: _baseTime.add(const Duration(hours: 4)),
+        ),
+      );
+      final incompleteSnapshot =
+          jsonDecode(snapshotPayload) as Map<String, dynamic>;
+      final snapshotTables =
+          incompleteSnapshot['tables'] as Map<String, dynamic>;
+      final snapshotTrash = (snapshotTables['trash'] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
+      snapshotTables['trash'] = snapshotTrash.sublist(1);
+      await expectLater(
+        registry.runPortableBackupExclusive(
+          (service) => service.previewOperationalRestore(
+            payloadJson: jsonEncode(incompleteSnapshot),
+          ),
+        ),
+        throwsA(isA<PortableBackupException>()),
+      );
+
       database.execute(
         '''UPDATE historical_hours_entries SET revision = revision + 1
            WHERE student_id = ? AND id = ?''',

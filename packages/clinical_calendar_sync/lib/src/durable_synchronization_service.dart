@@ -312,63 +312,87 @@ final class DurableSynchronizationService
     final pending = <RemoteSynchronizationChange>[
       ...{for (final change in fetched) change.cursor: change}.values,
     ]..sort((left, right) => left.cursor.compareTo(right.cursor));
-    while (pending.isNotEmpty) {
-      final first = pending.removeAt(0);
-      final aggregate = _aggregateEnvelope(first);
-      final batch = aggregate == null
-          ? [first]
-          : <RemoteSynchronizationChange>[
-              first,
-              ...pending.where(
-                (change) =>
-                    _aggregateEnvelope(change)?.mutationId ==
-                    aggregate.mutationId,
-              ),
-            ];
-      if (aggregate != null) {
-        pending.removeWhere(
-          (change) =>
-              _aggregateEnvelope(change)?.mutationId == aggregate.mutationId,
-        );
-        final actual = {
-          for (final change in batch) '${change.entityType}:${change.entityId}',
-        };
-        if (actual.length != aggregate.expectedMembers.length ||
-            !actual.containsAll(aggregate.expectedMembers)) {
-          await _repositories.mutate((repositories) {
-            final synchronization = _syncRepository(repositories);
-            if (synchronization
-                case final AggregateSynchronizationLocalRepository
-                    aggregateRepository) {
-              aggregateRepository.recordIncompleteAggregatePull(
-                studentId: _studentId,
-                firstMember: first,
-                aggregateMutationId: aggregate.mutationId,
-                detectedAtUtc: _now(),
-              );
-            }
-          });
-          throw const SynchronizationTransportException(
-            'incomplete_aggregate_batch',
-            offline: false,
-          );
-        }
-        batch.sort(_aggregateDependencyOrder);
-      }
-      await _repositories.mutate((repositories) {
-        final synchronization = _syncRepository(repositories);
-        if (aggregate != null) {
+    final aggregateBatches =
+        <
+          String,
+          ({
+            _AggregateEnvelope envelope,
+            List<RemoteSynchronizationChange> changes,
+          })
+        >{};
+    for (final change in pending) {
+      final envelope = _aggregateEnvelope(change);
+      if (envelope == null) continue;
+      aggregateBatches
+          .putIfAbsent(
+            envelope.mutationId,
+            () => (envelope: envelope, changes: []),
+          )
+          .changes
+          .add(change);
+    }
+    for (final batch in aggregateBatches.values) {
+      final aggregate = batch.envelope;
+      final changes = batch.changes;
+      final actual = {
+        for (final change in changes) '${change.entityType}:${change.entityId}',
+      };
+      if (actual.length != aggregate.expectedMembers.length ||
+          !actual.containsAll(aggregate.expectedMembers)) {
+        await _repositories.mutate((repositories) {
+          final synchronization = _syncRepository(repositories);
           if (synchronization
               case final AggregateSynchronizationLocalRepository
                   aggregateRepository) {
-            aggregateRepository.resolveIncompleteAggregatePull(
+            aggregateRepository.recordIncompleteAggregatePull(
               studentId: _studentId,
+              firstMember: changes.first,
               aggregateMutationId: aggregate.mutationId,
-              resolvedAtUtc: _now(),
+              detectedAtUtc: _now(),
             );
           }
+        });
+        throw const SynchronizationTransportException(
+          'incomplete_aggregate_batch',
+          offline: false,
+        );
+      }
+    }
+    final lastIndexByAggregate = {
+      for (final entry in aggregateBatches.entries)
+        entry.key: pending.indexOf(entry.value.changes.last),
+    };
+    var index = 0;
+    while (index < pending.length) {
+      var endIndex = index;
+      var scanIndex = index;
+      while (scanIndex <= endIndex) {
+        final envelope = _aggregateEnvelope(pending[scanIndex]);
+        if (envelope != null) {
+          final aggregateEnd = lastIndexByAggregate[envelope.mutationId]!;
+          if (aggregateEnd > endIndex) endIndex = aggregateEnd;
         }
-        for (final change in batch) {
+        scanIndex++;
+      }
+      final visibleBatch = pending.sublist(index, endIndex + 1);
+      await _repositories.mutate((repositories) {
+        final synchronization = _syncRepository(repositories);
+        if (synchronization
+            case final AggregateSynchronizationLocalRepository
+                aggregateRepository) {
+          final resolved = <String>{};
+          for (final change in visibleBatch) {
+            final envelope = _aggregateEnvelope(change);
+            if (envelope != null && resolved.add(envelope.mutationId)) {
+              aggregateRepository.resolveIncompleteAggregatePull(
+                studentId: _studentId,
+                aggregateMutationId: envelope.mutationId,
+                resolvedAtUtc: _now(),
+              );
+            }
+          }
+        }
+        for (final change in visibleBatch) {
           synchronization.applyRemoteAndAdvanceCursor(
             studentId: _studentId,
             remoteScope: remoteScope,
@@ -378,6 +402,7 @@ final class DurableSynchronizationService
         }
       });
       _boundary.reached(SynchronizationBoundary.afterPullLocalCommit);
+      index = endIndex + 1;
     }
   }
 
@@ -474,37 +499,6 @@ final class _AggregateEnvelope {
 
   final String mutationId;
   final Set<String> expectedMembers;
-}
-
-int _aggregateDependencyOrder(
-  RemoteSynchronizationChange left,
-  RemoteSynchronizationChange right,
-) {
-  const deletion = <String, int>{
-    'reminder_state': 0,
-    'clinical_session': 1,
-    'historical_hours_entry': 2,
-    'schedule_template': 3,
-    'evaluation_plan': 4,
-    'clinical_placement': 5,
-    'settings': 6,
-  };
-  const restoration = <String, int>{
-    'clinical_placement': 0,
-    'evaluation_plan': 1,
-    'historical_hours_entry': 2,
-    'clinical_session': 3,
-    'schedule_template': 4,
-    'reminder_state': 5,
-    'settings': 6,
-  };
-  int rank(RemoteSynchronizationChange change) =>
-      (change.operationType == OutboxOperationType.delete
-          ? deletion
-          : restoration)[change.entityType] ??
-      99;
-  final byDependency = rank(left).compareTo(rank(right));
-  return byDependency != 0 ? byDependency : left.cursor.compareTo(right.cursor);
 }
 
 const _conflictCodes = {
