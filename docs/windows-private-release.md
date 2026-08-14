@@ -13,6 +13,10 @@ versioned upgrades, and clean Windows-managed uninstall behavior.
   - `WINDOWS_SIGNING_PFX_PASSWORD`: the PFX password.
 - Configure `WINDOWS_SIGNING_PUBLISHER` as a protected environment variable
   containing the exact certificate subject distinguished name.
+- Configure `WINDOWS_SIGNING_CERT_SHA256` as a protected environment variable
+  containing the maintainer-approved, 64-hex SHA-256 fingerprint of the public
+  signing certificate. Record it from a separately authenticated public
+  certificate; do not derive approval from the uploaded PFX.
 - Configure `CLINICAL_CALENDAR_SUPABASE_URL` as a protected environment
   variable containing the hosted HTTPS project URL and
   `CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY` as a protected secret containing
@@ -23,12 +27,37 @@ versioned upgrades, and clean Windows-managed uninstall behavior.
 - Never commit or attach the PFX, its password, a private key, database key,
   backup passphrase, Supabase privileged key, or test account credential.
 
-The workflow imports the PFX into the ephemeral runner's Current User store,
-derives the manifest Publisher from the certificate subject, requires it to
-match the pinned `WINDOWS_SIGNING_PUBLISHER`, signs with SHA-256
-and an RFC 3161 timestamp, verifies the completed signature, uploads only the
-MSIX and SHA-256 file, and removes the certificate in an `always()` cleanup
-step. Missing signing secrets fail before the release build.
+For this private release, create the maintainer-approved durable self-signed
+identity once on the maintainer's Windows machine:
+
+```powershell
+./tool/windows/create_private_release_certificate.ps1
+```
+
+The command creates a ten-year RSA-4096 code-signing certificate and stores its
+encrypted PFX, public CER, and generated password under the ignored,
+access-restricted `.secrets/windows-signing` directory. Keep an encrypted
+offline copy of that directory. Losing the PFX or its password prevents future
+packages from remaining in the same signing lineage. Only the public CER,
+subject, and SHA-256 fingerprint may be shared.
+
+The workflow imports the PFX into the ephemeral runner's Current User store
+without making the key exportable, deletes the temporary PFX in the same step,
+and removes the imported certificate in an `always()` cleanup step. After the
+subject and SHA-256 fingerprint match the approved values, it temporarily adds
+only that pinned public certificate to the runner's Current User Trusted People
+store so the self-signed chain can be verified, then removes that trust entry in
+the same cleanup. It requires
+the certificate subject and SHA-256 fingerprint to match the independently
+approved `WINDOWS_SIGNING_PUBLISHER` and `WINDOWS_SIGNING_CERT_SHA256` values.
+It never prints or uploads PFX bytes, passwords, private keys, or protected app
+configuration. Missing or mismatched signing inputs fail before upload.
+
+The `windows-private-release` environment admits protected branches only. Keep
+that policy enabled and require normal protected-branch review before dispatch.
+Signing uses SHA-256 and the pinned RFC 3161 timestamp service. Verification
+uses SignTool `/pa /all /v /tw`, so an invalid trust chain, signature, or
+missing timestamp fails closed.
 
 ## Produce a release
 
@@ -37,10 +66,17 @@ step. Missing signing secrets fail before the release build.
    component must be between 0 and 65535, and an upgrade must be greater than
    the installed package version.
 2. Complete `docs/release-security-checklist.md` against the candidate commit.
-3. Run the `Windows private release` workflow manually from that commit.
-4. Download the workflow artifact and retain the workflow URL, commit SHA,
-   package version, signer certificate subject/thumbprint, timestamp result,
-   SHA-256 value, and verification-machine identity in the private release log.
+3. Merge the reviewed candidate commit to the protected branch and run the
+   `Windows private release` workflow from that exact commit.
+4. Download the immutable, commit-named artifact. It contains one signed x64
+   MSIX, its checksum, public signer CER, SignTool signature/timestamp evidence,
+   `windows_release_provenance.json`, and the offline attestation bundle
+   `windows_release_provenance.sigstore.json`.
+5. Independently verify the bundle as described below. Record the workflow URL,
+   artifact name and ID, commit SHA, package version and SHA-256, signer subject
+   and certificate SHA-256, verifier machine, verifier result, and attestation
+   result on the owning issue. That hash-identified issue record selects the
+   exact downstream candidate; never replace it under the same label.
 
 For local structure validation only, after a Windows release build run:
 
@@ -53,22 +89,53 @@ release and must never be privately delivered.
 
 ## Verify before installation
 
-On the target Windows machine, compare the package with the separately shared
-expected hash and require a valid trusted signature:
+On a supported Windows machine, use approved Publisher and certificate values
+obtained separately from the downloaded artifact. Verify the bundled CER's
+SHA-256 against that separate record, then trust only that public certificate
+before package verification:
 
 ```powershell
-$package = Resolve-Path .\ClinicalCalendar-<version>-x64.msix
-Get-FileHash -Algorithm SHA256 $package
-$signature = Get-AuthenticodeSignature $package
-$signature | Format-List Status,StatusMessage,SignerCertificate,TimeStamperCertificate
-if ($signature.Status -ne 'Valid') { throw 'Clinical Calendar signature is not valid.' }
+$bundle = Resolve-Path .\clinical-calendar-windows-<commit-sha>
+$publicCertificate = Resolve-Path "$bundle\ClinicalCalendar-<version>-x64.msix.cer"
+$certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($publicCertificate)
+$approvedFingerprint = '<approved 64-hex certificate SHA-256>'.ToUpperInvariant()
+$actualFingerprint = $certificate.GetCertHashString(
+  [Security.Cryptography.HashAlgorithmName]::SHA256
+).ToUpperInvariant()
+if ($actualFingerprint -ne $approvedFingerprint) {
+  throw 'Refusing to trust an unapproved Windows release certificate.'
+}
+Import-Certificate `
+  -FilePath $publicCertificate `
+  -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+
+./tool/windows/verify_release_bundle.ps1 `
+  -BundlePath $bundle `
+  -ExpectedPublisher '<approved certificate subject>' `
+  -ExpectedSignerSha256 $approvedFingerprint `
+  -ExpectedRepository 'mshamblin5150-code/clinical-calendar' `
+  -ExpectedCommitSha '<40-hex candidate commit>' `
+  -WindowsSdkVersion '10.0.26100.0'
+
+$package = Resolve-Path "$bundle\ClinicalCalendar-<version>-x64.msix"
+gh attestation verify $package `
+  --repo mshamblin5150-code/clinical-calendar `
+  --signer-workflow mshamblin5150-code/clinical-calendar/.github/workflows/windows-release.yml `
+  --source-digest '<40-hex candidate commit>' `
+  --bundle "$bundle\windows_release_provenance.sigstore.json"
 ```
 
-The signer subject must match the recorded publisher. For a self-signed private
-test certificate, distribute only its public `.cer` through a separate trusted
-channel and install it in Local Computer `Trusted People` before verifying the
-MSIX. Never distribute the PFX. A publicly trusted code-signing certificate or
-Azure Artifact Signing avoids that manual trust bootstrap for production use.
+The verifier recomputes the checksum, reconciles the provenance identity,
+requires a trusted Authenticode signer and timestamp, compares the subject and
+certificate SHA-256 with independently approved values, and reruns pinned-SDK
+SignTool verification. The GitHub CLI command binds those bytes to the protected
+workflow and source commit. Both commands must pass.
+
+This certificate is approved only for authenticated private delivery. It does
+not carry public-CA trust and must not be represented as suitable for public
+distribution. Each target machine must verify its SHA-256 through a separate
+channel and trust only the public `.cer` in Local Computer `Trusted People`.
+Never distribute the PFX or its password.
 
 ## Clean install and offline verification
 
@@ -118,7 +185,14 @@ private server data, bypass ownership, or restore an erased account.
 ## Private delivery
 
 Share the signed MSIX, expected SHA-256, public certificate when required, and
-these instructions over authenticated channels. Keep the hash on a channel
-separate from the package where practical. Retain the preceding supported
+these instructions over authenticated channels. Keep the approved Publisher,
+certificate SHA-256, and package checksum on a separate channel where
+practical. These records contain no secret material.
+
+Retain the downloaded workflow bundle and owning-issue selection record for
+reproducible verification. GitHub retention is 90 days, so archival policy must
+preserve the exact bytes before expiry. Immutability comes from the package
+SHA-256, certificate identity, source commit, and signed GitHub provenance, not
+from a mutable display name. Retain the preceding supported
 artifact for rollback construction, but never publish mutable “latest” files
 without the exact version, commit, signer, and checksum record.

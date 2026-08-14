@@ -4,6 +4,7 @@ param(
   [string]$Publisher,
   [string]$PublisherDisplayName = 'Clinical Calendar',
   [string]$SigningThumbprint,
+  [string]$ExpectedSignerSha256,
   [string]$TimestampUrl = 'http://timestamp.digicert.com',
   [string]$WindowsSdkVersion,
   [string]$FlutterExecutable = 'flutter',
@@ -91,6 +92,24 @@ if ($SigningThumbprint) {
   if (-not $certificate.HasPrivateKey) {
     throw 'The selected signing certificate has no private key.'
   }
+  if ([string]::IsNullOrWhiteSpace($ExpectedSignerSha256)) {
+    throw 'ExpectedSignerSha256 is required for signed packaging.'
+  }
+  $normalizedExpectedSignerSha256 = $ExpectedSignerSha256.Replace(':', '').Replace(' ', '').ToUpperInvariant()
+  if ($normalizedExpectedSignerSha256 -notmatch '^[A-F0-9]{64}$') {
+    throw 'ExpectedSignerSha256 must be a complete SHA-256 certificate fingerprint.'
+  }
+  $actualSignerSha256 = $certificate.GetCertHashString(
+    [Security.Cryptography.HashAlgorithmName]::SHA256
+  ).ToUpperInvariant()
+  if ($actualSignerSha256 -ne $normalizedExpectedSignerSha256) {
+    throw 'Signing certificate does not match the approved SHA-256 identity.'
+  }
+  $now = [DateTime]::UtcNow
+  if ($now -lt $certificate.NotBefore.ToUniversalTime() -or
+      $now -gt $certificate.NotAfter.ToUniversalTime()) {
+    throw 'Signing certificate is not currently valid.'
+  }
   if ($Publisher -and $Publisher -ne $certificate.Subject) {
     throw 'Publisher must exactly match the signing certificate subject.'
   }
@@ -165,10 +184,15 @@ if ($certificate) {
   if ($LASTEXITCODE -ne 0) {
     throw "SignTool signing failed with exit code $LASTEXITCODE."
   }
-  & $signTool verify /pa /all /v $packagePath
-  if ($LASTEXITCODE -ne 0) {
-    throw "SignTool verification failed with exit code $LASTEXITCODE."
+  $signatureEvidencePath = "$packagePath.signature.txt"
+  & $signTool verify /pa /all /v /tw $packagePath 2>&1 |
+    Tee-Object -FilePath $signatureEvidencePath
+  $verificationExitCode = $LASTEXITCODE
+  if ($verificationExitCode -ne 0) {
+    throw "SignTool verification failed with exit code $verificationExitCode."
   }
+  $signerCertificatePath = "$packagePath.cer"
+  Export-Certificate -Cert $certificate -FilePath $signerCertificatePath | Out-Null
 }
 
 $hash = Get-FileHash -LiteralPath $packagePath -Algorithm SHA256
@@ -183,3 +207,8 @@ Write-Output "MSIX_PACKAGE=$packagePath"
 Write-Output "MSIX_SHA256=$hashPath"
 Write-Output "MSIX_VERSION=$packageVersion"
 Write-Output "MSIX_PUBLISHER=$Publisher"
+if ($certificate) {
+  Write-Output "MSIX_SIGNER_SHA256=$actualSignerSha256"
+  Write-Output "MSIX_SIGNATURE_EVIDENCE=$signatureEvidencePath"
+  Write-Output "MSIX_SIGNER_CERTIFICATE=$signerCertificatePath"
+}

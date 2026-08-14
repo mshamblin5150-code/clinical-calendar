@@ -5,19 +5,35 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
   build-sign-verify:
-    runs-on: windows-2025
+    strategy:
+      matrix:
+        include:
+          - runner: windows-2025
+            flutter: 3.44.8
+            windows_sdk: 10.0.26100.0
+            timestamp_url: http://timestamp.digicert.com
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     environment: windows-private-release
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - name: Verify protected release contract
+        shell: pwsh
+        run: |
+          ./tool/windows/windows_release_contract_test.ps1
+          ./tool/windows/verify_release_bundle_test.ps1
+
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
-          flutter-version: 3.44.8
+          flutter-version: ${{ matrix.flutter }}
           cache: true
 
       - name: Require release signing secrets
@@ -26,11 +42,13 @@ jobs:
           WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
           WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
           WINDOWS_SIGNING_PUBLISHER: ${{ vars.WINDOWS_SIGNING_PUBLISHER }}
+          WINDOWS_SIGNING_CERT_SHA256: ${{ vars.WINDOWS_SIGNING_CERT_SHA256 }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_PFX_BASE64) -or
               [string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_PFX_PASSWORD) -or
-              [string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_PUBLISHER)) {
-            throw 'Windows release signing secrets and the pinned Publisher variable are required.'
+              [string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_PUBLISHER) -or
+              $env:WINDOWS_SIGNING_CERT_SHA256 -notmatch '^[A-Fa-f0-9]{64}$') {
+            throw 'Windows release signing secrets, Publisher, and approved signer SHA-256 are required.'
           }
 
       - name: Resolve workspace and run quality gate
@@ -44,16 +62,43 @@ jobs:
         env:
           WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
           WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
+          WINDOWS_SIGNING_PUBLISHER: ${{ vars.WINDOWS_SIGNING_PUBLISHER }}
+          WINDOWS_SIGNING_CERT_SHA256: ${{ vars.WINDOWS_SIGNING_CERT_SHA256 }}
         run: |
           $pfxPath = Join-Path $env:RUNNER_TEMP 'clinical-calendar-signing.pfx'
-          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_PFX_BASE64))
-          $password = ConvertTo-SecureString $env:WINDOWS_SIGNING_PFX_PASSWORD -AsPlainText -Force
-          $certificate = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $password -Exportable:$false
-          if (-not $certificate.HasPrivateKey) {
-            throw 'Imported Windows signing certificate has no private key.'
+          $cerPath = Join-Path $env:RUNNER_TEMP 'clinical-calendar-signing.cer'
+          try {
+            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_PFX_BASE64))
+            $password = ConvertTo-SecureString $env:WINDOWS_SIGNING_PFX_PASSWORD -AsPlainText -Force
+            $importedCertificates = @(Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $password -Exportable:$false)
+            $importedThumbprints = @($importedCertificates | ForEach-Object Thumbprint)
+            "imported_thumbprints=$($importedThumbprints -join ',')" >> $env:GITHUB_OUTPUT
+            $signingCertificates = @($importedCertificates | Where-Object HasPrivateKey)
+            if ($signingCertificates.Count -ne 1) {
+              throw 'The PFX must contain exactly one signing certificate with a private key.'
+            }
+            $certificate = $signingCertificates[0]
+            "thumbprint=$($certificate.Thumbprint)" >> $env:GITHUB_OUTPUT
+            $certificateSha256 = $certificate.GetCertHashString(
+              [Security.Cryptography.HashAlgorithmName]::SHA256
+            )
+            if ($certificateSha256 -ne $env:WINDOWS_SIGNING_CERT_SHA256.ToUpperInvariant() -or
+                $certificate.Subject -ne $env:WINDOWS_SIGNING_PUBLISHER) {
+              throw 'The imported certificate does not match the approved Publisher and SHA-256 identity.'
+            }
+            Export-Certificate -Cert $certificate -FilePath $cerPath | Out-Null
+            $trustedCertificate = Import-Certificate `
+              -FilePath $cerPath `
+              -CertStoreLocation Cert:\CurrentUser\TrustedPeople
+            "trust_thumbprint=$($trustedCertificate.Thumbprint)" >> $env:GITHUB_OUTPUT
+          } finally {
+            if (Test-Path -LiteralPath $pfxPath) {
+              Remove-Item -LiteralPath $pfxPath -Force
+            }
+            if (Test-Path -LiteralPath $cerPath) {
+              Remove-Item -LiteralPath $cerPath -Force
+            }
           }
-          "thumbprint=$($certificate.Thumbprint)" >> $env:GITHUB_OUTPUT
-          Remove-Item -LiteralPath $pfxPath -Force
 
       - name: Build, package, sign, and verify MSIX
         shell: pwsh
@@ -62,12 +107,70 @@ jobs:
           CLINICAL_CALENDAR_SUPABASE_URL: ${{ vars.CLINICAL_CALENDAR_SUPABASE_URL }}
           CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY }}
           WINDOWS_SIGNING_PUBLISHER: ${{ vars.WINDOWS_SIGNING_PUBLISHER }}
+          WINDOWS_SIGNING_CERT_SHA256: ${{ vars.WINDOWS_SIGNING_CERT_SHA256 }}
         run: |
           ./tool/windows/package_msix.ps1 `
             -SigningThumbprint '${{ steps.certificate.outputs.thumbprint }}' `
+            -ExpectedSignerSha256 $env:WINDOWS_SIGNING_CERT_SHA256 `
             -Publisher $env:WINDOWS_SIGNING_PUBLISHER `
-            -WindowsSdkVersion '10.0.26100.0' `
+            -TimestampUrl '${{ matrix.timestamp_url }}' `
+            -WindowsSdkVersion '${{ matrix.windows_sdk }}' `
             -FlutterExecutable (Get-Command flutter).Source
+
+      - name: Write and independently verify release provenance
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_PUBLISHER: ${{ vars.WINDOWS_SIGNING_PUBLISHER }}
+          WINDOWS_SIGNING_CERT_SHA256: ${{ vars.WINDOWS_SIGNING_CERT_SHA256 }}
+        run: |
+          $releaseRoot = Resolve-Path 'apps/clinical_calendar/build/windows/msix'
+          $package = @(Get-ChildItem -LiteralPath $releaseRoot -Filter '*.msix' -File)
+          $checksum = @(Get-ChildItem -LiteralPath $releaseRoot -Filter '*.msix.sha256' -File)
+          $evidence = @(Get-ChildItem -LiteralPath $releaseRoot -Filter '*.msix.signature.txt' -File)
+          if ($package.Count -ne 1 -or $checksum.Count -ne 1 -or $evidence.Count -ne 1) {
+            throw 'Packaging must produce exactly one MSIX, checksum, and signature evidence file.'
+          }
+          if ($package[0].BaseName -notmatch '^ClinicalCalendar-(\d+\.\d+\.\d+\.\d+)-x64$') {
+            throw 'Signed MSIX file name does not contain the required version and architecture.'
+          }
+          $provenancePath = Join-Path $releaseRoot 'windows_release_provenance.json'
+          ./tool/windows/write_release_provenance.ps1 `
+            -PackagePath $package[0].FullName `
+            -ChecksumPath $checksum[0].FullName `
+            -SignatureEvidencePath $evidence[0].FullName `
+            -OutputPath $provenancePath `
+            -Repository '${{ github.repository }}' `
+            -CommitSha '${{ github.sha }}' `
+            -WorkflowRef '${{ github.workflow_ref }}' `
+            -RunId '${{ github.run_id }}' `
+            -RunAttempt '${{ github.run_attempt }}' `
+            -Publisher $env:WINDOWS_SIGNING_PUBLISHER `
+            -SignerSha256 $env:WINDOWS_SIGNING_CERT_SHA256 `
+            -Version $Matches[1] `
+            -RunnerImage '${{ matrix.runner }}' `
+            -FlutterVersion '${{ matrix.flutter }}' `
+            -WindowsSdkVersion '${{ matrix.windows_sdk }}'
+          ./tool/windows/verify_release_bundle.ps1 `
+            -BundlePath $releaseRoot `
+            -ExpectedPublisher $env:WINDOWS_SIGNING_PUBLISHER `
+            -ExpectedSignerSha256 $env:WINDOWS_SIGNING_CERT_SHA256 `
+            -ExpectedRepository '${{ github.repository }}' `
+            -ExpectedCommitSha '${{ github.sha }}' `
+            -ExpectedRunnerImage '${{ matrix.runner }}' `
+            -ExpectedFlutterVersion '${{ matrix.flutter }}' `
+            -WindowsSdkVersion '${{ matrix.windows_sdk }}'
+
+      - name: Attest immutable release candidate
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: apps/clinical_calendar/build/windows/msix/*.msix
+
+      - name: Include offline provenance attestation
+        shell: pwsh
+        run: |
+          Copy-Item -LiteralPath '${{ steps.attest.outputs.bundle-path }}' `
+            -Destination 'apps/clinical_calendar/build/windows/msix/windows_release_provenance.sigstore.json'
 
       - name: Upload signed private release
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -76,14 +179,30 @@ jobs:
           path: |
             apps/clinical_calendar/build/windows/msix/*.msix
             apps/clinical_calendar/build/windows/msix/*.sha256
+            apps/clinical_calendar/build/windows/msix/*.signature.txt
+            apps/clinical_calendar/build/windows/msix/*.cer
+            apps/clinical_calendar/build/windows/msix/windows_release_provenance.json
+            apps/clinical_calendar/build/windows/msix/windows_release_provenance.sigstore.json
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90
 
       - name: Remove ephemeral signing certificate
-        if: always() && steps.certificate.outputs.thumbprint != ''
+        if: always() && (steps.certificate.outputs.imported_thumbprints != '' || steps.certificate.outputs.trust_thumbprint != '')
         shell: pwsh
         run: |
-          $certificatePath = "Cert:\CurrentUser\My\${{ steps.certificate.outputs.thumbprint }}"
-          if (Test-Path -LiteralPath $certificatePath) {
-            Remove-Item -LiteralPath $certificatePath -Force
+          $certificatePaths = @()
+          $importedThumbprints = '${{ steps.certificate.outputs.imported_thumbprints }}'.Split(
+            ',',
+            [StringSplitOptions]::RemoveEmptyEntries
+          )
+          foreach ($thumbprint in $importedThumbprints) {
+            $certificatePaths += "Cert:\CurrentUser\My\$thumbprint"
+          }
+          if ('${{ steps.certificate.outputs.trust_thumbprint }}') {
+            $certificatePaths += "Cert:\CurrentUser\TrustedPeople\${{ steps.certificate.outputs.trust_thumbprint }}"
+          }
+          foreach ($certificatePath in $certificatePaths) {
+            if (Test-Path -LiteralPath $certificatePath) {
+              Remove-Item -LiteralPath $certificatePath -Force
+            }
           }

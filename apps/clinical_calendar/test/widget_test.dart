@@ -354,13 +354,17 @@ void main() {
     final packager = File(
       '../../tool/windows/package_msix.ps1',
     ).readAsStringSync();
+    final verifier = File(
+      '../../tool/windows/verify_release_bundle.ps1',
+    ).readAsStringSync();
     final manifest = File(
       '../../tool/windows/AppxManifest.template.xml',
     ).readAsStringSync();
 
-    expect(workflow, contains('runs-on: windows-2025'));
-    expect(workflow, contains('flutter-version: 3.44.8'));
-    expect(workflow, contains("-WindowsSdkVersion '10.0.26100.0'"));
+    expect(workflow, contains('runner: windows-2025'));
+    expect(workflow, contains('flutter: 3.44.8'));
+    expect(workflow, contains('windows_sdk: 10.0.26100.0'));
+    expect(workflow, contains(r'flutter-version: ${{ matrix.flutter }}'));
     expect(workflow, contains('WINDOWS_SIGNING_PFX_BASE64'));
     expect(workflow, contains('WINDOWS_SIGNING_PFX_PASSWORD'));
     expect(workflow, contains('WINDOWS_SIGNING_PUBLISHER'));
@@ -375,16 +379,27 @@ void main() {
     );
     expect(workflow, contains('Import-PfxCertificate'));
     expect(workflow, contains('Remove ephemeral signing certificate'));
+    expect(workflow, contains(r'Cert:\CurrentUser\TrustedPeople'));
+    expect(workflow, contains('imported_thumbprints'));
+    expect(workflow, contains('trust_thumbprint'));
     expect(workflow, isNot(contains('-AllowUnsigned')));
     expect(packager, contains("throw 'A CurrentUser signing certificate"));
     expect(packager, contains('Publisher must exactly match'));
     expect(packager, contains('signtool.exe'));
     expect(packager, contains('verify /pa /all /v'));
+    expect(packager, contains('MSIX_SIGNER_CERTIFICATE'));
     expect(packager, contains('Get-ClinicalCalendarReleaseFlutterArguments'));
     expect(
       packager,
       contains(r'''$suffix = if ($certificate) { '' } else { '.unsigned' }'''),
     );
+    expect(verifier, contains('makeappx.exe'));
+    expect(verifier, contains('AppxManifest.xml'));
+    expect(verifier, contains("GetAttribute('Name')"));
+    expect(verifier, contains("GetAttribute('Publisher')"));
+    expect(verifier, contains("GetAttribute('Version')"));
+    expect(verifier, contains("GetAttribute('ProcessorArchitecture')"));
+    expect(verifier, contains('*.msix.cer'));
     expect(manifest, contains('Name="ClinicalCalendar"'));
     expect(manifest, contains('Version="__VERSION__"'));
     expect(manifest, contains('uap10:PackageIntegrity'));
