@@ -1259,7 +1259,7 @@ final class _ContainmentDroneFramePainter extends CustomPainter {
     canvas.drawCircle(
       Offset(size.width - 18, 15),
       3.5,
-      Paint()..color = _roleColor(role),
+      Paint()..color = _containmentDroneRoleColor(role),
     );
     canvas.drawCircle(
       Offset(17, size.height - 15),
@@ -1268,15 +1268,6 @@ final class _ContainmentDroneFramePainter extends CustomPainter {
     );
     canvas.drawRect(bounds.deflate(10), Paint()..color = Colors.transparent);
   }
-
-  Color _roleColor(ContainmentDronePanelRole role) => switch (role) {
-    ContainmentDronePanelRole.calendar ||
-    ContainmentDronePanelRole.placements ||
-    ContainmentDronePanelRole.progress => VariantFColors.primary,
-    ContainmentDronePanelRole.planning => VariantFColors.scheduled,
-    ContainmentDronePanelRole.attention => VariantFColors.urgent,
-    ContainmentDronePanelRole.destination => VariantFColors.workMachinery,
-  };
 
   @override
   bool shouldRepaint(_ContainmentDroneFramePainter oldDelegate) =>
@@ -1296,7 +1287,8 @@ final class _ContainmentDroneFrameForegroundPainter extends CustomPainter {
       ..strokeWidth = 1.5
       ..color = const Color(0xFF657168);
     final dark = Paint()..color = const Color(0xFF050A07);
-    final glow = Paint()..color = _roleColor(role).withValues(alpha: .82);
+    final glow = Paint()
+      ..color = _containmentDroneRoleColor(role).withValues(alpha: .82);
 
     for (final corner in <Offset>[
       const Offset(8, 8),
@@ -1341,19 +1333,20 @@ final class _ContainmentDroneFrameForegroundPainter extends CustomPainter {
     canvas.drawPath(bottom, seam);
   }
 
-  Color _roleColor(ContainmentDronePanelRole role) => switch (role) {
-    ContainmentDronePanelRole.calendar ||
-    ContainmentDronePanelRole.placements ||
-    ContainmentDronePanelRole.progress => VariantFColors.primary,
-    ContainmentDronePanelRole.planning => VariantFColors.scheduled,
-    ContainmentDronePanelRole.attention => VariantFColors.urgent,
-    ContainmentDronePanelRole.destination => VariantFColors.workMachinery,
-  };
-
   @override
   bool shouldRepaint(_ContainmentDroneFrameForegroundPainter oldDelegate) =>
       role != oldDelegate.role;
 }
+
+Color _containmentDroneRoleColor(ContainmentDronePanelRole role) =>
+    switch (role) {
+      ContainmentDronePanelRole.calendar ||
+      ContainmentDronePanelRole.placements ||
+      ContainmentDronePanelRole.progress => VariantFColors.primary,
+      ContainmentDronePanelRole.planning => VariantFColors.scheduled,
+      ContainmentDronePanelRole.attention => VariantFColors.urgent,
+      ContainmentDronePanelRole.destination => VariantFColors.workMachinery,
+    };
 
 final class _ContainmentDroneChassisPainter extends CustomPainter {
   const _ContainmentDroneChassisPainter();

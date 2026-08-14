@@ -327,6 +327,7 @@ void main() {
     for (final fixture in const [
       (Size(320, 568), 1.0),
       (Size(900, 1440), 1.0),
+      (Size(900, 1440), 2.0),
       (Size(1536, 1024), 1.0),
     ]) {
       await tester.binding.setSurfaceSize(fixture.$1);
