@@ -380,6 +380,7 @@ void main() {
     expect(workflow, contains('Import-PfxCertificate'));
     expect(workflow, contains('Remove ephemeral signing certificate'));
     expect(workflow, contains(r'Cert:\CurrentUser\TrustedPeople'));
+    expect(workflow, contains('imported_thumbprints'));
     expect(workflow, contains('trust_thumbprint'));
     expect(workflow, isNot(contains('-AllowUnsigned')));
     expect(packager, contains("throw 'A CurrentUser signing certificate"));

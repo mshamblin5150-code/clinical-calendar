@@ -71,6 +71,8 @@ jobs:
             [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_PFX_BASE64))
             $password = ConvertTo-SecureString $env:WINDOWS_SIGNING_PFX_PASSWORD -AsPlainText -Force
             $importedCertificates = @(Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $password -Exportable:$false)
+            $importedThumbprints = @($importedCertificates | ForEach-Object Thumbprint)
+            "imported_thumbprints=$($importedThumbprints -join ',')" >> $env:GITHUB_OUTPUT
             $signingCertificates = @($importedCertificates | Where-Object HasPrivateKey)
             if ($signingCertificates.Count -ne 1) {
               throw 'The PFX must contain exactly one signing certificate with a private key.'
@@ -185,13 +187,20 @@ jobs:
           retention-days: 90
 
       - name: Remove ephemeral signing certificate
-        if: always() && (steps.certificate.outputs.thumbprint != '' || steps.certificate.outputs.trust_thumbprint != '')
+        if: always() && (steps.certificate.outputs.imported_thumbprints != '' || steps.certificate.outputs.trust_thumbprint != '')
         shell: pwsh
         run: |
-          $certificatePaths = @(
-            "Cert:\CurrentUser\My\${{ steps.certificate.outputs.thumbprint }}",
-            "Cert:\CurrentUser\TrustedPeople\${{ steps.certificate.outputs.trust_thumbprint }}"
+          $certificatePaths = @()
+          $importedThumbprints = '${{ steps.certificate.outputs.imported_thumbprints }}'.Split(
+            ',',
+            [StringSplitOptions]::RemoveEmptyEntries
           )
+          foreach ($thumbprint in $importedThumbprints) {
+            $certificatePaths += "Cert:\CurrentUser\My\$thumbprint"
+          }
+          if ('${{ steps.certificate.outputs.trust_thumbprint }}') {
+            $certificatePaths += "Cert:\CurrentUser\TrustedPeople\${{ steps.certificate.outputs.trust_thumbprint }}"
+          }
           foreach ($certificatePath in $certificatePaths) {
             if (Test-Path -LiteralPath $certificatePath) {
               Remove-Item -LiteralPath $certificatePath -Force

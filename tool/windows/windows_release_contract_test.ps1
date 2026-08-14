@@ -30,6 +30,7 @@ $requiredWorkflowFragments = @(
     '*.signature.txt',
     '*.cer',
     'Cert:\CurrentUser\TrustedPeople',
+    'imported_thumbprints',
     'trust_thumbprint',
     'retention-days: 90'
 )
@@ -93,7 +94,9 @@ foreach ($fragment in @(
     'verify_release_bundle.ps1',
     'gh attestation verify',
     'windows_release_provenance.json',
-    'immutable'
+    'immutable',
+    '$actualFingerprint -ne $approvedFingerprint',
+    'Refusing to trust an unapproved Windows release certificate.'
 )) {
     if (-not $releaseGuide.Contains($fragment)) {
         throw "Windows private-release guidance is missing required fragment: $fragment"

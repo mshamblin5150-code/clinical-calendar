@@ -98,7 +98,13 @@ before package verification:
 $bundle = Resolve-Path .\clinical-calendar-windows-<commit-sha>
 $publicCertificate = Resolve-Path "$bundle\ClinicalCalendar-<version>-x64.msix.cer"
 $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($publicCertificate)
-$certificate.GetCertHashString([Security.Cryptography.HashAlgorithmName]::SHA256)
+$approvedFingerprint = '<approved 64-hex certificate SHA-256>'.ToUpperInvariant()
+$actualFingerprint = $certificate.GetCertHashString(
+  [Security.Cryptography.HashAlgorithmName]::SHA256
+).ToUpperInvariant()
+if ($actualFingerprint -ne $approvedFingerprint) {
+  throw 'Refusing to trust an unapproved Windows release certificate.'
+}
 Import-Certificate `
   -FilePath $publicCertificate `
   -CertStoreLocation Cert:\LocalMachine\TrustedPeople
@@ -106,7 +112,7 @@ Import-Certificate `
 ./tool/windows/verify_release_bundle.ps1 `
   -BundlePath $bundle `
   -ExpectedPublisher '<approved certificate subject>' `
-  -ExpectedSignerSha256 '<approved 64-hex certificate SHA-256>' `
+  -ExpectedSignerSha256 $approvedFingerprint `
   -ExpectedRepository 'mshamblin5150-code/clinical-calendar' `
   -ExpectedCommitSha '<40-hex candidate commit>' `
   -WindowsSdkVersion '10.0.26100.0'
