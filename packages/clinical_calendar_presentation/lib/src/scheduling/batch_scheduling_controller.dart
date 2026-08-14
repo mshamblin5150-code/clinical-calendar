@@ -27,6 +27,7 @@ final class BatchSchedulingController extends ChangeNotifier {
   final bool useTwelveHourTime;
 
   final List<ZonedScheduleDate> _dates;
+  final Map<LocalDate, String> _preceptorOverrides = {};
   BatchSchedulingStage stage = BatchSchedulingStage.typeAndTime;
   BatchCommitmentType type = BatchCommitmentType.clinicalSession;
   LocalTime? startTime;
@@ -45,6 +46,11 @@ final class BatchSchedulingController extends ChangeNotifier {
   bool applied = false;
 
   List<ZonedScheduleDate> get selectedDates => List.unmodifiable(_dates);
+  Map<LocalDate, String> get preceptorOverrides =>
+      Map.unmodifiable(_preceptorOverrides);
+
+  String? preceptorIdFor(LocalDate date) =>
+      _preceptorOverrides[date] ?? preceptorId;
 
   BatchClinicalPlacementOption? get selectedPlacement {
     for (final placement in placements) {
@@ -104,6 +110,7 @@ final class BatchSchedulingController extends ChangeNotifier {
     review = null;
     busy = false;
     applied = false;
+    _preceptorOverrides.clear();
     _defaultClinicalAssignment(activeClinicalPlacementId);
     if (type != BatchCommitmentType.clinicalSession) {
       clinicalPlacementId = null;
@@ -123,6 +130,7 @@ final class BatchSchedulingController extends ChangeNotifier {
     } else {
       clinicalPlacementId = null;
       preceptorId = null;
+      _preceptorOverrides.clear();
     }
     notifyListeners();
   }
@@ -173,6 +181,7 @@ final class BatchSchedulingController extends ChangeNotifier {
       return;
     }
     final template = templates.firstWhere((value) => value.id == templateId);
+    final previousPlacementId = clinicalPlacementId;
     type = switch (template.type) {
       ScheduleTemplateType.workShift => BatchCommitmentType.workShift,
       ScheduleTemplateType.clinicalSession =>
@@ -186,14 +195,31 @@ final class BatchSchedulingController extends ChangeNotifier {
           placements.any(
             (placement) => placement.id == template.clinicalPlacementId,
           )) {
-        clinicalPlacementId = template.clinicalPlacementId;
-        preceptorId = template.preceptorId;
+        final placement = placements.firstWhere(
+          (value) => value.id == template.clinicalPlacementId,
+        );
+        clinicalPlacementId = placement.id;
+        if (previousPlacementId != placement.id) {
+          _preceptorOverrides.clear();
+        }
+        final templatePreceptorAttached = placement.preceptors.any(
+          (value) => value.id == template.preceptorId,
+        );
+        final currentPreceptorAttached = placement.preceptors.any(
+          (value) => value.id == preceptorId,
+        );
+        preceptorId = templatePreceptorAttached
+            ? template.preceptorId
+            : previousPlacementId == placement.id && currentPreceptorAttached
+            ? preceptorId
+            : placement.primaryPreceptorId;
       } else if (clinicalPlacementId == null) {
         _defaultClinicalAssignment(null);
       }
     } else {
       clinicalPlacementId = null;
       preceptorId = null;
+      _preceptorOverrides.clear();
     }
     inputError = null;
     review = null;
@@ -202,9 +228,11 @@ final class BatchSchedulingController extends ChangeNotifier {
   }
 
   void choosePlacement(String? placementId) {
+    if (placementId == clinicalPlacementId) return;
     clinicalPlacementId = placementId;
     final placement = selectedPlacement;
     preceptorId = placement?.primaryPreceptorId;
+    _preceptorOverrides.clear();
     review = null;
     applied = false;
     notifyListeners();
@@ -217,9 +245,35 @@ final class BatchSchedulingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> choosePreceptorForDate(LocalDate date, String? value) async {
+    final placement = selectedPlacement;
+    if (value == null ||
+        placement == null ||
+        !placement.preceptors.any((preceptor) => preceptor.id == value)) {
+      inputError = 'Choose a Preceptor attached to the Clinical Placement.';
+      notifyListeners();
+      return;
+    }
+    if (value == preceptorId) {
+      _preceptorOverrides.remove(date);
+    } else {
+      _preceptorOverrides[date] = value;
+    }
+    inputError = null;
+    status = null;
+    applied = false;
+    if (stage == BatchSchedulingStage.review && _dates.isNotEmpty) {
+      await _loadReview();
+    } else {
+      review = null;
+      notifyListeners();
+    }
+  }
+
   void toggleDate(ZonedScheduleDate date) {
     final index = _dates.indexWhere((value) => value.date == date.date);
     if (index >= 0) {
+      _preceptorOverrides.remove(_dates[index].date);
       _dates.removeAt(index);
     } else {
       _dates.add(date);
@@ -233,6 +287,7 @@ final class BatchSchedulingController extends ChangeNotifier {
 
   Future<void> removeDate(LocalDate date) async {
     _dates.removeWhere((value) => value.date == date);
+    _preceptorOverrides.remove(date);
     status = null;
     applied = false;
     if (stage == BatchSchedulingStage.review && _dates.isNotEmpty) {
@@ -334,6 +389,7 @@ final class BatchSchedulingController extends ChangeNotifier {
     endTime: endTime,
     clinicalPlacementId: clinicalPlacementId,
     preceptorId: preceptorId,
+    preceptorOverrides: _preceptorOverrides,
   );
 
   BatchSchedulingReview _reviewWithConflicts(List<SchedulingError> conflicts) =>

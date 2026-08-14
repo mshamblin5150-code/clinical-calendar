@@ -333,39 +333,69 @@ final class _ReviewStage extends StatelessWidget {
                 context.clinicalMetrics.cornerRadius,
               ),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
                         formatUsDate(item.date),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 4),
-                      Text(_reviewSummary(controller, item)),
-                      for (final conflict in item.conflicts)
-                        Text(
-                          _conflictLabel(conflict),
-                          style: TextStyle(
-                            color: context.clinicalColors.urgent,
-                          ),
+                    ),
+                    IconButton(
+                      key: Key('remove-batch-date-${item.date}'),
+                      constraints: BoxConstraints.tightFor(
+                        width: context.clinicalMetrics.minimumTouchTarget,
+                        height: context.clinicalMetrics.minimumTouchTarget,
+                      ),
+                      tooltip: 'Remove ${formatUsDate(item.date)}',
+                      onPressed: controller.busy
+                          ? null
+                          : () => controller.removeDate(item.date),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                Text(_reviewSummary(controller, item)),
+                if (controller.type == BatchCommitmentType.clinicalSession) ...[
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    key: Key(
+                      'batch-review-preceptor-${item.date}-'
+                      '${controller.preceptorIdFor(item.date)}',
+                    ),
+                    isExpanded: true,
+                    initialValue: controller.preceptorIdFor(item.date),
+                    decoration: InputDecoration(
+                      labelText: 'Preceptor for ${formatUsDate(item.date)}',
+                    ),
+                    items: [
+                      for (final preceptor
+                          in controller.selectedPlacement?.preceptors ??
+                              const <BatchPreceptorOption>[])
+                        DropdownMenuItem(
+                          value: preceptor.id,
+                          child: Text(preceptor.name),
                         ),
                     ],
+                    onChanged: controller.busy
+                        ? null
+                        : (value) => controller.choosePreceptorForDate(
+                            item.date,
+                            value,
+                          ),
                   ),
-                ),
-                IconButton(
-                  key: Key('remove-batch-date-${item.date}'),
-                  constraints: BoxConstraints.tightFor(
-                    width: context.clinicalMetrics.minimumTouchTarget,
-                    height: context.clinicalMetrics.minimumTouchTarget,
+                ],
+                for (final conflict in item.conflicts)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _conflictLabel(conflict),
+                      style: TextStyle(color: context.clinicalColors.urgent),
+                    ),
                   ),
-                  tooltip: 'Remove ${formatUsDate(item.date)}',
-                  onPressed: () => controller.removeDate(item.date),
-                  icon: const Icon(Icons.close),
-                ),
               ],
             ),
           ),
@@ -382,7 +412,10 @@ final class _TrayActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final touch = context.clinicalMetrics.minimumTouchTarget;
-    return Row(
+    return Wrap(
+      alignment: WrapAlignment.end,
+      spacing: 8,
+      runSpacing: 8,
       children: [
         if (controller.stage != BatchSchedulingStage.typeAndTime)
           ConstrainedBox(
@@ -394,7 +427,6 @@ final class _TrayActions extends StatelessWidget {
               label: const Text('Back'),
             ),
           ),
-        const Spacer(),
         ConstrainedBox(
           constraints: BoxConstraints(minHeight: touch),
           child: FilledButton.icon(
@@ -452,7 +484,7 @@ String _reviewSummary(
   if (controller.type != BatchCommitmentType.clinicalSession) return duration;
   final placement = controller.selectedPlacement;
   final preceptor = placement?.preceptors
-      .where((value) => value.id == controller.preceptorId)
+      .where((value) => value.id == controller.preceptorIdFor(item.date))
       .firstOrNull;
   return '$duration · ${placement?.name ?? 'No Clinical Placement'} · '
       '${preceptor?.name ?? 'No Preceptor'}';

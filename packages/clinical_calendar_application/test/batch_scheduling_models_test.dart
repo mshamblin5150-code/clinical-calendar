@@ -82,6 +82,26 @@ void main() {
       ),
     );
   });
+
+  test('draft resolves per-date Preceptors without replacing its default', () {
+    final firstDate = LocalDate(2026, 8, 3);
+    final secondDate = LocalDate(2026, 8, 7);
+    final draft = BatchSchedulingDraft(
+      studentId: 'student-1',
+      type: BatchCommitmentType.clinicalSession,
+      dates: [_date(3), _date(7), _date(9)],
+      startTime: LocalTime(8, 0),
+      endTime: LocalTime(16, 0),
+      clinicalPlacementId: 'placement-1',
+      preceptorId: 'preceptor-primary',
+      preceptorOverrides: {firstDate: 'preceptor-a', secondDate: 'preceptor-b'},
+    );
+
+    expect(draft.preceptorIdFor(firstDate), 'preceptor-a');
+    expect(draft.preceptorIdFor(secondDate), 'preceptor-b');
+    expect(draft.preceptorIdFor(LocalDate(2026, 8, 9)), 'preceptor-primary');
+    expect(draft.preceptorId, 'preceptor-primary');
+  });
 }
 
 ZonedScheduleDate _date(int day) => ZonedScheduleDate(
