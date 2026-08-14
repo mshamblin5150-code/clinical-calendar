@@ -668,9 +668,16 @@ final class PlacementApplicationService {
               session.state == ClinicalSessionState.awaitingConfirmation,
         )
         .length;
-    final scheduled = sessions
-        .where((session) => session.state == ClinicalSessionState.scheduled)
-        .length;
+    final scheduledSessions =
+        sessions
+            .where((session) => session.state == ClinicalSessionState.scheduled)
+            .toList(growable: false)
+          ..sort(
+            (left, right) => left.plannedInterval.startInstantUtc.compareTo(
+              right.plannedInterval.startInstantUtc,
+            ),
+          );
+    final scheduled = scheduledSessions.length;
     final evidence = PlacementCompletionEvidence(
       completedMinutes: progress.completedMinutes,
       allRequiredEvaluationsDocumented:
@@ -712,6 +719,7 @@ final class PlacementApplicationService {
       derivedState: derivedState,
       awaitingConfirmationSessionCount: awaiting,
       scheduledFutureSessionCount: scheduled,
+      scheduledFutureSessions: List.unmodifiable(scheduledSessions),
     );
   }
 

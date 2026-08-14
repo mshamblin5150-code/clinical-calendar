@@ -18,10 +18,12 @@ workflow reachability, and accessibility semantics. Concept themes may own
 responsive composition and control placement under
 [`concept-fidelity-renderer-contract.md`](concept-fidelity-renderer-contract.md).
 
-Containment Drone 47-Alpha remains the accepted existing identity. With
-Enhanced accessibility off, catalog work must preserve its identifier,
-palette, typography, Help guide, frame geometry, raster bytes, widget behavior,
-and rendered output exactly.
+Containment Drone 47-Alpha remains the accepted identity. Issue
+[#146](https://github.com/mshamblin5150-code/clinical-calendar/issues/146)
+ratifies a concept-owned v2 renderer under the same immutable identifier. Its
+palette, typography, Help guide, workflows, and protected historical renderer
+sources remain preserved; the approved v2 shell and its new proof lane replace
+the applied `variant-f` composition.
 
 ## Catalog identities
 
@@ -86,10 +88,10 @@ theme.
 
 ### Catalog brand-mark exception
 
-Issue [#159](https://github.com/mshamblin5150-code/clinical-calendar/issues/159)
-ratifies one narrow exception to theme-local asset ownership. Graphite,
-Coastal Light, Botanical Study, Field Archive, Federation Classic, and
-Federation 2399 consume the catalog-owned Axion delta from
+Issues [#159](https://github.com/mshamblin5150-code/clinical-calendar/issues/159)
+and [#146](https://github.com/mshamblin5150-code/clinical-calendar/issues/146)
+ratify one narrow exception to theme-local asset ownership. All seven themes,
+including Containment Drone 47-Alpha, consume the catalog-owned Axion delta from
 `assets/shared_brand/axion-delta-mark.png`. Each bundle declares that shared
 dependency and renders it through the common mark boundary.
 
@@ -97,27 +99,25 @@ This exception covers only the underlying delta-and-orbit geometry. Placement,
 scale, optional color treatment, semantics, crown composition, material
 language, panel art, and all other chrome remain independently theme-owned.
 It does not authorize borrowing generic panels or any other identity's art.
-Containment Drone 47-Alpha remains outside this exception and unchanged.
 
 ## Renderer lanes
 
 The initial catalog uses two renderer lanes over the same workflow
 controllers, domain services, loaded Student data, and live content surfaces:
 
-- `variant-f` delegates to the existing `buildVariantFTheme()`,
-  `ResponsiveApplicationShell`, frames, painters, raster loaders, and Help
-  guide.
+- `variant-f` retains `buildVariantFTheme()`, its protected historical files,
+  raster loaders, and Help guide, but delegates the applied shell to the
+  issue-146 `ContainmentDroneShellRenderer`.
 - The six additions consume shared live content slots and workflow callbacks.
   A theme may use the shared additive shell where it satisfies its approved
   concept, or own its tablet composition under the concept-fidelity renderer
   contract. Shared behavior and semantics are fixed; tablet geometry is not.
 
-This separation remains a preservation boundary. A later, separate GitHub
-issue may converge implementation infrastructure, but convergence does not
-require identical theme geometry. The legacy Variant F lane may be removed
-only after the replacement path produces exact reference-image equality for
-`variant-f`, leaves its asset hashes and geometry unchanged, passes the full
-responsive suite, and receives fresh physical Android-tablet approval.
+This separation remains a preservation boundary. Issue #146 authorizes only
+the new Containment-owned shell, canonical Axion dependency, opt-in shared
+slot policies, refreshed Gallery thumbnail, and a separate v2 golden lane. It
+does not authorize edits to the protected historical implementation or v1
+baselines. Fresh physical Android-tablet approval remains a release gate.
 
 ## Containment Drone preservation boundary
 
@@ -159,12 +159,14 @@ alpha zero.
 - Choosing, previewing, applying, restarting into, or falling back from
   another theme cannot mutate a `variant-f` bundle component.
 
-The initial catalog change must not edit `variant_f_theme.dart`,
+The initial catalog change and issue #146 must not edit `variant_f_theme.dart`,
 `variant_f_raster_assets.dart`, `mechanical_pixel_tiles.dart`,
 `tactical_frame.dart`, or `responsive_shell.dart`. Any later proposed change
-to these files, the frozen assets, hashes, or accepted goldens is blocked from
-an additive catalog PR. Re-baselining requires a separate issue, explicit
-maintainer approval, fresh physical Android evidence, and a dedicated PR.
+to these files, the frozen assets, hashes, or historical accepted goldens is
+blocked. Issue #146 records new output only in the `containment_drone_v2`
+proof lane. Re-baselining the historical lane requires a separate issue,
+explicit maintainer approval, fresh physical Android evidence, and a dedicated
+PR.
 
 Build 37 and commit `1ef05bd989329da0f97c13009717c339ce9b9807` are the
 canonical nine-slice physical baseline. Build 39 and commit
@@ -409,9 +411,9 @@ no Windows or physical-phone visual claim.
 
 ## Release and evolution rules
 
-The current Containment-only experience remains authoritative until all seven
-bundles are complete, approved, and pass every applicable gate. The gallery
-does not ship partially.
+The complete seven-theme catalog remains authoritative; the gallery does not
+ship partially. Issue #146 refines the existing Containment identity without
+changing the catalog count or stored theme identifier.
 
 Theme IDs identify enduring identities rather than visual versions. An
 approved refinement ships under the same ID and reaches existing selections

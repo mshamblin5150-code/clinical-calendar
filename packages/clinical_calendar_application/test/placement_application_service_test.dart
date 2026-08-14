@@ -112,6 +112,34 @@ void main() {
   });
 
   test(
+    'snapshot exposes scheduled future sessions in chronological order',
+    () async {
+      final created = await _createSimplePlacement(service);
+      final later = ClinicalSession.schedule(
+        id: identifiers.nextIdentifier(),
+        clinicalPlacementId: created.placement.id,
+        preceptorId: created.placement.primaryPreceptorId,
+        plannedInterval: _interval(LocalDate(2026, 8, 22), 8, 4),
+        asOfUtc: DateTime.utc(2026, 8, 10, 12),
+      );
+      final earlier = ClinicalSession.schedule(
+        id: identifiers.nextIdentifier(),
+        clinicalPlacementId: created.placement.id,
+        preceptorId: created.placement.primaryPreceptorId,
+        plannedInterval: _interval(LocalDate(2026, 8, 20), 8, 4),
+        asOfUtc: DateTime.utc(2026, 8, 10, 12),
+      );
+      registry.repositories.seedClinicalSession(later);
+      registry.repositories.seedClinicalSession(earlier);
+
+      final snapshot = (await service.activePlacement())!;
+
+      expect(snapshot.scheduledFutureSessionCount, 2);
+      expect(snapshot.scheduledFutureSessions, [earlier, later]);
+    },
+  );
+
+  test(
     'aggregate failure rolls back records, selection, and outboxes',
     () async {
       final preceptor = await service.createPreceptor(name: 'Dr. Rivera');

@@ -1142,28 +1142,54 @@ final class _MonthView extends StatelessWidget {
       return _buildMonthGrid(context, dates, weekdayLabels, null);
     }
     return LayoutBuilder(
-      builder: (context, constraints) => Column(
-        key: const Key('month-view'),
-        children: [
-          _weekdayHeader(
-            context,
-            weekdayLabels,
-            height: weekdayHeaderHeight,
-            colored:
-                Theme.of(context)
-                    .extension<ClinicalCalendarPresentationPolicy>()
-                    ?.colorWeekdayHeader ??
-                false,
-          ),
-          _monthGrid(
-            context,
-            dates,
-            constraints.maxHeight - (showLegend ? 38 : 0),
-            weekdayHeaderHeight,
-          ),
-          if (showLegend) const _BotanicalMonthLegend(),
-        ],
-      ),
+      builder: (context, constraints) {
+        final coloredHeader =
+            Theme.of(context)
+                .extension<ClinicalCalendarPresentationPolicy>()
+                ?.colorWeekdayHeader ??
+            false;
+        final header = _weekdayHeader(
+          context,
+          weekdayLabels,
+          height: weekdayHeaderHeight,
+          colored: coloredHeader,
+        );
+        final legendHeight = showLegend ? 38.0 : 0.0;
+        final minimumGridHeight = 44.0 * weekRows;
+        if (constraints.maxHeight <
+            weekdayHeaderHeight + minimumGridHeight + legendHeight) {
+          return Column(
+            key: const Key('month-view'),
+            children: [
+              header,
+              Expanded(
+                child: SingleChildScrollView(
+                  child: _monthGrid(
+                    context,
+                    dates,
+                    weekdayHeaderHeight + minimumGridHeight,
+                    weekdayHeaderHeight,
+                  ),
+                ),
+              ),
+              if (showLegend) const _BotanicalMonthLegend(),
+            ],
+          );
+        }
+        return Column(
+          key: const Key('month-view'),
+          children: [
+            header,
+            _monthGrid(
+              context,
+              dates,
+              constraints.maxHeight - legendHeight,
+              weekdayHeaderHeight,
+            ),
+            if (showLegend) const _BotanicalMonthLegend(),
+          ],
+        );
+      },
     );
   }
 

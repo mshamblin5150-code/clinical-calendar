@@ -103,11 +103,12 @@ void main() {
 
       for (final bundle
           in ClinicalCalendarThemeBundleRegistry.standard.galleryBundles) {
+        final assetId = bundle.gallery.runtimeThumbnailAssetId ?? bundle.id;
         final shipped = await File(
-          '${packageRoot.path}/assets/theme_gallery_runtime/${bundle.id}.png',
+          '${packageRoot.path}/assets/theme_gallery_runtime/$assetId.png',
         ).readAsBytes();
         final golden = await File(
-          '${packageRoot.path}/test/goldens/theme_gallery_runtime/${bundle.id}.png',
+          '${packageRoot.path}/test/goldens/theme_gallery_runtime/$assetId.png',
         ).readAsBytes();
 
         expect(shipped, golden, reason: bundle.id);
@@ -243,7 +244,7 @@ void main() {
     tester,
   ) async {
     const expectedShellKeys = <String, String>{
-      variantFThemeId: 'command-bar',
+      variantFThemeId: 'containment-drone-landscape-shell',
       graphiteThemeId: 'graphite-landscape-shell',
       federationClassicThemeId: 'federation-classic-landscape-shell',
       federation2399ThemeId: 'federation-2399-landscape-shell',
@@ -315,9 +316,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.getSize(thumbnail), bundle.gallery.thumbnailViewport);
+      final assetId = bundle.gallery.runtimeThumbnailAssetId ?? bundle.id;
       await expectLater(
         thumbnail,
-        matchesGoldenFile('goldens/theme_gallery_runtime/${bundle.id}.png'),
+        matchesGoldenFile('goldens/theme_gallery_runtime/$assetId.png'),
       );
       expect(tester.takeException(), isNull, reason: bundle.id);
     });
@@ -329,9 +331,10 @@ void main() {
             Directory.current.path.endsWith('clinical_calendar_presentation')
             ? Directory.current
             : Directory('packages/clinical_calendar_presentation');
+        final assetId = bundle.gallery.runtimeThumbnailAssetId ?? bundle.id;
         final bytes = await File(
           '${packageRoot.path}/test/goldens/theme_gallery_runtime/'
-          '${bundle.id}.png',
+          '$assetId.png',
         ).readAsBytes();
         final evidence = ThemeThumbnailEvidence(
           themeId: bundle.id,

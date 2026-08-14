@@ -2,7 +2,8 @@
 
 Issue: [#146](https://github.com/mshamblin5150-code/clinical-calendar/issues/146)
 
-Status: **proposed concept; maintainer approval pending**.
+Status: **concept approved; deterministic runtime implemented on issue #146;
+physical Android-tablet approval pending**.
 
 Declared landscape golden viewport: **1536 x 1024 logical pixels**.
 Declared portrait proof viewport: **900 x 1440 logical pixels**.
@@ -10,13 +11,28 @@ Declared portrait proof viewport: **900 x 1440 logical pixels**.
 `proposed-concept-landscape-1536x1024.png` is a generated approval artifact,
 not a runtime capture or production raster asset. It uses fictional data.
 
+`concept-vs-runtime-landscape-1536x1024.png` is the labelled equal-size review
+sheet. Its left half is the approved concept; its right half is the
+deterministic Flutter runtime at the same 1536 x 1024 logical viewport. The
+runtime source golden is captured at the Android test device pixel ratio and
+downsampled only for this review sheet. It is not a production raster asset.
+
+The authoritative runtime proofs live in
+`packages/clinical_calendar_presentation/test/baselines/containment_drone_v2`.
+They include exact logical landscape and portrait targets, a 200% text proof,
+compact rendering, Settings, and all ten destination mounts. The deterministic
+fixture uses fictional Family Medicine data. The single cross-host reference
+set and renderer metadata are pinned in `runtime-proof-manifest.json`; Windows
+must match it exactly and Linux CI validates the same files under the
+repository's bounded proof comparator. No Linux-authored capture is claimed.
+
 ## Maintainer-directed identity
 
 - The shared canonical Axion Delta is integrated as the actionable
   Application Menu trigger.
 - A large live Clinical Placement progress wheel is the dominant right-side
   instrument and exposes Completed Hours, Scheduled Hours, Remaining Hours,
-  and Over-Target Hours.
+  Unscheduled Hours, and Over-Target Hours.
 - Dense irregular hull plates, conduits, ribs, recessed circuits, clamp-like
   joints, and localized green illumination make the theme materially more
   Borg-like than v1 while preserving readable live-content bays.
@@ -93,6 +109,14 @@ The exact built-in generation prompt and reference hashes are recorded in
 `generation-prompt.md`. The first proposal remains under the adjacent v1
 directory and is explicitly labelled rejected.
 
-Production implementation remains blocked until the maintainer explicitly
-approves this concept (or a successor) and authorizes the exact frozen
-renderer/asset/geometry preservation-boundary amendment.
+The maintainer approved this concept and the exact issue-146 preservation
+amendment on 2026-08-13, then clarified that the approved concept must ship as
+the working selectable theme. That clarification authorizes the new
+Containment-only `assets/containment_drone_v2/chassis-conduit-bridge.png`
+production ornament while all protected legacy rasters remain immutable. The
+ornament is non-interactive and sits outside the safe live-content boundary.
+Its generation provenance and final prompt are recorded in
+`production-chassis-asset.md`.
+Release acceptance remains blocked only on fresh physical inspection on the
+SM-X920 target; no physical-device capture is represented by this deterministic
+proof package.

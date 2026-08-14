@@ -1638,6 +1638,8 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             placementProgress: placementProgress,
             attention: attention,
           )
+        : widget.themeBundle.id == variantFThemeId
+        ? KeyedSubtree(key: _insightRailContentKey, child: placementProgress)
         : KeyedSubtree(
             key: _insightRailContentKey,
             child: SingleChildScrollView(

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   const inScopeThemes = <ClinicalCalendarThemeBundle>[
+    VariantFThemeBundle(),
     GraphiteThemeBundle(),
     CoastalLightThemeBundle(),
     BotanicalStudyThemeBundle(),
@@ -16,43 +17,42 @@ void main() {
     Federation2399ThemeBundle(),
   ];
 
-  testWidgets(
-    'all six non-Containment themes render the canonical delta source',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1536, 1024));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets('all seven themes render the canonical delta source', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1536, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      for (final bundle in inScopeThemes) {
-        expect(
-          bundle.frame.assetPaths,
-          contains(canonicalDeltaMarkAsset),
-          reason: '${bundle.id} must declare the canonical delta dependency',
-        );
+    for (final bundle in inScopeThemes) {
+      expect(
+        bundle.frame.assetPaths,
+        contains(canonicalDeltaMarkAsset),
+        reason: '${bundle.id} must declare the canonical delta dependency',
+      );
 
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: bundle.standardPresentation.createThemeData(),
-            home: bundle.shellRenderer.build(
-              slots: _slots,
-              environmentName: 'TEST',
-              onOpenMenu: _noop,
-              onOpenDestination: _ignoreDestination,
-              onOpenAttention: _noop,
-              onAddSchedule: _noop,
-            ),
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: bundle.standardPresentation.createThemeData(),
+          home: bundle.shellRenderer.build(
+            slots: _slots,
+            environmentName: 'TEST',
+            onOpenMenu: _noop,
+            onOpenDestination: _ignoreDestination,
+            onOpenAttention: _noop,
+            onAddSchedule: _noop,
           ),
-        );
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(
-          find.byType(CanonicalDeltaMark),
-          findsOneWidget,
-          reason: '${bundle.id} must render through the shared mark widget',
-        );
-        expect(tester.takeException(), isNull);
-      }
-    },
-  );
+      expect(
+        find.byType(CanonicalDeltaMark),
+        findsOneWidget,
+        reason: '${bundle.id} must render through the shared mark widget',
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
 
   test('the package bundles exactly one delta mark raster', () async {
     final assetDirectory = _assetDirectory();
@@ -114,6 +114,7 @@ void main() {
         'lib/src/heritage_field_notes_shell.dart',
         'lib/src/federation_classic_shell.dart',
         'lib/src/federation_2399_shell.dart',
+        'lib/src/containment_drone_shell.dart',
       ];
       final localDeltaPainter = RegExp(
         r'class\s+\S*(?:Axion|Delta)\S*Painter',
@@ -168,14 +169,9 @@ void main() {
     },
   );
 
-  testWidgets('Containment Drone does not consume the canonical delta', (
-    tester,
-  ) async {
+  testWidgets('Containment Drone consumes the canonical delta', (tester) async {
     const containment = VariantFThemeBundle();
-    expect(
-      containment.frame.assetPaths,
-      isNot(contains(canonicalDeltaMarkAsset)),
-    );
+    expect(containment.frame.assetPaths, contains(canonicalDeltaMarkAsset));
 
     await tester.pumpWidget(
       MaterialApp(
@@ -192,7 +188,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(CanonicalDeltaMark), findsNothing);
+    expect(find.byType(CanonicalDeltaMark), findsOneWidget);
   });
 }
 

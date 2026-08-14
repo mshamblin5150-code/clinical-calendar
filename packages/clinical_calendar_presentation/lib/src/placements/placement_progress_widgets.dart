@@ -106,6 +106,7 @@ final class PlacementProgressWheel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = snapshot.progress;
+    final detailsScope = PlacementProgressDetailsScope.maybeOf(context);
     final fractions = _progressWheelFractions(progress);
     final instrument = GraphiteInstrumentScope.isActive(context);
     final touchWording = _usesTouchWording(touch);
@@ -117,13 +118,15 @@ final class PlacementProgressWheel extends StatelessWidget {
         '${_minutes(progress.scheduledMinutes)} Scheduled Hours, '
         '${_minutes(progress.unscheduledMinutes)} Unscheduled Hours, '
         '${_minutes(progress.overTargetMinutes)} Over-Target Hours. '
-        '${touchWording ? 'Tap' : 'Click'} to show the next Clinical Placement.';
+        '${detailsScope == null ? '${touchWording ? 'Tap' : 'Click'} to show the next Clinical Placement.' : '${touchWording ? 'Tap' : 'Click'} for detailed Clinical Placement progress.'}';
     return Semantics(
       button: true,
       label: semantics,
       child: InkWell(
         key: const Key('placement-progress-wheel'),
-        onTap: onCycle,
+        onTap: detailsScope == null
+            ? onCycle
+            : () => detailsScope.onOpenDetails(snapshot),
         customBorder: const CircleBorder(),
         child: SizedBox.square(
           dimension: effectiveDiameter,
@@ -139,13 +142,23 @@ final class PlacementProgressWheel extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _minutes(progress.completedMinutes),
+                    detailsScope == null
+                        ? _minutes(progress.completedMinutes)
+                        : snapshot.placement.name,
+                    textAlign: detailsScope == null ? null : TextAlign.center,
+                    maxLines: detailsScope == null ? null : 2,
+                    overflow: detailsScope == null
+                        ? null
+                        : TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                   Text(
-                    'completed',
+                    detailsScope == null
+                        ? 'completed'
+                        : '${touchWording ? 'Tap' : 'Click'} for details',
+                    textAlign: detailsScope == null ? null : TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -156,6 +169,26 @@ final class PlacementProgressWheel extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Opt-in interaction policy used by a theme-owned progress instrument.
+/// The shared progress widget remains the source of metrics and semantics;
+/// only the public action changes from cycling to opening live details.
+final class PlacementProgressDetailsScope extends InheritedWidget {
+  const PlacementProgressDetailsScope({
+    required this.onOpenDetails,
+    required super.child,
+    super.key,
+  });
+
+  final ValueChanged<PlacementSnapshot> onOpenDetails;
+
+  static PlacementProgressDetailsScope? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<PlacementProgressDetailsScope>();
+
+  @override
+  bool updateShouldNotify(PlacementProgressDetailsScope oldWidget) =>
+      onOpenDetails != oldWidget.onOpenDetails;
 }
 
 /// Shared production wheel graphic used by the live progress surface and
@@ -228,7 +261,13 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
 /// Marks a placement panel embedded inside theme-owned housing so shared
 /// content does not paint a second tactical frame.
 final class EmbeddedPlacementPanelInterior extends InheritedWidget {
-  const EmbeddedPlacementPanelInterior({required super.child, super.key});
+  const EmbeddedPlacementPanelInterior({
+    required super.child,
+    this.outerScrollOwnsVerticalOverflow = false,
+    super.key,
+  });
+
+  final bool outerScrollOwnsVerticalOverflow;
 
   static bool isActive(BuildContext context) =>
       context
@@ -237,8 +276,16 @@ final class EmbeddedPlacementPanelInterior extends InheritedWidget {
           >() !=
       null;
 
+  static bool outerScrollOwnsOverflow(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<EmbeddedPlacementPanelInterior>()
+          ?.outerScrollOwnsVerticalOverflow ??
+      false;
+
   @override
-  bool updateShouldNotify(EmbeddedPlacementPanelInterior oldWidget) => false;
+  bool updateShouldNotify(EmbeddedPlacementPanelInterior oldWidget) =>
+      outerScrollOwnsVerticalOverflow !=
+      oldWidget.outerScrollOwnsVerticalOverflow;
 }
 
 final class PlacementProgressRail extends StatefulWidget {
@@ -1368,7 +1415,9 @@ final class _TacticalPanel extends StatelessWidget {
         if (expandChild) Expanded(child: child) else child,
       ],
     );
-    final adaptiveContent = enlargedText
+    final adaptiveContent =
+        enlargedText &&
+            !EmbeddedPlacementPanelInterior.outerScrollOwnsOverflow(context)
         ? SingleChildScrollView(child: content)
         : content;
     if (FederationClassicPanelScope.isActive(context)) {

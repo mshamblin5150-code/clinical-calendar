@@ -1,0 +1,24 @@
+{
+  "issue": 146,
+  "themeId": "variant-f",
+  "rendererId": "containment-drone-concept-renderer-v2",
+  "fixture": "fictional-family-medicine",
+  "platform": "cross-host-reference",
+  "physicalAndroidApproval": "pending",
+  "proofs": {
+    "calendar-landscape-1536x1024.png": "9853434223297f11b6bd3fca1fe21e05c4cbabec929c25bbaa06326bec8d2a35",
+    "calendar-portrait-900x1440.png": "e7df1f390c3a49ffd26740a1fd545ec9634d56d196942e096c62227fb9942c5e",
+    "calendar-portrait-200-percent-900x1440.png": "4d008bb22a4293b5e444aad5d922a3ab91aad183706b69d8fa27ca555bba569e",
+    "concept-vs-runtime-landscape-1536x1024.png": "5b9e8e5fffb293587d883831bcb5bf7503505d28a5f17af043ea09dd1477db8a",
+    "theme-gallery-runtime-variant-f-v2.png": "b85f9b738ca4959beea66e1f735ef3af8d916e673dc99017e1f980f006fb3a98"
+  },
+  "containmentAssetSha256": {
+    "chassis-conduit-bridge.png": "074d5c0a71b124330c65adeffaf4975dedd78687d248665205c95b8f730ea777"
+  },
+  "protectedRasterSha256": {
+    "panel-nine-slice-v2.png": "9ff3968a94d497dc6f76f2b14f370c5a24c3bb4969397ee220da005093c15ad7",
+    "hardware-atlas.png": "0abc02903e8fb954fe80fb91e71aaaa7ee5a5020160e7138cb8b75e516f949e1",
+    "panel-atlas.png": "01df9ab1ee87dc41852dd61c8193a7b453eb92695e323bf1861ba891120d65ae",
+    "rail-atlas.png": "2acf4e26ad10db07a49fadcf78064e24d04724ad680390508593f06761cb2649"
+  }
+}

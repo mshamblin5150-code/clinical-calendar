@@ -20,13 +20,17 @@ void main() {
     expect(bundle.id, variantFThemeId);
     expect(bundle.metadata.displayName, 'Containment Drone 47-Alpha');
     expect(bundle.standardPresentation, isA<VariantFVisualTheme>());
-    expect(bundle.shellRenderer, isA<VariantFShellRenderer>());
+    expect(bundle.shellRenderer, isA<ContainmentDroneShellRenderer>());
     expect(bundle.frame.sourceSize, const Size(1536, 1024));
     expect(
       bundle.frame.sourceCuts,
       const EdgeInsets.fromLTRB(120, 145, 120, 170),
     );
-    expect(bundle.frame.assetPaths, hasLength(4));
+    expect(bundle.frame.assetPaths, hasLength(6));
+    expect(
+      bundle.frame.assetPaths,
+      contains(containmentDroneChassisBridgeAsset),
+    );
     expect(bundle.gallery.swatches, hasLength(5));
     expect(bundle.marks.marks, hasLength(9));
     expect(bundle.helpGuide.calendarStates, hasLength(5));
@@ -222,11 +226,7 @@ void main() {
     'Federation Classic rebuild leaves every other renderer path unchanged',
     () {
       final cases = <(ClinicalCalendarThemeBundle, String, Type)>[
-        (
-          bundle,
-          'variant-f-existing-responsive-shell',
-          ResponsiveApplicationShell,
-        ),
+        (bundle, containmentDroneRendererId, ContainmentDroneApplicationShell),
         (
           graphite,
           'graphite-owned-responsive-instrument-v4',
@@ -470,38 +470,16 @@ void main() {
     );
   });
 
-  testWidgets('bundle shell exactly matches the existing renderer lane', (
+  testWidgets('bundle shell uses the approved Containment renderer lane', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1000, 700));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    final directKey = GlobalKey();
-    await tester.pumpWidget(
-      _shellHarness(
-        theme: const VariantFVisualTheme().createThemeData(),
-        boundaryKey: directKey,
-        shell: ResponsiveApplicationShell(
-          slots: _slots,
-          environmentName: 'TEST',
-          onOpenMenu: _noop,
-          onOpenDestination: _ignoreDestination,
-          onOpenAttention: _noop,
-          onAddSchedule: _noop,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final directImage = await _capture(directKey);
-    addTearDown(directImage.dispose);
-
     const resolved = VariantFThemeBundle();
-    final bundleKey = GlobalKey();
     await tester.pumpWidget(
-      _shellHarness(
+      MaterialApp(
         theme: resolved.standardPresentation.createThemeData(),
-        boundaryKey: bundleKey,
-        shell: resolved.shellRenderer.build(
+        home: resolved.shellRenderer.build(
           slots: _slots,
           environmentName: 'TEST',
           onOpenMenu: _noop,
@@ -513,10 +491,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await expectLater(
-      find.byKey(bundleKey),
-      matchesReferenceImage(directImage),
-    );
+    expect(find.byType(ContainmentDroneApplicationShell), findsOneWidget);
+    expect(find.byType(ResponsiveApplicationShell), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(

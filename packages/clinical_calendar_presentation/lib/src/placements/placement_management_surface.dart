@@ -364,6 +364,33 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
       return const Center(child: Text('Add a Clinical Placement to begin.'));
     }
     final completed = value.placement.state == ClinicalPlacementState.completed;
+    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    final dateFields = [
+      TextField(
+        key: const Key('placement-start-date-field'),
+        controller: _start,
+        enabled: !completed,
+        readOnly: true,
+        onTap: completed ? null : () => _pickInto(_start),
+        decoration: const InputDecoration(
+          labelText: 'Start Date',
+          hintText: 'MM-DD-YYYY',
+          suffixIcon: Icon(Icons.calendar_today_outlined),
+        ),
+      ),
+      TextField(
+        key: const Key('placement-deadline-field'),
+        controller: _deadline,
+        enabled: !completed,
+        readOnly: true,
+        onTap: completed ? null : () => _pickInto(_deadline),
+        decoration: const InputDecoration(
+          labelText: 'Completion Deadline',
+          hintText: 'MM-DD-YYYY',
+          suffixIcon: Icon(Icons.calendar_today_outlined),
+        ),
+      ),
+    ];
     return ListView(
       key: const Key('placement-management-editor'),
       children: [
@@ -392,40 +419,17 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
           decoration: const InputDecoration(labelText: 'Target Hours'),
         ),
         const SizedBox(height: 8),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: TextField(
-                key: const Key('placement-start-date-field'),
-                controller: _start,
-                enabled: !completed,
-                readOnly: true,
-                onTap: completed ? null : () => _pickInto(_start),
-                decoration: const InputDecoration(
-                  labelText: 'Start Date',
-                  hintText: 'MM-DD-YYYY',
-                  suffixIcon: Icon(Icons.calendar_today_outlined),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                key: const Key('placement-deadline-field'),
-                controller: _deadline,
-                enabled: !completed,
-                readOnly: true,
-                onTap: completed ? null : () => _pickInto(_deadline),
-                decoration: const InputDecoration(
-                  labelText: 'Completion Deadline',
-                  hintText: 'MM-DD-YYYY',
-                  suffixIcon: Icon(Icons.calendar_today_outlined),
-                ),
-              ),
-            ),
-          ],
-        ),
+        if (enlargedText)
+          ...dateFields.expand((field) => [field, const SizedBox(height: 8)])
+        else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: dateFields[0]),
+              const SizedBox(width: 8),
+              Expanded(child: dateFields[1]),
+            ],
+          ),
         const SizedBox(height: 16),
         Text('PRECEPTORS', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
@@ -730,7 +734,9 @@ final class _PreceptorEditorRowState extends State<_PreceptorEditorRow> {
     padding: const EdgeInsets.only(bottom: 8),
     child: LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 520;
+        final compact =
+            constraints.maxWidth < 520 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.3;
         final actions = <Widget>[
           OutlinedButton(
             onPressed: widget.locked ? null : () => widget.onSave(_name.text),

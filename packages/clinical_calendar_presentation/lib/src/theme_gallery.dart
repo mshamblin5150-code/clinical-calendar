@@ -367,7 +367,9 @@ final class ThemeRuntimeThumbnail extends StatelessWidget {
     final captureKey = Key('theme-gallery-thumbnail-${bundle.id}');
     final renderedThumbnail = useBakedAsset
         ? Image.asset(
-            themeRuntimeThumbnailAssetPath(bundle.id),
+            themeRuntimeThumbnailAssetPath(
+              bundle.gallery.runtimeThumbnailAssetId ?? bundle.id,
+            ),
             key: captureKey,
             package: 'clinical_calendar_presentation',
             fit: BoxFit.fill,
