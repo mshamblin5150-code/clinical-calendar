@@ -238,6 +238,20 @@ final class DefaultPortableBackupMigrator implements PortableBackupMigrator {
       }
       payload['source_database_schema_version'] = 16;
     }
+    if (sourceVersion < 17 && tables is Map<dynamic, dynamic>) {
+      final trash = tables['trash'];
+      if (trash is List) {
+        for (final row in trash) {
+          if (row is Map) {
+            row.putIfAbsent('aggregate_mutation_id', () => null);
+            row.putIfAbsent('aggregate_root_id', () => null);
+            row.putIfAbsent('aggregate_manifest_json', () => null);
+            row.putIfAbsent('aggregate_recovery_json', () => null);
+          }
+        }
+      }
+      payload['source_database_schema_version'] = 17;
+    }
     return payload;
   }
 }

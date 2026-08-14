@@ -2,6 +2,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 
 import '../ports.dart';
 import '../repositories.dart';
+import 'placement_deletion.dart';
 import 'placement_models.dart';
 
 final class PlacementApplicationService {
@@ -37,6 +38,61 @@ final class PlacementApplicationService {
   final String _studentId;
   final ClinicalPlacementProgressEngine _progressEngine;
   final EvaluationPlanEngine _evaluationPlanEngine;
+
+  ClinicalPlacementAggregateDeletionStore get _deletionStore {
+    final repositories = _repositories;
+    if (repositories is ClinicalPlacementAggregateDeletionStore) {
+      return repositories as ClinicalPlacementAggregateDeletionStore;
+    }
+    throw const RepositoryException(
+      RepositoryFailureKind.persistenceFailure,
+      'Clinical Placement recovery is not available in this build.',
+    );
+  }
+
+  Future<ClinicalPlacementDeletionPreview> previewDeletion({
+    required String clinicalPlacementId,
+    int unsavedSchedulingDraftCount = 0,
+  }) {
+    if (unsavedSchedulingDraftCount < 0) {
+      throw ArgumentError.value(
+        unsavedSchedulingDraftCount,
+        'unsavedSchedulingDraftCount',
+        'must not be negative',
+      );
+    }
+    return _deletionStore.previewClinicalPlacementDeletion(
+      clinicalPlacementId: requireIdentifier(
+        clinicalPlacementId,
+        'Clinical Placement id',
+      ),
+      unsavedSchedulingDraftCount: unsavedSchedulingDraftCount,
+    );
+  }
+
+  Future<void> moveToTrash({
+    required ClinicalPlacementDeletionPreview preview,
+    String? completedPlacementNameConfirmation,
+  }) {
+    if (preview.hasUnresolvedSynchronizationConflicts) {
+      throw const RepositoryException(
+        RepositoryFailureKind.concurrentModification,
+        'Resolve synchronization conflicts before moving this Clinical Placement to Trash.',
+      );
+    }
+    if (preview.requiresTypedName &&
+        completedPlacementNameConfirmation != preview.clinicalPlacementName) {
+      throw const DomainValidationException(
+        'Type the exact Clinical Placement name to move a Completed Placement to Trash.',
+      );
+    }
+    final deletedAtUtc = _now();
+    return _deletionStore.moveClinicalPlacementAggregateToTrash(
+      preview: preview,
+      aggregateMutationId: _identifiers.nextIdentifier(),
+      deletedAtUtc: deletedAtUtc,
+    );
+  }
 
   Future<PlacementSnapshot> createPlacement(
     CreatePlacementRequest request,

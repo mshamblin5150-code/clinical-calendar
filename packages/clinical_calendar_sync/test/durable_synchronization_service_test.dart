@@ -563,6 +563,65 @@ void main() {
       );
     },
   );
+
+  test(
+    'incomplete aggregate pull stays invisible until its manifest is complete',
+    () async {
+      const secondPreceptorId = '00000000-0000-4000-8000-000000000099';
+      const aggregateId = '00000000-0000-4000-8000-000000000098';
+      final manifest = {
+        'preceptor:$_preceptorId': 0,
+        'preceptor:$secondPreceptorId': 0,
+      };
+      server.feed.add(
+        _remoteChange(
+          cursor: 1,
+          entityType: 'preceptor',
+          entityId: _preceptorId,
+          revision: 1,
+          value: {'name': 'First aggregate member'},
+          aggregateMutationId: aggregateId,
+          aggregateManifest: manifest,
+        ),
+      );
+
+      final incomplete = await _service(second, server, clock).syncNow();
+      expect(incomplete.disposition, SynchronizationDisposition.deferred);
+      expect(await _cursor(second.registry), 0);
+      expect(await _preceptorName(second.registry), isNull);
+
+      server.feed.add(
+        _remoteChange(
+          cursor: 2,
+          entityType: 'preceptor',
+          entityId: secondPreceptorId,
+          revision: 1,
+          value: {'name': 'Second aggregate member'},
+          aggregateMutationId: aggregateId,
+          aggregateManifest: manifest,
+        ),
+      );
+      final complete = await _service(second, server, clock).syncNow();
+      expect(complete.disposition, SynchronizationDisposition.synchronized);
+      expect(await _cursor(second.registry), 2);
+      await second.registry.read((repositories) {
+        expect(
+          repositories.preceptors
+              .find(studentId: _studentId, id: _preceptorId)!
+              .value
+              .name,
+          'First aggregate member',
+        );
+        expect(
+          repositories.preceptors
+              .find(studentId: _studentId, id: secondPreceptorId)!
+              .value
+              .name,
+          'Second aggregate member',
+        );
+      });
+    },
+  );
 }
 
 RemoteSynchronizationChange _remoteChange({
@@ -571,6 +630,8 @@ RemoteSynchronizationChange _remoteChange({
   required String entityId,
   required int revision,
   required Map<String, Object?> value,
+  String? aggregateMutationId,
+  Map<String, int>? aggregateManifest,
 }) {
   final payload = jsonEncode({
     'schema_version': 1,
@@ -582,6 +643,8 @@ RemoteSynchronizationChange _remoteChange({
     'updated_at_utc': _baseTime.toIso8601String(),
     'deleted_at_utc': null,
     'value': value,
+    'aggregate_mutation_id': ?aggregateMutationId,
+    'expected_member_manifest': ?aggregateManifest,
   });
   return RemoteSynchronizationChange(
     cursor: cursor,

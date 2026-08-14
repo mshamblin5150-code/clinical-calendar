@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 
@@ -296,19 +297,62 @@ final class DurableSynchronizationService
       final ordered =
           {for (final change in page) change.cursor: change}.values.toList()
             ..sort((left, right) => left.cursor.compareTo(right.cursor));
-      for (final change in ordered) {
-        await _repositories.mutate((repositories) {
-          _syncRepository(repositories).applyRemoteAndAdvanceCursor(
-            studentId: _studentId,
-            remoteScope: remoteScope,
-            change: change,
-            appliedAtUtc: _now(),
+      final pending = List<RemoteSynchronizationChange>.of(ordered);
+      while (pending.isNotEmpty) {
+        final first = pending.removeAt(0);
+        final aggregate = _aggregateEnvelope(first);
+        final batch = aggregate == null
+            ? [first]
+            : <RemoteSynchronizationChange>[
+                first,
+                ...pending.where(
+                  (change) =>
+                      _aggregateEnvelope(change)?.mutationId ==
+                      aggregate.mutationId,
+                ),
+              ];
+        if (aggregate != null) {
+          pending.removeWhere(
+            (change) =>
+                _aggregateEnvelope(change)?.mutationId == aggregate.mutationId,
           );
+          final actual = {
+            for (final change in batch)
+              '${change.entityType}:${change.entityId}',
+          };
+          if (actual.length != aggregate.expectedMembers.length ||
+              !actual.containsAll(aggregate.expectedMembers)) {
+            throw const SynchronizationTransportException(
+              'incomplete_aggregate_batch',
+              offline: false,
+            );
+          }
+          batch.sort(_aggregateDependencyOrder);
+        }
+        await _repositories.mutate((repositories) {
+          final synchronization = _syncRepository(repositories);
+          for (final change in batch) {
+            synchronization.applyRemoteAndAdvanceCursor(
+              studentId: _studentId,
+              remoteScope: remoteScope,
+              change: change,
+              appliedAtUtc: _now(),
+            );
+          }
         });
         _boundary.reached(SynchronizationBoundary.afterPullLocalCommit);
       }
       if (page.length < pageSize) return;
     }
+  }
+
+  _AggregateEnvelope? _aggregateEnvelope(RemoteSynchronizationChange change) {
+    final decoded = jsonDecode(change.payloadJson);
+    if (decoded is! Map<String, dynamic>) return null;
+    final mutationId = decoded['aggregate_mutation_id'];
+    final manifest = decoded['expected_member_manifest'];
+    if (mutationId is! String || manifest is! Map<String, dynamic>) return null;
+    return _AggregateEnvelope(mutationId, manifest.keys.toSet());
   }
 
   Future<void> _recordOperationFailure(
@@ -388,6 +432,44 @@ final class _PushOutcome {
 
   final _PushDisposition disposition;
   final String? rejectionCode;
+}
+
+final class _AggregateEnvelope {
+  const _AggregateEnvelope(this.mutationId, this.expectedMembers);
+
+  final String mutationId;
+  final Set<String> expectedMembers;
+}
+
+int _aggregateDependencyOrder(
+  RemoteSynchronizationChange left,
+  RemoteSynchronizationChange right,
+) {
+  const deletion = <String, int>{
+    'reminder_state': 0,
+    'clinical_session': 1,
+    'historical_hours_entry': 2,
+    'schedule_template': 3,
+    'evaluation_plan': 4,
+    'clinical_placement': 5,
+    'settings': 6,
+  };
+  const restoration = <String, int>{
+    'clinical_placement': 0,
+    'evaluation_plan': 1,
+    'historical_hours_entry': 2,
+    'clinical_session': 3,
+    'schedule_template': 4,
+    'reminder_state': 5,
+    'settings': 6,
+  };
+  int rank(RemoteSynchronizationChange change) =>
+      (change.operationType == OutboxOperationType.delete
+          ? deletion
+          : restoration)[change.entityType] ??
+      99;
+  final byDependency = rank(left).compareTo(rank(right));
+  return byDependency != 0 ? byDependency : left.cursor.compareTo(right.cursor);
 }
 
 const _conflictCodes = {

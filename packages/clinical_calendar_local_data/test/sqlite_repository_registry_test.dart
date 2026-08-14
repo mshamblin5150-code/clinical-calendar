@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
@@ -1000,6 +1001,238 @@ void main() {
       });
     },
   );
+
+  test(
+    'Clinical Placement deletion is grouped, stale-safe, and restores atomically',
+    () async {
+      await registry.initialize();
+      final fixture = _DomainFixture();
+      final session = ClinicalSession.schedule(
+        id: _id(180),
+        clinicalPlacementId: fixture.placement.id,
+        preceptorId: fixture.preceptor.id,
+        plannedInterval: _interval(8, 12),
+        asOfUtc: _baseTime,
+      );
+      final history = HistoricalHoursEntry(
+        id: _id(181),
+        clinicalPlacementId: fixture.placement.id,
+        completedMinutes: 90,
+        effectiveDate: LocalDate(2026, 8, 3),
+        preceptorId: fixture.preceptor.id,
+      );
+      await registry.mutate((repositories) {
+        repositories.preceptors.put(
+          studentId: _studentId,
+          value: fixture.preceptor,
+          expectedRevision: 0,
+          mutation: _mutation(180),
+        );
+        repositories.clinicalPlacements.put(
+          studentId: _studentId,
+          value: fixture.placement,
+          expectedRevision: 0,
+          mutation: _mutation(181),
+        );
+        repositories.evaluationPlans.put(
+          studentId: _studentId,
+          value: fixture.evaluationPlan,
+          expectedRevision: 0,
+          mutation: _mutation(182),
+        );
+        repositories.clinicalSessions.put(
+          studentId: _studentId,
+          value: session,
+          expectedRevision: 0,
+          mutation: _mutation(183),
+        );
+        repositories.historicalHoursEntries.put(
+          studentId: _studentId,
+          value: history,
+          expectedRevision: 0,
+          mutation: _mutation(184),
+        );
+        repositories.activePlacementSelection.put(
+          studentId: _studentId,
+          clinicalPlacementId: fixture.placement.id,
+          expectedRevision: 0,
+          mutation: _mutation(185),
+        );
+      });
+      final service = PlacementApplicationService(
+        repositories: registry,
+        clock: _FixedClock(_baseTime.add(const Duration(hours: 4))),
+        identifiers: identifiers,
+        studentId: _studentId,
+      );
+
+      var preview = await service.previewDeletion(
+        clinicalPlacementId: fixture.placement.id,
+        unsavedSchedulingDraftCount: 2,
+      );
+      expect(preview.clinicalPlacementName, fixture.placement.name);
+      expect(preview.scheduledClinicalSessionCount, 1);
+      expect(preview.historicalHoursEntryCount, 1);
+      expect(preview.historicalCompletedMinutes, 90);
+      expect(preview.unsavedSchedulingDraftCount, 2);
+      expect(preview.clearsActivePlacementSelection, isTrue);
+
+      await registry.mutate((repositories) {
+        repositories.historicalHoursEntries.put(
+          studentId: _studentId,
+          value: HistoricalHoursEntry(
+            id: history.id,
+            clinicalPlacementId: history.clinicalPlacementId,
+            completedMinutes: history.completedMinutes,
+            effectiveDate: history.effectiveDate,
+            preceptorId: history.preceptorId,
+            note: 'Changed after preview',
+          ),
+          expectedRevision: 1,
+          mutation: MutationToken(
+            operationId: _id(1880),
+            idempotencyKey: _id(1881),
+            occurredAtUtc: _baseTime.add(const Duration(hours: 3, minutes: 30)),
+          ),
+        );
+      });
+      await expectLater(
+        service.moveToTrash(preview: preview),
+        throwsA(
+          _repositoryFailure(RepositoryFailureKind.concurrentModification),
+        ),
+      );
+      expect(await service.placements(), hasLength(1));
+      expect(
+        await registry.listTrash(
+          nowUtc: _baseTime.add(const Duration(hours: 4)),
+        ),
+        isEmpty,
+      );
+      preview = await service.previewDeletion(
+        clinicalPlacementId: fixture.placement.id,
+        unsavedSchedulingDraftCount: 2,
+      );
+
+      await service.moveToTrash(preview: preview);
+      expect(await service.placements(), isEmpty);
+      expect(await service.activePlacement(), isNull);
+      final trash = await registry.listTrash(
+        nowUtc: _baseTime.add(const Duration(hours: 4)),
+      );
+      expect(trash, hasLength(1));
+      expect(trash.single.entityType, 'clinical_placement_aggregate');
+      expect(trash.single.displayName, fixture.placement.name);
+      expect(trash.single.dependentRecordCount, 3);
+      final deletePayloads = database
+          .select(
+            '''SELECT payload_json FROM outbox_operations
+               WHERE student_id = ? AND operation_type = 'delete'
+                 AND created_at_utc = ?''',
+            [
+              _studentId,
+              _baseTime.add(const Duration(hours: 4)).toIso8601String(),
+            ],
+          )
+          .map(
+            (row) =>
+                jsonDecode(row['payload_json']! as String)
+                    as Map<String, Object?>,
+          )
+          .toList();
+      expect(deletePayloads, hasLength(4));
+      expect(
+        deletePayloads
+            .map((payload) => payload['aggregate_mutation_id'])
+            .toSet(),
+        hasLength(1),
+      );
+      expect(
+        deletePayloads.every(
+          (payload) => payload['expected_member_manifest'] is Map,
+        ),
+        isTrue,
+      );
+
+      try {
+        await registry.restoreTrash(
+          trashId: trash.single.id,
+          restoredAtUtc: _baseTime.add(const Duration(hours: 5)),
+          mutation: MutationToken(
+            operationId: _id(1900),
+            idempotencyKey: _id(1901),
+            occurredAtUtc: _baseTime.add(const Duration(hours: 5)),
+          ),
+        );
+      } on RecoveryException catch (error) {
+        fail('${error.safeMessage} cause=${error.cause}');
+      }
+      expect(await service.placements(), hasLength(1));
+      expect(
+        (await service.activePlacement())!.placement.id,
+        fixture.placement.id,
+      );
+      await registry.read((repositories) {
+        expect(
+          repositories.clinicalSessions.find(
+            studentId: _studentId,
+            id: session.id,
+          ),
+          isNotNull,
+        );
+        expect(
+          repositories.historicalHoursEntries.find(
+            studentId: _studentId,
+            id: history.id,
+          ),
+          isNotNull,
+        );
+      });
+    },
+  );
+
+  test(
+    'Clinical Placement without activity can move to grouped Trash',
+    () async {
+      await registry.initialize();
+      final service = PlacementApplicationService(
+        repositories: registry,
+        clock: const _FixedClock(),
+        identifiers: identifiers,
+        studentId: _studentId,
+      );
+      final preceptor = await service.createPreceptor(name: 'Dr. Rivera');
+      final created = await service.createPlacement(
+        CreatePlacementRequest(
+          name: 'Pediatrics',
+          targetHours: TargetHours.fromWholeHours(90),
+          startDate: LocalDate(2026, 8, 1),
+          completionDeadline: LocalDate(2026, 12, 31),
+          primaryPreceptorId: preceptor.id,
+          evaluationPlanConfiguration: EvaluationPlanConfiguration(
+            initialSelfAssessmentRequired: false,
+            interimReviewCadenceMinutes: 6000,
+            finalSelfAssessmentRequired: false,
+            finalPlacementReviewRequired: false,
+          ),
+        ),
+      );
+
+      final preview = await service.previewDeletion(
+        clinicalPlacementId: created.placement.id,
+      );
+      expect(preview.clinicalSessionCount, 0);
+      expect(preview.historicalHoursEntryCount, 0);
+      expect(preview.scheduleTemplateCount, 0);
+      expect(preview.reminderStateCount, 0);
+      await service.moveToTrash(preview: preview);
+
+      expect(await service.placements(), isEmpty);
+      final trash = await registry.listTrash(nowUtc: _baseTime);
+      expect(trash, hasLength(1));
+      expect(trash.single.displayName, 'Pediatrics');
+    },
+  );
 }
 
 SqliteRepositoryRegistry _registry(
@@ -1264,10 +1497,12 @@ final class _DomainFixture {
 }
 
 final class _FixedClock implements Clock {
-  const _FixedClock();
+  const _FixedClock([this.value]);
+
+  final DateTime? value;
 
   @override
-  DateTime nowUtc() => _baseTime;
+  DateTime nowUtc() => value ?? _baseTime;
 }
 
 final class DeterministicIdentifierGenerator implements IdentifierGenerator {

@@ -26,7 +26,10 @@ final RegExp _uuid = RegExp(
 /// Public operations share a FIFO gate. Mutation callbacks are synchronous and
 /// execute inside one `BEGIN IMMEDIATE` transaction.
 final class SqliteRepositoryRegistry
-    implements RepositoryRegistry, RecoveryStore {
+    implements
+        RepositoryRegistry,
+        RecoveryStore,
+        ClinicalPlacementAggregateDeletionStore {
   SqliteRepositoryRegistry({
     required String studentId,
     required this._database,
@@ -93,6 +96,353 @@ final class SqliteRepositoryRegistry
     }
   });
 
+  @override
+  Future<ClinicalPlacementDeletionPreview> previewClinicalPlacementDeletion({
+    required String clinicalPlacementId,
+    required int unsavedSchedulingDraftCount,
+  }) => _enqueue(() {
+    _requireInitialized();
+    return _placementDeletionPreview(
+      _identifier(clinicalPlacementId),
+      unsavedSchedulingDraftCount,
+    );
+  });
+
+  @override
+  Future<void> moveClinicalPlacementAggregateToTrash({
+    required ClinicalPlacementDeletionPreview preview,
+    required String aggregateMutationId,
+    required DateTime deletedAtUtc,
+  }) => _enqueue(() {
+    _requireInitialized();
+    _requireUtcRecovery(deletedAtUtc);
+    final normalizedAggregateId = _identifier(aggregateMutationId);
+    return _database.transaction(() {
+      final current = _placementDeletionPreview(
+        _identifier(preview.clinicalPlacementId),
+        preview.unsavedSchedulingDraftCount,
+      );
+      if (!_samePlacementDeletionPreview(preview, current)) {
+        throw const RepositoryException(
+          RepositoryFailureKind.concurrentModification,
+          'The Clinical Placement changed after its deletion preview.',
+        );
+      }
+      if (current.hasUnresolvedSynchronizationConflicts) {
+        throw const RepositoryException(
+          RepositoryFailureKind.concurrentModification,
+          'Resolve synchronization conflicts before moving this Clinical Placement to Trash.',
+        );
+      }
+
+      final repositories = _Repositories(this, writable: true);
+      try {
+        final placement = repositories.clinicalPlacements.find(
+          studentId: studentId,
+          id: current.clinicalPlacementId,
+        )!;
+        final sessions = repositories.clinicalSessions
+            .list(studentId: studentId)
+            .where(
+              (record) =>
+                  record.value.clinicalPlacementId ==
+                  current.clinicalPlacementId,
+            )
+            .toList(growable: false);
+        final history = repositories.historicalHoursEntries
+            .list(studentId: studentId)
+            .where(
+              (record) =>
+                  record.value.clinicalPlacementId ==
+                  current.clinicalPlacementId,
+            )
+            .toList(growable: false);
+        final templates = repositories.scheduleTemplates
+            .list(studentId: studentId)
+            .where(
+              (record) =>
+                  record.value.clinicalPlacementId ==
+                  current.clinicalPlacementId,
+            )
+            .toList(growable: false);
+        final plan = repositories.evaluationPlans.find(
+          studentId: studentId,
+          id: placement.value.evaluationPlanId,
+        )!;
+        final subjectIds = <String>{
+          current.clinicalPlacementId,
+          for (final record in sessions) record.value.id,
+          for (final requirement in plan.value.requirements)
+            requirement.identity.stableValue,
+        };
+        final reminders = repositories.reminderStates
+            .list(studentId: studentId)
+            .where(
+              (record) => subjectIds.contains(record.value.subjectEntityId),
+            )
+            .toList(growable: false);
+
+        final aggregateOperationIds = <String>[];
+        MutationToken mutation() {
+          final value = MutationToken(
+            operationId: _identifierGenerator.nextIdentifier(),
+            idempotencyKey: _identifierGenerator.nextIdentifier(),
+            occurredAtUtc: deletedAtUtc,
+          );
+          aggregateOperationIds.add(value.operationId);
+          return value;
+        }
+
+        // Dependents are tombstoned before their owners. The SQL transaction
+        // and deferred relationship checks expose none of the partial graph.
+        for (final record in reminders) {
+          repositories.reminderStates.tombstone(
+            studentId: studentId,
+            id: record.value.id,
+            expectedRevision: record.revision,
+            mutation: mutation(),
+          );
+        }
+        for (final record in sessions) {
+          repositories.clinicalSessions.tombstone(
+            studentId: studentId,
+            id: record.value.id,
+            expectedRevision: record.revision,
+            mutation: mutation(),
+          );
+        }
+        for (final record in history) {
+          repositories.historicalHoursEntries.tombstone(
+            studentId: studentId,
+            id: record.value.id,
+            expectedRevision: record.revision,
+            mutation: mutation(),
+          );
+        }
+        for (final record in templates) {
+          repositories.scheduleTemplates.tombstone(
+            studentId: studentId,
+            id: record.value.id,
+            expectedRevision: record.revision,
+            mutation: mutation(),
+          );
+        }
+        repositories.evaluationPlans.tombstone(
+          studentId: studentId,
+          id: plan.value.id,
+          expectedRevision: plan.revision,
+          mutation: mutation(),
+        );
+        repositories.clinicalPlacements.tombstone(
+          studentId: studentId,
+          id: placement.value.id,
+          expectedRevision: placement.revision,
+          mutation: mutation(),
+        );
+        if (current.clearsActivePlacementSelection) {
+          final selection = repositories.activePlacementSelection.find(
+            studentId: studentId,
+          )!;
+          repositories.activePlacementSelection.put(
+            studentId: studentId,
+            clinicalPlacementId: null,
+            expectedRevision: selection.revision,
+            mutation: mutation(),
+          );
+        }
+
+        final manifest = _canonicalJson(current.memberRevisions);
+        final recovery = _canonicalJson({
+          'name': placement.value.name,
+          'was_active': current.clearsActivePlacementSelection,
+          'attached_preceptor_ids': placement.value.attachedPreceptorIds
+              .toList(),
+          'primary_preceptor_id': placement.value.primaryPreceptorId,
+          'dependent_record_count': current.persistedDependentRecordCount,
+        });
+        for (final member in current.memberRevisions.keys) {
+          final separator = member.indexOf(':');
+          final entityType = member.substring(0, separator);
+          if (entityType == 'settings') continue;
+          final entityId = member.substring(separator + 1);
+          _database.execute(
+            '''UPDATE trash SET aggregate_mutation_id = ?,
+               aggregate_root_id = ?, aggregate_manifest_json = ?,
+               aggregate_recovery_json = ?
+               WHERE student_id = ? AND entity_type = ? AND entity_id = ?
+                 AND permanently_deleted_at_utc IS NULL''',
+            [
+              normalizedAggregateId,
+              current.clinicalPlacementId,
+              manifest,
+              recovery,
+              studentId,
+              entityType,
+              entityId,
+            ],
+          );
+        }
+        final operationPlaceholders = List.filled(
+          aggregateOperationIds.length,
+          '?',
+        ).join(', ');
+        _database.execute(
+          '''UPDATE outbox_operations SET payload_json = json_set(
+               payload_json,
+               '\$.aggregate_mutation_id', ?,
+               '\$.aggregate_root_id', ?,
+               '\$.expected_member_manifest', json(?)
+             )
+             WHERE student_id = ? AND id IN ($operationPlaceholders)''',
+          [
+            normalizedAggregateId,
+            current.clinicalPlacementId,
+            manifest,
+            studentId,
+            ...aggregateOperationIds,
+          ],
+        );
+      } finally {
+        repositories.close();
+      }
+    });
+  });
+
+  ClinicalPlacementDeletionPreview _placementDeletionPreview(
+    String placementId,
+    int unsavedSchedulingDraftCount,
+  ) {
+    final repositories = _Repositories(this, writable: false);
+    try {
+      final placement = repositories.clinicalPlacements.find(
+        studentId: studentId,
+        id: placementId,
+      );
+      if (placement == null) {
+        throw const RepositoryException(
+          RepositoryFailureKind.notFound,
+          'Clinical Placement was not found.',
+        );
+      }
+      final sessions = repositories.clinicalSessions
+          .list(studentId: studentId)
+          .where((record) => record.value.clinicalPlacementId == placementId)
+          .toList(growable: false);
+      final history = repositories.historicalHoursEntries
+          .list(studentId: studentId)
+          .where((record) => record.value.clinicalPlacementId == placementId)
+          .toList(growable: false);
+      final templates = repositories.scheduleTemplates
+          .list(studentId: studentId)
+          .where((record) => record.value.clinicalPlacementId == placementId)
+          .toList(growable: false);
+      final plan = repositories.evaluationPlans.find(
+        studentId: studentId,
+        id: placement.value.evaluationPlanId,
+      );
+      if (plan == null) {
+        throw const RepositoryException(
+          RepositoryFailureKind.corruptData,
+          'The Clinical Placement Evaluation Plan is missing.',
+        );
+      }
+      final reminderSubjectIds = <String>{
+        placementId,
+        for (final record in sessions) record.value.id,
+        for (final requirement in plan.value.requirements)
+          requirement.identity.stableValue,
+      };
+      final reminders = repositories.reminderStates
+          .list(studentId: studentId)
+          .where(
+            (record) =>
+                reminderSubjectIds.contains(record.value.subjectEntityId),
+          )
+          .toList(growable: false);
+      final selection = repositories.activePlacementSelection.find(
+        studentId: studentId,
+      );
+      final revisions = <String, int>{
+        'clinical_placement:${placement.value.id}': placement.revision,
+        'evaluation_plan:${plan.value.id}': plan.revision,
+        for (final record in sessions)
+          'clinical_session:${record.value.id}': record.revision,
+        for (final record in history)
+          'historical_hours_entry:${record.value.id}': record.revision,
+        for (final record in templates)
+          'schedule_template:${record.value.id}': record.revision,
+        for (final record in reminders)
+          'reminder_state:${record.value.id}': record.revision,
+        if (selection?.value == placementId)
+          'settings:$studentId': selection!.revision,
+      };
+      final conflicts = _database.select(
+        '''SELECT entity_type, entity_id FROM sync_conflicts
+           WHERE student_id = ? AND resolved_at_utc IS NULL''',
+        [studentId],
+      );
+      final hasConflict = conflicts.any((row) {
+        final direct =
+            '${_text(row, 'entity_type')}:${_text(row, 'entity_id')}';
+        return revisions.containsKey(direct);
+      });
+
+      int count(ClinicalSessionState state) =>
+          sessions.where((record) => record.value.state == state).length;
+      return ClinicalPlacementDeletionPreview(
+        clinicalPlacementId: placement.value.id,
+        clinicalPlacementName: placement.value.name,
+        clinicalPlacementState: placement.value.state,
+        memberRevisions: Map.unmodifiable(revisions),
+        scheduledClinicalSessionCount: count(ClinicalSessionState.scheduled),
+        awaitingConfirmationClinicalSessionCount: count(
+          ClinicalSessionState.awaitingConfirmation,
+        ),
+        completedClinicalSessionCount: count(ClinicalSessionState.completed),
+        cancelledClinicalSessionCount: count(ClinicalSessionState.cancelled),
+        missedClinicalSessionCount: count(ClinicalSessionState.missed),
+        clinicalSessionCompletedMinutes: sessions.fold(
+          0,
+          (total, record) => total + record.value.completedMinutes,
+        ),
+        historicalHoursEntryCount: history.length,
+        historicalCompletedMinutes: history.fold(
+          0,
+          (total, record) => total + record.value.completedMinutes,
+        ),
+        evaluationRequirementCount: plan.value.requirements.length,
+        documentedEvaluationRequirementCount: plan.value.requirements
+            .where((requirement) => requirement.documentation != null)
+            .length,
+        scheduleTemplateCount: templates.length,
+        reminderStateCount: reminders.length,
+        attachedPreceptorRelationshipCount:
+            placement.value.attachedPreceptorIds.length,
+        unsavedSchedulingDraftCount: unsavedSchedulingDraftCount,
+        clearsActivePlacementSelection: selection?.value == placementId,
+        hasUnresolvedSynchronizationConflicts: hasConflict,
+      );
+    } finally {
+      repositories.close();
+    }
+  }
+
+  bool _samePlacementDeletionPreview(
+    ClinicalPlacementDeletionPreview expected,
+    ClinicalPlacementDeletionPreview current,
+  ) {
+    if (expected.clinicalPlacementId != current.clinicalPlacementId ||
+        expected.unsavedSchedulingDraftCount !=
+            current.unsavedSchedulingDraftCount ||
+        expected.memberRevisions.length != current.memberRevisions.length) {
+      return false;
+    }
+    for (final entry in expected.memberRevisions.entries) {
+      if (current.memberRevisions[entry.key] != entry.value) return false;
+    }
+    return true;
+  }
+
   /// Runs one complete portable-backup operation behind the repository FIFO.
   ///
   /// The callback may be asynchronous; the gate remains held until its Future
@@ -116,30 +466,62 @@ final class SqliteRepositoryRegistry
   });
 
   @override
-  Future<List<TrashEntry>> listTrash({
-    required DateTime nowUtc,
-  }) => _enqueue(() {
-    _requireInitialized();
-    _database.transaction(() => _purgeExpiredTrash(nowUtc));
-    return _database
-        .select(
-          '''SELECT id, entity_type, entity_id, updated_at_utc, purge_after_utc
-             FROM trash WHERE student_id = ?
-               AND permanently_deleted_at_utc IS NULL
-             ORDER BY updated_at_utc DESC, id''',
+  Future<List<TrashEntry>> listTrash({required DateTime nowUtc}) =>
+      _enqueue(() {
+        _requireInitialized();
+        _database.transaction(() => _purgeExpiredTrash(nowUtc));
+        final rows = _database.select(
+          '''SELECT * FROM trash WHERE student_id = ?
+         AND permanently_deleted_at_utc IS NULL
+         ORDER BY updated_at_utc DESC, id''',
           [studentId],
-        )
-        .map(
-          (row) => TrashEntry(
-            id: _identifier(_text(row, 'id')),
-            entityType: _text(row, 'entity_type'),
-            entityId: _identifier(_text(row, 'entity_id')),
-            deletedAtUtc: _dateTime(row, 'updated_at_utc'),
-            purgeAfterUtc: _dateTime(row, 'purge_after_utc'),
-          ),
-        )
-        .toList(growable: false);
-  });
+        );
+        final result = <TrashEntry>[];
+        final emittedAggregates = <String>{};
+        for (final row in rows) {
+          final aggregateId = row['aggregate_mutation_id'];
+          if (aggregateId is String && aggregateId.isNotEmpty) {
+            if (!emittedAggregates.add(aggregateId)) continue;
+            final group = rows
+                .where(
+                  (candidate) =>
+                      candidate['aggregate_mutation_id'] == aggregateId,
+                )
+                .toList(growable: false);
+            final rootId = _identifier(_text(row, 'aggregate_root_id'));
+            final root = group.singleWhere(
+              (candidate) =>
+                  _text(candidate, 'entity_type') == 'clinical_placement' &&
+                  _identifier(_text(candidate, 'entity_id')) == rootId,
+            );
+            final recovery =
+                jsonDecode(_text(root, 'aggregate_recovery_json'))
+                    as Map<String, Object?>;
+            result.add(
+              TrashEntry(
+                id: _identifier(_text(root, 'id')),
+                entityType: 'clinical_placement_aggregate',
+                entityId: rootId,
+                deletedAtUtc: _dateTime(root, 'updated_at_utc'),
+                purgeAfterUtc: _dateTime(root, 'purge_after_utc'),
+                displayName: recovery['name']! as String,
+                dependentRecordCount: group.length - 1,
+              ),
+            );
+            continue;
+          }
+          result.add(
+            TrashEntry(
+              id: _identifier(_text(row, 'id')),
+              entityType: _text(row, 'entity_type'),
+              entityId: _identifier(_text(row, 'entity_id')),
+              deletedAtUtc: _dateTime(row, 'updated_at_utc'),
+              purgeAfterUtc: _dateTime(row, 'purge_after_utc'),
+            ),
+          );
+        }
+        return result;
+      });
 
   @override
   Future<void> restoreTrash({
@@ -170,12 +552,29 @@ final class SqliteRepositoryRegistry
       }
       final repositories = _Repositories(this, writable: true);
       try {
-        _restoreTombstone(
-          repositories,
-          entityType: _text(row, 'entity_type'),
-          entityId: _identifier(_text(row, 'entity_id')),
-          mutation: mutation,
-        );
+        final aggregateId = row['aggregate_mutation_id'];
+        if (aggregateId is String && aggregateId.isNotEmpty) {
+          final group = _database.select(
+            '''SELECT * FROM trash WHERE student_id = ?
+               AND aggregate_mutation_id = ?
+               AND permanently_deleted_at_utc IS NULL''',
+            [studentId, aggregateId],
+          );
+          _restorePlacementAggregate(
+            repositories,
+            group: group,
+            rootRow: row,
+            restoredAtUtc: restoredAtUtc,
+            rootMutation: mutation,
+          );
+        } else {
+          _restoreTombstone(
+            repositories,
+            entityType: _text(row, 'entity_type'),
+            entityId: _identifier(_text(row, 'entity_id')),
+            mutation: mutation,
+          );
+        }
         _backupService().validateCurrentState();
       } on RecoveryException {
         rethrow;
@@ -190,6 +589,132 @@ final class SqliteRepositoryRegistry
       }
     });
   });
+
+  void _restorePlacementAggregate(
+    _Repositories repositories, {
+    required List<Map<String, Object?>> group,
+    required Map<String, Object?> rootRow,
+    required DateTime restoredAtUtc,
+    required MutationToken rootMutation,
+  }) {
+    if (group.isEmpty) {
+      throw const RecoveryException(
+        RecoveryFailureKind.invariantViolation,
+        'The Clinical Placement recovery group is incomplete.',
+      );
+    }
+    final manifest =
+        jsonDecode(_text(rootRow, 'aggregate_manifest_json'))
+            as Map<String, Object?>;
+    final expectedTrashMembers = manifest.keys
+        .where((key) => !key.startsWith('settings:'))
+        .toSet();
+    final actualTrashMembers = {
+      for (final member in group)
+        '${_text(member, 'entity_type')}:${_text(member, 'entity_id')}',
+    };
+    if (expectedTrashMembers.length != group.length ||
+        !actualTrashMembers.containsAll(expectedTrashMembers)) {
+      throw const RecoveryException(
+        RecoveryFailureKind.invariantViolation,
+        'The Clinical Placement recovery group is incomplete.',
+      );
+    }
+    final expiry = _dateTime(rootRow, 'purge_after_utc');
+    if (group.any((member) => _dateTime(member, 'purge_after_utc') != expiry)) {
+      throw const RecoveryException(
+        RecoveryFailureKind.invariantViolation,
+        'The Clinical Placement recovery group has inconsistent expiry data.',
+      );
+    }
+    final recovery =
+        jsonDecode(_text(rootRow, 'aggregate_recovery_json'))
+            as Map<String, Object?>;
+    final preceptorIds = (recovery['attached_preceptor_ids']! as List<Object?>)
+        .cast<String>();
+    for (final preceptorId in preceptorIds) {
+      if (repositories.preceptors.find(
+            studentId: studentId,
+            id: _identifier(preceptorId),
+          ) ==
+          null) {
+        throw const RecoveryException(
+          RecoveryFailureKind.invariantViolation,
+          'Restore the independently deleted Preceptor before restoring this Clinical Placement.',
+        );
+      }
+    }
+
+    const dependencyOrder = <String, int>{
+      'clinical_placement': 0,
+      'evaluation_plan': 1,
+      'historical_hours_entry': 2,
+      'clinical_session': 3,
+      'schedule_template': 4,
+      'reminder_state': 5,
+    };
+    final orderedGroup = List<Map<String, Object?>>.of(group)
+      ..sort(
+        (left, right) => dependencyOrder[_text(left, 'entity_type')]!.compareTo(
+          dependencyOrder[_text(right, 'entity_type')]!,
+        ),
+      );
+    var usedRootMutation = false;
+    final aggregateOperationIds = <String>[];
+    for (final member in orderedGroup) {
+      final memberMutation = !usedRootMutation
+          ? rootMutation
+          : _newRecoveryMutation(restoredAtUtc);
+      usedRootMutation = true;
+      aggregateOperationIds.add(memberMutation.operationId);
+      _restoreTombstone(
+        repositories,
+        entityType: _text(member, 'entity_type'),
+        entityId: _identifier(_text(member, 'entity_id')),
+        mutation: memberMutation,
+      );
+    }
+    var restoredActiveSelection = false;
+    if (recovery['was_active'] == true) {
+      final selection = repositories.activePlacementSelection.find(
+        studentId: studentId,
+      );
+      if (selection?.value == null) {
+        final selectionMutation = _newRecoveryMutation(restoredAtUtc);
+        repositories.activePlacementSelection.put(
+          studentId: studentId,
+          clinicalPlacementId: _identifier(_text(rootRow, 'aggregate_root_id')),
+          expectedRevision: selection?.revision ?? 0,
+          mutation: selectionMutation,
+        );
+        aggregateOperationIds.add(selectionMutation.operationId);
+        restoredActiveSelection = true;
+      }
+    }
+    final restoreManifest = Map<String, Object?>.of(manifest);
+    if (!restoredActiveSelection) restoreManifest.remove('settings:$studentId');
+    final restoreAggregateId = _identifierGenerator.nextIdentifier();
+    final operationPlaceholders = List.filled(
+      aggregateOperationIds.length,
+      '?',
+    ).join(', ');
+    _database.execute(
+      '''UPDATE outbox_operations SET payload_json = json_set(
+           payload_json,
+           '\$.aggregate_mutation_id', ?,
+           '\$.aggregate_root_id', ?,
+           '\$.expected_member_manifest', json(?)
+         )
+         WHERE student_id = ? AND id IN ($operationPlaceholders)''',
+      [
+        restoreAggregateId,
+        _identifier(_text(rootRow, 'aggregate_root_id')),
+        _canonicalJson(restoreManifest),
+        studentId,
+        ...aggregateOperationIds,
+      ],
+    );
+  }
 
   @override
   Future<void> permanentlyDelete({
@@ -211,7 +736,23 @@ final class SqliteRepositoryRegistry
           'The Trash entry no longer exists.',
         );
       }
-      _purgeTrashRow(rows.single, deletedAtUtc, mutation);
+      final selected = rows.single;
+      final aggregateId = selected['aggregate_mutation_id'];
+      final members = aggregateId is String && aggregateId.isNotEmpty
+          ? _database.select(
+              '''SELECT * FROM trash WHERE student_id = ?
+                 AND aggregate_mutation_id = ?
+                 AND permanently_deleted_at_utc IS NULL ORDER BY id''',
+              [studentId, aggregateId],
+            )
+          : [selected];
+      for (var index = 0; index < members.length; index++) {
+        _purgeTrashRow(
+          members[index],
+          deletedAtUtc,
+          index == 0 ? mutation : _newRecoveryMutation(deletedAtUtc),
+        );
+      }
     });
   });
 
@@ -228,16 +769,43 @@ final class SqliteRepositoryRegistry
         'AND permanently_deleted_at_utc IS NULL ORDER BY id',
         [studentId],
       );
-      if (rows.length != mutations.length) {
+      final groups = <List<Map<String, Object?>>>[];
+      final seenAggregates = <String>{};
+      for (final row in rows) {
+        final aggregateId = row['aggregate_mutation_id'];
+        if (aggregateId is String && aggregateId.isNotEmpty) {
+          if (!seenAggregates.add(aggregateId)) continue;
+          groups.add(
+            rows
+                .where(
+                  (candidate) =>
+                      candidate['aggregate_mutation_id'] == aggregateId,
+                )
+                .toList(growable: false),
+          );
+        } else {
+          groups.add([row]);
+        }
+      }
+      if (groups.length != mutations.length) {
         throw const RecoveryException(
           RecoveryFailureKind.concurrentModification,
           'Trash changed before it could be cleared.',
         );
       }
-      for (var index = 0; index < rows.length; index++) {
-        _purgeTrashRow(rows[index], deletedAtUtc, mutations[index]);
+      for (var groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+        final group = groups[groupIndex];
+        for (var memberIndex = 0; memberIndex < group.length; memberIndex++) {
+          _purgeTrashRow(
+            group[memberIndex],
+            deletedAtUtc,
+            memberIndex == 0
+                ? mutations[groupIndex]
+                : _newRecoveryMutation(deletedAtUtc),
+          );
+        }
       }
-      return rows.length;
+      return groups.length;
     });
   });
 

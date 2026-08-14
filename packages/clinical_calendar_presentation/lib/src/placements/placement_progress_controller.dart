@@ -20,6 +20,7 @@ final class PlacementProgressController extends ChangeNotifier {
   TotalProgress _totalProgress = const ClinicalPlacementProgressEngine()
       .deriveTotal(const []);
   PlacementEditImpactPreview? _editPreview;
+  ClinicalPlacementDeletionPreview? _deletionPreview;
   bool _isBusy = false;
   Object? _error;
 
@@ -37,6 +38,7 @@ final class PlacementProgressController extends ChangeNotifier {
 
   TotalProgress get totalProgress => _totalProgress;
   PlacementEditImpactPreview? get editPreview => _editPreview;
+  ClinicalPlacementDeletionPreview? get deletionPreview => _deletionPreview;
   bool get isBusy => _isBusy;
   Object? get error => _error;
 
@@ -53,6 +55,7 @@ final class PlacementProgressController extends ChangeNotifier {
       listed.map((snapshot) => snapshot.progress),
     );
     _editPreview = null;
+    _deletionPreview = null;
   });
 
   Future<void> selectPlacement(String clinicalPlacementId) =>
@@ -60,6 +63,7 @@ final class PlacementProgressController extends ChangeNotifier {
         await service.selectActivePlacement(clinicalPlacementId);
         _activePlacementId = clinicalPlacementId;
         _editPreview = null;
+        _deletionPreview = null;
       });
 
   Future<void> cyclePlacement() async {
@@ -86,6 +90,50 @@ final class PlacementProgressController extends ChangeNotifier {
     final preview = _editPreview;
     if (preview == null) return;
     await _mutateAndReload(() => service.confirmEdit(preview));
+  }
+
+  Future<void> previewDeletion({int unsavedSchedulingDraftCount = 0}) async {
+    final active = activePlacement;
+    if (active == null) return;
+    await _perform(() async {
+      _deletionPreview = await service.previewDeletion(
+        clinicalPlacementId: active.placement.id,
+        unsavedSchedulingDraftCount: unsavedSchedulingDraftCount,
+      );
+    });
+  }
+
+  Future<bool> confirmDeletion({String? completedPlacementName}) async {
+    final preview = _deletionPreview;
+    if (preview == null) return false;
+    var deleted = false;
+    await _perform(() async {
+      await service.moveToTrash(
+        preview: preview,
+        completedPlacementNameConfirmation: completedPlacementName,
+      );
+      deleted = true;
+      final listed = await service.placements();
+      final active = await service.activePlacement();
+      _placements = listed;
+      _activePlacementId = active?.placement.id;
+      if (_activePlacementId == null && listed.isNotEmpty) {
+        await service.selectActivePlacement(listed.first.placement.id);
+        _activePlacementId = listed.first.placement.id;
+      }
+      _totalProgress = _progressEngine.deriveTotal(
+        listed.map((snapshot) => snapshot.progress),
+      );
+      _editPreview = null;
+      _deletionPreview = null;
+    });
+    return deleted;
+  }
+
+  void clearDeletionPreview() {
+    if (_deletionPreview == null) return;
+    _deletionPreview = null;
+    notifyListeners();
   }
 
   Future<void> createPlacementWithPrimary({
@@ -205,6 +253,7 @@ final class PlacementProgressController extends ChangeNotifier {
       listed.map((snapshot) => snapshot.progress),
     );
     _editPreview = null;
+    _deletionPreview = null;
   });
 
   Future<void> _perform(Future<void> Function() operation) async {

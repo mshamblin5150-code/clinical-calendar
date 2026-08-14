@@ -334,6 +334,111 @@ void main() {
     expect(harness.controller.editPreview, isNull);
   });
 
+  testWidgets(
+    'placement deletion previews every category and cancel is inert',
+    (tester) async {
+      final harness = PlacementProgressHarness();
+      await harness.controller.load();
+      await _pump(
+        tester,
+        PlacementManagementSurface(
+          controller: harness.controller,
+          studentId: placementTestStudentId,
+          unsavedSchedulingDraftCount: 2,
+        ),
+        size: const Size(1024, 900),
+      );
+
+      await tester.ensureVisible(
+        find.byKey(const Key('move-placement-to-trash-action')),
+      );
+      await tester.tap(find.byKey(const Key('move-placement-to-trash-action')));
+      await tester.pumpAndSettle();
+      expect(find.text('Move Family Medicine to Trash?'), findsOneWidget);
+      for (final label in [
+        'Scheduled Clinical Sessions',
+        'Awaiting-confirmation Clinical Sessions',
+        'Completed Clinical Sessions',
+        'Cancelled Clinical Sessions',
+        'Missed Clinical Sessions',
+        'Historical Hours Entries',
+        'Evaluation Plan requirements',
+        'Clinical Session schedule templates',
+        'Placement-derived reminders',
+        'Attached Preceptor relationships',
+        'Unsaved scheduling drafts',
+        'Active Clinical Placement selection',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(harness.controller.placements, hasLength(2));
+    },
+  );
+
+  testWidgets(
+    'confirming discards disclosed drafts and removes the aggregate',
+    (tester) async {
+      final harness = PlacementProgressHarness();
+      var draftsDiscarded = 0;
+      await harness.controller.load();
+      await _pump(
+        tester,
+        PlacementManagementSurface(
+          controller: harness.controller,
+          studentId: placementTestStudentId,
+          unsavedSchedulingDraftCount: 3,
+          onDiscardUnsavedSchedulingDrafts: () => draftsDiscarded++,
+        ),
+        size: const Size(1024, 900),
+      );
+
+      await tester.ensureVisible(
+        find.byKey(const Key('move-placement-to-trash-action')),
+      );
+      await tester.tap(find.byKey(const Key('move-placement-to-trash-action')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('confirm-move-placement-to-trash')),
+      );
+      await tester.pumpAndSettle();
+      expect(draftsDiscarded, 1);
+      expect(harness.controller.placements, hasLength(1));
+      expect(harness.controller.placements.single.placement.name, 'Pediatrics');
+    },
+  );
+
+  testWidgets('Completed Placement requires its exact name before deletion', (
+    tester,
+  ) async {
+    final harness = PlacementProgressHarness(completed: true);
+    await harness.controller.load();
+    await _pump(
+      tester,
+      PlacementManagementSurface(
+        controller: harness.controller,
+        studentId: placementTestStudentId,
+      ),
+      size: const Size(768, 900),
+    );
+    await tester.drag(
+      find.byKey(const Key('placement-management-editor')),
+      const Offset(0, -700),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('move-placement-to-trash-action')));
+    await tester.pumpAndSettle();
+    final confirm = find.byKey(const Key('confirm-move-placement-to-trash'));
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+    await tester.enterText(
+      find.byKey(const Key('completed-placement-name-confirmation')),
+      'Family Medicine',
+    );
+    await tester.pump();
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+  });
+
   testWidgets('management changes Primary and attaches a new Preceptor', (
     tester,
   ) async {

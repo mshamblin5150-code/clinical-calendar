@@ -52,6 +52,13 @@ final class BatchSchedulingController extends ChangeNotifier {
   String? preceptorIdFor(LocalDate date) =>
       _preceptorOverrides[date] ?? preceptorId;
 
+  int unsavedDraftCountForPlacement(String clinicalPlacementId) =>
+      !applied &&
+          type == BatchCommitmentType.clinicalSession &&
+          this.clinicalPlacementId == clinicalPlacementId
+      ? _dates.length
+      : 0;
+
   BatchClinicalPlacementOption? get selectedPlacement {
     for (final placement in placements) {
       if (placement.id == clinicalPlacementId) return placement;
