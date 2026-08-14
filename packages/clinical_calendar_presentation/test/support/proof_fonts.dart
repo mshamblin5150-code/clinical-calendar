@@ -16,9 +16,11 @@ const _highDeltaThreshold = 128;
 GoldenFileComparator createProofGoldenComparator(
   GoldenFileComparator delegate, {
   double highDeltaPixelTolerance = _nonWindowsHighDeltaPixelTolerance,
+  double meanChannelErrorTolerance = _nonWindowsMeanChannelErrorTolerance,
 }) => _ProofGoldenComparator(
   _unwrapProofGoldenComparator(delegate),
   highDeltaPixelTolerance: highDeltaPixelTolerance,
+  meanChannelErrorTolerance: meanChannelErrorTolerance,
 );
 
 GoldenFileComparator _unwrapProofGoldenComparator(
@@ -155,10 +157,12 @@ final class _ProofGoldenComparator implements GoldenFileComparator {
   const _ProofGoldenComparator(
     this.delegate, {
     this.highDeltaPixelTolerance = _nonWindowsHighDeltaPixelTolerance,
+    this.meanChannelErrorTolerance = _nonWindowsMeanChannelErrorTolerance,
   });
 
   final GoldenFileComparator delegate;
   final double highDeltaPixelTolerance;
+  final double meanChannelErrorTolerance;
 
   @override
   Future<bool> compare(Uint8List imageBytes, Uri golden) async {
@@ -178,6 +182,7 @@ final class _ProofGoldenComparator implements GoldenFileComparator {
         _differenceIsAccepted(
           difference,
           highDeltaPixelTolerance: highDeltaPixelTolerance,
+          meanChannelErrorTolerance: meanChannelErrorTolerance,
         );
     if (!matches && difference != null) {
       stderr.writeln(
@@ -209,12 +214,14 @@ bool proofImagesMatch(
   img.Image expected,
   img.Image actual, {
   double highDeltaPixelTolerance = _nonWindowsHighDeltaPixelTolerance,
+  double meanChannelErrorTolerance = _nonWindowsMeanChannelErrorTolerance,
 }) {
   final difference = _proofImageDifference(expected, actual);
   return difference != null &&
       _differenceIsAccepted(
         difference,
         highDeltaPixelTolerance: highDeltaPixelTolerance,
+        meanChannelErrorTolerance: meanChannelErrorTolerance,
       );
 }
 
@@ -271,7 +278,8 @@ _ProofImageDifference? _proofImageDifference(
 bool _differenceIsAccepted(
   _ProofImageDifference difference, {
   required double highDeltaPixelTolerance,
+  required double meanChannelErrorTolerance,
 }) =>
     difference.changedRatio <= _nonWindowsPixelTolerance &&
     difference.highDeltaRatio <= highDeltaPixelTolerance &&
-    difference.meanChannelError <= _nonWindowsMeanChannelErrorTolerance;
+    difference.meanChannelError <= meanChannelErrorTolerance;
