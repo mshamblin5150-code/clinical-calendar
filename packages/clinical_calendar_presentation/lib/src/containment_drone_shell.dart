@@ -382,7 +382,7 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                   left: width * .769,
                   top: height * .018,
                   width: width * .206,
-                  height: height * .664,
+                  height: height * .590,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-insight-bay'),
                     conceptAperture: true,
@@ -398,9 +398,9 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                 ),
                 Positioned(
                   left: width * .769,
-                  top: height * .684,
+                  top: height * .612,
                   width: width * .206,
-                  height: height * .186,
+                  height: height * .274,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-attention-bay'),
                     conceptAperture: true,
@@ -680,6 +680,7 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
         wheelPadding: EdgeInsets.zero,
         compactLedger: true,
         segmentedWheel: true,
+        scrollContent: true,
         wheelDiameter: wheelDiameter,
         child: PlacementProgressDetailsScope(
           onOpenDetails: (snapshot) => showDialog<void>(

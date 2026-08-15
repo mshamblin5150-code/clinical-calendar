@@ -1687,9 +1687,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             onManageClasses: _openClassCatalog,
             calendar: CalendarPeriodView(
               key: ValueKey('calendar-period-view-$_calendarRevision'),
-              dataSource: widget.themeBundle.id == variantFThemeId
-                  ? _schedulingCalendarDataSource
-                  : _assignmentCalendarDataSource,
+              dataSource: _assignmentCalendarDataSource,
               studentId: widget.studentId,
               today: _today(widget.dependencies.clock),
               weekStartsOn: settings.weekStart,

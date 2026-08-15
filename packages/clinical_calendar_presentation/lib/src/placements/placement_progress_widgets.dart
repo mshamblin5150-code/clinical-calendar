@@ -286,6 +286,7 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
     this.conceptActionRail = false,
     this.emphasizeProjection = false,
     this.segmentedWheel = false,
+    this.scrollContent = false,
     this.wheelDiameter,
     required super.child,
     super.key,
@@ -297,6 +298,7 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
   final bool conceptActionRail;
   final bool emphasizeProjection;
   final bool segmentedWheel;
+  final bool scrollContent;
   final double? wheelDiameter;
 
   static PlacementProgressPanelPolicy? maybeOf(BuildContext context) => context
@@ -310,6 +312,7 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
       conceptActionRail != oldWidget.conceptActionRail ||
       emphasizeProjection != oldWidget.emphasizeProjection ||
       segmentedWheel != oldWidget.segmentedWheel ||
+      scrollContent != oldWidget.scrollContent ||
       wheelDiameter != oldWidget.wheelDiameter;
 }
 
@@ -1609,8 +1612,10 @@ final class _TacticalPanel extends StatelessWidget {
         if (expandChild) Expanded(child: child) else child,
       ],
     );
+    final policyRequestsScroll =
+        PlacementProgressPanelPolicy.maybeOf(context)?.scrollContent ?? false;
     final adaptiveContent =
-        enlargedText &&
+        (policyRequestsScroll || enlargedText) &&
             !EmbeddedPlacementPanelInterior.outerScrollOwnsOverflow(context)
         ? SingleChildScrollView(child: content)
         : content;

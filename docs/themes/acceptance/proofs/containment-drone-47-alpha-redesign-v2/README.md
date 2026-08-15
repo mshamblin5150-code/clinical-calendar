@@ -2,15 +2,23 @@
 
 Issue: [#146](https://github.com/mshamblin5150-code/clinical-calendar/issues/146)
 
-Status: **concept approved; candidates `d4959ec` and `a28bdb8` were rejected
-on 2026-08-15; deterministic candidate v4 is ready for maintainer review.
-Physical SM-X920 work remains intentionally deferred until that visual gate**.
+Status: **concept approved; candidates `d4959ec`, `a28bdb8`, and `7ac6ba8`
+were not accepted on 2026-08-15; deterministic candidate v5 is ready for
+maintainer review. Physical SM-X920 work remains intentionally deferred until
+that visual gate**.
 
-## Deterministic candidate v4
+## Deterministic candidate v5
 
-Candidate v4 preserves the maintainer-accepted full-bleed chassis from v3 and
-replaces only the rejected seams. Four individually housed live crown command
-cells, a separate circular Student control, five sculpted live navigation
+Candidate v5 preserves the maintainer-accepted v4 chassis, crown, navigation,
+wheel, progress-detail, and destination direction. It restores the shared live
+Academic Assignment entry and Class/Course management actions at the Calendar's
+trailing edge, switches Containment to the assignment-inclusive Calendar data
+source, and raises/extends Needs Attention to the concept-measured right-side
+instrument boundary. The shortened progress bay owns a Containment-only scroll
+policy so its live metric ledger remains usable at smaller landscape proofs.
+
+Four individually housed live crown command cells, a separate circular Student
+control, five sculpted live navigation
 keys, and a concentric 48-sector Family Medicine instrument now carry the
 approved mechanical identity. The live progress-detail surface repeats that
 instrument, while every destination now carries the same mechanical language
@@ -19,15 +27,18 @@ deterministic fictional fixture supplies 72 Completed Hours, 36 Scheduled
 Hours, and 12 Unscheduled Hours so the wheel and semantic ledger exercise
 representative live state.
 
-`candidate-v4-concept-vs-runtime-landscape-1536x1024.png` is the current
-equal-size labelled comparison. The adjacent v4 captures cover landscape,
+`candidate-v5-concept-vs-runtime-landscape-1536x1024.png` is the current
+equal-size labelled comparison. The adjacent v5 captures cover landscape,
 portrait, 200% text, compact, both menu orientations, progress detail, both
 Clinical Placements orientations, Gallery, and the ten canonical destination
-goldens. `candidate-v4-runtime-proof-manifest.json` pins their hashes and
+goldens. `candidate-v5-runtime-proof-manifest.json` pins their hashes and
 explicitly records that deterministic maintainer review is pending and no new
 physical cycle has begun.
 
-Rejected v3 evidence is preserved under `rejected/a28bdb8/` and
+Candidate v4 evidence remains hash-pinned by
+`candidate-v4-runtime-proof-manifest.json` at commit `7ac6ba8`; it is historical
+review evidence, not the current target. Rejected v3 evidence is preserved
+under `rejected/a28bdb8/` and
 `test/baselines/containment_drone_v2/rejected/a28bdb8/`. Rejected `d4959ec`
 evidence remains in its existing historical directories. Neither is an
 acceptance target.
@@ -46,7 +57,7 @@ must not be treated as an acceptance baseline. The runtime source image is
 captured at the Android test device pixel ratio and downsampled only for this
 review sheet. It is not a production raster asset.
 
-Candidate v4's runtime regression proofs live in
+Candidate v5's runtime regression proofs live in
 `packages/clinical_calendar_presentation/test/baselines/containment_drone_v2/reference/`.
 They include landscape and portrait captures, a 200% text proof, compact
 rendering, Settings, explicit state-surface captures, and all ten destination

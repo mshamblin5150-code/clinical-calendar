@@ -6,6 +6,7 @@ import '../date_input.dart';
 import '../botanical_study_theme.dart';
 import '../coastal_light_theme.dart';
 import '../theme_contract.dart';
+import '../variant_f_theme.dart';
 
 typedef AcademicAssignmentSave =
     Future<void> Function({
@@ -34,6 +35,9 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!_academicAssignmentThemeIds.contains(themeId)) return calendar;
     final addButton = switch (themeId) {
+      variantFThemeId => _ContainmentDroneAssignmentControlHousing(
+        onPressed: onAddAssignment,
+      ),
       graphiteThemeId => _GraphiteAssignmentControlHousing(
         onPressed: onAddAssignment,
       ),
@@ -101,6 +105,40 @@ final class AcademicAssignmentCalendarWorkspace extends StatelessWidget {
       },
     );
   }
+}
+
+final class _ContainmentDroneAssignmentControlHousing extends StatelessWidget {
+  const _ContainmentDroneAssignmentControlHousing({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('containment-drone-assignment-control-housing'),
+    width: 58,
+    height: 54,
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: VariantFColors.surface.withValues(alpha: .96),
+      border: Border.all(color: VariantFColors.controlBorder, width: 2),
+      boxShadow: const [
+        BoxShadow(color: Colors.black87, blurRadius: 5, offset: Offset(0, 2)),
+      ],
+    ),
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: VariantFColors.background,
+        border: Border.all(color: VariantFColors.primary.withValues(alpha: .7)),
+      ),
+      child: IconButton(
+        key: const Key('add-academic-assignment'),
+        tooltip: 'Add Academic Assignment',
+        padding: EdgeInsets.zero,
+        onPressed: onPressed,
+        icon: const Icon(Icons.assignment_add),
+      ),
+    ),
+  );
 }
 
 final class _BotanicalStudyAssignmentControlHousing extends StatelessWidget {
@@ -316,6 +354,7 @@ final class _Federation2399AssignmentControlHousing extends StatelessWidget {
 }
 
 const _academicAssignmentThemeIds = <String>{
+  variantFThemeId,
   graphiteThemeId,
   federationClassicThemeId,
   federation2399ThemeId,

@@ -174,7 +174,7 @@ void main() {
     }
   });
 
-  test('candidate v4 pins every deterministic review surface', () async {
+  test('candidate v5 pins every deterministic review surface', () async {
     final packageRoot =
         Directory.current.path.endsWith('clinical_calendar_presentation')
         ? Directory.current
@@ -187,7 +187,7 @@ void main() {
     final manifest =
         jsonDecode(
               await File(
-                '${proofRoot.path}/candidate-v4-runtime-proof-manifest.json',
+                '${proofRoot.path}/candidate-v5-runtime-proof-manifest.json',
               ).readAsString(),
             )
             as Map<String, dynamic>;
@@ -227,10 +227,10 @@ void main() {
       );
     }
     final galleryGolden = File(
-      '${packageRoot.path}/test/goldens/theme_gallery_runtime/variant-f-v4.png',
+      '${packageRoot.path}/test/goldens/theme_gallery_runtime/variant-f-v5.png',
     );
     final galleryAsset = File(
-      '${packageRoot.path}/assets/theme_gallery_runtime/variant-f-v4.png',
+      '${packageRoot.path}/assets/theme_gallery_runtime/variant-f-v5.png',
     );
     expect(await galleryAsset.readAsBytes(), await galleryGolden.readAsBytes());
   });
@@ -388,6 +388,57 @@ void main() {
         find.byKey(const Key('containment-navigation-calendar-active')),
         findsOneWidget,
       );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'landscape insight and attention form the concept right instrument stack',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1536, 1024));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var attentionActionCount = 0;
+
+      await tester.pumpWidget(
+        _app(
+          slots: ResponsiveShellSlots(
+            centralContent: _slots.centralContent,
+            planningRegion: _slots.planningRegion,
+            placementDock: _slots.placementDock,
+            insightRail: _slots.insightRail,
+            mobilePlacementSummary: _slots.mobilePlacementSummary,
+            mobileAttention: Align(
+              alignment: Alignment.bottomCenter,
+              child: FilledButton(
+                key: const Key('proof-attention-action'),
+                onPressed: () => attentionActionCount++,
+                child: const Text('View all alerts'),
+              ),
+            ),
+            profileAvatar: _slots.profileAvatar,
+          ),
+        ),
+      );
+
+      final insight = tester.getRect(
+        find.byKey(const Key('containment-drone-insight-bay')),
+      );
+      final attention = tester.getRect(
+        find.byKey(const Key('containment-drone-attention-bay')),
+      );
+      final navigation = tester.getRect(
+        find.byKey(const Key('containment-drone-bottom-navigation')),
+      );
+
+      // Measured from the normative 1536x1024 concept: the attention housing
+      // starts near y=625 and continues to the navigation chassis near y=920.
+      expect(attention.top, lessThanOrEqualTo(1024 * .625));
+      expect(attention.height, greaterThanOrEqualTo(1024 * .27));
+      expect(attention.top - insight.bottom, inInclusiveRange(0, 12));
+      expect(attention.bottom, lessThanOrEqualTo(navigation.top));
+
+      await tester.tap(find.byKey(const Key('proof-attention-action')));
+      expect(attentionActionCount, 1);
       expect(tester.takeException(), isNull);
     },
   );

@@ -600,6 +600,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'Containment Calendar uses the assignment-inclusive production data source',
+    (tester) async {
+      final repositories = _Repositories(seedAcademicAssignment: true);
+
+      await _pumpAt(
+        tester,
+        const Size(1536, 1024),
+        dependencies: _dependencies(repositories: repositories),
+      );
+      final calendar = tester.widget<CalendarPeriodView>(
+        find.byType(CalendarPeriodView),
+      );
+      final snapshot = await calendar.dataSource.load(
+        studentId: studentId,
+        firstDate: LocalDate(2025, 12, 1),
+        lastDate: LocalDate(2026, 1, 31),
+      );
+
+      expect(snapshot.entries, hasLength(1));
+      expect(
+        snapshot.entries.single.kind,
+        CalendarEntryKind.academicAssignment,
+      );
+      expect(snapshot.entries.single.title, 'Evidence review');
+      expect(snapshot.entries.single.course, 'NURS 702');
+      expect(find.byKey(const Key('add-academic-assignment')), findsOneWidget);
+      expect(find.byKey(const Key('manage-class-catalog')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('portrait placement dock keeps headings and names readable', (
     tester,
   ) async {
@@ -2165,6 +2197,7 @@ final class _Repositories implements RepositoryRegistry {
     bool seedLifecycle = false,
     bool seedSynchronization = false,
     bool seedConflict = false,
+    bool seedAcademicAssignment = false,
   }) {
     settings = _SettingsStore();
     profile = _ProfileStore();
@@ -2173,6 +2206,7 @@ final class _Repositories implements RepositoryRegistry {
     repositories = _ReadRepositories(
       seedLifecycle: seedLifecycle,
       seedSynchronization: seedSynchronization,
+      seedAcademicAssignment: seedAcademicAssignment,
       synchronization: synchronization,
       settings: settings,
       profile: profile,
@@ -2216,6 +2250,7 @@ final class _ReadRepositories
   _ReadRepositories({
     required bool seedLifecycle,
     required bool seedSynchronization,
+    required bool seedAcademicAssignment,
     required this.synchronization,
     required this.settings,
     required this.profile,
@@ -2258,6 +2293,24 @@ final class _ReadRepositories
                _evaluationPlanRecord(),
              ], (value) => value.id)
            : _EmptyReadRepository(),
+       _academicAssignments = seedAcademicAssignment
+           ? _StaticReadRepository([
+               StoredDomainRecord(
+                 value: AcademicAssignment(
+                   id: 'assignment-1',
+                   title: 'Evidence review',
+                   course: 'NURS 702',
+                   courseId: 'course-1',
+                   dueDate: LocalDate(2025, 12, 31),
+                   status: AcademicAssignmentStatus.pending,
+                 ),
+                 studentId: studentId,
+                 revision: 1,
+                 createdAtUtc: DateTime.utc(2026, 1, 1),
+                 updatedAtUtc: DateTime.utc(2026, 1, 1),
+               ),
+             ], (value) => value.id)
+           : _EmptyReadRepository(),
        _classCatalogEntries = _StaticReadRepository([
          StoredDomainRecord(
            value: ClassCatalogEntry(id: 'course-1', name: 'NURS 702'),
@@ -2278,8 +2331,7 @@ final class _ReadRepositories
   final OutboxReadRepository _outbox;
   final ReadRepository<HistoricalHoursEntry> _historicalHoursEntries;
   final ReadRepository<EvaluationPlan> _evaluationPlans;
-  final _EmptyReadRepository<AcademicAssignment> _academicAssignments =
-      _EmptyReadRepository();
+  final ReadRepository<AcademicAssignment> _academicAssignments;
   final ReadRepository<ClassCatalogEntry> _classCatalogEntries;
 
   @override

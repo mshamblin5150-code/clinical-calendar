@@ -10,82 +10,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/keyboard_focus.dart';
 
 void main() {
-  testWidgets(
-    'six additive themes expose Add Assignment but Variant F does not',
-    (tester) async {
-      tester.view.physicalSize = const Size(900, 1200);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      const additiveThemeIds = [
-        graphiteThemeId,
-        federationClassicThemeId,
-        federation2399ThemeId,
-        coastalCalmThemeId,
-        botanicalStudyThemeId,
-        heritageFieldNotesThemeId,
-      ];
-
-      for (final themeId in additiveThemeIds) {
-        await tester.pumpWidget(_workspace(themeId));
-        expect(
-          find.byKey(const Key('add-academic-assignment')),
-          findsOneWidget,
-          reason: themeId,
-        );
-        expect(
-          find.byKey(const Key('manage-class-catalog')),
-          findsOneWidget,
-          reason: themeId,
-        );
-        expect(tester.takeException(), isNull, reason: themeId);
-        expect(
-          find.byKey(const Key('graphite-assignment-control-housing')),
-          themeId == graphiteThemeId ? findsOneWidget : findsNothing,
-          reason: themeId,
-        );
-        expect(
-          find.byKey(
-            const Key('federation-classic-assignment-control-housing'),
-          ),
-          themeId == federationClassicThemeId ? findsOneWidget : findsNothing,
-          reason: themeId,
-        );
-        expect(
-          find.byKey(const Key('federation-2399-assignment-control-housing')),
-          themeId == federation2399ThemeId ? findsOneWidget : findsNothing,
-          reason: themeId,
-        );
-        expect(
-          find.byKey(const Key('coastal-light-assignment-control-housing')),
-          themeId == coastalCalmThemeId ? findsOneWidget : findsNothing,
-          reason: themeId,
-        );
-        expect(
-          find.byKey(const Key('botanical-study-assignment-control-housing')),
-          themeId == botanicalStudyThemeId ? findsOneWidget : findsNothing,
-          reason: themeId,
-        );
-        if (themeId == graphiteThemeId) {
-          expect(find.byTooltip('Add Academic Assignment'), findsOneWidget);
-        }
-      }
-
-      await tester.pumpWidget(_workspace(variantFThemeId));
-      expect(find.byKey(const Key('add-academic-assignment')), findsNothing);
-      expect(find.byKey(const Key('manage-class-catalog')), findsNothing);
-
-      await tester.pumpWidget(_workspace('unknown-theme'));
-      expect(find.byKey(const Key('add-academic-assignment')), findsNothing);
-    },
-  );
-
-  testWidgets('six real theme shells keep assignment entry usable at 200%', (
+  testWidgets('all seven themes expose live Academic Assignment actions', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1600, 1000));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    const additiveThemeIds = [
+    tester.view.physicalSize = const Size(900, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    const themeIds = [
+      variantFThemeId,
       graphiteThemeId,
       federationClassicThemeId,
       federation2399ThemeId,
@@ -94,7 +27,86 @@ void main() {
       heritageFieldNotesThemeId,
     ];
 
-    for (final themeId in additiveThemeIds) {
+    for (final themeId in themeIds) {
+      var addCount = 0;
+      var manageCount = 0;
+      await tester.pumpWidget(
+        _workspace(
+          themeId,
+          onAddAssignment: () => addCount++,
+          onManageClasses: () => manageCount++,
+        ),
+      );
+      expect(
+        find.byKey(const Key('add-academic-assignment')),
+        findsOneWidget,
+        reason: themeId,
+      );
+      expect(
+        find.byKey(const Key('manage-class-catalog')),
+        findsOneWidget,
+        reason: themeId,
+      );
+      expect(tester.takeException(), isNull, reason: themeId);
+      await tester.tap(find.byKey(const Key('add-academic-assignment')));
+      await tester.tap(find.byKey(const Key('manage-class-catalog')));
+      expect(addCount, 1, reason: themeId);
+      expect(manageCount, 1, reason: themeId);
+      expect(
+        find.byKey(const Key('containment-drone-assignment-control-housing')),
+        themeId == variantFThemeId ? findsOneWidget : findsNothing,
+        reason: themeId,
+      );
+      expect(
+        find.byKey(const Key('graphite-assignment-control-housing')),
+        themeId == graphiteThemeId ? findsOneWidget : findsNothing,
+        reason: themeId,
+      );
+      expect(
+        find.byKey(const Key('federation-classic-assignment-control-housing')),
+        themeId == federationClassicThemeId ? findsOneWidget : findsNothing,
+        reason: themeId,
+      );
+      expect(
+        find.byKey(const Key('federation-2399-assignment-control-housing')),
+        themeId == federation2399ThemeId ? findsOneWidget : findsNothing,
+        reason: themeId,
+      );
+      expect(
+        find.byKey(const Key('coastal-light-assignment-control-housing')),
+        themeId == coastalCalmThemeId ? findsOneWidget : findsNothing,
+        reason: themeId,
+      );
+      expect(
+        find.byKey(const Key('botanical-study-assignment-control-housing')),
+        themeId == botanicalStudyThemeId ? findsOneWidget : findsNothing,
+        reason: themeId,
+      );
+      if (themeId == graphiteThemeId) {
+        expect(find.byTooltip('Add Academic Assignment'), findsOneWidget);
+      }
+    }
+
+    await tester.pumpWidget(_workspace('unknown-theme'));
+    expect(find.byKey(const Key('add-academic-assignment')), findsNothing);
+  });
+
+  testWidgets('all real theme shells keep assignment entry usable at 200%', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1600, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const themeIds = [
+      variantFThemeId,
+      graphiteThemeId,
+      federationClassicThemeId,
+      federation2399ThemeId,
+      coastalCalmThemeId,
+      botanicalStudyThemeId,
+      heritageFieldNotesThemeId,
+    ];
+
+    for (final themeId in themeIds) {
       final bundle = ClinicalCalendarThemeBundleRegistry.standard.resolveRoot(
         themeId,
       );
@@ -143,6 +155,62 @@ void main() {
       expect(tester.takeException(), isNull, reason: themeId);
     }
   });
+
+  testWidgets(
+    'Containment assignment controls survive landscape portrait and compact',
+    (tester) async {
+      for (final viewport in const [
+        Size(1536, 1024),
+        Size(900, 1440),
+        Size(390, 844),
+      ]) {
+        await tester.binding.setSurfaceSize(viewport);
+        await tester.pumpWidget(
+          MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: MaterialApp(
+              theme: const VariantFVisualTheme().createThemeData(),
+              home: const VariantFThemeBundle().shellRenderer.build(
+                environmentName: 'TEST',
+                onOpenMenu: _noop,
+                onOpenDestination: _ignoreDestination,
+                onOpenAttention: _noop,
+                onAddSchedule: _noop,
+                slots: ResponsiveShellSlots(
+                  centralContent: AcademicAssignmentCalendarWorkspace(
+                    themeId: variantFThemeId,
+                    onAddAssignment: _noop,
+                    onManageClasses: _noop,
+                    calendar: SizedBox(height: 480),
+                  ),
+                  planningRegion: SizedBox.shrink(),
+                  placementDock: SizedBox.shrink(),
+                  insightRail: SizedBox.shrink(),
+                  mobilePlacementSummary: SizedBox.shrink(),
+                  mobileAttention: SizedBox.shrink(),
+                  profileAvatar: Icon(Icons.person_outline),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('add-academic-assignment')),
+          findsOneWidget,
+          reason: '$viewport',
+        );
+        expect(
+          find.byKey(const Key('manage-class-catalog')),
+          findsOneWidget,
+          reason: '$viewport',
+        );
+        expect(tester.takeException(), isNull, reason: '$viewport');
+      }
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+    },
+  );
 
   testWidgets('editor validates required fields and saves fictional data', (
     tester,
@@ -428,16 +496,24 @@ StoredDomainRecord<ClassCatalogEntry> _catalogRecord(
   updatedAtUtc: DateTime.utc(2026, 8, 11),
 );
 
-Widget _workspace(String themeId) => MaterialApp(
+Widget _workspace(
+  String themeId, {
+  VoidCallback onAddAssignment = _noop,
+  VoidCallback onManageClasses = _noop,
+}) => MaterialApp(
   home: Scaffold(
     body: MediaQuery(
       data: const MediaQueryData(textScaler: TextScaler.linear(2)),
       child: AcademicAssignmentCalendarWorkspace(
         themeId: themeId,
-        onAddAssignment: () {},
-        onManageClasses: () {},
+        onAddAssignment: onAddAssignment,
+        onManageClasses: onManageClasses,
         calendar: const ColoredBox(color: Colors.black),
       ),
     ),
   ),
 );
+
+void _noop() {}
+
+void _ignoreDestination(ClinicalCalendarDestination _) {}
