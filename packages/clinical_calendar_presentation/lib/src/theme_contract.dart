@@ -1298,6 +1298,8 @@ final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
       canonicalDeltaMarkAsset,
       containmentDroneChassisBridgeAsset,
       containmentDronePanelAsset,
+      containmentDroneLandscapeChassisAsset,
+      containmentDronePortraitChassisAsset,
     ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
@@ -1313,7 +1315,7 @@ final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: variantFThemeId,
     rendererId: containmentDroneRendererId,
-    runtimeThumbnailAssetId: 'variant-f-v2',
+    runtimeThumbnailAssetId: 'variant-f-v3',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [

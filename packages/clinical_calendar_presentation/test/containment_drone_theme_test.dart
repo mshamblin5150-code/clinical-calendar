@@ -19,7 +19,7 @@ void main() {
         : Directory('packages/clinical_calendar_presentation');
     final repositoryRoot = packageRoot.parent.parent;
     final proofRoot = Directory(
-      '${packageRoot.path}/test/baselines/containment_drone_v2',
+      '${packageRoot.path}/test/baselines/containment_drone_v2/rejected/d4959ec',
     );
     final manifest =
         jsonDecode(
@@ -38,7 +38,7 @@ void main() {
 
     expect(manifest['rendererId'], containmentDroneRendererId);
     expect(manifest['platform'], 'cross-host-reference');
-    expect(manifest['physicalAndroidApproval'], 'pending');
+    expect(manifest['physicalAndroidApproval'], 'rejected');
     expect(
       Directory('${proofRoot.path}/reference')
           .listSync()
@@ -95,10 +95,84 @@ void main() {
     expect(containment.frame.assetPaths, contains(canonicalDeltaMarkAsset));
     expect(containment.frame.assetPaths, contains(containmentDronePanelAsset));
     expect(
+      containment.frame.assetPaths,
+      containsAll([
+        containmentDroneLandscapeChassisAsset,
+        containmentDronePortraitChassisAsset,
+      ]),
+    );
+    expect(
       containment.shellRenderer.buildFrame(child: const SizedBox.shrink()),
       isA<ContainmentDroneFrame>(),
     );
   });
+
+  test(
+    'successor candidate pins its full-bleed assets and proof set',
+    () async {
+      final packageRoot =
+          Directory.current.path.endsWith('clinical_calendar_presentation')
+          ? Directory.current
+          : Directory('packages/clinical_calendar_presentation');
+      final repositoryRoot = packageRoot.parent.parent;
+      final proofRoot = Directory(
+        '${repositoryRoot.path}/docs/themes/acceptance/proofs/'
+        'containment-drone-47-alpha-redesign-v2',
+      );
+      final manifest =
+          jsonDecode(
+                await File(
+                  '${proofRoot.path}/candidate-v3-runtime-proof-manifest.json',
+                ).readAsString(),
+              )
+              as Map<String, dynamic>;
+      final proofs = (manifest['proofs'] as Map<String, dynamic>)
+          .cast<String, String>();
+      final assets =
+          (manifest['containmentAssetSha256'] as Map<String, dynamic>)
+              .cast<String, String>();
+
+      expect(manifest['physicalAndroidApproval'], 'pending-fresh-sm-x920-run');
+      final proofFiles = <String, File>{
+        'calendar-landscape-1536x1024.png': File(
+          '${packageRoot.path}/test/baselines/containment_drone_v2/reference/'
+          'calendar-landscape-1536x1024.png',
+        ),
+        'calendar-portrait-900x1440.png': File(
+          '${packageRoot.path}/test/baselines/containment_drone_v2/reference/'
+          'calendar-portrait-900x1440.png',
+        ),
+        'calendar-portrait-200-percent-900x1440.png': File(
+          '${packageRoot.path}/test/baselines/containment_drone_v2/reference/'
+          'calendar-portrait-200-percent-900x1440.png',
+        ),
+        'candidate-v3-concept-vs-runtime-landscape-1536x1024.png': File(
+          '${proofRoot.path}/'
+          'candidate-v3-concept-vs-runtime-landscape-1536x1024.png',
+        ),
+        'theme-gallery-runtime-variant-f-v3.png': File(
+          '${packageRoot.path}/assets/theme_gallery_runtime/variant-f-v3.png',
+        ),
+      };
+      for (final entry in proofFiles.entries) {
+        expect(
+          sha256.convert(await entry.value.readAsBytes()).toString(),
+          proofs[entry.key],
+          reason: entry.key,
+        );
+      }
+      for (final entry in assets.entries) {
+        final file = File(
+          '${packageRoot.path}/assets/containment_drone_v2/${entry.key}',
+        );
+        expect(
+          sha256.convert(await file.readAsBytes()).toString(),
+          entry.value,
+          reason: entry.key,
+        );
+      }
+    },
+  );
 
   test('the other six themes keep their existing renderer lanes', () {
     const renderers = <ClinicalCalendarShellRenderer>[
@@ -230,8 +304,8 @@ void main() {
           .getTopLeft(find.byKey(const Key('containment-drone-planning-bay')))
           .dy;
       expect(calendarTop, lessThan(placementTop));
-      expect(placementTop, lessThan(insightTop));
-      expect(insightTop, lessThan(planningTop));
+      expect(placementTop, insightTop);
+      expect(placementTop, lessThan(planningTop));
       expect(tester.takeException(), isNull);
     },
   );

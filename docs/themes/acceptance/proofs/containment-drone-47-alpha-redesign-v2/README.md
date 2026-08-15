@@ -2,9 +2,23 @@
 
 Issue: [#146](https://github.com/mshamblin5150-code/clinical-calendar/issues/146)
 
-Status: **concept approved; current deterministic and physical runtime candidate
-rejected by the maintainer on 2026-08-15 for failing the 100% concept-fidelity
-requirement; replacement implementation required**.
+Status: **concept approved; the `d4959ec` deterministic and physical candidate
+was rejected on 2026-08-15; successor candidate v3 is implemented and passes
+the repository quality gate, with fresh physical SM-X920 approval still
+required**.
+
+## Successor candidate v3
+
+The successor implementation uses full-bleed, concept-derived landscape and
+portrait chassis plates with live Flutter apertures, a Containment-only
+segmented green progress instrument, and an intentional fixed portrait
+recomposition. The rejected `d4959ec` references are preserved under
+`test/baselines/containment_drone_v2/rejected/d4959ec/reference/`; the current
+candidate references remain under `test/baselines/containment_drone_v2/reference/`.
+
+`candidate-v3-concept-vs-runtime-landscape-1536x1024.png` is the new equal-size
+labelled comparison. It is candidate evidence only. Automated proof does not
+grant the required fresh physical SM-X920 approval.
 
 Declared landscape golden viewport: **1536 x 1024 logical pixels**.
 Declared portrait proof viewport: **900 x 1440 logical pixels**.

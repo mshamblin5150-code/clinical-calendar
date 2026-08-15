@@ -26,7 +26,7 @@ void main() {
       bundle.frame.sourceCuts,
       const EdgeInsets.fromLTRB(120, 145, 120, 170),
     );
-    expect(bundle.frame.assetPaths, hasLength(7));
+    expect(bundle.frame.assetPaths, hasLength(9));
     expect(
       bundle.frame.assetPaths,
       contains(containmentDroneChassisBridgeAsset),

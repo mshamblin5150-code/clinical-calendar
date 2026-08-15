@@ -207,7 +207,7 @@ void main() {
             viewport.height >= 800 &&
             viewport.width > viewport.height;
         final portrait =
-            viewport.width >= 600 && viewport.height >= viewport.width;
+            viewport.width >= 840 && viewport.height >= viewport.width;
         expect(
           find.byKey(
             Key(
@@ -522,8 +522,8 @@ void main() {
       find.byKey(const Key('containment-drone-attention-bay')),
     );
     expect(calendar.top, lessThan(placement.top));
-    expect(placement.top, lessThan(progress.top));
-    expect(progress.top, lessThan(planning.top));
+    expect(placement.top, progress.top);
+    expect(placement.top, lessThan(planning.top));
     expect(planning.top, lessThan(attention.top));
     expect(
       find.byKey(const Key('containment-drone-portrait-scroll')),
@@ -1840,6 +1840,8 @@ Future<void> _pumpAcceptedRenderAt(
         'assets/variant_f_raster/panel-nine-slice-v2.png',
         containmentDroneChassisBridgeAsset,
         containmentDronePanelAsset,
+        containmentDroneLandscapeChassisAsset,
+        containmentDronePortraitChassisAsset,
       ]) {
         await precacheImage(
           AssetImage(asset, package: 'clinical_calendar_presentation'),
@@ -2154,7 +2156,13 @@ final class _ReadRepositories
     required this.activePlacement,
   }) : _workShifts = _EmptyReadRepository(),
        _clinicalSessions = seedLifecycle
-           ? _StaticReadRepository([_sessionRecord()], (value) => value.id)
+           ? _StaticReadRepository([
+               _proofSessionRecord(
+                 ordinal: 101,
+                 date: LocalDate(2026, 1, 1),
+                 hours: 3,
+               ),
+             ], (value) => value.id)
            : _EmptyReadRepository(),
        _protectedDays = _EmptyReadRepository(),
        _scheduleTemplates = _EmptyReadRepository(),
@@ -2453,32 +2461,54 @@ final class _StaticReadRepository<T> implements ReadRepository<T> {
       .toList(growable: false);
 }
 
-StoredDomainRecord<ClinicalSession> _sessionRecord() => StoredDomainRecord(
-  value: ClinicalSession.schedule(
-    id: _appSessionId,
-    clinicalPlacementId: '20000000-0000-4000-8000-000000000001',
-    preceptorId: '30000000-0000-4000-8000-000000000001',
-    plannedInterval: ZonedInterval(
-      startDate: LocalDate(2026, 1, 1),
-      startTime: LocalTime(13, 0),
-      endTime: LocalTime(16, 0),
-      timeZone: TimeZoneId('UTC'),
-      startOffset: UtcOffset.utc,
-      endOffset: UtcOffset.utc,
-    ),
-    asOfUtc: DateTime.utc(2026, 1, 1, 12),
-  ),
-  studentId: studentId,
-  revision: 1,
-  createdAtUtc: DateTime.utc(2026),
-  updatedAtUtc: DateTime.utc(2026),
-);
+StoredDomainRecord<ClinicalSession> _proofSessionRecord({
+  required int ordinal,
+  required LocalDate date,
+  required int hours,
+  bool completed = false,
+}) {
+  final interval = ZonedInterval(
+    startDate: date,
+    startTime: LocalTime(8, 0),
+    endTime: LocalTime(8 + hours, 0),
+    timeZone: TimeZoneId('UTC'),
+    startOffset: UtcOffset.utc,
+    endOffset: UtcOffset.utc,
+  );
+  final id = completed
+      ? '41000000-0000-4000-8000-${ordinal.toString().padLeft(12, '0')}'
+      : ordinal == 101
+      ? _appSessionId
+      : '40000000-0000-4000-8000-${ordinal.toString().padLeft(12, '0')}';
+  return StoredDomainRecord(
+    value: completed
+        ? ClinicalSession.restore(
+            id: id,
+            clinicalPlacementId: '20000000-0000-4000-8000-000000000001',
+            preceptorId: '30000000-0000-4000-8000-000000000001',
+            plannedInterval: interval,
+            state: ClinicalSessionState.completed,
+            actualInterval: interval,
+          )
+        : ClinicalSession.schedule(
+            id: id,
+            clinicalPlacementId: '20000000-0000-4000-8000-000000000001',
+            preceptorId: '30000000-0000-4000-8000-000000000001',
+            plannedInterval: interval,
+            asOfUtc: DateTime.utc(2026, 1, 1),
+          ),
+    studentId: studentId,
+    revision: 1,
+    createdAtUtc: DateTime.utc(2025, 12),
+    updatedAtUtc: DateTime.utc(2026),
+  );
+}
 
 StoredDomainRecord<ClinicalPlacement> _placementRecord() => StoredDomainRecord(
   value: ClinicalPlacement.create(
     id: '20000000-0000-4000-8000-000000000001',
     name: 'Family Medicine',
-    targetHours: TargetHours.fromWholeHours(270),
+    targetHours: TargetHours.fromWholeHours(120),
     startDate: LocalDate(2026, 1, 1),
     completionDeadline: LocalDate(2026, 12, 31),
     attachedPreceptorIds: const ['30000000-0000-4000-8000-000000000001'],
@@ -2497,7 +2527,7 @@ StoredDomainRecord<EvaluationPlan> _evaluationPlanRecord() {
     configuration: EvaluationPlanConfiguration(),
     context: EvaluationPlanContext(
       completedMinutes: 0,
-      targetMinutes: 270 * 60,
+      targetMinutes: 120 * 60,
       startDate: LocalDate(2026, 1, 1),
       completionDeadline: LocalDate(2026, 12, 31),
       today: LocalDate(2026, 1, 1),

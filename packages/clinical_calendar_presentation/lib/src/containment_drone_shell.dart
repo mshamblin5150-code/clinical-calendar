@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
@@ -10,6 +9,7 @@ import 'additive_semantic_colors.dart';
 import 'calendar/calendar_period_view.dart';
 import 'canonical_delta_mark.dart';
 import 'date_input.dart';
+import 'insight_rail_presentation_policy.dart';
 import 'placements/placement_management_surface.dart';
 import 'placements/placement_progress_widgets.dart';
 import 'responsive_shell.dart';
@@ -20,6 +20,10 @@ const containmentDroneChassisBridgeAsset =
     'assets/containment_drone_v2/chassis-conduit-bridge.png';
 const containmentDronePanelAsset =
     'assets/containment_drone_v2/panel-nine-slice-v2.png';
+const containmentDroneLandscapeChassisAsset =
+    'assets/containment_drone_v2/chassis-landscape-v3.png';
+const containmentDronePortraitChassisAsset =
+    'assets/containment_drone_v2/chassis-portrait-v3.png';
 
 /// Concept-owned Containment housing layered around the required Variant F
 /// nine-slice. The raster owns clipping and the Containment painter adds the
@@ -28,17 +32,24 @@ final class ContainmentDroneFrame extends StatelessWidget {
   const ContainmentDroneFrame({
     required this.child,
     this.padding = const EdgeInsets.all(14),
+    this.conceptAperture = false,
     super.key,
   });
 
   final Widget child;
   final EdgeInsets padding;
+  final bool conceptAperture;
 
   @override
-  Widget build(BuildContext context) => _ContainmentDroneV2PanelFrame(
-    padding: padding,
-    child: AdditiveThemePanelInterior(child: child),
-  );
+  Widget build(BuildContext context) {
+    final interior = AdditiveThemePanelInterior(child: child);
+    if (conceptAperture) {
+      return ClipRect(
+        child: Padding(padding: padding, child: interior),
+      );
+    }
+    return _ContainmentDroneV2PanelFrame(padding: padding, child: interior);
+  }
 }
 
 final class _ContainmentDroneV2PanelFrame extends StatefulWidget {
@@ -202,26 +213,20 @@ final class ContainmentDroneChassis extends StatelessWidget {
         child: ColoredBox(
           key: const Key('containment-drone-safe-paint-area'),
           color: VariantFColors.background,
-          child: CustomPaint(
-            painter: const _ContainmentDroneChassisPainter(),
-            child: Stack(
+          child: LayoutBuilder(
+            builder: (context, constraints) => Stack(
               fit: StackFit.expand,
               children: [
-                const Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  height: 74,
-                  child: _ContainmentDroneConduitBridge(),
-                ),
-                const Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: 74,
-                  child: RotatedBox(
-                    quarterTurns: 2,
-                    child: _ContainmentDroneConduitBridge(),
+                ExcludeSemantics(
+                  child: IgnorePointer(
+                    child: Image.asset(
+                      constraints.maxWidth > constraints.maxHeight
+                          ? containmentDroneLandscapeChassisAsset
+                          : containmentDronePortraitChassisAsset,
+                      package: 'clinical_calendar_presentation',
+                      fit: BoxFit.fill,
+                      filterQuality: FilterQuality.high,
+                    ),
                   ),
                 ),
                 child,
@@ -232,23 +237,6 @@ final class ContainmentDroneChassis extends StatelessWidget {
       ),
     );
   }
-}
-
-final class _ContainmentDroneConduitBridge extends StatelessWidget {
-  const _ContainmentDroneConduitBridge();
-
-  @override
-  Widget build(BuildContext context) => IgnorePointer(
-    child: ExcludeSemantics(
-      child: Image.asset(
-        containmentDroneChassisBridgeAsset,
-        package: 'clinical_calendar_presentation',
-        fit: BoxFit.cover,
-        alignment: Alignment.center,
-        filterQuality: FilterQuality.high,
-      ),
-    ),
-  );
 }
 
 final class ContainmentDroneApplicationShell extends StatelessWidget {
@@ -280,7 +268,7 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
           constraints.maxHeight >= 800 &&
           constraints.maxWidth > constraints.maxHeight;
       final portrait =
-          constraints.maxWidth >= 600 &&
+          constraints.maxWidth >= 840 &&
           constraints.maxHeight >= constraints.maxWidth;
       if (enlargedText) return _compact(context);
       if (landscape) return _landscape();
@@ -316,6 +304,7 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                     profileAvatar: slots.profileAvatar,
                     compact: true,
                     menuOnly: true,
+                    conceptAperture: true,
                   ),
                 ),
                 Positioned(
@@ -334,6 +323,7 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                     profileAvatar: slots.profileAvatar,
                     compact: width < 1450,
                     actionsOnly: true,
+                    conceptAperture: true,
                   ),
                 ),
                 Positioned(
@@ -343,7 +333,8 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                   height: height * .735,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-placement-bay'),
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
+                    conceptAperture: true,
+                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
                     child: KeyedSubtree(
                       key: const Key('placement-dock'),
                       child: slots.placementDock,
@@ -357,7 +348,8 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                   height: height * .55,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-calendar-bay'),
-                    padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
+                    conceptAperture: true,
+                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
                     child: KeyedSubtree(
                       key: const Key('central-content'),
                       child: _ContainmentDroneCalendarViewport(
@@ -373,7 +365,8 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                   height: height * .208,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-planning-bay'),
-                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+                    conceptAperture: true,
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
                     child: KeyedSubtree(
                       key: const Key('planning-region'),
                       child: SingleChildScrollView(
@@ -392,10 +385,14 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                   height: height * .664,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-insight-bay'),
-                    padding: const EdgeInsets.fromLTRB(14, 20, 14, 14),
+                    conceptAperture: true,
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
                     child: KeyedSubtree(
                       key: const Key('insight-rail'),
-                      child: _progressDetailsScope(slots.insightRail),
+                      child: _progressDetailsScope(
+                        slots.insightRail,
+                        wheelDiameter: 250,
+                      ),
                     ),
                   ),
                 ),
@@ -406,7 +403,8 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                   height: height * .186,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-attention-bay'),
-                    padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
+                    conceptAperture: true,
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
                     child: SingleChildScrollView(child: slots.mobileAttention),
                   ),
                 ),
@@ -430,110 +428,140 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
   );
 
   Widget _portrait(BuildContext context) {
-    final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final scale = textScale.clamp(1.0, 2.0);
     return Scaffold(
       key: const Key('containment-drone-portrait-shell'),
       backgroundColor: VariantFColors.background,
       body: ContainmentDroneChassis(
-        child: SafeArea(
-          bottom: false,
-          child: KeyedSubtree(
-            key: const Key('variant-f-tablet-console'),
-            child: Column(
-              children: [
-                SizedBox(
-                  height: 104 * math.min(scale, 1.35),
-                  child: _ContainmentDroneCrown(
-                    environmentName: environmentName,
-                    onOpenMenu: onOpenMenu,
-                    onOpenDestination: onOpenDestination,
-                    onAddSchedule: onAddSchedule,
-                    profileAvatar: slots.profileAvatar,
-                    compact: true,
-                  ),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    key: const Key('containment-drone-portrait-scroll'),
-                    primary: true,
-                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(
-                          height: 600 * scale,
-                          child: ContainmentDroneFrame(
-                            key: const Key('containment-drone-calendar-bay'),
-                            child: KeyedSubtree(
-                              key: const Key('central-content'),
-                              child: _ContainmentDroneCalendarViewport(
-                                scrollAtEnlargedText: true,
-                                child: slots.centralContent,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 330 * scale,
-                          child: ContainmentDroneFrame(
-                            key: const Key('containment-drone-placement-bay'),
-                            child: KeyedSubtree(
-                              key: const Key('placement-dock'),
-                              child: slots.placementDock,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 520 * scale,
-                          child: ContainmentDroneFrame(
-                            key: const Key('containment-drone-insight-bay'),
-                            child: KeyedSubtree(
-                              key: const Key('insight-rail'),
-                              child: _progressDetailsScope(slots.insightRail),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 320 * scale,
-                          child: ContainmentDroneFrame(
-                            key: const Key('containment-drone-planning-bay'),
-                            child: KeyedSubtree(
-                              key: const Key('planning-region'),
-                              child: VariantFPlanningBayMode(
-                                expandedByDefault: false,
-                                child: slots.planningRegion,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 260 * scale,
-                          child: ContainmentDroneFrame(
-                            key: const Key('containment-drone-attention-bay'),
-                            child: SingleChildScrollView(
-                              child: slots.mobileAttention,
-                            ),
-                          ),
-                        ),
-                      ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final height = constraints.maxHeight;
+            return KeyedSubtree(
+              key: const Key('variant-f-tablet-console'),
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: width * .04,
+                    top: height * .018,
+                    width: width * .92,
+                    height: height * .075,
+                    child: _ContainmentDroneCrown(
+                      environmentName: environmentName,
+                      onOpenMenu: onOpenMenu,
+                      onOpenDestination: onOpenDestination,
+                      onAddSchedule: onAddSchedule,
+                      profileAvatar: slots.profileAvatar,
+                      compact: true,
+                      conceptAperture: true,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
+                  Positioned(
+                    key: const Key('containment-drone-portrait-scroll'),
+                    left: width * .04,
+                    top: height * .105,
+                    width: width * .92,
+                    height: height * .355,
+                    child: ContainmentDroneFrame(
+                      key: const Key('containment-drone-calendar-bay'),
+                      conceptAperture: true,
+                      padding: const EdgeInsets.all(8),
+                      child: KeyedSubtree(
+                        key: const Key('central-content'),
+                        child: _ContainmentDroneCalendarViewport(
+                          child: slots.centralContent,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: width * .04,
+                    top: height * .455,
+                    width: width * .27,
+                    height: height * .31,
+                    child: ContainmentDroneFrame(
+                      key: const Key('containment-drone-placement-bay'),
+                      conceptAperture: true,
+                      padding: const EdgeInsets.all(8),
+                      child: KeyedSubtree(
+                        key: const Key('placement-dock'),
+                        child: EmbeddedPlacementPanelInterior(
+                          child: slots.placementDock,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: width * .34,
+                    top: height * .455,
+                    width: width * .62,
+                    height: height * .205,
+                    child: ContainmentDroneFrame(
+                      key: const Key('containment-drone-insight-bay'),
+                      conceptAperture: true,
+                      padding: const EdgeInsets.all(8),
+                      child: KeyedSubtree(
+                        key: const Key('insight-rail'),
+                        child: SingleChildScrollView(
+                          child: _progressDetailsScope(
+                            slots.insightRail,
+                            wheelDiameter: 190,
+                            sideBySide: true,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: width * .34,
+                    top: height * .68,
+                    width: width * .62,
+                    height: height * .10,
+                    child: ContainmentDroneFrame(
+                      key: const Key('containment-drone-planning-bay'),
+                      conceptAperture: true,
+                      padding: const EdgeInsets.all(6),
+                      child: KeyedSubtree(
+                        key: const Key('planning-region'),
+                        child: SingleChildScrollView(
+                          child: VariantFPlanningBayMode(
+                            expandedByDefault: false,
+                            child: slots.planningRegion,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: width * .04,
+                    top: height * .80,
+                    width: width * .92,
+                    height: height * .105,
+                    child: ContainmentDroneFrame(
+                      key: const Key('containment-drone-attention-bay'),
+                      conceptAperture: true,
+                      padding: const EdgeInsets.all(6),
+                      child: SingleChildScrollView(
+                        child: slots.mobileAttention,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: width * .04,
+                    top: height * .925,
+                    width: width * .92,
+                    height: height * .06,
+                    child: _ContainmentDroneNavigation(
+                      selectedIndex: mobileIndex,
+                      onOpenDestination: onOpenDestination,
+                      onOpenAttention: onOpenAttention,
+                      compact: true,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
-      ),
-      bottomNavigationBar: _ContainmentDroneNavigation(
-        selectedIndex: mobileIndex,
-        onOpenDestination: onOpenDestination,
-        onOpenAttention: onOpenAttention,
-        compact: true,
       ),
     );
   }
@@ -556,6 +584,7 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                 profileAvatar: slots.profileAvatar,
                 compact: true,
                 phone: true,
+                conceptAperture: true,
               ),
             ),
             Expanded(
@@ -637,28 +666,39 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
     ),
   );
 
-  Widget _progressDetailsScope(Widget child) => Builder(
-    builder: (context) => PlacementProgressPanelPolicy(
-      wheelAlignment: Alignment.center,
-      wheelPadding: EdgeInsets.zero,
-      compactLedger: true,
-      child: PlacementProgressDetailsScope(
-        onOpenDetails: (snapshot) => showDialog<void>(
-          context: context,
-          builder: (dialogContext) => Dialog.fullscreen(
-            child: ContainmentDronePlacementDetailsSurface(
-              snapshot: snapshot,
-              onClose: () => Navigator.pop(dialogContext),
-              onManage: () {
-                Navigator.pop(dialogContext);
-                onOpenDestination(
-                  ClinicalCalendarDestination.clinicalPlacements,
-                );
-              },
+  Widget _progressDetailsScope(
+    Widget child, {
+    double? wheelDiameter,
+    bool sideBySide = false,
+  }) => Builder(
+    builder: (context) => InsightRailPresentationPolicy(
+      placementProgressLayout: sideBySide
+          ? PlacementProgressRailLayout.sideBySide
+          : PlacementProgressRailLayout.vertical,
+      child: PlacementProgressPanelPolicy(
+        wheelAlignment: Alignment.center,
+        wheelPadding: EdgeInsets.zero,
+        compactLedger: true,
+        segmentedWheel: true,
+        wheelDiameter: wheelDiameter,
+        child: PlacementProgressDetailsScope(
+          onOpenDetails: (snapshot) => showDialog<void>(
+            context: context,
+            builder: (dialogContext) => Dialog.fullscreen(
+              child: ContainmentDronePlacementDetailsSurface(
+                snapshot: snapshot,
+                onClose: () => Navigator.pop(dialogContext),
+                onManage: () {
+                  Navigator.pop(dialogContext);
+                  onOpenDestination(
+                    ClinicalCalendarDestination.clinicalPlacements,
+                  );
+                },
+              ),
             ),
           ),
+          child: child,
         ),
-        child: child,
       ),
     ),
   );
@@ -1013,6 +1053,7 @@ final class _ContainmentDroneCrown extends StatelessWidget {
     this.phone = false,
     this.menuOnly = false,
     this.actionsOnly = false,
+    this.conceptAperture = false,
   });
 
   final String environmentName;
@@ -1025,10 +1066,12 @@ final class _ContainmentDroneCrown extends StatelessWidget {
   final bool phone;
   final bool menuOnly;
   final bool actionsOnly;
+  final bool conceptAperture;
 
   @override
   Widget build(BuildContext context) => ContainmentDroneFrame(
     key: frameKey,
+    conceptAperture: conceptAperture,
     padding: EdgeInsets.symmetric(horizontal: phone ? 6 : 12, vertical: 6),
     child: Row(
       children: [
@@ -1167,12 +1210,10 @@ final class _ContainmentDroneCrown extends StatelessWidget {
 final class _ContainmentDroneCalendarViewport extends StatelessWidget {
   const _ContainmentDroneCalendarViewport({
     required this.child,
-    this.scrollAtEnlargedText = false,
     this.bounded = true,
   });
 
   final Widget child;
-  final bool scrollAtEnlargedText;
   final bool bounded;
 
   @override
@@ -1181,33 +1222,34 @@ final class _ContainmentDroneCalendarViewport extends StatelessWidget {
       final calendar = CalendarPeriodViewportPolicy(
         useBoundedMonthGrid: bounded,
         scaleDayNumberWithText: true,
-        useEnlargedTextLandscapeReflow: !scrollAtEnlargedText,
+        useEnlargedTextLandscapeReflow: true,
         centerPeriodHeader: true,
-        useConceptMonthMarks: true,
+        useConceptMonthMarks: constraints.maxWidth >= 800,
         clipDayDecoration: true,
         allowLowHeightMonthScroll: true,
-        child: _ContainmentCalendarTheme(child: child),
+        child: _ContainmentCalendarTheme(
+          compactCells: constraints.maxWidth < 800,
+          child: child,
+        ),
       );
-      return buildEnlargedTextCalendarScrollViewport(
-        context: context,
-        constraints: constraints,
-        enabled: scrollAtEnlargedText,
-        scrollKey: const Key('containment-drone-calendar-horizontal-scroll'),
-        child: calendar,
-      );
+      return calendar;
     },
   );
 }
 
 final class _ContainmentCalendarTheme extends StatelessWidget {
-  const _ContainmentCalendarTheme({required this.child});
+  const _ContainmentCalendarTheme({
+    required this.child,
+    this.compactCells = false,
+  });
   final Widget child;
+  final bool compactCells;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final policy = theme.extension<ClinicalCalendarPresentationPolicy>();
-    if (policy == null || !policy.monthCellMetrics.showTodayLabel) {
+    if (policy == null) {
       return child;
     }
     final metrics = policy.monthCellMetrics;
@@ -1215,13 +1257,13 @@ final class _ContainmentCalendarTheme extends StatelessWidget {
       weekdayHeaderHeight: metrics.weekdayHeaderHeight,
       weekdayLabelFontSize: metrics.weekdayLabelFontSize,
       weekdayLabelFontWeight: metrics.weekdayLabelFontWeight,
-      cellPadding: metrics.cellPadding,
-      markerHeight: metrics.markerHeight,
+      cellPadding: compactCells ? const EdgeInsets.all(1) : metrics.cellPadding,
+      markerHeight: compactCells ? 12 : metrics.markerHeight,
       markerHorizontalPadding: metrics.markerHorizontalPadding,
-      markerIconSize: metrics.markerIconSize,
-      markerGap: metrics.markerGap,
-      markerFontSize: metrics.markerFontSize,
-      dayNumberFontSize: metrics.dayNumberFontSize,
+      markerIconSize: compactCells ? 8 : metrics.markerIconSize,
+      markerGap: compactCells ? 1 : metrics.markerGap,
+      markerFontSize: compactCells ? 8 : metrics.markerFontSize,
+      dayNumberFontSize: compactCells ? 10 : metrics.dayNumberFontSize,
       gridStrokeWidth: metrics.gridStrokeWidth,
       gridOpacity: metrics.gridOpacity,
       roundedSelection: metrics.roundedSelection,
@@ -1257,6 +1299,7 @@ final class _ContainmentDroneNavigation extends StatelessWidget {
     key: const Key('bottom-navigation'),
     child: ContainmentDroneFrame(
       key: const Key('containment-drone-bottom-navigation'),
+      conceptAperture: true,
       padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 12, vertical: 4),
       child: Row(
         children: [
@@ -1347,63 +1390,4 @@ final class _ContainmentDroneNavigationAction extends StatelessWidget {
       ),
     ),
   );
-}
-
-final class _ContainmentDroneChassisPainter extends CustomPainter {
-  const _ContainmentDroneChassisPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = VariantFColors.background,
-    );
-    final plate = Paint()..color = const Color(0xFF111814);
-    final edge = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = const Color(0xFF39433E);
-    final seed = math.max(1, (size.width / 96).round());
-    for (var index = 0; index < seed; index++) {
-      final x = index * size.width / seed;
-      final top = Rect.fromLTWH(x, index.isEven ? 0 : 5, 72, 18);
-      final bottom = Rect.fromLTWH(
-        size.width - x - 68,
-        size.height - (index.isEven ? 20 : 15),
-        68,
-        18,
-      );
-      canvas.drawRect(top, plate);
-      canvas.drawRect(top, edge);
-      canvas.drawRect(bottom, plate);
-      canvas.drawRect(bottom, edge);
-    }
-    final conduit = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..color = const Color(0xFF26312B);
-    final glow = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = VariantFColors.primary.withValues(alpha: .36);
-    final leftPath = Path()
-      ..moveTo(8, size.height * .12)
-      ..lineTo(22, size.height * .2)
-      ..lineTo(12, size.height * .44)
-      ..lineTo(25, size.height * .72)
-      ..lineTo(10, size.height * .9);
-    final rightPath = Path()
-      ..moveTo(size.width - 10, size.height * .08)
-      ..lineTo(size.width - 25, size.height * .26)
-      ..lineTo(size.width - 14, size.height * .55)
-      ..lineTo(size.width - 26, size.height * .82)
-      ..lineTo(size.width - 8, size.height * .94);
-    canvas.drawPath(leftPath, conduit);
-    canvas.drawPath(leftPath, glow);
-    canvas.drawPath(rightPath, conduit);
-    canvas.drawPath(rightPath, glow);
-  }
-
-  @override
-  bool shouldRepaint(_ContainmentDroneChassisPainter oldDelegate) => false;
 }

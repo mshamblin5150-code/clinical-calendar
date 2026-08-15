@@ -137,6 +137,9 @@ final class PlacementProgressWheel extends StatelessWidget {
             unscheduledFraction: fractions.unscheduled,
             overTargetFraction: fractions.overTarget,
             instrument: instrument,
+            segmented:
+                PlacementProgressPanelPolicy.maybeOf(context)?.segmentedWheel ??
+                false,
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -200,6 +203,7 @@ final class PlacementProgressWheelGraphic extends StatelessWidget {
     required this.unscheduledFraction,
     this.overTargetFraction = 0,
     this.instrument = false,
+    this.segmented = false,
     required this.child,
     super.key,
   });
@@ -209,6 +213,7 @@ final class PlacementProgressWheelGraphic extends StatelessWidget {
   final double unscheduledFraction;
   final double overTargetFraction;
   final bool instrument;
+  final bool segmented;
   final Widget child;
 
   @override
@@ -223,6 +228,7 @@ final class PlacementProgressWheelGraphic extends StatelessWidget {
         context,
       ).extension<ClinicalCalendarAdditiveColors>(),
       instrument: instrument,
+      segmented: segmented,
     ),
     child: child,
   );
@@ -236,6 +242,8 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
     required this.compactLedger,
     this.conceptActionRail = false,
     this.emphasizeProjection = false,
+    this.segmentedWheel = false,
+    this.wheelDiameter,
     required super.child,
     super.key,
   });
@@ -245,6 +253,8 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
   final bool compactLedger;
   final bool conceptActionRail;
   final bool emphasizeProjection;
+  final bool segmentedWheel;
+  final double? wheelDiameter;
 
   static PlacementProgressPanelPolicy? maybeOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<PlacementProgressPanelPolicy>();
@@ -255,7 +265,9 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
       wheelPadding != oldWidget.wheelPadding ||
       compactLedger != oldWidget.compactLedger ||
       conceptActionRail != oldWidget.conceptActionRail ||
-      emphasizeProjection != oldWidget.emphasizeProjection;
+      emphasizeProjection != oldWidget.emphasizeProjection ||
+      segmentedWheel != oldWidget.segmentedWheel ||
+      wheelDiameter != oldWidget.wheelDiameter;
 }
 
 /// Marks a placement panel embedded inside theme-owned housing so shared
@@ -394,6 +406,7 @@ final class _PlacementProgressPanelState extends State<PlacementProgressPanel> {
                         snapshot: snapshot,
                         touch: widget.touch,
                         onCycle: widget.onCycle,
+                        diameter: policy?.wheelDiameter ?? 142,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -410,6 +423,7 @@ final class _PlacementProgressPanelState extends State<PlacementProgressPanel> {
                         snapshot: snapshot,
                         touch: widget.touch,
                         onCycle: widget.onCycle,
+                        diameter: policy?.wheelDiameter ?? 142,
                       ),
                     ),
                   ),
@@ -1113,6 +1127,7 @@ final class _ProgressWheelPainter extends CustomPainter {
     required this.colors,
     required this.additiveColors,
     this.instrument = false,
+    this.segmented = false,
   });
   final double completedFraction;
   final double scheduledFraction;
@@ -1121,9 +1136,14 @@ final class _ProgressWheelPainter extends CustomPainter {
   final ClinicalCalendarColors colors;
   final ClinicalCalendarAdditiveColors? additiveColors;
   final bool instrument;
+  final bool segmented;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (segmented) {
+      _paintContainmentSegments(canvas, size);
+      return;
+    }
     if (instrument) {
       _paintInstrumentTicks(canvas, size);
     }
@@ -1182,7 +1202,59 @@ final class _ProgressWheelPainter extends CustomPainter {
       oldDelegate.overTargetFraction != overTargetFraction ||
       oldDelegate.colors != colors ||
       oldDelegate.additiveColors != additiveColors ||
-      oldDelegate.instrument != instrument;
+      oldDelegate.instrument != instrument ||
+      oldDelegate.segmented != segmented;
+
+  void _paintContainmentSegments(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide * .44;
+    const count = 40;
+    const gap = .035;
+    final activeCount = math.max(
+      1,
+      ((completedFraction + scheduledFraction) * count).round(),
+    );
+    final instrumentGreen = additiveColors?.completed ?? colors.clinical;
+    for (var index = 0; index < count; index++) {
+      final angle = -math.pi / 2 + index * math.pi * 2 / count;
+      final sweep = math.pi * 2 / count - gap;
+      final active = index < activeCount;
+      final outer = Rect.fromCircle(center: center, radius: radius);
+      final inner = Rect.fromCircle(center: center, radius: radius * .72);
+      final path = Path()
+        ..arcTo(outer, angle, sweep, false)
+        ..arcTo(inner, angle + sweep, -sweep, false)
+        ..close();
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = active
+              ? instrumentGreen
+              : instrumentGreen.withValues(alpha: .28)
+          ..style = PaintingStyle.fill,
+      );
+    }
+    canvas.drawCircle(
+      center,
+      radius * .63,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = colors.insetBorder,
+    );
+    if (overTargetFraction > 0) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius * .97),
+        -math.pi / 2,
+        math.pi * 2 * overTargetFraction.clamp(0.0, 1.0),
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(2, size.shortestSide * .018)
+          ..color = additiveColors?.overTarget ?? colors.primaryText,
+      );
+    }
+  }
 
   void _paintInstrumentTicks(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
