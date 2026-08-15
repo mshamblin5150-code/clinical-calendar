@@ -107,72 +107,133 @@ void main() {
     );
   });
 
-  test(
-    'successor candidate pins its full-bleed assets and proof set',
-    () async {
-      final packageRoot =
-          Directory.current.path.endsWith('clinical_calendar_presentation')
-          ? Directory.current
-          : Directory('packages/clinical_calendar_presentation');
-      final repositoryRoot = packageRoot.parent.parent;
-      final proofRoot = Directory(
-        '${repositoryRoot.path}/docs/themes/acceptance/proofs/'
-        'containment-drone-47-alpha-redesign-v2',
-      );
-      final manifest =
-          jsonDecode(
-                await File(
-                  '${proofRoot.path}/candidate-v3-runtime-proof-manifest.json',
-                ).readAsString(),
-              )
-              as Map<String, dynamic>;
-      final proofs = (manifest['proofs'] as Map<String, dynamic>)
-          .cast<String, String>();
-      final assets =
-          (manifest['containmentAssetSha256'] as Map<String, dynamic>)
-              .cast<String, String>();
+  test('rejected candidate v3 remains archived and hash-pinned', () async {
+    final packageRoot =
+        Directory.current.path.endsWith('clinical_calendar_presentation')
+        ? Directory.current
+        : Directory('packages/clinical_calendar_presentation');
+    final repositoryRoot = packageRoot.parent.parent;
+    final proofRoot = Directory(
+      '${repositoryRoot.path}/docs/themes/acceptance/proofs/'
+      'containment-drone-47-alpha-redesign-v2/rejected/a28bdb8',
+    );
+    final manifest =
+        jsonDecode(
+              await File(
+                '${proofRoot.path}/candidate-v3-runtime-proof-manifest.json',
+              ).readAsString(),
+            )
+            as Map<String, dynamic>;
+    final proofs = (manifest['proofs'] as Map<String, dynamic>)
+        .cast<String, String>();
+    final assets = (manifest['containmentAssetSha256'] as Map<String, dynamic>)
+        .cast<String, String>();
 
-      expect(manifest['physicalAndroidApproval'], 'pending-fresh-sm-x920-run');
-      final proofFiles = <String, File>{
-        'calendar-landscape-1536x1024.png': File(
-          '${packageRoot.path}/test/baselines/containment_drone_v2/reference/'
-          'calendar-landscape-1536x1024.png',
-        ),
-        'calendar-portrait-900x1440.png': File(
-          '${packageRoot.path}/test/baselines/containment_drone_v2/reference/'
-          'calendar-portrait-900x1440.png',
-        ),
-        'calendar-portrait-200-percent-900x1440.png': File(
-          '${packageRoot.path}/test/baselines/containment_drone_v2/reference/'
-          'calendar-portrait-200-percent-900x1440.png',
-        ),
-        'candidate-v3-concept-vs-runtime-landscape-1536x1024.png': File(
-          '${proofRoot.path}/'
-          'candidate-v3-concept-vs-runtime-landscape-1536x1024.png',
-        ),
-        'theme-gallery-runtime-variant-f-v3.png': File(
-          '${packageRoot.path}/assets/theme_gallery_runtime/variant-f-v3.png',
-        ),
-      };
-      for (final entry in proofFiles.entries) {
-        expect(
-          sha256.convert(await entry.value.readAsBytes()).toString(),
-          proofs[entry.key],
-          reason: entry.key,
-        );
-      }
-      for (final entry in assets.entries) {
-        final file = File(
-          '${packageRoot.path}/assets/containment_drone_v2/${entry.key}',
-        );
-        expect(
-          sha256.convert(await file.readAsBytes()).toString(),
-          entry.value,
-          reason: entry.key,
-        );
-      }
-    },
-  );
+    expect(manifest['physicalAndroidApproval'], 'pending-fresh-sm-x920-run');
+    final proofFiles = <String, File>{
+      'calendar-landscape-1536x1024.png': File(
+        '${packageRoot.path}/test/baselines/containment_drone_v2/rejected/'
+        'a28bdb8/reference/'
+        'calendar-landscape-1536x1024.png',
+      ),
+      'calendar-portrait-900x1440.png': File(
+        '${packageRoot.path}/test/baselines/containment_drone_v2/rejected/'
+        'a28bdb8/reference/'
+        'calendar-portrait-900x1440.png',
+      ),
+      'calendar-portrait-200-percent-900x1440.png': File(
+        '${packageRoot.path}/test/baselines/containment_drone_v2/rejected/'
+        'a28bdb8/reference/'
+        'calendar-portrait-200-percent-900x1440.png',
+      ),
+      'candidate-v3-concept-vs-runtime-landscape-1536x1024.png': File(
+        '${proofRoot.path}/'
+        'candidate-v3-concept-vs-runtime-landscape-1536x1024.png',
+      ),
+      'theme-gallery-runtime-variant-f-v3.png': File(
+        '${packageRoot.path}/test/baselines/containment_drone_v2/rejected/'
+        'a28bdb8/theme-gallery-shipped-variant-f-v3.png',
+      ),
+    };
+    for (final entry in proofFiles.entries) {
+      expect(
+        sha256.convert(await entry.value.readAsBytes()).toString(),
+        proofs[entry.key],
+        reason: entry.key,
+      );
+    }
+    for (final entry in assets.entries) {
+      final file = File(
+        '${packageRoot.path}/assets/containment_drone_v2/${entry.key}',
+      );
+      expect(
+        sha256.convert(await file.readAsBytes()).toString(),
+        entry.value,
+        reason: entry.key,
+      );
+    }
+  });
+
+  test('candidate v4 pins every deterministic review surface', () async {
+    final packageRoot =
+        Directory.current.path.endsWith('clinical_calendar_presentation')
+        ? Directory.current
+        : Directory('packages/clinical_calendar_presentation');
+    final repositoryRoot = packageRoot.parent.parent;
+    final proofRoot = Directory(
+      '${repositoryRoot.path}/docs/themes/acceptance/proofs/'
+      'containment-drone-47-alpha-redesign-v2',
+    );
+    final manifest =
+        jsonDecode(
+              await File(
+                '${proofRoot.path}/candidate-v4-runtime-proof-manifest.json',
+              ).readAsString(),
+            )
+            as Map<String, dynamic>;
+    final proofs = (manifest['proofs'] as Map<String, dynamic>)
+        .cast<String, String>();
+    final destinationProofs =
+        (manifest['destinationProofs'] as Map<String, dynamic>)
+            .cast<String, String>();
+
+    expect(
+      manifest['runtimeAcceptance'],
+      'candidate-pending-maintainer-deterministic-review',
+    );
+    expect(
+      manifest['physicalAndroidApproval'],
+      'not-run-awaiting-deterministic-approval',
+    );
+    for (final entry in proofs.entries) {
+      final file = File('${proofRoot.path}/${entry.key}');
+      expect(file.existsSync(), isTrue, reason: entry.key);
+      expect(
+        sha256.convert(await file.readAsBytes()).toString(),
+        entry.value,
+        reason: entry.key,
+      );
+    }
+    for (final entry in destinationProofs.entries) {
+      final file = File(
+        '${packageRoot.path}/test/baselines/containment_drone_v2/reference/'
+        '${entry.key}',
+      );
+      expect(file.existsSync(), isTrue, reason: entry.key);
+      expect(
+        sha256.convert(await file.readAsBytes()).toString(),
+        entry.value,
+        reason: entry.key,
+      );
+    }
+    final galleryGolden = File(
+      '${packageRoot.path}/test/goldens/theme_gallery_runtime/variant-f-v4.png',
+    );
+    final galleryAsset = File(
+      '${packageRoot.path}/assets/theme_gallery_runtime/variant-f-v4.png',
+    );
+    expect(await galleryAsset.readAsBytes(), await galleryGolden.readAsBytes());
+  });
 
   test('the other six themes keep their existing renderer lanes', () {
     const renderers = <ClinicalCalendarShellRenderer>[
@@ -271,6 +332,67 @@ void main() {
   );
 
   testWidgets(
+    'landscape uses individually housed command cells and navigation keys',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1536, 1024));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_app());
+
+      final commandCrown = tester.getRect(
+        find.byKey(const Key('containment-drone-command-actions-crown')),
+      );
+      final commandCells = <Finder>[
+        find.byKey(const Key('containment-command-add-schedule')),
+        find.byKey(const Key('containment-command-help')),
+        find.byKey(const Key('containment-command-notifications')),
+        find.byKey(const Key('containment-command-synchronization')),
+      ];
+      final commandRects = commandCells.map(tester.getRect).toList();
+      for (final rect in commandRects) {
+        expect(rect.height, greaterThanOrEqualTo(50));
+        expect(rect.width, greaterThanOrEqualTo(125));
+        expect(commandCrown.contains(rect.topLeft), isTrue);
+        expect(commandCrown.contains(rect.bottomRight), isTrue);
+      }
+      for (var index = 1; index < commandRects.length; index++) {
+        expect(
+          commandRects[index].left - commandRects[index - 1].right,
+          greaterThanOrEqualTo(6),
+        );
+      }
+      expect(
+        find.byKey(const Key('containment-command-student-control')),
+        findsOneWidget,
+      );
+
+      final navigationKeys = <Finder>[
+        find.byKey(const Key('containment-navigation-today')),
+        find.byKey(const Key('containment-navigation-calendar')),
+        find.byKey(const Key('containment-navigation-placements')),
+        find.byKey(const Key('containment-navigation-attention')),
+        find.byKey(const Key('containment-navigation-settings')),
+      ];
+      final navigationRects = navigationKeys.map(tester.getRect).toList();
+      for (final rect in navigationRects) {
+        expect(rect.height, greaterThanOrEqualTo(58));
+        expect(rect.width, greaterThanOrEqualTo(180));
+      }
+      for (var index = 1; index < navigationRects.length; index++) {
+        expect(
+          navigationRects[index].left - navigationRects[index - 1].right,
+          greaterThanOrEqualTo(6),
+        );
+      }
+      expect(
+        find.byKey(const Key('containment-navigation-calendar-active')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'portrait is an ordered scroll composition with fixed navigation',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(900, 1440));
@@ -340,10 +462,33 @@ void main() {
         ),
       );
 
+      final instrument = find.byKey(
+        const Key('containment-progress-instrument'),
+      );
+      expect(instrument, findsOneWidget);
+      final instrumentRect = tester.getRect(instrument);
+      expect(instrumentRect.width, greaterThanOrEqualTo(240));
+      expect(instrumentRect.height, instrumentRect.width);
+      expect(
+        find.byKey(const Key('containment-progress-center-disk')),
+        findsOneWidget,
+      );
+
       await tester.tap(find.byKey(const Key('placement-progress-wheel')));
       await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('containment-placement-details')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('containment-placement-details-instrument')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('containment-placement-details-instrument')),
+          matching: find.byKey(const Key('containment-progress-instrument')),
+        ),
         findsOneWidget,
       );
       for (final label in const [
@@ -401,9 +546,46 @@ void main() {
       expect(find.text('Live Clinical Placements destination'), findsOne);
       expect(find.byKey(const Key('application-menu-action')), findsOneWidget);
       expect(find.text('APPLICATION MENU'), findsOneWidget);
+      expect(
+        find.byKey(const Key('containment-destination-live-exit-control')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('containment-destination-identity-dial')),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     }
     addTearDown(() => tester.binding.setSurfaceSize(null));
+  });
+
+  testWidgets('default progress graphic stays outside Containment instrument', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: containment.standardPresentation.createThemeData(),
+        home: const SizedBox.square(
+          dimension: 200,
+          child: PlacementProgressWheelGraphic(
+            completedFraction: .5,
+            scheduledFraction: .25,
+            unscheduledFraction: .25,
+            child: SizedBox.shrink(),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const Key('containment-progress-instrument')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('containment-progress-center-disk')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('compact and 200 percent text preserve every required action', (

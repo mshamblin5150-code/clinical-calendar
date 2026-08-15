@@ -208,6 +208,26 @@ final class PlacementProgressWheelGraphic extends StatelessWidget {
     super.key,
   });
 
+  factory PlacementProgressWheelGraphic.forProgress({
+    required ClinicalPlacementProgress progress,
+    bool instrument = false,
+    bool segmented = false,
+    required Widget child,
+    Key? key,
+  }) {
+    final fractions = _progressWheelFractions(progress);
+    return PlacementProgressWheelGraphic(
+      key: key,
+      completedFraction: fractions.completed,
+      scheduledFraction: fractions.scheduled,
+      unscheduledFraction: fractions.unscheduled,
+      overTargetFraction: fractions.overTarget,
+      instrument: instrument,
+      segmented: segmented,
+      child: child,
+    );
+  }
+
   final double completedFraction;
   final double scheduledFraction;
   final double unscheduledFraction;
@@ -217,8 +237,8 @@ final class PlacementProgressWheelGraphic extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: _ProgressWheelPainter(
+  Widget build(BuildContext context) {
+    final painter = _ProgressWheelPainter(
       completedFraction: completedFraction,
       scheduledFraction: scheduledFraction,
       unscheduledFraction: unscheduledFraction,
@@ -229,9 +249,32 @@ final class PlacementProgressWheelGraphic extends StatelessWidget {
       ).extension<ClinicalCalendarAdditiveColors>(),
       instrument: instrument,
       segmented: segmented,
-    ),
-    child: child,
-  );
+    );
+    if (!segmented) {
+      return CustomPaint(painter: painter, child: child);
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final centerDiameter = constraints.biggest.shortestSide * .46;
+        return CustomPaint(
+          key: const Key('containment-progress-instrument'),
+          painter: painter,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Center(
+                child: SizedBox.square(
+                  key: const Key('containment-progress-center-disk'),
+                  dimension: centerDiameter,
+                ),
+              ),
+              child,
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// Opt-in layout policy for a theme-owned progress bay.
@@ -1207,20 +1250,70 @@ final class _ProgressWheelPainter extends CustomPainter {
 
   void _paintContainmentSegments(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
-    final radius = size.shortestSide * .44;
-    const count = 40;
-    const gap = .035;
-    final activeCount = math.max(
-      1,
-      ((completedFraction + scheduledFraction) * count).round(),
+    final diameter = size.shortestSide;
+    final outerRadius = diameter * .49;
+    final segmentOuterRadius = diameter * .405;
+    final segmentInnerRadius = diameter * .292;
+    const count = 48;
+    const gap = .026;
+    final completedCount = (completedFraction * count).round().clamp(0, count);
+    final scheduledCount = (scheduledFraction * count).round().clamp(
+      0,
+      count - completedCount,
     );
     final instrumentGreen = additiveColors?.completed ?? colors.clinical;
+    final scheduledColor = colors.scheduled;
+
+    canvas.drawCircle(
+      center.translate(0, diameter * .018),
+      outerRadius,
+      Paint()..color = const Color(0xB0000000),
+    );
+    for (final ring in <(double, double, Color)>[
+      (outerRadius, diameter * .035, const Color(0xFF090D0A)),
+      (diameter * .462, diameter * .018, const Color(0xFF5E675E)),
+      (diameter * .438, diameter * .012, const Color(0xFF171F19)),
+      (diameter * .424, diameter * .008, const Color(0xFF7A8279)),
+      (diameter * .274, diameter * .020, const Color(0xFF0A0E0B)),
+      (diameter * .252, diameter * .008, const Color(0xFF596259)),
+    ]) {
+      canvas.drawCircle(
+        center,
+        ring.$1,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = ring.$2
+          ..color = ring.$3,
+      );
+    }
+
+    final centerRect = Rect.fromCircle(center: center, radius: diameter * .23);
+    canvas.drawCircle(
+      center,
+      diameter * .23,
+      Paint()
+        ..shader = const RadialGradient(
+          colors: [Color(0xFF101A12), Color(0xFF030705)],
+          stops: [.0, 1],
+        ).createShader(centerRect),
+    );
+    canvas.drawCircle(
+      center,
+      diameter * .23,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = diameter * .012
+        ..color = const Color(0xFF252E27),
+    );
+
     for (var index = 0; index < count; index++) {
       final angle = -math.pi / 2 + index * math.pi * 2 / count;
       final sweep = math.pi * 2 / count - gap;
-      final active = index < activeCount;
-      final outer = Rect.fromCircle(center: center, radius: radius);
-      final inner = Rect.fromCircle(center: center, radius: radius * .72);
+      final completed = index < completedCount;
+      final scheduled =
+          index >= completedCount && index < completedCount + scheduledCount;
+      final outer = Rect.fromCircle(center: center, radius: segmentOuterRadius);
+      final inner = Rect.fromCircle(center: center, radius: segmentInnerRadius);
       final path = Path()
         ..arcTo(outer, angle, sweep, false)
         ..arcTo(inner, angle + sweep, -sweep, false)
@@ -1228,29 +1321,58 @@ final class _ProgressWheelPainter extends CustomPainter {
       canvas.drawPath(
         path,
         Paint()
-          ..color = active
+          ..color = completed
               ? instrumentGreen
-              : instrumentGreen.withValues(alpha: .28)
+              : scheduled
+              ? instrumentGreen.withValues(alpha: .68)
+              : const Color(0xFF1D2A1E)
           ..style = PaintingStyle.fill,
       );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = const Color(0xFF050805)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = diameter * .0035,
+      );
+      if (scheduled) {
+        canvas.drawArc(
+          Rect.fromCircle(center: center, radius: diameter * .282),
+          angle,
+          sweep,
+          false,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = diameter * .018
+            ..color = scheduledColor,
+        );
+      }
     }
-    canvas.drawCircle(
-      center,
-      radius * .63,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..color = colors.insetBorder,
-    );
+
+    final hardwarePaint = Paint()
+      ..color = const Color(0xFF697169)
+      ..strokeWidth = diameter * .008
+      ..strokeCap = StrokeCap.square;
+    for (var index = 0; index < 24; index++) {
+      final angle = index * math.pi * 2 / 24;
+      final inner = diameter * (index.isEven ? .43 : .445);
+      final outer = diameter * .475;
+      canvas.drawLine(
+        center + Offset(math.cos(angle), math.sin(angle)) * inner,
+        center + Offset(math.cos(angle), math.sin(angle)) * outer,
+        hardwarePaint,
+      );
+    }
+
     if (overTargetFraction > 0) {
       canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius * .97),
+        Rect.fromCircle(center: center, radius: diameter * .472),
         -math.pi / 2,
         math.pi * 2 * overTargetFraction.clamp(0.0, 1.0),
         false,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(2, size.shortestSide * .018)
+          ..strokeWidth = math.max(2, diameter * .018)
           ..color = additiveColors?.overTarget ?? colors.primaryText,
       );
     }

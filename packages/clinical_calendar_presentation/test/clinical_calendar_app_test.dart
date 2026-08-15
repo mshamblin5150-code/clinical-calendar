@@ -95,6 +95,18 @@ void main() {
           findsOneWidget,
           reason: 'The accepted proof must exercise live placement progress.',
         );
+        if (fixture.key == 'calendar-landscape-1536x1024') {
+          expect(
+            find.textContaining('72 hr / 120 hr completed'),
+            findsWidgets,
+            reason: 'The concept proof must illuminate real Completed Hours.',
+          );
+          expect(
+            find.textContaining('36 hr scheduled · 12 hr unscheduled'),
+            findsWidgets,
+            reason: 'The concept proof must exercise every wheel state.',
+          );
+        }
         await _expectAppGolden(
           tester,
           fixture.key,
@@ -115,6 +127,60 @@ void main() {
         collection: 'containment_drone_v2',
       );
     });
+
+    for (final fixture in const <(String, Size)>[
+      ('calendar-landscape-menu-open-1536x1024', Size(1536, 1024)),
+      ('calendar-portrait-menu-open-900x1440', Size(900, 1440)),
+    ]) {
+      testWidgets(fixture.$1, (tester) async {
+        await _pumpAcceptedRenderAt(tester, fixture.$2);
+        await tester.tap(find.byKey(const Key('application-menu-action')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('application-menu')), findsOneWidget);
+        await _expectAppGolden(
+          tester,
+          fixture.$1,
+          collection: 'containment_drone_v2',
+        );
+      });
+    }
+
+    testWidgets('calendar-landscape-progress-open-1536x1024', (tester) async {
+      await _pumpAcceptedRenderAt(tester, const Size(1536, 1024));
+      await tester.tap(find.byKey(const Key('placement-progress-wheel')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('containment-placement-details')),
+        findsOneWidget,
+      );
+      await _expectAppGolden(
+        tester,
+        'calendar-landscape-progress-open-1536x1024',
+        collection: 'containment_drone_v2',
+      );
+    });
+
+    for (final fixture in const <(String, Size)>[
+      ('destination-clinicalPlacements-landscape-1536x1024', Size(1536, 1024)),
+      ('destination-clinicalPlacements-portrait-900x1440', Size(900, 1440)),
+    ]) {
+      testWidgets(fixture.$1, (tester) async {
+        await _pumpAcceptedRenderAt(tester, fixture.$2);
+        await tester.tap(find.byKey(const Key('application-menu-action')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Clinical Placements'));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('containment-drone-destination-shell')),
+          findsOneWidget,
+        );
+        await _expectAppGolden(
+          tester,
+          fixture.$1,
+          collection: 'containment_drone_v2',
+        );
+      });
+    }
 
     testWidgets('settings-320', (tester) async {
       await _pumpAcceptedRenderAt(tester, const Size(320, 700));
@@ -2160,8 +2226,23 @@ final class _ReadRepositories
                _proofSessionRecord(
                  ordinal: 101,
                  date: LocalDate(2026, 1, 1),
-                 hours: 3,
+                 hours: 12,
                ),
+               _proofSessionRecord(
+                 ordinal: 102,
+                 date: LocalDate(2026, 1, 2),
+                 hours: 12,
+               ),
+               _proofSessionRecord(
+                 ordinal: 103,
+                 date: LocalDate(2026, 1, 3),
+                 hours: 12,
+               ),
+             ], (value) => value.id)
+           : _EmptyReadRepository(),
+       _historicalHoursEntries = seedLifecycle
+           ? _StaticReadRepository([
+               _proofHistoricalHoursRecord(),
              ], (value) => value.id)
            : _EmptyReadRepository(),
        _protectedDays = _EmptyReadRepository(),
@@ -2195,8 +2276,7 @@ final class _ReadRepositories
   final ReadRepository<Preceptor> _preceptors;
   final ReadRepository<ClinicalPlacement> _clinicalPlacements;
   final OutboxReadRepository _outbox;
-  final _EmptyReadRepository<HistoricalHoursEntry> _historicalHoursEntries =
-      _EmptyReadRepository();
+  final ReadRepository<HistoricalHoursEntry> _historicalHoursEntries;
   final ReadRepository<EvaluationPlan> _evaluationPlans;
   final _EmptyReadRepository<AcademicAssignment> _academicAssignments =
       _EmptyReadRepository();
@@ -2503,6 +2583,22 @@ StoredDomainRecord<ClinicalSession> _proofSessionRecord({
     updatedAtUtc: DateTime.utc(2026),
   );
 }
+
+StoredDomainRecord<HistoricalHoursEntry> _proofHistoricalHoursRecord() =>
+    StoredDomainRecord(
+      value: HistoricalHoursEntry(
+        id: '42000000-0000-4000-8000-000000000001',
+        clinicalPlacementId: '20000000-0000-4000-8000-000000000001',
+        completedMinutes: 72 * 60,
+        effectiveDate: LocalDate(2026, 1, 1),
+        preceptorId: '30000000-0000-4000-8000-000000000001',
+        note: 'Fictional pre-adoption proof hours',
+      ),
+      studentId: studentId,
+      revision: 1,
+      createdAtUtc: DateTime.utc(2026, 1, 1),
+      updatedAtUtc: DateTime.utc(2026, 1, 1),
+    );
 
 StoredDomainRecord<ClinicalPlacement> _placementRecord() => StoredDomainRecord(
   value: ClinicalPlacement.create(

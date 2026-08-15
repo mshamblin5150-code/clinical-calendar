@@ -728,6 +728,61 @@ final class ContainmentDronePlacementDetailsSurface extends StatelessWidget {
       ('Unscheduled Hours', progress.unscheduledMinutes),
       ('Over-Target Hours', progress.overTargetMinutes),
     ];
+    final detailLedger = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final metric in metrics)
+              SizedBox(
+                width: 180,
+                child: _ContainmentDetailMetric(
+                  label: metric.$1,
+                  value: _detailHours(metric.$2),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        Text('PRECEPTORS', style: Theme.of(context).textTheme.titleMedium),
+        for (final attached in snapshot.attachedPreceptors)
+          Text(
+            '${attached.isPrimary ? 'Primary · ' : 'Attached · '}'
+            '${attached.preceptor.name}',
+          ),
+        const SizedBox(height: 18),
+        Text(
+          'UPCOMING CLINICAL SESSIONS',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        if (snapshot.scheduledFutureSessions.isEmpty)
+          const Text(
+            'No upcoming Clinical Sessions.',
+            key: Key('placement-upcoming-sessions-empty'),
+          ),
+        for (final session in snapshot.scheduledFutureSessions)
+          _ContainmentUpcomingSessionRow(
+            session: session,
+            preceptorName: snapshot.attachedPreceptors
+                .where(
+                  (attached) => attached.preceptor.id == session.preceptorId,
+                )
+                .map((attached) => attached.preceptor.name)
+                .firstOrNull,
+          ),
+        const SizedBox(height: 18),
+        Text(
+          'EVALUATION PLAN REQUIREMENTS',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        if (snapshot.evaluation.requirements.isEmpty)
+          const Text('No requirements configured.'),
+        for (final item in snapshot.evaluation.requirements)
+          Text(_containmentEvaluationLabel(item.requirement.identity)),
+      ],
+    );
     return Material(
       key: const Key('containment-placement-details'),
       color: VariantFColors.background,
@@ -761,72 +816,36 @@ final class ContainmentDronePlacementDetailsSurface extends StatelessWidget {
                   ),
                   const Divider(),
                   Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final instrument = _ContainmentPlacementInstrument(
+                          snapshot: snapshot,
+                          diameter: constraints.maxWidth >= 760 ? 300 : 220,
+                        );
+                        if (constraints.maxWidth >= 760) {
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              for (final metric in metrics)
-                                SizedBox(
-                                  width: 180,
-                                  child: _ContainmentDetailMetric(
-                                    label: metric.$1,
-                                    value: _detailHours(metric.$2),
-                                  ),
+                              instrument,
+                              const SizedBox(width: 20),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  child: detailLedger,
                                 ),
+                              ),
+                            ],
+                          );
+                        }
+                        return SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              instrument,
+                              const SizedBox(height: 16),
+                              detailLedger,
                             ],
                           ),
-                          const SizedBox(height: 18),
-                          Text(
-                            'PRECEPTORS',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          for (final attached in snapshot.attachedPreceptors)
-                            Text(
-                              '${attached.isPrimary ? 'Primary · ' : 'Attached · '}'
-                              '${attached.preceptor.name}',
-                            ),
-                          const SizedBox(height: 18),
-                          Text(
-                            'UPCOMING CLINICAL SESSIONS',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          if (snapshot.scheduledFutureSessions.isEmpty)
-                            const Text(
-                              'No upcoming Clinical Sessions.',
-                              key: Key('placement-upcoming-sessions-empty'),
-                            ),
-                          for (final session
-                              in snapshot.scheduledFutureSessions)
-                            _ContainmentUpcomingSessionRow(
-                              session: session,
-                              preceptorName: snapshot.attachedPreceptors
-                                  .where(
-                                    (attached) =>
-                                        attached.preceptor.id ==
-                                        session.preceptorId,
-                                  )
-                                  .map((attached) => attached.preceptor.name)
-                                  .firstOrNull,
-                            ),
-                          const SizedBox(height: 18),
-                          Text(
-                            'EVALUATION PLAN REQUIREMENTS',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          if (snapshot.evaluation.requirements.isEmpty)
-                            const Text('No requirements configured.'),
-                          for (final item in snapshot.evaluation.requirements)
-                            Text(
-                              _containmentEvaluationLabel(
-                                item.requirement.identity,
-                              ),
-                            ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ),
                   FilledButton.icon(
@@ -843,6 +862,42 @@ final class ContainmentDronePlacementDetailsSurface extends StatelessWidget {
       ),
     );
   }
+}
+
+final class _ContainmentPlacementInstrument extends StatelessWidget {
+  const _ContainmentPlacementInstrument({
+    required this.snapshot,
+    required this.diameter,
+  });
+
+  final PlacementSnapshot snapshot;
+  final double diameter;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    label: '${snapshot.placement.name} progress instrument',
+    child: SizedBox.square(
+      key: const Key('containment-placement-details-instrument'),
+      dimension: diameter,
+      child: PlacementProgressWheelGraphic.forProgress(
+        progress: snapshot.progress,
+        segmented: true,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _detailHours(snapshot.progress.completedMinutes),
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              Text('COMPLETED', style: Theme.of(context).textTheme.labelMedium),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 final class _ContainmentUpcomingSessionRow extends StatelessWidget {
@@ -943,35 +998,38 @@ final class ContainmentDroneDestinationSurface extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(
-                height: 70,
+                height: 82,
                 child: ContainmentDroneFrame(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final compactHeader = constraints.maxWidth < 430;
-                      final exitAction = KeyedSubtree(
-                        key: Key(
-                          entry == DestinationEntry.applicationMenu
-                              ? 'back-action'
-                              : 'close-action',
-                        ),
-                        child: TextButton(
-                          key: entry == DestinationEntry.applicationMenu
-                              ? const Key('application-menu-action')
-                              : const Key('destination-exit-action'),
-                          onPressed: onExit,
+                      final exitAction = _ContainmentDestinationExitControl(
+                        entry: entry,
+                        compact: compactHeader,
+                        onExit: onExit,
+                      );
+                      final title = CustomPaint(
+                        painter: const _ContainmentCommandCellPainter(),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (entry == DestinationEntry.applicationMenu)
-                                const CanonicalDeltaMark(size: 34)
-                              else
-                                const Icon(Icons.arrow_back),
-                              const SizedBox(width: 8),
-                              Text(
-                                entry == DestinationEntry.applicationMenu
-                                    ? 'APPLICATION MENU'
-                                    : 'Close',
+                              Icon(
+                                destination.icon,
+                                color: VariantFColors.primary,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  destination.label.toUpperCase(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
                               ),
                             ],
                           ),
@@ -979,37 +1037,17 @@ final class ContainmentDroneDestinationSurface extends StatelessWidget {
                       );
                       return Row(
                         children: [
-                          if (compactHeader)
-                            Expanded(
-                              flex: 3,
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: exitAction,
-                              ),
-                            )
-                          else
-                            exitAction,
-                          const SizedBox(width: 8),
-                          if (!compactHeader) ...[
-                            Icon(
-                              destination.icon,
-                              color: VariantFColors.primary,
-                            ),
-                            const SizedBox(width: 10),
-                          ],
-                          Expanded(
-                            flex: compactHeader ? 2 : 1,
-                            child: Text(
-                              destination.label.toUpperCase(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
+                          SizedBox(
+                            width: compactHeader ? 72 : 210,
+                            child: exitAction,
                           ),
-                          if (constraints.maxWidth >= 600 &&
-                              MediaQuery.textScalerOf(context).scale(1) <= 1.3)
-                            const Text('CONTAINMENT DRONE 47-ALPHA'),
+                          const SizedBox(width: 8),
+                          Expanded(child: title),
+                          const SizedBox(width: 8),
+                          _ContainmentDestinationIdentityDial(
+                            destination: destination,
+                            compact: compactHeader,
+                          ),
                         ],
                       );
                     },
@@ -1037,6 +1075,102 @@ final class ContainmentDroneDestinationSurface extends StatelessWidget {
           ),
         ),
       ),
+    ),
+  );
+}
+
+final class _ContainmentDestinationExitControl extends StatelessWidget {
+  const _ContainmentDestinationExitControl({
+    required this.entry,
+    required this.compact,
+    required this.onExit,
+  });
+
+  final DestinationEntry entry;
+  final bool compact;
+  final VoidCallback onExit;
+
+  @override
+  Widget build(BuildContext context) {
+    final fromMenu = entry == DestinationEntry.applicationMenu;
+    return KeyedSubtree(
+      key: Key(fromMenu ? 'back-action' : 'close-action'),
+      child: Tooltip(
+        message: fromMenu ? 'Return to Application Menu' : 'Close destination',
+        child: Semantics(
+          button: true,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: fromMenu
+                  ? const Key('application-menu-action')
+                  : const Key('destination-exit-action'),
+              onTap: onExit,
+              child: CustomPaint(
+                key: const Key('containment-destination-live-exit-control'),
+                painter: const _ContainmentNavigationKeyPainter(selected: true),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (fromMenu)
+                        CanonicalDeltaMark(size: compact ? 30 : 36)
+                      else
+                        const Icon(Icons.arrow_back),
+                      if (!compact) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              fromMenu ? 'APPLICATION MENU' : 'CLOSE',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _ContainmentDestinationIdentityDial extends StatelessWidget {
+  const _ContainmentDestinationIdentityDial({
+    required this.destination,
+    required this.compact,
+  });
+
+  final ClinicalCalendarDestination destination;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('containment-destination-identity-dial'),
+    width: compact ? 52 : 62,
+    height: compact ? 52 : 62,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: const RadialGradient(
+        colors: [Color(0xFF233329), Color(0xFF07100B), Color(0xFF1A231D)],
+        stops: [0, .64, 1],
+      ),
+      border: Border.all(color: const Color(0xFF79C44D), width: 2),
+      boxShadow: const [
+        BoxShadow(color: Color(0xAA000000), blurRadius: 5),
+        BoxShadow(color: Color(0x333FCB45), blurRadius: 8),
+      ],
+    ),
+    child: Icon(
+      destination.icon,
+      color: VariantFColors.primary,
+      size: compact ? 22 : 28,
     ),
   );
 }
@@ -1076,43 +1210,13 @@ final class _ContainmentDroneCrown extends StatelessWidget {
     child: Row(
       children: [
         if (!actionsOnly)
-          Expanded(
-            child: KeyedSubtree(
-              key: const Key('mobile-menu-action'),
-              child: Semantics(
-                key: const Key('desktop-menu-action'),
-                button: true,
-                label: 'Open menu',
-                child: InkWell(
-                  key: const Key('application-menu-action'),
-                  onTap: onOpenMenu,
-                  borderRadius: BorderRadius.circular(4),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CanonicalDeltaMark(
-                          imageKey: const Key('containment-drone-axion-delta'),
-                          size: phone ? 30 : (compact ? 38 : 52),
-                          errorBuilder: (_, _, _) => const Icon(Icons.apps),
-                        ),
-                        if (!phone)
-                          Text(
-                            'APPLICATION MENU',
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+          if (menuOnly)
+            Expanded(child: _menuAction(context))
+          else
+            SizedBox(
+              width: phone ? 54 : (compact ? 108 : 150),
+              child: _menuAction(context),
             ),
-          ),
         if (!menuOnly && !compact && environmentName.trim().isNotEmpty) ...[
           const SizedBox(width: 10),
           Text(environmentName, style: Theme.of(context).textTheme.labelSmall),
@@ -1120,29 +1224,38 @@ final class _ContainmentDroneCrown extends StatelessWidget {
         if (!menuOnly) const SizedBox(width: 8),
         if (!menuOnly)
           Expanded(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _crownAction(
-                    key: const Key('desktop-add-schedule-action'),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 11,
+                  child: _crownAction(
+                    context: context,
+                    key: const Key('containment-command-add-schedule'),
                     tooltip: 'Open Add Schedule',
                     icon: Icons.add_box_outlined,
                     label: 'ADD SCHEDULE',
                     onPressed: onAddSchedule,
                   ),
-                  _crownAction(
-                    key: const Key('desktop-help-action'),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  flex: 9,
+                  child: _crownAction(
+                    context: context,
+                    key: const Key('containment-command-help'),
                     tooltip: 'Open Help',
                     icon: Icons.help_outline,
                     label: 'HELP',
                     onPressed: () =>
                         onOpenDestination(ClinicalCalendarDestination.help),
                   ),
-                  _crownAction(
-                    key: const Key('desktop-notifications-action'),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  flex: 12,
+                  child: _crownAction(
+                    context: context,
+                    key: const Key('containment-command-notifications'),
                     tooltip: 'Open Notifications',
                     icon: Icons.notifications_outlined,
                     label: 'NOTIFICATIONS',
@@ -1150,8 +1263,13 @@ final class _ContainmentDroneCrown extends StatelessWidget {
                       ClinicalCalendarDestination.notifications,
                     ),
                   ),
-                  _crownAction(
-                    key: const Key('desktop-synchronization-action'),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  flex: 14,
+                  child: _crownAction(
+                    context: context,
+                    key: const Key('containment-command-synchronization'),
                     tooltip: 'Open Synchronization',
                     icon: Icons.sync_outlined,
                     label: 'SYNCHRONIZATION',
@@ -1159,52 +1277,188 @@ final class _ContainmentDroneCrown extends StatelessWidget {
                       ClinicalCalendarDestination.synchronization,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         if (!menuOnly) const SizedBox(width: 8),
         if (!menuOnly)
-          SizedBox.square(dimension: phone ? 44 : 46, child: profileAvatar),
+          Container(
+            key: const Key('containment-command-student-control'),
+            width: phone ? 48 : 58,
+            height: phone ? 48 : 58,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF07100B),
+              border: Border.all(color: const Color(0xFF526052), width: 2),
+              boxShadow: const [
+                BoxShadow(color: Color(0xAA000000), blurRadius: 6),
+                BoxShadow(color: Color(0x443FCB45), blurRadius: 8),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: SizedBox.square(dimension: 44, child: profileAvatar),
+          ),
       ],
     ),
   );
 
+  Widget _menuAction(BuildContext context) => KeyedSubtree(
+    key: const Key('mobile-menu-action'),
+    child: Semantics(
+      key: const Key('desktop-menu-action'),
+      button: true,
+      label: 'Open menu',
+      child: InkWell(
+        key: const Key('application-menu-action'),
+        onTap: onOpenMenu,
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CanonicalDeltaMark(
+                imageKey: const Key('containment-drone-axion-delta'),
+                size: phone ? 30 : (compact ? 38 : 52),
+                errorBuilder: (_, _, _) => const Icon(Icons.apps),
+              ),
+              if (!phone)
+                Text(
+                  'APPLICATION MENU',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
   Widget _crownAction({
+    required BuildContext context,
     required Key key,
     required String tooltip,
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
-  }) => Padding(
+  }) => SizedBox(
     key: key,
-    padding: const EdgeInsets.only(left: 4),
+    height: phone ? 44 : 56,
     child: Tooltip(
       message: tooltip,
-      child: phone
-          ? Semantics(
-              button: true,
-              label: tooltip,
-              child: InkWell(
-                onTap: onPressed,
-                child: SizedBox(
-                  width: 34,
-                  height: 44,
-                  child: Center(child: Icon(icon, size: 19)),
+      child: Semantics(
+        button: true,
+        label: tooltip,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: Key(switch (tooltip) {
+              'Open Add Schedule' => 'desktop-add-schedule-action',
+              'Open Help' => 'desktop-help-action',
+              'Open Notifications' => 'desktop-notifications-action',
+              _ => 'desktop-synchronization-action',
+            }),
+            onTap: onPressed,
+            customBorder: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(3)),
+            ),
+            child: CustomPaint(
+              painter: const _ContainmentCommandCellPainter(),
+              child: KeyedSubtree(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: phone ? 4 : (compact ? 7 : 12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, size: phone ? 18 : 20),
+                      if (!phone) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              label,
+                              maxLines: 1,
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-            )
-          : TextButton.icon(
-              style: TextButton.styleFrom(
-                minimumSize: Size(compact ? 42 : 74, 44),
-                padding: EdgeInsets.symmetric(horizontal: compact ? 7 : 12),
-              ),
-              onPressed: onPressed,
-              icon: Icon(icon, size: 19),
-              label: compact ? const SizedBox.shrink() : Text(label),
             ),
+          ),
+        ),
+      ),
     ),
   );
+}
+
+final class _ContainmentCommandCellPainter extends CustomPainter {
+  const _ContainmentCommandCellPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final outer = Path()
+      ..moveTo(5, 0)
+      ..lineTo(size.width - 3, 0)
+      ..lineTo(size.width, 5)
+      ..lineTo(size.width, size.height - 7)
+      ..lineTo(size.width - 7, size.height)
+      ..lineTo(3, size.height)
+      ..lineTo(0, size.height - 4)
+      ..lineTo(0, 6)
+      ..close();
+    canvas.drawPath(
+      outer,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF263029), Color(0xFF07120D), Color(0xFF121B16)],
+          stops: [0, .46, 1],
+        ).createShader(Offset.zero & size),
+    );
+    canvas.drawPath(
+      outer,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = const Color(0xFF090C0A),
+    );
+    final inset = Rect.fromLTWH(4, 4, size.width - 8, size.height - 8);
+    canvas.drawRect(
+      inset,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0xFF526052),
+    );
+    canvas.drawLine(
+      Offset(8, 6),
+      Offset(size.width - 8, 6),
+      Paint()
+        ..strokeWidth = 1
+        ..color = const Color(0xFF89968A).withValues(alpha: .42),
+    );
+    for (final x in [10.0, size.width - 10]) {
+      canvas.drawCircle(
+        Offset(x, size.height - 8),
+        1.4,
+        Paint()..color = const Color(0xFF72C760).withValues(alpha: .65),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ContainmentCommandCellPainter oldDelegate) => false;
 }
 
 final class _ContainmentDroneCalendarViewport extends StatelessWidget {
@@ -1307,7 +1561,8 @@ final class _ContainmentDroneNavigation extends StatelessWidget {
             var index = 0;
             index < ClinicalCalendarPrimaryNavigation.values.length;
             index++
-          )
+          ) ...[
+            if (index > 0) SizedBox(width: compact ? 4 : 8),
             Expanded(
               child: _ContainmentDroneNavigationAction(
                 navigation: ClinicalCalendarPrimaryNavigation.values[index],
@@ -1320,6 +1575,7 @@ final class _ContainmentDroneNavigation extends StatelessWidget {
                     ),
               ),
             ),
+          ],
         ],
       ),
     ),
@@ -1339,55 +1595,155 @@ final class _ContainmentDroneNavigationAction extends StatelessWidget {
   final bool compact;
   final VoidCallback onPressed;
 
+  ({String segment, String tooltip}) get _identity => switch (navigation) {
+    ClinicalCalendarPrimaryNavigation.today => (
+      segment: 'today',
+      tooltip: 'Open Today',
+    ),
+    ClinicalCalendarPrimaryNavigation.calendar => (
+      segment: 'calendar',
+      tooltip: 'Open Calendar',
+    ),
+    ClinicalCalendarPrimaryNavigation.placements => (
+      segment: 'placements',
+      tooltip: 'Open Clinical Placements',
+    ),
+    ClinicalCalendarPrimaryNavigation.attention => (
+      segment: 'attention',
+      tooltip: 'Open Attention',
+    ),
+    ClinicalCalendarPrimaryNavigation.settings => (
+      segment: 'settings',
+      tooltip: 'Open Settings',
+    ),
+  };
+
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: switch (navigation) {
-      ClinicalCalendarPrimaryNavigation.today => 'Open Today',
-      ClinicalCalendarPrimaryNavigation.calendar => 'Open Calendar',
-      ClinicalCalendarPrimaryNavigation.placements =>
-        'Open Clinical Placements',
-      ClinicalCalendarPrimaryNavigation.attention => 'Open Attention',
-      ClinicalCalendarPrimaryNavigation.settings => 'Open Settings',
-    },
-    child: Semantics(
-      selected: selected,
-      button: true,
-      child: InkWell(
-        onTap: onPressed,
-        child: Container(
-          height: compact ? 58 : 68,
-          decoration: BoxDecoration(
-            color: selected
-                ? VariantFColors.primary.withValues(alpha: .13)
-                : VariantFColors.surface.withValues(alpha: .72),
-            border: Border.all(
-              color: selected
-                  ? VariantFColors.primary
-                  : VariantFColors.controlBorder,
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                navigation.icon,
-                color: selected ? VariantFColors.primary : VariantFColors.muted,
+  Widget build(BuildContext context) {
+    final identity = _identity;
+    return KeyedSubtree(
+      key: Key('containment-navigation-${identity.segment}'),
+      child: Tooltip(
+        message: identity.tooltip,
+        child: Semantics(
+          selected: selected,
+          button: true,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onPressed,
+              customBorder: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(4)),
               ),
-              if (!compact || MediaQuery.sizeOf(context).width >= 360)
-                Text(
-                  navigation.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: selected
-                        ? VariantFColors.primary
-                        : VariantFColors.muted,
+              child: CustomPaint(
+                painter: _ContainmentNavigationKeyPainter(selected: selected),
+                child: KeyedSubtree(
+                  key:
+                      selected &&
+                          navigation ==
+                              ClinicalCalendarPrimaryNavigation.calendar
+                      ? const Key('containment-navigation-calendar-active')
+                      : null,
+                  child: SizedBox(
+                    height: compact ? 58 : 68,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          navigation.icon,
+                          size: compact ? 20 : 26,
+                          color: selected
+                              ? VariantFColors.primary
+                              : VariantFColors.muted,
+                        ),
+                        if (!compact ||
+                            MediaQuery.sizeOf(context).width >= 360) ...[
+                          SizedBox(width: compact ? 4 : 12),
+                          Flexible(
+                            child: Text(
+                              navigation.label.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(
+                                    letterSpacing: compact ? .5 : 1.4,
+                                    color: selected
+                                        ? VariantFColors.primary
+                                        : VariantFColors.muted,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-            ],
+              ),
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+final class _ContainmentNavigationKeyPainter extends CustomPainter {
+  const _ContainmentNavigationKeyPainter({required this.selected});
+
+  final bool selected;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final housing = Path()
+      ..moveTo(14, 0)
+      ..lineTo(size.width - 12, 0)
+      ..lineTo(size.width, 12)
+      ..lineTo(size.width - 5, size.height - 8)
+      ..lineTo(size.width - 15, size.height)
+      ..lineTo(12, size.height)
+      ..lineTo(0, size.height - 12)
+      ..lineTo(5, 9)
+      ..close();
+    canvas.drawPath(
+      housing,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: selected
+              ? const [Color(0xFF19251A), Color(0xFF071108), Color(0xFF20331B)]
+              : const [Color(0xFF29312D), Color(0xFF0A100D), Color(0xFF161E19)],
+          stops: const [0, .52, 1],
+        ).createShader(Offset.zero & size),
+    );
+    canvas.drawPath(
+      housing,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = selected ? 2.2 : 1.6
+        ..color = selected ? const Color(0xFF79C44D) : const Color(0xFF4E5B52),
+    );
+    final recess = Rect.fromLTRB(10, 8, size.width - 10, size.height - 9);
+    canvas.drawRect(
+      recess,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = selected ? const Color(0xFF315D29) : const Color(0xFF202A24),
+    );
+    if (selected) {
+      canvas.drawLine(
+        Offset(18, size.height - 7),
+        Offset(size.width - 18, size.height - 7),
+        Paint()
+          ..strokeWidth = 3
+          ..color = const Color(0xFF72C742),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ContainmentNavigationKeyPainter oldDelegate) =>
+      oldDelegate.selected != selected;
 }

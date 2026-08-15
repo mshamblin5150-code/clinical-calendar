@@ -1315,7 +1315,7 @@ final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: variantFThemeId,
     rendererId: containmentDroneRendererId,
-    runtimeThumbnailAssetId: 'variant-f-v3',
+    runtimeThumbnailAssetId: 'variant-f-v4',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [
