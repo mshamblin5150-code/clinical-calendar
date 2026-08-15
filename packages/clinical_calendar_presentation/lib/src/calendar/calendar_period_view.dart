@@ -67,6 +67,7 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
     this.useConceptMonthMarks = false,
     this.suppressProtectedHatch = false,
     this.clipDayDecoration = false,
+    this.allowLowHeightMonthScroll = false,
     this.useEnlargedTextLandscapeReflow,
     required super.child,
     super.key,
@@ -91,6 +92,7 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
   final bool useConceptMonthMarks;
   final bool suppressProtectedHatch;
   final bool clipDayDecoration;
+  final bool allowLowHeightMonthScroll;
   final bool? useEnlargedTextLandscapeReflow;
 
   static bool usesBoundedMonthGrid(BuildContext context) =>
@@ -180,6 +182,12 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
           ?.clipDayDecoration ??
       false;
 
+  static bool allowsLowHeightMonthScroll(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.allowLowHeightMonthScroll ??
+      false;
+
   @override
   bool updateShouldNotify(CalendarPeriodViewportPolicy oldWidget) =>
       useBoundedMonthGrid != oldWidget.useBoundedMonthGrid ||
@@ -202,6 +210,7 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
       useConceptMonthMarks != oldWidget.useConceptMonthMarks ||
       suppressProtectedHatch != oldWidget.suppressProtectedHatch ||
       clipDayDecoration != oldWidget.clipDayDecoration ||
+      allowLowHeightMonthScroll != oldWidget.allowLowHeightMonthScroll ||
       useEnlargedTextLandscapeReflow !=
           oldWidget.useEnlargedTextLandscapeReflow;
 }
@@ -1156,8 +1165,9 @@ final class _MonthView extends StatelessWidget {
         );
         final legendHeight = showLegend ? 38.0 : 0.0;
         final minimumGridHeight = 44.0 * weekRows;
-        if (constraints.maxHeight <
-            weekdayHeaderHeight + minimumGridHeight + legendHeight) {
+        if (CalendarPeriodViewportPolicy.allowsLowHeightMonthScroll(context) &&
+            constraints.maxHeight <
+                weekdayHeaderHeight + minimumGridHeight + legendHeight) {
           return Column(
             key: const Key('month-view'),
             children: [

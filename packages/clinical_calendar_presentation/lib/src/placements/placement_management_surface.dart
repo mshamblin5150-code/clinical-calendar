@@ -10,11 +10,13 @@ import 'placement_specialty_icon.dart';
 final class PlacementManagementPresentation extends InheritedWidget {
   const PlacementManagementPresentation({
     required this.promoteDeletionToHeader,
+    this.adaptEnlargedText = false,
     required super.child,
     super.key,
   });
 
   final bool promoteDeletionToHeader;
+  final bool adaptEnlargedText;
 
   static bool promotesDeletionToHeader(BuildContext context) =>
       context
@@ -22,9 +24,16 @@ final class PlacementManagementPresentation extends InheritedWidget {
           ?.promoteDeletionToHeader ??
       false;
 
+  static bool adaptsEnlargedText(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<PlacementManagementPresentation>()
+          ?.adaptEnlargedText ??
+      false;
+
   @override
   bool updateShouldNotify(PlacementManagementPresentation oldWidget) =>
-      promoteDeletionToHeader != oldWidget.promoteDeletionToHeader;
+      promoteDeletionToHeader != oldWidget.promoteDeletionToHeader ||
+      adaptEnlargedText != oldWidget.adaptEnlargedText;
 }
 
 final class PlacementManagementSurface extends StatelessWidget {
@@ -52,17 +61,16 @@ final class PlacementManagementSurface extends StatelessWidget {
         final compactHeader = constraints.maxWidth < 480;
         final promoteDeletion =
             PlacementManagementPresentation.promotesDeletionToHeader(context);
-        final editorKey = GlobalObjectKey<_PlacementEditorState>(
-          'placement-editor|${controller.activePlacementId}|'
-          '${controller.activePlacement?.placementRevision}',
-        );
         final navigation = _PlacementManagementNavigation(
           controller: controller,
           onAdd: controller.isBusy ? null : () => _showAddPlacement(context),
           horizontal: !wide,
         );
         final editor = _PlacementEditor(
-          key: editorKey,
+          key: ValueKey(
+            '${controller.activePlacementId}|'
+            '${controller.activePlacement?.placementRevision}',
+          ),
           controller: controller,
           onOpenEvaluations: onOpenEvaluations,
           unsavedSchedulingDraftCount: unsavedSchedulingDraftCount,
@@ -95,8 +103,14 @@ final class PlacementManagementSurface extends StatelessWidget {
                           key: const Key('move-placement-to-trash-action'),
                           onPressed: controller.isBusy
                               ? null
-                              : () => editorKey.currentState
-                                    ?._showDeletionPreview(),
+                              : () => _showPlacementDeletionPreview(
+                                  context: context,
+                                  controller: controller,
+                                  unsavedSchedulingDraftCount:
+                                      unsavedSchedulingDraftCount,
+                                  onDiscardUnsavedSchedulingDrafts:
+                                      onDiscardUnsavedSchedulingDrafts,
+                                ),
                           color: context.clinicalColors.urgent,
                           icon: const Icon(Icons.delete_outline),
                         ),
@@ -106,8 +120,14 @@ final class PlacementManagementSurface extends StatelessWidget {
                         key: const Key('move-placement-to-trash-action'),
                         onPressed: controller.isBusy
                             ? null
-                            : () => editorKey.currentState
-                                  ?._showDeletionPreview(),
+                            : () => _showPlacementDeletionPreview(
+                                context: context,
+                                controller: controller,
+                                unsavedSchedulingDraftCount:
+                                    unsavedSchedulingDraftCount,
+                                onDiscardUnsavedSchedulingDrafts:
+                                    onDiscardUnsavedSchedulingDrafts,
+                              ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: context.clinicalColors.urgent,
                         ),
@@ -430,7 +450,9 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
       return const Center(child: Text('Add a Clinical Placement to begin.'));
     }
     final completed = value.placement.state == ClinicalPlacementState.completed;
-    final enlargedText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    final enlargedText =
+        PlacementManagementPresentation.adaptsEnlargedText(context) &&
+        MediaQuery.textScalerOf(context).scale(1) > 1.3;
     final dateFields = [
       TextField(
         key: const Key('placement-start-date-field'),
@@ -580,7 +602,16 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
           const SizedBox(height: 20),
           OutlinedButton.icon(
             key: const Key('move-placement-to-trash-action'),
-            onPressed: widget.controller.isBusy ? null : _showDeletionPreview,
+            onPressed: widget.controller.isBusy
+                ? null
+                : () => _showPlacementDeletionPreview(
+                    context: context,
+                    controller: widget.controller,
+                    unsavedSchedulingDraftCount:
+                        widget.unsavedSchedulingDraftCount,
+                    onDiscardUnsavedSchedulingDrafts:
+                        widget.onDiscardUnsavedSchedulingDrafts,
+                  ),
             style: OutlinedButton.styleFrom(
               foregroundColor: context.clinicalColors.urgent,
             ),
@@ -590,142 +621,6 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
         ],
       ],
     );
-  }
-
-  Future<void> _showDeletionPreview() async {
-    await widget.controller.previewDeletion(
-      unsavedSchedulingDraftCount: widget.unsavedSchedulingDraftCount,
-    );
-    if (!mounted) return;
-    final preview = widget.controller.deletionPreview;
-    if (preview == null) return;
-    var typedName = '';
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          final canConfirm =
-              !preview.requiresTypedName ||
-              typedName == preview.clinicalPlacementName;
-          return AlertDialog(
-            title: Text('Move ${preview.clinicalPlacementName} to Trash?'),
-            content: SizedBox(
-              width: 560,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'The complete Clinical Placement aggregate will remain '
-                      'recoverable for 30 days.',
-                    ),
-                    const SizedBox(height: 12),
-                    _DeletionImpactLine(
-                      label: 'Scheduled Clinical Sessions',
-                      value: preview.scheduledClinicalSessionCount,
-                    ),
-                    _DeletionImpactLine(
-                      label: 'Awaiting-confirmation Clinical Sessions',
-                      value: preview.awaitingConfirmationClinicalSessionCount,
-                    ),
-                    _DeletionImpactLine(
-                      label: 'Completed Clinical Sessions',
-                      value: preview.completedClinicalSessionCount,
-                      detail:
-                          '${_hoursInput(preview.clinicalSessionCompletedMinutes)} Completed Hours',
-                    ),
-                    _DeletionImpactLine(
-                      label: 'Cancelled Clinical Sessions',
-                      value: preview.cancelledClinicalSessionCount,
-                    ),
-                    _DeletionImpactLine(
-                      label: 'Missed Clinical Sessions',
-                      value: preview.missedClinicalSessionCount,
-                    ),
-                    _DeletionImpactLine(
-                      label: 'Historical Hours Entries',
-                      value: preview.historicalHoursEntryCount,
-                      detail:
-                          '${_hoursInput(preview.historicalCompletedMinutes)} Completed Hours',
-                    ),
-                    _DeletionImpactLine(
-                      label: 'Evaluation Plan requirements',
-                      value: preview.evaluationRequirementCount,
-                      detail:
-                          '${preview.documentedEvaluationRequirementCount} documented',
-                    ),
-                    _DeletionImpactLine(
-                      label: 'Clinical Session schedule templates',
-                      value: preview.scheduleTemplateCount,
-                    ),
-                    _DeletionImpactLine(
-                      label: 'Placement-derived reminders',
-                      value: preview.reminderStateCount,
-                    ),
-                    _DeletionImpactLine(
-                      label: 'Attached Preceptor relationships',
-                      value: preview.attachedPreceptorRelationshipCount,
-                      detail:
-                          'preserved for recovery; Preceptors are not deleted',
-                    ),
-                    _DeletionImpactLine(
-                      label: 'Unsaved scheduling drafts',
-                      value: preview.unsavedSchedulingDraftCount,
-                      detail: 'discarded and not recoverable',
-                    ),
-                    _DeletionImpactLine(
-                      label: 'Active Clinical Placement selection',
-                      value: preview.clearsActivePlacementSelection ? 1 : 0,
-                      detail: preview.clearsActivePlacementSelection
-                          ? 'will be cleared'
-                          : 'unchanged',
-                    ),
-                    if (preview.requiresTypedName) ...[
-                      const SizedBox(height: 12),
-                      TextField(
-                        key: const Key('completed-placement-name-confirmation'),
-                        autofocus: true,
-                        onChanged: (value) =>
-                            setDialogState(() => typedName = value),
-                        decoration: InputDecoration(
-                          labelText:
-                              'Type ${preview.clinicalPlacementName} to confirm',
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                key: const Key('confirm-move-placement-to-trash'),
-                onPressed: canConfirm
-                    ? () => Navigator.pop(context, true)
-                    : null,
-                child: const Text('Move to Trash'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-    if (confirmed != true) {
-      widget.controller.clearDeletionPreview();
-      return;
-    }
-    final deleted = await widget.controller.confirmDeletion(
-      completedPlacementName: typedName,
-    );
-    if (deleted) {
-      widget.onDiscardUnsavedSchedulingDrafts?.call();
-    }
   }
 
   Future<void> _preview() async {
@@ -787,6 +682,143 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
       await widget.controller.createAndAttachPreceptor(name);
     }
   }
+}
+
+Future<void> _showPlacementDeletionPreview({
+  required BuildContext context,
+  required PlacementProgressController controller,
+  required int unsavedSchedulingDraftCount,
+  required VoidCallback? onDiscardUnsavedSchedulingDrafts,
+}) async {
+  await controller.previewDeletion(
+    unsavedSchedulingDraftCount: unsavedSchedulingDraftCount,
+  );
+  if (!context.mounted) return;
+  final preview = controller.deletionPreview;
+  if (preview == null) return;
+  var typedName = '';
+  final confirmed = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setDialogState) {
+        final canConfirm =
+            !preview.requiresTypedName ||
+            typedName == preview.clinicalPlacementName;
+        return AlertDialog(
+          title: Text('Move ${preview.clinicalPlacementName} to Trash?'),
+          content: SizedBox(
+            width: 560,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'The complete Clinical Placement aggregate will remain '
+                    'recoverable for 30 days.',
+                  ),
+                  const SizedBox(height: 12),
+                  _DeletionImpactLine(
+                    label: 'Scheduled Clinical Sessions',
+                    value: preview.scheduledClinicalSessionCount,
+                  ),
+                  _DeletionImpactLine(
+                    label: 'Awaiting-confirmation Clinical Sessions',
+                    value: preview.awaitingConfirmationClinicalSessionCount,
+                  ),
+                  _DeletionImpactLine(
+                    label: 'Completed Clinical Sessions',
+                    value: preview.completedClinicalSessionCount,
+                    detail:
+                        '${_hoursInput(preview.clinicalSessionCompletedMinutes)} Completed Hours',
+                  ),
+                  _DeletionImpactLine(
+                    label: 'Cancelled Clinical Sessions',
+                    value: preview.cancelledClinicalSessionCount,
+                  ),
+                  _DeletionImpactLine(
+                    label: 'Missed Clinical Sessions',
+                    value: preview.missedClinicalSessionCount,
+                  ),
+                  _DeletionImpactLine(
+                    label: 'Historical Hours Entries',
+                    value: preview.historicalHoursEntryCount,
+                    detail:
+                        '${_hoursInput(preview.historicalCompletedMinutes)} Completed Hours',
+                  ),
+                  _DeletionImpactLine(
+                    label: 'Evaluation Plan requirements',
+                    value: preview.evaluationRequirementCount,
+                    detail:
+                        '${preview.documentedEvaluationRequirementCount} documented',
+                  ),
+                  _DeletionImpactLine(
+                    label: 'Clinical Session schedule templates',
+                    value: preview.scheduleTemplateCount,
+                  ),
+                  _DeletionImpactLine(
+                    label: 'Placement-derived reminders',
+                    value: preview.reminderStateCount,
+                  ),
+                  _DeletionImpactLine(
+                    label: 'Attached Preceptor relationships',
+                    value: preview.attachedPreceptorRelationshipCount,
+                    detail:
+                        'preserved for recovery; Preceptors are not deleted',
+                  ),
+                  _DeletionImpactLine(
+                    label: 'Unsaved scheduling drafts',
+                    value: preview.unsavedSchedulingDraftCount,
+                    detail: 'discarded and not recoverable',
+                  ),
+                  _DeletionImpactLine(
+                    label: 'Active Clinical Placement selection',
+                    value: preview.clearsActivePlacementSelection ? 1 : 0,
+                    detail: preview.clearsActivePlacementSelection
+                        ? 'will be cleared'
+                        : 'unchanged',
+                  ),
+                  if (preview.requiresTypedName) ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      key: const Key('completed-placement-name-confirmation'),
+                      autofocus: true,
+                      onChanged: (value) =>
+                          setDialogState(() => typedName = value),
+                      decoration: InputDecoration(
+                        labelText:
+                            'Type ${preview.clinicalPlacementName} to confirm',
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: const Key('confirm-move-placement-to-trash'),
+              onPressed: canConfirm ? () => Navigator.pop(context, true) : null,
+              child: const Text('Move to Trash'),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+  if (confirmed != true) {
+    controller.clearDeletionPreview();
+    return;
+  }
+  final deleted = await controller.confirmDeletion(
+    completedPlacementName: typedName,
+  );
+  if (deleted) onDiscardUnsavedSchedulingDrafts?.call();
 }
 
 final class _DeletionImpactLine extends StatelessWidget {
@@ -986,7 +1018,8 @@ final class _PreceptorEditorRowState extends State<_PreceptorEditorRow> {
       builder: (context, constraints) {
         final compact =
             constraints.maxWidth < 520 ||
-            MediaQuery.textScalerOf(context).scale(1) > 1.3;
+            (PlacementManagementPresentation.adaptsEnlargedText(context) &&
+                MediaQuery.textScalerOf(context).scale(1) > 1.3);
         final actions = <Widget>[
           OutlinedButton(
             onPressed: widget.locked ? null : () => widget.onSave(_name.text),

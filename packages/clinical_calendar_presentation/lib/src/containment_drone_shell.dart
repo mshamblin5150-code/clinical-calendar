@@ -21,28 +21,17 @@ const containmentDroneChassisBridgeAsset =
 const containmentDronePanelAsset =
     'assets/containment_drone_v2/panel-nine-slice-v2.png';
 
-enum ContainmentDronePanelRole {
-  calendar,
-  placements,
-  planning,
-  progress,
-  attention,
-  destination,
-}
-
 /// Concept-owned Containment housing layered around the required Variant F
-/// nine-slice. The raster owns clipping and role-specific safe insets; the
-/// Containment painter adds the approved asymmetric chassis silhouette.
+/// nine-slice. The raster owns clipping and the Containment painter adds the
+/// approved asymmetric chassis silhouette.
 final class ContainmentDroneFrame extends StatelessWidget {
   const ContainmentDroneFrame({
     required this.child,
-    this.role = ContainmentDronePanelRole.destination,
     this.padding = const EdgeInsets.all(14),
     super.key,
   });
 
   final Widget child;
-  final ContainmentDronePanelRole role;
   final EdgeInsets padding;
 
   @override
@@ -354,7 +343,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                   height: height * .735,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-placement-bay'),
-                    role: ContainmentDronePanelRole.placements,
                     padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
                     child: KeyedSubtree(
                       key: const Key('placement-dock'),
@@ -369,7 +357,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                   height: height * .55,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-calendar-bay'),
-                    role: ContainmentDronePanelRole.calendar,
                     padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
                     child: KeyedSubtree(
                       key: const Key('central-content'),
@@ -386,7 +373,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                   height: height * .208,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-planning-bay'),
-                    role: ContainmentDronePanelRole.planning,
                     padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
                     child: KeyedSubtree(
                       key: const Key('planning-region'),
@@ -406,7 +392,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                   height: height * .664,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-insight-bay'),
-                    role: ContainmentDronePanelRole.progress,
                     padding: const EdgeInsets.fromLTRB(14, 20, 14, 14),
                     child: KeyedSubtree(
                       key: const Key('insight-rail'),
@@ -421,7 +406,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                   height: height * .186,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-attention-bay'),
-                    role: ContainmentDronePanelRole.attention,
                     padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
                     child: SingleChildScrollView(child: slots.mobileAttention),
                   ),
@@ -481,7 +465,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                           height: 600 * scale,
                           child: ContainmentDroneFrame(
                             key: const Key('containment-drone-calendar-bay'),
-                            role: ContainmentDronePanelRole.calendar,
                             child: KeyedSubtree(
                               key: const Key('central-content'),
                               child: _ContainmentDroneCalendarViewport(
@@ -496,7 +479,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                           height: 330 * scale,
                           child: ContainmentDroneFrame(
                             key: const Key('containment-drone-placement-bay'),
-                            role: ContainmentDronePanelRole.placements,
                             child: KeyedSubtree(
                               key: const Key('placement-dock'),
                               child: slots.placementDock,
@@ -508,7 +490,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                           height: 520 * scale,
                           child: ContainmentDroneFrame(
                             key: const Key('containment-drone-insight-bay'),
-                            role: ContainmentDronePanelRole.progress,
                             child: KeyedSubtree(
                               key: const Key('insight-rail'),
                               child: _progressDetailsScope(slots.insightRail),
@@ -520,7 +501,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                           height: 320 * scale,
                           child: ContainmentDroneFrame(
                             key: const Key('containment-drone-planning-bay'),
-                            role: ContainmentDronePanelRole.planning,
                             child: KeyedSubtree(
                               key: const Key('planning-region'),
                               child: VariantFPlanningBayMode(
@@ -535,7 +515,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                           height: 260 * scale,
                           child: ContainmentDroneFrame(
                             key: const Key('containment-drone-attention-bay'),
-                            role: ContainmentDronePanelRole.attention,
                             child: SingleChildScrollView(
                               child: slots.mobileAttention,
                             ),
@@ -591,7 +570,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                       _compactPanel(
                         key: const Key('containment-drone-calendar-bay'),
                         legacyKey: const Key('central-content'),
-                        role: ContainmentDronePanelRole.calendar,
                         child: _ContainmentDroneCalendarViewport(
                           bounded: false,
                           child: slots.centralContent,
@@ -600,7 +578,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                       _compactPanel(
                         key: const Key('containment-drone-placement-bay'),
                         legacyKey: const Key('placement-dock'),
-                        role: ContainmentDronePanelRole.placements,
                         child: SizedBox(
                           height:
                               320 *
@@ -616,18 +593,15 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                       _compactPanel(
                         key: const Key('containment-drone-insight-bay'),
                         legacyKey: const Key('insight-rail'),
-                        role: ContainmentDronePanelRole.progress,
                         child: _progressDetailsScope(slots.insightRail),
                       ),
                       _compactPanel(
                         key: const Key('containment-drone-planning-bay'),
                         legacyKey: const Key('planning-region'),
-                        role: ContainmentDronePanelRole.planning,
                         child: slots.planningRegion,
                       ),
                       _compactPanel(
                         key: const Key('containment-drone-attention-bay'),
-                        role: ContainmentDronePanelRole.attention,
                         child: slots.mobileAttention,
                       ),
                     ],
@@ -650,7 +624,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
   Widget _compactPanel({
     required Key key,
     Key? legacyKey,
-    required ContainmentDronePanelRole role,
     required Widget child,
   }) => KeyedSubtree(
     key: legacyKey,
@@ -658,7 +631,6 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: ContainmentDroneFrame(
         key: key,
-        role: role,
         padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
         child: child,
       ),
@@ -724,7 +696,6 @@ final class ContainmentDronePlacementDetailsSurface extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: ContainmentDroneFrame(
-              role: ContainmentDronePanelRole.placements,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -1008,7 +979,6 @@ final class ContainmentDroneDestinationSurface extends StatelessWidget {
               const SizedBox(height: 10),
               Expanded(
                 child: ContainmentDroneFrame(
-                  role: ContainmentDronePanelRole.destination,
                   padding: EdgeInsets.all(
                     MediaQuery.sizeOf(context).width < 600 ? 12 : 20,
                   ),
@@ -1017,6 +987,7 @@ final class ContainmentDroneDestinationSurface extends StatelessWidget {
                           ClinicalCalendarDestination.clinicalPlacements
                       ? PlacementManagementPresentation(
                           promoteDeletionToHeader: true,
+                          adaptEnlargedText: true,
                           child: child,
                         )
                       : child,
@@ -1214,6 +1185,7 @@ final class _ContainmentDroneCalendarViewport extends StatelessWidget {
         centerPeriodHeader: true,
         useConceptMonthMarks: true,
         clipDayDecoration: true,
+        allowLowHeightMonthScroll: true,
         child: _ContainmentCalendarTheme(child: child),
       );
       return buildEnlargedTextCalendarScrollViewport(
