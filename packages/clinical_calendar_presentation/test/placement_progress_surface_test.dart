@@ -388,9 +388,12 @@ void main() {
       await harness.controller.load();
       await _pump(
         tester,
-        PlacementManagementSurface(
-          controller: harness.controller,
-          studentId: placementTestStudentId,
+        PlacementManagementPresentation(
+          promoteDeletionToHeader: true,
+          child: PlacementManagementSurface(
+            controller: harness.controller,
+            studentId: placementTestStudentId,
+          ),
         ),
         size: const Size(1024, 900),
       );

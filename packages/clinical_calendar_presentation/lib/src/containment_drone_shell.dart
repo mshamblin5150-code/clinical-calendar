@@ -10,6 +10,7 @@ import 'additive_semantic_colors.dart';
 import 'calendar/calendar_period_view.dart';
 import 'canonical_delta_mark.dart';
 import 'date_input.dart';
+import 'placements/placement_management_surface.dart';
 import 'placements/placement_progress_widgets.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
@@ -1011,7 +1012,14 @@ final class ContainmentDroneDestinationSurface extends StatelessWidget {
                   padding: EdgeInsets.all(
                     MediaQuery.sizeOf(context).width < 600 ? 12 : 20,
                   ),
-                  child: child,
+                  child:
+                      destination ==
+                          ClinicalCalendarDestination.clinicalPlacements
+                      ? PlacementManagementPresentation(
+                          promoteDeletionToHeader: true,
+                          child: child,
+                        )
+                      : child,
                 ),
               ),
             ],

@@ -129,6 +129,7 @@ void main() {
         final expectedReferences = switch (relativePath) {
           'lib/src/graphite_shell.dart' ||
           'lib/src/heritage_field_notes_shell.dart' => 2,
+          'lib/src/containment_drone_shell.dart' => 2,
           _ => 1,
         };
         expect(

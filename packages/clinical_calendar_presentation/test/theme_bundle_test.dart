@@ -26,11 +26,12 @@ void main() {
       bundle.frame.sourceCuts,
       const EdgeInsets.fromLTRB(120, 145, 120, 170),
     );
-    expect(bundle.frame.assetPaths, hasLength(6));
+    expect(bundle.frame.assetPaths, hasLength(7));
     expect(
       bundle.frame.assetPaths,
       contains(containmentDroneChassisBridgeAsset),
     );
+    expect(bundle.frame.assetPaths, contains(containmentDronePanelAsset));
     expect(bundle.gallery.swatches, hasLength(5));
     expect(bundle.marks.marks, hasLength(9));
     expect(bundle.helpGuide.calendarStates, hasLength(5));

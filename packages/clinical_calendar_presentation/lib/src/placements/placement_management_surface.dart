@@ -7,6 +7,26 @@ import '../variant_f_theme.dart';
 import 'placement_progress_controller.dart';
 import 'placement_specialty_icon.dart';
 
+final class PlacementManagementPresentation extends InheritedWidget {
+  const PlacementManagementPresentation({
+    required this.promoteDeletionToHeader,
+    required super.child,
+    super.key,
+  });
+
+  final bool promoteDeletionToHeader;
+
+  static bool promotesDeletionToHeader(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<PlacementManagementPresentation>()
+          ?.promoteDeletionToHeader ??
+      false;
+
+  @override
+  bool updateShouldNotify(PlacementManagementPresentation oldWidget) =>
+      promoteDeletionToHeader != oldWidget.promoteDeletionToHeader;
+}
+
 final class PlacementManagementSurface extends StatelessWidget {
   const PlacementManagementSurface({
     required this.controller,
@@ -30,6 +50,8 @@ final class PlacementManagementSurface extends StatelessWidget {
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 720;
         final compactHeader = constraints.maxWidth < 480;
+        final promoteDeletion =
+            PlacementManagementPresentation.promotesDeletionToHeader(context);
         final editorKey = GlobalObjectKey<_PlacementEditorState>(
           'placement-editor|${controller.activePlacementId}|'
           '${controller.activePlacement?.placementRevision}',
@@ -63,7 +85,8 @@ final class PlacementManagementSurface extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
-                  if (controller.activePlacement != null) ...[
+                  if (promoteDeletion &&
+                      controller.activePlacement != null) ...[
                     const SizedBox(width: 8),
                     if (compactHeader)
                       Tooltip(
@@ -551,6 +574,20 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
             icon: const Icon(Icons.task_alt),
             label: const Text('Complete Placement'),
           ),
+        if (!PlacementManagementPresentation.promotesDeletionToHeader(
+          context,
+        )) ...[
+          const SizedBox(height: 20),
+          OutlinedButton.icon(
+            key: const Key('move-placement-to-trash-action'),
+            onPressed: widget.controller.isBusy ? null : _showDeletionPreview,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: context.clinicalColors.urgent,
+            ),
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('Move Clinical Placement to Trash'),
+          ),
+        ],
       ],
     );
   }
