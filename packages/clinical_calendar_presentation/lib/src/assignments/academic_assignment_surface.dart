@@ -115,7 +115,7 @@ final class _ContainmentDroneAssignmentControlHousing extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     key: const Key('containment-drone-assignment-control-housing'),
-    width: 58,
+    width: 212,
     height: 54,
     padding: const EdgeInsets.all(4),
     decoration: BoxDecoration(
@@ -130,12 +130,19 @@ final class _ContainmentDroneAssignmentControlHousing extends StatelessWidget {
         color: VariantFColors.background,
         border: Border.all(color: VariantFColors.primary.withValues(alpha: .7)),
       ),
-      child: IconButton(
-        key: const Key('add-academic-assignment'),
-        tooltip: 'Add Academic Assignment',
-        padding: EdgeInsets.zero,
-        onPressed: onPressed,
-        icon: const Icon(Icons.assignment_add),
+      child: Tooltip(
+        message: 'Add Academic Assignment',
+        child: TextButton.icon(
+          key: const Key('add-academic-assignment'),
+          onPressed: onPressed,
+          icon: const Icon(Icons.assignment_add, size: 19),
+          label: const Text(
+            'ADD ACADEMIC ASSIGNMENT',
+            maxLines: 1,
+            overflow: TextOverflow.clip,
+            style: TextStyle(fontSize: 11, letterSpacing: .45),
+          ),
+        ),
       ),
     ),
   );

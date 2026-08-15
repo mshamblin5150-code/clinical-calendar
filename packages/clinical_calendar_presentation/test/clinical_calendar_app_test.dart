@@ -627,6 +627,7 @@ void main() {
       expect(snapshot.entries.single.title, 'Evidence review');
       expect(snapshot.entries.single.course, 'NURS 702');
       expect(find.byKey(const Key('add-academic-assignment')), findsOneWidget);
+      expect(find.text('ADD ACADEMIC ASSIGNMENT'), findsOneWidget);
       expect(find.byKey(const Key('manage-class-catalog')), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
