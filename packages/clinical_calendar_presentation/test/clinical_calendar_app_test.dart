@@ -1839,6 +1839,7 @@ Future<void> _pumpAcceptedRenderAt(
       for (final asset in const [
         'assets/variant_f_raster/panel-nine-slice-v2.png',
         containmentDroneChassisBridgeAsset,
+        containmentDronePanelAsset,
       ]) {
         await precacheImage(
           AssetImage(asset, package: 'clinical_calendar_presentation'),

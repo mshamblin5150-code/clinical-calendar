@@ -6,14 +6,15 @@
   "platform": "cross-host-reference",
   "physicalAndroidApproval": "pending",
   "proofs": {
-    "calendar-landscape-1536x1024.png": "9853434223297f11b6bd3fca1fe21e05c4cbabec929c25bbaa06326bec8d2a35",
-    "calendar-portrait-900x1440.png": "e7df1f390c3a49ffd26740a1fd545ec9634d56d196942e096c62227fb9942c5e",
-    "calendar-portrait-200-percent-900x1440.png": "4d008bb22a4293b5e444aad5d922a3ab91aad183706b69d8fa27ca555bba569e",
-    "concept-vs-runtime-landscape-1536x1024.png": "5b9e8e5fffb293587d883831bcb5bf7503505d28a5f17af043ea09dd1477db8a",
-    "theme-gallery-runtime-variant-f-v2.png": "b85f9b738ca4959beea66e1f735ef3af8d916e673dc99017e1f980f006fb3a98"
+    "calendar-landscape-1536x1024.png": "8342b2c48ba97bd3b8649c59072ba79993f7be8cb8a7b06865f85a532dca28ae",
+    "calendar-portrait-900x1440.png": "55c4e34b76e824c06c9b7db703529896355340b3b434cbe75c896fc1a9a7ba51",
+    "calendar-portrait-200-percent-900x1440.png": "1f1a5287fbdce674b574f58b92023cdb37a251d6edbb80093405e97e4c51b759",
+    "concept-vs-runtime-landscape-1536x1024.png": "6129fe7b2cca34074da50e756dcffb8c7ff810b34d714b22cf32288f9afb11a0",
+    "theme-gallery-runtime-variant-f-v2.png": "d14016d17751ec2e0cfc38b545a93611b78835a92d16cf1fc92986010c5e11df"
   },
   "containmentAssetSha256": {
-    "chassis-conduit-bridge.png": "074d5c0a71b124330c65adeffaf4975dedd78687d248665205c95b8f730ea777"
+    "chassis-conduit-bridge.png": "074d5c0a71b124330c65adeffaf4975dedd78687d248665205c95b8f730ea777",
+    "panel-nine-slice-v2.png": "337cb42e4e12e7cc89cb0c2e09f8c5b4c78a723ca693c6f0c0928d07a69130af"
   },
   "protectedRasterSha256": {
     "panel-nine-slice-v2.png": "9ff3968a94d497dc6f76f2b14f370c5a24c3bb4969397ee220da005093c15ad7",

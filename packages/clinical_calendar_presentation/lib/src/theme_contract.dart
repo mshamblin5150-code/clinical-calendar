@@ -1297,6 +1297,7 @@ final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
       'assets/variant_f_raster/rail-atlas.png',
       canonicalDeltaMarkAsset,
       containmentDroneChassisBridgeAsset,
+      containmentDronePanelAsset,
     ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),

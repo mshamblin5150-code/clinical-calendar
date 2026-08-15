@@ -324,6 +324,10 @@ void main() {
     await tester.tap(find.byKey(const Key('preview-placement-edit-action')));
     await tester.pumpAndSettle();
     expect(find.text('IMPACT PREVIEW'), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const Key('confirm-placement-edit-action')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('confirm-placement-edit-action')));
     await tester.pumpAndSettle();
     expect(harness.controller.activePlacement!.progress.targetMinutes, 18000);
@@ -541,8 +545,15 @@ void main() {
             .enabled,
         isFalse,
       );
-      await tester.ensureVisible(
+      await tester.scrollUntilVisible(
         find.byKey(const Key('reopen-placement-action')),
+        300,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const Key('placement-management-editor')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('reopen-placement-action')));

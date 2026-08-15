@@ -112,11 +112,12 @@ directory and is explicitly labelled rejected.
 The maintainer approved this concept and the exact issue-146 preservation
 amendment on 2026-08-13, then clarified that the approved concept must ship as
 the working selectable theme. That clarification authorizes the new
-Containment-only `assets/containment_drone_v2/chassis-conduit-bridge.png`
-production ornament while all protected legacy rasters remain immutable. The
-ornament is non-interactive and sits outside the safe live-content boundary.
-Its generation provenance and final prompt are recorded in
-`production-chassis-asset.md`.
+Containment-only `assets/containment_drone_v2/chassis-conduit-bridge.png` and
+`assets/containment_drone_v2/panel-nine-slice-v2.png` production housings while
+all protected legacy rasters remain immutable. The housings are
+non-interactive and preserve the safe live-content boundary. The bridge's
+generation provenance is recorded in `production-chassis-asset.md`; both
+applied assets are pinned by SHA-256 in the runtime proof manifest.
 Release acceptance remains blocked only on fresh physical inspection on the
 SM-X920 target; no physical-device capture is represented by this deterministic
 proof package.

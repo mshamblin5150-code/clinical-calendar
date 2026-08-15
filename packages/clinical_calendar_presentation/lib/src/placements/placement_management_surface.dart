@@ -29,6 +29,7 @@ final class PlacementManagementSurface extends StatelessWidget {
     builder: (context, _) => LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 720;
+        final compactHeader = constraints.maxWidth < 480;
         final editorKey = GlobalObjectKey<_PlacementEditorState>(
           'placement-editor|${controller.activePlacementId}|'
           '${controller.activePlacement?.placementRevision}',
@@ -57,23 +58,39 @@ final class PlacementManagementSurface extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'CLINICAL PLACEMENT MANAGEMENT',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
                   if (controller.activePlacement != null) ...[
                     const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      key: const Key('move-placement-to-trash-action'),
-                      onPressed: controller.isBusy
-                          ? null
-                          : () =>
-                                editorKey.currentState?._showDeletionPreview(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: context.clinicalColors.urgent,
+                    if (compactHeader)
+                      Tooltip(
+                        message: 'Move Clinical Placement to Trash',
+                        child: IconButton.outlined(
+                          key: const Key('move-placement-to-trash-action'),
+                          onPressed: controller.isBusy
+                              ? null
+                              : () => editorKey.currentState
+                                    ?._showDeletionPreview(),
+                          color: context.clinicalColors.urgent,
+                          icon: const Icon(Icons.delete_outline),
+                        ),
+                      )
+                    else
+                      OutlinedButton.icon(
+                        key: const Key('move-placement-to-trash-action'),
+                        onPressed: controller.isBusy
+                            ? null
+                            : () => editorKey.currentState
+                                  ?._showDeletionPreview(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: context.clinicalColors.urgent,
+                        ),
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Move to Trash'),
                       ),
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Move to Trash'),
-                    ),
                   ],
                   if (controller.isBusy)
                     const SizedBox.square(
@@ -417,143 +434,123 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
         ),
       ),
     ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return ListView(
+      key: const Key('placement-management-editor'),
       children: [
-        Expanded(
-          child: ListView(
-            key: const Key('placement-management-editor'),
+        if (completed)
+          _LifecycleBanner(
+            label: 'COMPLETED PLACEMENT · ORDINARY EDITING LOCKED',
+            color: context.clinicalColors.scheduled,
+          )
+        else if (value.isReadyToComplete)
+          _LifecycleBanner(
+            label: 'READY TO COMPLETE',
+            color: context.clinicalColors.clinical,
+          ),
+        TextField(
+          key: const Key('placement-name-field'),
+          controller: _name,
+          enabled: !completed,
+          decoration: const InputDecoration(labelText: 'Placement name'),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          key: const Key('placement-target-field'),
+          controller: _target,
+          enabled: !completed,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'Target Hours'),
+        ),
+        const SizedBox(height: 8),
+        if (enlargedText)
+          ...dateFields.expand((field) => [field, const SizedBox(height: 8)])
+        else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (completed)
-                _LifecycleBanner(
-                  label: 'COMPLETED PLACEMENT · ORDINARY EDITING LOCKED',
-                  color: context.clinicalColors.scheduled,
-                )
-              else if (value.isReadyToComplete)
-                _LifecycleBanner(
-                  label: 'READY TO COMPLETE',
-                  color: context.clinicalColors.clinical,
-                ),
-              TextField(
-                key: const Key('placement-name-field'),
-                controller: _name,
-                enabled: !completed,
-                decoration: const InputDecoration(labelText: 'Placement name'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                key: const Key('placement-target-field'),
-                controller: _target,
-                enabled: !completed,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(labelText: 'Target Hours'),
-              ),
-              const SizedBox(height: 8),
-              if (enlargedText)
-                ...dateFields.expand(
-                  (field) => [field, const SizedBox(height: 8)],
-                )
-              else
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: dateFields[0]),
-                    const SizedBox(width: 8),
-                    Expanded(child: dateFields[1]),
-                  ],
-                ),
-              const SizedBox(height: 16),
-              Text(
-                'PRECEPTORS',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              for (final attached in value.attachedPreceptors)
-                _PreceptorEditorRow(
-                  key: ValueKey(
-                    '${attached.preceptor.id}|${attached.revision}',
-                  ),
-                  attached: attached,
-                  locked: completed || widget.controller.isBusy,
-                  onSave: (name) =>
-                      widget.controller.editPreceptor(attached, name),
-                  onMakePrimary: attached.isPrimary
-                      ? null
-                      : () => widget.controller.makePrimary(
-                          attached.preceptor.id,
-                        ),
-                  onDetach: attached.isPrimary
-                      ? null
-                      : () => widget.controller.detachPreceptor(
-                          attached.preceptor.id,
-                        ),
-                ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  key: const Key('add-preceptor-action'),
-                  onPressed: completed || widget.controller.isBusy
-                      ? null
-                      : () => _showAddPreceptor(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Preceptor'),
-                ),
-              ),
-              Text(
-                'Changing the Primary Preceptor preserves Completed Hours, '
-                'Over-Target Hours, and documented review history.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              if (_validation != null) _ErrorBanner(message: _validation!),
-              const SizedBox(height: 14),
-              if (!completed)
-                FilledButton.icon(
-                  key: const Key('preview-placement-edit-action'),
-                  onPressed: widget.controller.isBusy ? null : _preview,
-                  icon: const Icon(Icons.manage_search),
-                  label: const Text('Preview impact'),
-                ),
-              if (widget.controller.editPreview case final preview?) ...[
-                const SizedBox(height: 12),
-                _ImpactPreviewPanel(preview: preview),
-                const SizedBox(height: 8),
-                FilledButton(
-                  key: const Key('confirm-placement-edit-action'),
-                  onPressed: preview.canConfirm && !widget.controller.isBusy
-                      ? widget.controller.confirmEdit
-                      : null,
-                  child: const Text('Confirm and save changes'),
-                ),
-              ],
-              const SizedBox(height: 16),
-              _ReviewsAndEvaluationsPanel(
-                evaluation: value.evaluation,
-                onOpen: widget.onOpenEvaluations,
-              ),
-              const SizedBox(height: 16),
-              if (completed)
-                OutlinedButton.icon(
-                  key: const Key('reopen-placement-action'),
-                  onPressed: widget.controller.isBusy
-                      ? null
-                      : widget.controller.reopenPlacement,
-                  icon: const Icon(Icons.lock_open_outlined),
-                  label: const Text('Reopen Placement'),
-                )
-              else if (value.isReadyToComplete)
-                OutlinedButton.icon(
-                  key: const Key('complete-placement-action'),
-                  onPressed: widget.controller.isBusy
-                      ? null
-                      : widget.controller.completePlacement,
-                  icon: const Icon(Icons.task_alt),
-                  label: const Text('Complete Placement'),
-                ),
+              Expanded(child: dateFields[0]),
+              const SizedBox(width: 8),
+              Expanded(child: dateFields[1]),
             ],
           ),
+        const SizedBox(height: 16),
+        Text('PRECEPTORS', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        for (final attached in value.attachedPreceptors)
+          _PreceptorEditorRow(
+            key: ValueKey('${attached.preceptor.id}|${attached.revision}'),
+            attached: attached,
+            locked: completed || widget.controller.isBusy,
+            onSave: (name) => widget.controller.editPreceptor(attached, name),
+            onMakePrimary: attached.isPrimary
+                ? null
+                : () => widget.controller.makePrimary(attached.preceptor.id),
+            onDetach: attached.isPrimary
+                ? null
+                : () =>
+                      widget.controller.detachPreceptor(attached.preceptor.id),
+          ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            key: const Key('add-preceptor-action'),
+            onPressed: completed || widget.controller.isBusy
+                ? null
+                : () => _showAddPreceptor(context),
+            icon: const Icon(Icons.add),
+            label: const Text('Add Preceptor'),
+          ),
         ),
+        Text(
+          'Changing the Primary Preceptor preserves Completed Hours, '
+          'Over-Target Hours, and documented review history.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        if (_validation != null) _ErrorBanner(message: _validation!),
+        const SizedBox(height: 14),
+        if (!completed)
+          FilledButton.icon(
+            key: const Key('preview-placement-edit-action'),
+            onPressed: widget.controller.isBusy ? null : _preview,
+            icon: const Icon(Icons.manage_search),
+            label: const Text('Preview impact'),
+          ),
+        if (widget.controller.editPreview case final preview?) ...[
+          const SizedBox(height: 12),
+          _ImpactPreviewPanel(preview: preview),
+          const SizedBox(height: 8),
+          FilledButton(
+            key: const Key('confirm-placement-edit-action'),
+            onPressed: preview.canConfirm && !widget.controller.isBusy
+                ? widget.controller.confirmEdit
+                : null,
+            child: const Text('Confirm and save changes'),
+          ),
+        ],
+        const SizedBox(height: 16),
+        _ReviewsAndEvaluationsPanel(
+          evaluation: value.evaluation,
+          onOpen: widget.onOpenEvaluations,
+        ),
+        const SizedBox(height: 16),
+        if (completed)
+          OutlinedButton.icon(
+            key: const Key('reopen-placement-action'),
+            onPressed: widget.controller.isBusy
+                ? null
+                : widget.controller.reopenPlacement,
+            icon: const Icon(Icons.lock_open_outlined),
+            label: const Text('Reopen Placement'),
+          )
+        else if (value.isReadyToComplete)
+          OutlinedButton.icon(
+            key: const Key('complete-placement-action'),
+            onPressed: widget.controller.isBusy
+                ? null
+                : widget.controller.completePlacement,
+            icon: const Icon(Icons.task_alt),
+            label: const Text('Complete Placement'),
+          ),
       ],
     );
   }

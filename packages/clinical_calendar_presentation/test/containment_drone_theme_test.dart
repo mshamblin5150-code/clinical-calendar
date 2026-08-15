@@ -72,14 +72,19 @@ void main() {
         reason: entry.key,
       );
     }
-    final chassisAsset = File(
-      '${packageRoot.path}/assets/containment_drone_v2/'
+    for (final name in [
       'chassis-conduit-bridge.png',
-    );
-    expect(
-      sha256.convert(await chassisAsset.readAsBytes()).toString(),
-      containmentAssets['chassis-conduit-bridge.png'],
-    );
+      'panel-nine-slice-v2.png',
+    ]) {
+      final asset = File(
+        '${packageRoot.path}/assets/containment_drone_v2/$name',
+      );
+      expect(
+        sha256.convert(await asset.readAsBytes()).toString(),
+        containmentAssets[name],
+        reason: name,
+      );
+    }
   });
 
   test('Containment Drone owns the approved concept renderer', () {
@@ -88,6 +93,7 @@ void main() {
     expect(containment.shellRenderer, isA<ContainmentDroneShellRenderer>());
     expect(containment.shellRenderer.rendererId, containmentDroneRendererId);
     expect(containment.frame.assetPaths, contains(canonicalDeltaMarkAsset));
+    expect(containment.frame.assetPaths, contains(containmentDronePanelAsset));
     expect(
       containment.shellRenderer.buildFrame(child: const SizedBox.shrink()),
       isA<ContainmentDroneFrame>(),

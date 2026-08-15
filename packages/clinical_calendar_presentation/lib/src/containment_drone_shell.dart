@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
@@ -11,7 +12,6 @@ import 'canonical_delta_mark.dart';
 import 'date_input.dart';
 import 'placements/placement_progress_widgets.dart';
 import 'responsive_shell.dart';
-import 'variant_f_raster_assets.dart';
 import 'variant_f_theme.dart';
 
 const containmentDroneRendererId = 'containment-drone-concept-renderer-v2';
@@ -51,7 +51,7 @@ final class ContainmentDroneFrame extends StatelessWidget {
   );
 }
 
-final class _ContainmentDroneV2PanelFrame extends StatelessWidget {
+final class _ContainmentDroneV2PanelFrame extends StatefulWidget {
   const _ContainmentDroneV2PanelFrame({
     required this.child,
     required this.padding,
@@ -61,27 +61,135 @@ final class _ContainmentDroneV2PanelFrame extends StatelessWidget {
   final EdgeInsets padding;
 
   @override
-  Widget build(BuildContext context) {
-    return ClipRect(
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(
-              containmentDronePanelAsset,
-              package: 'clinical_calendar_presentation',
-            ),
-            fit: BoxFit.fill,
-            centerSlice: Rect.fromLTRB(24, 24, 1512, 1000),
-            filterQuality: FilterQuality.high,
-          ),
-        ),
-        child: Padding(
-          padding: padding,
-          child: ClipRect(child: child),
-        ),
-      ),
-    );
+  State<_ContainmentDroneV2PanelFrame> createState() =>
+      _ContainmentDroneV2PanelFrameState();
+}
+
+final class _ContainmentDroneV2PanelFrameState
+    extends State<_ContainmentDroneV2PanelFrame> {
+  ImageStream? _stream;
+  ImageInfo? _image;
+  late final ImageStreamListener _listener = ImageStreamListener((image, _) {
+    if (!mounted) return;
+    setState(() => _image = image);
+  });
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = const AssetImage(
+      containmentDronePanelAsset,
+      package: 'clinical_calendar_presentation',
+    ).resolve(createLocalImageConfiguration(context));
+    if (next.key == _stream?.key) return;
+    _stream?.removeListener(_listener);
+    _image?.dispose();
+    _image = null;
+    _stream = next..addListener(_listener);
   }
+
+  @override
+  void dispose() {
+    _stream?.removeListener(_listener);
+    _image?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ClipRect(
+    child: CustomPaint(
+      painter: _image == null
+          ? null
+          : _ContainmentDronePanelPainter(
+              image: _image!.image,
+              destinationInsets: widget.padding,
+            ),
+      child: Padding(
+        padding: widget.padding,
+        child: ClipRect(child: widget.child),
+      ),
+    ),
+  );
+}
+
+final class _ContainmentDronePanelPainter extends CustomPainter {
+  const _ContainmentDronePanelPainter({
+    required this.image,
+    required this.destinationInsets,
+  });
+
+  final ui.Image image;
+  final EdgeInsets destinationInsets;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    const sourceInsets = EdgeInsets.fromLTRB(256, 128, 256, 128);
+    final horizontalScale =
+        (size.width / (destinationInsets.left + destinationInsets.right)).clamp(
+          0.0,
+          1.0,
+        );
+    final verticalScale =
+        (size.height / (destinationInsets.top + destinationInsets.bottom))
+            .clamp(0.0, 1.0);
+    final destination = EdgeInsets.fromLTRB(
+      destinationInsets.left * horizontalScale,
+      destinationInsets.top * verticalScale,
+      destinationInsets.right * horizontalScale,
+      destinationInsets.bottom * verticalScale,
+    );
+    final sourceX = <double>[
+      0,
+      sourceInsets.left,
+      image.width - sourceInsets.right,
+      image.width.toDouble(),
+    ];
+    final sourceY = <double>[
+      0,
+      sourceInsets.top,
+      image.height - sourceInsets.bottom,
+      image.height.toDouble(),
+    ];
+    final destinationX = <double>[
+      0,
+      destination.left,
+      size.width - destination.right,
+      size.width,
+    ];
+    final destinationY = <double>[
+      0,
+      destination.top,
+      size.height - destination.bottom,
+      size.height,
+    ];
+    final paint = Paint()..filterQuality = FilterQuality.high;
+    for (var row = 0; row < 3; row++) {
+      for (var column = 0; column < 3; column++) {
+        canvas.drawImageRect(
+          image,
+          Rect.fromLTRB(
+            sourceX[column],
+            sourceY[row],
+            sourceX[column + 1],
+            sourceY[row + 1],
+          ),
+          Rect.fromLTRB(
+            destinationX[column],
+            destinationY[row],
+            destinationX[column + 1],
+            destinationY[row + 1],
+          ),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ContainmentDronePanelPainter oldDelegate) =>
+      oldDelegate.image != image ||
+      oldDelegate.destinationInsets != destinationInsets;
 }
 
 /// Full-screen asymmetrical cybernetic chassis for the replacement renderer.
@@ -827,52 +935,72 @@ final class ContainmentDroneDestinationSurface extends StatelessWidget {
                 child: ContainmentDroneFrame(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: LayoutBuilder(
-                    builder: (context, constraints) => Row(
-                      children: [
-                        KeyedSubtree(
-                          key: Key(
-                            entry == DestinationEntry.applicationMenu
-                                ? 'back-action'
-                                : 'close-action',
+                    builder: (context, constraints) {
+                      final compactHeader = constraints.maxWidth < 430;
+                      final exitAction = KeyedSubtree(
+                        key: Key(
+                          entry == DestinationEntry.applicationMenu
+                              ? 'back-action'
+                              : 'close-action',
+                        ),
+                        child: TextButton(
+                          key: entry == DestinationEntry.applicationMenu
+                              ? const Key('application-menu-action')
+                              : const Key('destination-exit-action'),
+                          onPressed: onExit,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (entry == DestinationEntry.applicationMenu)
+                                const CanonicalDeltaMark(size: 34)
+                              else
+                                const Icon(Icons.arrow_back),
+                              const SizedBox(width: 8),
+                              Text(
+                                entry == DestinationEntry.applicationMenu
+                                    ? 'APPLICATION MENU'
+                                    : 'Close',
+                              ),
+                            ],
                           ),
-                          child: TextButton(
-                            key: entry == DestinationEntry.applicationMenu
-                                ? const Key('application-menu-action')
-                                : const Key('destination-exit-action'),
-                            onPressed: onExit,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (entry == DestinationEntry.applicationMenu)
-                                  const CanonicalDeltaMark(size: 34)
-                                else
-                                  const Icon(Icons.arrow_back),
-                                const SizedBox(width: 8),
-                                Text(
-                                  entry == DestinationEntry.applicationMenu
-                                      ? 'APPLICATION MENU'
-                                      : 'Close',
-                                ),
-                              ],
+                        ),
+                      );
+                      return Row(
+                        children: [
+                          if (compactHeader)
+                            Expanded(
+                              flex: 3,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: exitAction,
+                              ),
+                            )
+                          else
+                            exitAction,
+                          const SizedBox(width: 8),
+                          if (!compactHeader) ...[
+                            Icon(
+                              destination.icon,
+                              color: VariantFColors.primary,
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          Expanded(
+                            flex: compactHeader ? 2 : 1,
+                            child: Text(
+                              destination.label.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleLarge,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(destination.icon, color: VariantFColors.primary),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            destination.label.toUpperCase(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ),
-                        if (constraints.maxWidth >= 600 &&
-                            MediaQuery.textScalerOf(context).scale(1) <= 1.3)
-                          const Text('CONTAINMENT DRONE 47-ALPHA'),
-                      ],
-                    ),
+                          if (constraints.maxWidth >= 600 &&
+                              MediaQuery.textScalerOf(context).scale(1) <= 1.3)
+                            const Text('CONTAINMENT DRONE 47-ALPHA'),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -1240,158 +1368,6 @@ final class _ContainmentDroneNavigationAction extends StatelessWidget {
     ),
   );
 }
-
-final class _ContainmentDroneChamferClipper extends CustomClipper<Path> {
-  const _ContainmentDroneChamferClipper({required this.inset});
-  final double inset;
-
-  @override
-  Path getClip(Size size) => Path()
-    ..moveTo(inset * 2, inset)
-    ..lineTo(size.width - inset * 3, inset)
-    ..lineTo(size.width - inset, inset * 3)
-    ..lineTo(size.width - inset, size.height - inset * 2)
-    ..lineTo(size.width - inset * 2, size.height - inset)
-    ..lineTo(inset * 3, size.height - inset)
-    ..lineTo(inset, size.height - inset * 3)
-    ..lineTo(inset, inset * 2)
-    ..close();
-
-  @override
-  bool shouldReclip(_ContainmentDroneChamferClipper oldClipper) =>
-      inset != oldClipper.inset;
-}
-
-final class _ContainmentDroneFramePainter extends CustomPainter {
-  const _ContainmentDroneFramePainter({required this.role});
-  final ContainmentDronePanelRole role;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final bounds = Offset.zero & size;
-    final path = const _ContainmentDroneChamferClipper(inset: 2).getClip(size);
-    canvas.drawPath(path, Paint()..color = const Color(0xFF081710));
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..color = const Color(0xFF3B4A42),
-    );
-    canvas.drawPath(
-      const _ContainmentDroneChamferClipper(inset: 7).getClip(size),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = VariantFColors.primary.withValues(alpha: .38),
-    );
-
-    final plate = Paint()..color = const Color(0xFF18211D);
-    canvas.drawRect(Rect.fromLTWH(14, 1, size.width * .28, 9), plate);
-    canvas.drawRect(
-      Rect.fromLTWH(size.width * .64, size.height - 10, size.width * .25, 8),
-      plate,
-    );
-    final conduit = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = const Color(0xFF536059);
-    canvas.drawLine(
-      Offset(size.width * .34, 5),
-      Offset(size.width * .58, 5),
-      conduit,
-    );
-    canvas.drawCircle(
-      Offset(size.width - 18, 15),
-      3.5,
-      Paint()..color = _containmentDroneRoleColor(role),
-    );
-    canvas.drawCircle(
-      Offset(17, size.height - 15),
-      2.5,
-      Paint()..color = VariantFColors.primary.withValues(alpha: .7),
-    );
-    canvas.drawRect(bounds.deflate(10), Paint()..color = Colors.transparent);
-  }
-
-  @override
-  bool shouldRepaint(_ContainmentDroneFramePainter oldDelegate) =>
-      role != oldDelegate.role;
-}
-
-final class _ContainmentDroneFrameForegroundPainter extends CustomPainter {
-  const _ContainmentDroneFrameForegroundPainter({required this.role});
-  final ContainmentDronePanelRole role;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.width < 80 || size.height < 60) return;
-    final metal = Paint()..color = const Color(0xFF202A25);
-    final edge = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = const Color(0xFF657168);
-    final dark = Paint()..color = const Color(0xFF050A07);
-    final glow = Paint()
-      ..color = _containmentDroneRoleColor(role).withValues(alpha: .82);
-
-    for (final corner in <Offset>[
-      const Offset(8, 8),
-      Offset(size.width - 30, 8),
-      Offset(8, size.height - 22),
-      Offset(size.width - 30, size.height - 22),
-    ]) {
-      final clamp = RRect.fromRectAndRadius(
-        Rect.fromLTWH(corner.dx, corner.dy, 22, 14),
-        const Radius.circular(2),
-      );
-      canvas.drawRRect(clamp, dark);
-      canvas.drawRRect(clamp.deflate(2), metal);
-      canvas.drawRRect(clamp.deflate(2), edge);
-      canvas.drawCircle(corner + const Offset(6, 7), 1.4, glow);
-      canvas.drawCircle(corner + const Offset(17, 7), 1.4, dark);
-    }
-
-    final rail = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..color = const Color(0xFF313C36);
-    final seam = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = const Color(0xFF758078);
-    final top = Path()
-      ..moveTo(size.width * .12, 18)
-      ..lineTo(size.width * .22, 10)
-      ..lineTo(size.width * .48, 10)
-      ..lineTo(size.width * .55, 17)
-      ..lineTo(size.width * .83, 17);
-    canvas.drawPath(top, rail);
-    canvas.drawPath(top, seam);
-    final bottom = Path()
-      ..moveTo(size.width * .17, size.height - 12)
-      ..lineTo(size.width * .42, size.height - 12)
-      ..lineTo(size.width * .49, size.height - 19)
-      ..lineTo(size.width * .77, size.height - 19)
-      ..lineTo(size.width * .86, size.height - 12);
-    canvas.drawPath(bottom, rail);
-    canvas.drawPath(bottom, seam);
-  }
-
-  @override
-  bool shouldRepaint(_ContainmentDroneFrameForegroundPainter oldDelegate) =>
-      role != oldDelegate.role;
-}
-
-Color _containmentDroneRoleColor(ContainmentDronePanelRole role) =>
-    switch (role) {
-      ContainmentDronePanelRole.calendar ||
-      ContainmentDronePanelRole.placements ||
-      ContainmentDronePanelRole.progress => VariantFColors.primary,
-      ContainmentDronePanelRole.planning => VariantFColors.scheduled,
-      ContainmentDronePanelRole.attention => VariantFColors.urgent,
-      ContainmentDronePanelRole.destination => VariantFColors.workMachinery,
-    };
 
 final class _ContainmentDroneChassisPainter extends CustomPainter {
   const _ContainmentDroneChassisPainter();
