@@ -4,7 +4,9 @@
   "rendererId": "containment-drone-concept-renderer-v2",
   "fixture": "fictional-family-medicine",
   "platform": "cross-host-reference",
-  "physicalAndroidApproval": "pending",
+  "runtimeAcceptance": "rejected-by-maintainer-2026-08-15",
+  "physicalAndroidApproval": "rejected",
+  "rejectionReason": "The d4959ec runtime candidate does not match the approved v2 concept 100%.",
   "proofs": {
     "calendar-landscape-1536x1024.png": "8342b2c48ba97bd3b8649c59072ba79993f7be8cb8a7b06865f85a532dca28ae",
     "calendar-portrait-900x1440.png": "55c4e34b76e824c06c9b7db703529896355340b3b434cbe75c896fc1a9a7ba51",

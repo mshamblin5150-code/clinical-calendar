@@ -2,8 +2,9 @@
 
 Issue: [#146](https://github.com/mshamblin5150-code/clinical-calendar/issues/146)
 
-Status: **concept approved; deterministic runtime implemented on issue #146;
-physical Android-tablet approval pending**.
+Status: **concept approved; current deterministic and physical runtime candidate
+rejected by the maintainer on 2026-08-15 for failing the 100% concept-fidelity
+requirement; replacement implementation required**.
 
 Declared landscape golden viewport: **1536 x 1024 logical pixels**.
 Declared portrait proof viewport: **900 x 1440 logical pixels**.
@@ -11,20 +12,25 @@ Declared portrait proof viewport: **900 x 1440 logical pixels**.
 `proposed-concept-landscape-1536x1024.png` is a generated approval artifact,
 not a runtime capture or production raster asset. It uses fictional data.
 
-`concept-vs-runtime-landscape-1536x1024.png` is the labelled equal-size review
-sheet. Its left half is the approved concept; its right half is the
-deterministic Flutter runtime at the same 1536 x 1024 logical viewport. The
-runtime source golden is captured at the Android test device pixel ratio and
-downsampled only for this review sheet. It is not a production raster asset.
+`concept-vs-runtime-landscape-1536x1024.png` is the rejected candidate's
+labelled equal-size review sheet. Its left half is the approved concept; its
+right half is the deterministic Flutter runtime at the same 1536 x 1024
+logical viewport. It is retained only as historical rejection evidence and
+must not be treated as an acceptance baseline. The runtime source image is
+captured at the Android test device pixel ratio and downsampled only for this
+review sheet. It is not a production raster asset.
 
-The authoritative runtime proofs live in
+The rejected candidate's runtime regression proofs live in
 `packages/clinical_calendar_presentation/test/baselines/containment_drone_v2`.
-They include exact logical landscape and portrait targets, a 200% text proof,
-compact rendering, Settings, and all ten destination mounts. The deterministic
-fixture uses fictional Family Medicine data. The single cross-host reference
-set and renderer metadata are pinned in `runtime-proof-manifest.json`; Windows
-must match it exactly and Linux CI validates the same files under the
-repository's bounded proof comparator. No Linux-authored capture is claimed.
+They include landscape and portrait captures, a 200% text proof, compact
+rendering, Settings, and all ten destination mounts. They prove behavior and
+preserve the rejected rendering for comparison, but they are not approved
+visual targets. A successor must replace them only after producing a new
+equal-size comparison that reads as the same designed object as the approved
+concept. The deterministic fixture uses fictional Family Medicine data. The
+rejected cross-host reference set and renderer metadata remain pinned in
+`runtime-proof-manifest.json` as historical evidence. No Linux-authored
+capture is claimed.
 
 ## Maintainer-directed identity
 
@@ -118,6 +124,8 @@ all protected legacy rasters remain immutable. The housings are
 non-interactive and preserve the safe live-content boundary. The bridge's
 generation provenance is recorded in `production-chassis-asset.md`; both
 applied assets are pinned by SHA-256 in the runtime proof manifest.
-Release acceptance remains blocked only on fresh physical inspection on the
-SM-X920 target; no physical-device capture is represented by this deterministic
-proof package.
+The first physical SM-X920 candidate at `d4959ec` was rejected by the
+maintainer on 2026-08-15 because it did not match the approved concept 100%.
+Release acceptance is blocked on a replacement implementation, refreshed
+deterministic comparisons, and a new explicit physical approval. No
+physical-device capture is represented by this deterministic proof package.
