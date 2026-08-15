@@ -17,6 +17,8 @@ import 'variant_f_theme.dart';
 const containmentDroneRendererId = 'containment-drone-concept-renderer-v2';
 const containmentDroneChassisBridgeAsset =
     'assets/containment_drone_v2/chassis-conduit-bridge.png';
+const containmentDronePanelAsset =
+    'assets/containment_drone_v2/panel-nine-slice-v2.png';
 
 enum ContainmentDronePanelRole {
   calendar,
@@ -43,59 +45,40 @@ final class ContainmentDroneFrame extends StatelessWidget {
   final EdgeInsets padding;
 
   @override
+  Widget build(BuildContext context) => _ContainmentDroneV2PanelFrame(
+    padding: padding,
+    child: AdditiveThemePanelInterior(child: child),
+  );
+}
+
+final class _ContainmentDroneV2PanelFrame extends StatelessWidget {
+  const _ContainmentDroneV2PanelFrame({
+    required this.child,
+    required this.padding,
+  });
+
+  final Widget child;
+  final EdgeInsets padding;
+
+  @override
   Widget build(BuildContext context) {
-    final interior = AdditiveThemePanelInterior(child: child);
-    final frame = switch (role) {
-      ContainmentDronePanelRole.calendar => VariantFRasterPanelFrame(
-        panel: VariantFRasterPanel.calendar,
-        padding: padding,
-        child: interior,
-      ),
-      ContainmentDronePanelRole.placements => VariantFRasterPanelFrame(
-        panel: VariantFRasterPanel.placements,
-        padding: padding,
-        child: interior,
-      ),
-      ContainmentDronePanelRole.planning => VariantFRasterPanelFrame(
-        panel: VariantFRasterPanel.planning,
-        padding: padding,
-        child: interior,
-      ),
-      ContainmentDronePanelRole.progress ||
-      ContainmentDronePanelRole.attention => VariantFRasterPanelFrame(
-        panel: VariantFRasterPanel.status,
-        padding: padding,
-        child: interior,
-      ),
-      ContainmentDronePanelRole.destination => VariantFNineSliceFrame(
-        chromeInsets: padding,
-        child: interior,
-      ),
-    };
-    return CustomPaint(
-      painter: _ContainmentDroneFramePainter(role: role),
-      foregroundPainter: _ContainmentDroneFrameForegroundPainter(role: role),
-      child: Stack(
-        children: [
-          frame,
-          const Positioned(
-            left: 2,
-            right: 2,
-            top: 0,
-            height: 34,
-            child: _ContainmentDroneConduitBridge(),
-          ),
-          const Positioned(
-            left: 6,
-            right: 6,
-            bottom: 0,
-            height: 24,
-            child: RotatedBox(
-              quarterTurns: 2,
-              child: _ContainmentDroneConduitBridge(),
+    return ClipRect(
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(
+              containmentDronePanelAsset,
+              package: 'clinical_calendar_presentation',
             ),
+            fit: BoxFit.fill,
+            centerSlice: Rect.fromLTRB(24, 24, 1512, 1000),
+            filterQuality: FilterQuality.high,
           ),
-        ],
+        ),
+        child: Padding(
+          padding: padding,
+          child: ClipRect(child: child),
+        ),
       ),
     );
   }
@@ -108,35 +91,49 @@ final class ContainmentDroneChassis extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => ColoredBox(
-    color: VariantFColors.background,
-    child: CustomPaint(
-      painter: const _ContainmentDroneChassisPainter(),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            height: 74,
-            child: _ContainmentDroneConduitBridge(),
-          ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 74,
-            child: RotatedBox(
-              quarterTurns: 2,
-              child: _ContainmentDroneConduitBridge(),
+  Widget build(BuildContext context) {
+    final systemPadding = MediaQuery.paddingOf(context);
+    return Padding(
+      padding: systemPadding,
+      child: MediaQuery.removePadding(
+        context: context,
+        removeLeft: true,
+        removeTop: true,
+        removeRight: true,
+        removeBottom: true,
+        child: ColoredBox(
+          key: const Key('containment-drone-safe-paint-area'),
+          color: VariantFColors.background,
+          child: CustomPaint(
+            painter: const _ContainmentDroneChassisPainter(),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                const Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  height: 74,
+                  child: _ContainmentDroneConduitBridge(),
+                ),
+                const Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 74,
+                  child: RotatedBox(
+                    quarterTurns: 2,
+                    child: _ContainmentDroneConduitBridge(),
+                  ),
+                ),
+                child,
+              ],
             ),
           ),
-          child,
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 final class _ContainmentDroneConduitBridge extends StatelessWidget {
@@ -208,15 +205,37 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                 Positioned(
                   left: width * .025,
                   top: height * .018,
-                  width: width * .95,
+                  width: width * .185,
                   height: height * .105,
                   child: _ContainmentDroneCrown(
+                    frameKey: const Key(
+                      'containment-drone-application-menu-crown',
+                    ),
                     environmentName: environmentName,
                     onOpenMenu: onOpenMenu,
                     onOpenDestination: onOpenDestination,
                     onAddSchedule: onAddSchedule,
                     profileAvatar: slots.profileAvatar,
-                    compact: width < 1400,
+                    compact: true,
+                    menuOnly: true,
+                  ),
+                ),
+                Positioned(
+                  left: width * .222,
+                  top: height * .018,
+                  width: width * .535,
+                  height: height * .105,
+                  child: _ContainmentDroneCrown(
+                    frameKey: const Key(
+                      'containment-drone-command-actions-crown',
+                    ),
+                    environmentName: environmentName,
+                    onOpenMenu: onOpenMenu,
+                    onOpenDestination: onOpenDestination,
+                    onAddSchedule: onAddSchedule,
+                    profileAvatar: slots.profileAvatar,
+                    compact: width < 1450,
+                    actionsOnly: true,
                   ),
                 ),
                 Positioned(
@@ -273,9 +292,9 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                 ),
                 Positioned(
                   left: width * .769,
-                  top: height * .082,
+                  top: height * .018,
                   width: width * .206,
-                  height: height * .6,
+                  height: height * .664,
                   child: ContainmentDroneFrame(
                     key: const Key('containment-drone-insight-bay'),
                     role: ContainmentDronePanelRole.progress,
@@ -816,18 +835,25 @@ final class ContainmentDroneDestinationSurface extends StatelessWidget {
                                 ? 'back-action'
                                 : 'close-action',
                           ),
-                          child: TextButton.icon(
-                            key: const Key('destination-exit-action'),
+                          child: TextButton(
+                            key: entry == DestinationEntry.applicationMenu
+                                ? const Key('application-menu-action')
+                                : const Key('destination-exit-action'),
                             onPressed: onExit,
-                            icon: Icon(
-                              entry == DestinationEntry.applicationMenu
-                                  ? Icons.grid_view_outlined
-                                  : Icons.arrow_back,
-                            ),
-                            label: Text(
-                              entry == DestinationEntry.applicationMenu
-                                  ? 'Back'
-                                  : 'Close',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (entry == DestinationEntry.applicationMenu)
+                                  const CanonicalDeltaMark(size: 34)
+                                else
+                                  const Icon(Icons.arrow_back),
+                                const SizedBox(width: 8),
+                                Text(
+                                  entry == DestinationEntry.applicationMenu
+                                      ? 'APPLICATION MENU'
+                                      : 'Close',
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -875,8 +901,11 @@ final class _ContainmentDroneCrown extends StatelessWidget {
     required this.onOpenDestination,
     required this.onAddSchedule,
     required this.profileAvatar,
+    this.frameKey = const Key('containment-drone-command-crown'),
     this.compact = false,
     this.phone = false,
+    this.menuOnly = false,
+    this.actionsOnly = false,
   });
 
   final String environmentName;
@@ -884,93 +913,109 @@ final class _ContainmentDroneCrown extends StatelessWidget {
   final ValueChanged<ClinicalCalendarDestination> onOpenDestination;
   final VoidCallback onAddSchedule;
   final Widget profileAvatar;
+  final Key frameKey;
   final bool compact;
   final bool phone;
+  final bool menuOnly;
+  final bool actionsOnly;
 
   @override
   Widget build(BuildContext context) => ContainmentDroneFrame(
-    key: const Key('containment-drone-command-crown'),
+    key: frameKey,
     padding: EdgeInsets.symmetric(horizontal: phone ? 6 : 12, vertical: 6),
     child: Row(
       children: [
-        KeyedSubtree(
-          key: const Key('mobile-menu-action'),
-          child: Semantics(
-            key: const Key('desktop-menu-action'),
-            button: true,
-            label: 'Open menu',
-            child: InkWell(
-              key: const Key('application-menu-action'),
-              onTap: onOpenMenu,
-              borderRadius: BorderRadius.circular(4),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CanonicalDeltaMark(
-                      imageKey: const Key('containment-drone-axion-delta'),
-                      size: phone ? 30 : (compact ? 38 : 52),
-                      errorBuilder: (_, _, _) => const Icon(Icons.apps),
+        if (!actionsOnly)
+          Expanded(
+            child: KeyedSubtree(
+              key: const Key('mobile-menu-action'),
+              child: Semantics(
+                key: const Key('desktop-menu-action'),
+                button: true,
+                label: 'Open menu',
+                child: InkWell(
+                  key: const Key('application-menu-action'),
+                  onTap: onOpenMenu,
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
-                    if (!phone)
-                      Text(
-                        'APPLICATION MENU',
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                  ],
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CanonicalDeltaMark(
+                          imageKey: const Key('containment-drone-axion-delta'),
+                          size: phone ? 30 : (compact ? 38 : 52),
+                          errorBuilder: (_, _, _) => const Icon(Icons.apps),
+                        ),
+                        if (!phone)
+                          Text(
+                            'APPLICATION MENU',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        if (!compact && environmentName.trim().isNotEmpty) ...[
+        if (!menuOnly && !compact && environmentName.trim().isNotEmpty) ...[
           const SizedBox(width: 10),
           Text(environmentName, style: Theme.of(context).textTheme.labelSmall),
         ],
-        const SizedBox(width: 8),
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              _crownAction(
-                key: const Key('desktop-add-schedule-action'),
-                tooltip: 'Open Add Schedule',
-                icon: Icons.add_box_outlined,
-                label: 'ADD SCHEDULE',
-                onPressed: onAddSchedule,
+        if (!menuOnly) const SizedBox(width: 8),
+        if (!menuOnly)
+          Expanded(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _crownAction(
+                    key: const Key('desktop-add-schedule-action'),
+                    tooltip: 'Open Add Schedule',
+                    icon: Icons.add_box_outlined,
+                    label: 'ADD SCHEDULE',
+                    onPressed: onAddSchedule,
+                  ),
+                  _crownAction(
+                    key: const Key('desktop-help-action'),
+                    tooltip: 'Open Help',
+                    icon: Icons.help_outline,
+                    label: 'HELP',
+                    onPressed: () =>
+                        onOpenDestination(ClinicalCalendarDestination.help),
+                  ),
+                  _crownAction(
+                    key: const Key('desktop-notifications-action'),
+                    tooltip: 'Open Notifications',
+                    icon: Icons.notifications_outlined,
+                    label: 'NOTIFICATIONS',
+                    onPressed: () => onOpenDestination(
+                      ClinicalCalendarDestination.notifications,
+                    ),
+                  ),
+                  _crownAction(
+                    key: const Key('desktop-synchronization-action'),
+                    tooltip: 'Open Synchronization',
+                    icon: Icons.sync_outlined,
+                    label: 'SYNCHRONIZATION',
+                    onPressed: () => onOpenDestination(
+                      ClinicalCalendarDestination.synchronization,
+                    ),
+                  ),
+                ],
               ),
-              _crownAction(
-                key: const Key('desktop-help-action'),
-                tooltip: 'Open Help',
-                icon: Icons.help_outline,
-                label: 'HELP',
-                onPressed: () =>
-                    onOpenDestination(ClinicalCalendarDestination.help),
-              ),
-              _crownAction(
-                key: const Key('desktop-notifications-action'),
-                tooltip: 'Open Notifications',
-                icon: Icons.notifications_outlined,
-                label: 'NOTIFICATIONS',
-                onPressed: () => onOpenDestination(
-                  ClinicalCalendarDestination.notifications,
-                ),
-              ),
-              _crownAction(
-                key: const Key('desktop-synchronization-action'),
-                tooltip: 'Open Synchronization',
-                icon: Icons.sync_outlined,
-                label: 'SYNCHRONIZATION',
-                onPressed: () => onOpenDestination(
-                  ClinicalCalendarDestination.synchronization,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        SizedBox.square(dimension: phone ? 44 : 46, child: profileAvatar),
+        if (!menuOnly) const SizedBox(width: 8),
+        if (!menuOnly)
+          SizedBox.square(dimension: phone ? 44 : 46, child: profileAvatar),
       ],
     ),
   );

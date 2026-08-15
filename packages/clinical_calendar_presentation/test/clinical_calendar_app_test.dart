@@ -695,7 +695,13 @@ void main() {
   testWidgets('menu routes Clinical Placements to its management surface', (
     tester,
   ) async {
-    await _pumpAt(tester, const Size(1024, 768));
+    await _pumpAt(
+      tester,
+      const Size(1024, 768),
+      dependencies: _dependencies(
+        repositories: _Repositories(seedLifecycle: true),
+      ),
+    );
 
     await tester.tap(find.byKey(const Key('application-menu-action')));
     await tester.pumpAndSettle();
@@ -707,6 +713,15 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('back-action')), findsOneWidget);
+    final deleteAction = find.byKey(
+      const Key('move-placement-to-trash-action'),
+    );
+    expect(deleteAction, findsOneWidget);
+    expect(
+      deleteAction.hitTestable(),
+      findsOneWidget,
+      reason: 'Deletion must be discoverable without scrolling the editor.',
+    );
   });
 
   testWidgets('menu routes Settings to the settings and templates surface', (

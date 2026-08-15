@@ -161,6 +161,36 @@ void main() {
   });
 
   testWidgets(
+    'landscape separates the concept crown and keeps it out of system chrome',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1536, 1024));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        _app(mediaPadding: const EdgeInsets.only(top: 48)),
+      );
+
+      final menuCrown = tester.getRect(
+        find.byKey(const Key('containment-drone-application-menu-crown')),
+      );
+      final commandCrown = tester.getRect(
+        find.byKey(const Key('containment-drone-command-actions-crown')),
+      );
+      final placementBay = tester.getRect(
+        find.byKey(const Key('containment-drone-placement-bay')),
+      );
+      final chassis = tester.getRect(
+        find.byKey(const Key('containment-drone-safe-paint-area')),
+      );
+
+      expect(chassis.top, greaterThanOrEqualTo(48));
+      expect(menuCrown.right, lessThanOrEqualTo(placementBay.right + 2));
+      expect(commandCrown.left, greaterThanOrEqualTo(placementBay.right));
+      expect(commandCrown.width, lessThan(1536 * .58));
+    },
+  );
+
+  testWidgets(
     'portrait is an ordered scroll composition with fixed navigation',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(900, 1440));
@@ -289,6 +319,8 @@ void main() {
       );
       expect(find.byType(ContainmentDroneChassis), findsOneWidget);
       expect(find.text('Live Clinical Placements destination'), findsOne);
+      expect(find.byKey(const Key('application-menu-action')), findsOneWidget);
+      expect(find.text('APPLICATION MENU'), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -374,8 +406,12 @@ Widget _app({
   VoidCallback onOpenAttention = _noop,
   VoidCallback onAddSchedule = _noop,
   double textScale = 1,
+  EdgeInsets mediaPadding = EdgeInsets.zero,
 }) => MediaQuery(
-  data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+  data: MediaQueryData(
+    textScaler: TextScaler.linear(textScale),
+    padding: mediaPadding,
+  ),
   child: MaterialApp(
     theme: const VariantFVisualTheme().createThemeData(),
     home: const VariantFThemeBundle().shellRenderer.build(

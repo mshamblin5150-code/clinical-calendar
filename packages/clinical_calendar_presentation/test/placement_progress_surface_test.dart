@@ -378,6 +378,26 @@ void main() {
   );
 
   testWidgets(
+    'placement deletion is immediately visible and tappable in management',
+    (tester) async {
+      final harness = PlacementProgressHarness();
+      await harness.controller.load();
+      await _pump(
+        tester,
+        PlacementManagementSurface(
+          controller: harness.controller,
+          studentId: placementTestStudentId,
+        ),
+        size: const Size(1024, 900),
+      );
+
+      final action = find.byKey(const Key('move-placement-to-trash-action'));
+      expect(action.hitTestable(), findsOneWidget);
+      expect(tester.getRect(action).bottom, lessThanOrEqualTo(900));
+    },
+  );
+
+  testWidgets(
     'confirming discards disclosed drafts and removes the aggregate',
     (tester) async {
       final harness = PlacementProgressHarness();
