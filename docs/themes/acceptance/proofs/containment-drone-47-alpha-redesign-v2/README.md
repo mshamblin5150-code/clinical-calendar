@@ -35,10 +35,9 @@ goldens. `candidate-v5-runtime-proof-manifest.json` pins their hashes and
 explicitly records that deterministic maintainer review is pending and no new
 physical cycle has begun.
 
-Candidate v4 evidence remains hash-pinned by
-`candidate-v4-runtime-proof-manifest.json` at commit `7ac6ba8`; it is historical
-review evidence, not the current target. Rejected v3 evidence is preserved
-under `rejected/a28bdb8/` and
+Candidate v4 evidence remains hash-pinned under `rejected/7ac6ba8/`; it is
+explicitly rejected historical review evidence, not the current target.
+Rejected v3 evidence is preserved under `rejected/a28bdb8/` and
 `test/baselines/containment_drone_v2/rejected/a28bdb8/`. Rejected `d4959ec`
 evidence remains in its existing historical directories. Neither is an
 acceptance target.
