@@ -81,6 +81,140 @@ void main() {
   });
 
   test(
+    'legacy malformed local snapshot resolves through complete remote version',
+    () async {
+      await registry.mutate((repositories) {
+        repositories.workShifts.put(
+          studentId: _studentId,
+          value: WorkShift(id: _firstId, plannedInterval: _interval(9, 11)),
+          expectedRevision: 0,
+          mutation: _mutation(25),
+        );
+      });
+      final operation = await _operation(registry, _firstId);
+      final legacyOperation = OutboxOperation(
+        mutation: operation.mutation,
+        studentId: operation.studentId,
+        entityType: operation.entityType,
+        entityId: operation.entityId,
+        type: operation.type,
+        baseRevision: operation.baseRevision,
+        payloadJson: '[]',
+      );
+      final remoteEnvelope =
+          jsonDecode(operation.payloadJson) as Map<String, dynamic>;
+      remoteEnvelope['revision'] = 1;
+      remoteEnvelope['current_revision'] = 1;
+
+      await registry.mutate((repositories) {
+        final sync = repositories as SynchronizationLocalWriteRepositories;
+        sync.synchronization.recordTerminalRejection(
+          studentId: _studentId,
+          operation: legacyOperation,
+          rejectionCode: 'stale_revision',
+          rejectionJson: jsonEncode(remoteEnvelope),
+          rejectedAtUtc: _now.add(const Duration(minutes: 26)),
+          createsConflict: true,
+        );
+      });
+
+      final conflict = (await _conflicts(registry)).single;
+
+      expect(conflict.entityType, 'work_shift');
+      expect(conflict.entityId, _firstId);
+      expect(conflict.affectedRecords, hasLength(1));
+      expect(conflict.affectedRecords.single.entityId, _firstId);
+
+      await registry.mutate((repositories) {
+        final sync = repositories as SynchronizationLocalWriteRepositories;
+        sync.synchronization.resolveConflict(
+          studentId: _studentId,
+          conflictId: conflict.id,
+          choice: SynchronizationConflictResolutionChoice.remoteVersion,
+          mutation: _mutation(27),
+        );
+      });
+
+      expect(await _conflicts(registry), isEmpty);
+    },
+  );
+
+  for (final legacyRemoteCase in [
+    ('non-object', '[]'),
+    ('partial envelope', '{"schema_version":1,"value":{}}'),
+    ('floating-point revision', null),
+  ]) {
+    test('valid remote change repairs legacy remote snapshot '
+        '${legacyRemoteCase.$1}', () async {
+      await registry.mutate((repositories) {
+        repositories.workShifts.put(
+          studentId: _studentId,
+          value: WorkShift(id: _firstId, plannedInterval: _interval(9, 11)),
+          expectedRevision: 0,
+          mutation: _mutation(28),
+        );
+      });
+      final operation = await _operation(registry, _firstId);
+      final legacyRemoteSnapshot =
+          legacyRemoteCase.$2 ??
+          jsonEncode(
+            (jsonDecode(operation.payloadJson) as Map<String, dynamic>)
+              ..['revision'] = 1.0,
+          );
+      final legacyOperation = OutboxOperation(
+        mutation: operation.mutation,
+        studentId: operation.studentId,
+        entityType: operation.entityType,
+        entityId: operation.entityId,
+        type: operation.type,
+        baseRevision: 1,
+        payloadJson: operation.payloadJson,
+      );
+      await registry.mutate((repositories) {
+        final sync = repositories as SynchronizationLocalWriteRepositories;
+        sync.synchronization.recordTerminalRejection(
+          studentId: _studentId,
+          operation: legacyOperation,
+          rejectionCode: 'stale_revision',
+          rejectionJson: legacyRemoteSnapshot,
+          rejectedAtUtc: _now.add(const Duration(minutes: 29)),
+          createsConflict: true,
+        );
+      });
+      expect(
+        (await _conflicts(registry)).single.remoteSnapshotJson,
+        legacyRemoteSnapshot,
+      );
+      final remoteEnvelope =
+          jsonDecode(operation.payloadJson) as Map<String, dynamic>;
+      remoteEnvelope['revision'] = 1;
+
+      await registry.mutate((repositories) {
+        final sync = repositories as SynchronizationLocalWriteRepositories;
+        sync.synchronization.applyRemoteAndAdvanceCursor(
+          studentId: _studentId,
+          remoteScope: 'account',
+          change: RemoteSynchronizationChange(
+            cursor: 1,
+            entityType: operation.entityType,
+            entityId: operation.entityId,
+            revision: 1,
+            operationType: OutboxOperationType.upsert,
+            payloadJson: jsonEncode(remoteEnvelope),
+          ),
+          appliedAtUtc: _now.add(const Duration(minutes: 30)),
+        );
+      });
+
+      final repaired =
+          jsonDecode((await _conflicts(registry)).single.remoteSnapshotJson)
+              as Map<String, dynamic>;
+      expect(repaired['schema_version'], 1);
+      expect(repaired['revision'], 1);
+    });
+  }
+
+  test(
     'Protected Day conflict keeps the exact week Planning Incomplete',
     () async {
       await registry.mutate((repositories) {

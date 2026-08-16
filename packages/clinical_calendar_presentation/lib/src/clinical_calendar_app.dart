@@ -910,22 +910,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
           child: _portableBackupSurface(),
         );
       case 'synchronization':
-        await _conflictController.load();
-        if (!mounted) return;
-        final conflicts = _conflictController.snapshot;
-        await _openContextualRoute(
-          title: 'Synchronization',
-          child: conflicts != null && conflicts.hasConflicts
-              ? SynchronizationConflictResolutionSurface(
-                  controller: _conflictController,
-                  onOpenRecordAction: _openConflictRecord,
-                )
-              : SynchronizationAttentionSurface(
-                  synchronization: widget.dependencies.synchronization,
-                  onSynchronized: refreshAuthoritativeSettings,
-                ),
-        );
-        await _reloadSchedulingSurfaces();
+        await _openSynchronization();
     }
   }
 
@@ -1155,23 +1140,29 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
           child: _portableBackupSurface(),
         );
       case AttentionDestination.resolveSynchronization:
-        await _conflictController.load();
-        if (!mounted) return;
-        final conflicts = _conflictController.snapshot;
-        await _openContextualRoute(
-          title: 'Synchronization',
-          child: conflicts != null && conflicts.hasConflicts
-              ? SynchronizationConflictResolutionSurface(
-                  controller: _conflictController,
-                  onOpenRecordAction: _openConflictRecord,
-                )
-              : SynchronizationAttentionSurface(
-                  synchronization: widget.dependencies.synchronization,
-                  onSynchronized: refreshAuthoritativeSettings,
-                ),
-        );
-        await _reloadSchedulingSurfaces();
+        await _openSynchronization();
     }
+  }
+
+  Future<void> _openSynchronization() async {
+    await _conflictController.load();
+    if (!mounted) return;
+    final conflicts = _conflictController.snapshot;
+    await _openContextualRoute(
+      title: 'Synchronization',
+      child:
+          _conflictController.error != null ||
+              (conflicts != null && conflicts.hasConflicts)
+          ? SynchronizationConflictResolutionSurface(
+              controller: _conflictController,
+              onOpenRecordAction: _openConflictRecord,
+            )
+          : SynchronizationAttentionSurface(
+              synchronization: widget.dependencies.synchronization,
+              onSynchronized: refreshAuthoritativeSettings,
+            ),
+    );
+    await _reloadSchedulingSurfaces();
   }
 
   void _openConflictRecord(

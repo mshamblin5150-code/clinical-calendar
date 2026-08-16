@@ -41,7 +41,7 @@ final class SynchronizationConflictResolutionSurface extends StatelessWidget {
               ),
             ),
           ),
-          if (controller.error != null)
+          if (controller.error != null && snapshot != null)
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverToBoxAdapter(
@@ -52,9 +52,11 @@ final class SynchronizationConflictResolutionSurface extends StatelessWidget {
               ),
             ),
           if (snapshot == null)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(child: CircularProgressIndicator()),
+              child: controller.error == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : _ConflictLoadFailure(onRetry: controller.load),
             )
           else if (!snapshot.hasConflicts)
             const SliverFillRemaining(
@@ -77,6 +79,48 @@ final class SynchronizationConflictResolutionSurface extends StatelessWidget {
         ],
       );
     },
+  );
+}
+
+final class _ConflictLoadFailure extends StatelessWidget {
+  const _ConflictLoadFailure({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.sync_problem_outlined,
+            color: context.clinicalColors.urgent,
+            size: 40,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Synchronization conflicts could not be loaded.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'No records were changed. Retry before editing or moving '
+            'affected records to Trash.',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            key: const Key('retry-conflict-load-action'),
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: const Text('RETRY'),
+          ),
+        ],
+      ),
+    ),
   );
 }
 
@@ -201,7 +245,7 @@ final class _SameRecordResolution extends StatelessWidget {
               title: 'This device',
               version: item.local,
               actionKey: const Key('choose-local-conflict-version'),
-              onChoose: controller.busy
+              onChoose: controller.busy || !item.local.isComplete
                   ? null
                   : () => controller.resolve(
                       conflict: item,
@@ -341,13 +385,19 @@ final class _CrossRecordResolution extends StatelessWidget {
                 ),
         ),
       const SizedBox(height: 8),
+      if (!item.local.isComplete) ...[
+        const Text(
+          'A complete version is required before resolving this conflict.',
+        ),
+        const SizedBox(height: 8),
+      ],
       Wrap(
         spacing: 8,
         runSpacing: 8,
         children: [
           OutlinedButton(
             key: const Key('move-conflicting-record-action'),
-            onPressed: controller.busy
+            onPressed: controller.busy || !item.local.isComplete
                 ? null
                 : () => _composeCorrected(context, item, controller),
             child: const Text('Move'),
@@ -355,7 +405,7 @@ final class _CrossRecordResolution extends StatelessWidget {
           if (item.record.entityType == 'clinical_session') ...[
             OutlinedButton(
               key: const Key('cancel-conflicting-session-action'),
-              onPressed: controller.busy
+              onPressed: controller.busy || !item.local.isComplete
                   ? null
                   : () => controller.resolveCrossRecord(
                       conflict: item,
@@ -365,7 +415,7 @@ final class _CrossRecordResolution extends StatelessWidget {
             ),
             OutlinedButton(
               key: const Key('miss-conflicting-session-action'),
-              onPressed: controller.busy
+              onPressed: controller.busy || !item.local.isComplete
                   ? null
                   : () => controller.resolveCrossRecord(
                       conflict: item,
@@ -376,7 +426,7 @@ final class _CrossRecordResolution extends StatelessWidget {
           ],
           OutlinedButton(
             key: const Key('delete-conflicting-record-action'),
-            onPressed: controller.busy
+            onPressed: controller.busy || !item.local.isComplete
                 ? null
                 : () => _confirmDelete(context, item, controller),
             child: const Text('Delete if eligible'),
