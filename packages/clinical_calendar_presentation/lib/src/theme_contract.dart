@@ -8,6 +8,7 @@ import 'canonical_delta_mark.dart';
 import 'coastal_light_frame.dart';
 import 'coastal_light_shell.dart';
 import 'coastal_light_theme.dart';
+import 'containment_drone_shell.dart';
 import 'federation_classic_frame.dart';
 import 'federation_classic_shell.dart';
 import 'federation_classic_theme.dart';
@@ -271,6 +272,55 @@ final class VariantFShellRenderer implements ClinicalCalendarShellRenderer {
     required VoidCallback onExit,
     required Widget child,
   }) => DestinationSurface(
+    destination: destination,
+    entry: entry,
+    onExit: onExit,
+    child: child,
+  );
+}
+
+final class ContainmentDroneShellRenderer
+    implements ClinicalCalendarShellRenderer {
+  const ContainmentDroneShellRenderer();
+
+  @override
+  String get themeId => variantFThemeId;
+
+  @override
+  String get rendererId => containmentDroneRendererId;
+
+  @override
+  Widget build({
+    required ResponsiveShellSlots slots,
+    required String environmentName,
+    required VoidCallback onOpenMenu,
+    required ValueChanged<ClinicalCalendarDestination> onOpenDestination,
+    required VoidCallback onOpenAttention,
+    required VoidCallback onAddSchedule,
+    int mobileIndex = 1,
+    Key? key,
+  }) => ContainmentDroneApplicationShell(
+    key: key,
+    slots: slots,
+    environmentName: environmentName,
+    onOpenMenu: onOpenMenu,
+    onOpenDestination: onOpenDestination,
+    onOpenAttention: onOpenAttention,
+    onAddSchedule: onAddSchedule,
+    mobileIndex: mobileIndex,
+  );
+
+  @override
+  Widget buildFrame({required Widget child}) =>
+      ContainmentDroneFrame(child: child);
+
+  @override
+  Widget buildDestination({
+    required ClinicalCalendarDestination destination,
+    required DestinationEntry entry,
+    required VoidCallback onExit,
+    required Widget child,
+  }) => ContainmentDroneDestinationSurface(
     destination: destination,
     entry: entry,
     onExit: onExit,
@@ -646,6 +696,7 @@ final class ThemeGalleryData implements ThemeOwnedComponent {
     required this.thumbnailFixtureId,
     required this.thumbnailViewport,
     required this.swatches,
+    this.runtimeThumbnailAssetId,
   });
 
   @override
@@ -654,6 +705,7 @@ final class ThemeGalleryData implements ThemeOwnedComponent {
   final String thumbnailFixtureId;
   final Size thumbnailViewport;
   final List<ThemeGallerySwatch> swatches;
+  final String? runtimeThumbnailAssetId;
 }
 
 enum ThemeSemanticRole {
@@ -1231,7 +1283,7 @@ final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
 
   @override
   ClinicalCalendarShellRenderer get shellRenderer =>
-      const VariantFShellRenderer();
+      const ContainmentDroneShellRenderer();
 
   @override
   ThemeFrameDescriptor get frame => const ThemeFrameDescriptor(
@@ -1243,6 +1295,11 @@ final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
       'assets/variant_f_raster/hardware-atlas.png',
       'assets/variant_f_raster/panel-atlas.png',
       'assets/variant_f_raster/rail-atlas.png',
+      canonicalDeltaMarkAsset,
+      containmentDroneChassisBridgeAsset,
+      containmentDronePanelAsset,
+      containmentDroneLandscapeChassisAsset,
+      containmentDronePortraitChassisAsset,
     ],
     sourceSize: Size(1536, 1024),
     sourceCuts: EdgeInsets.fromLTRB(120, 145, 120, 170),
@@ -1257,7 +1314,8 @@ final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
   @override
   ThemeGalleryData get gallery => const ThemeGalleryData(
     themeId: variantFThemeId,
-    rendererId: 'variant-f-existing-responsive-shell',
+    rendererId: containmentDroneRendererId,
+    runtimeThumbnailAssetId: 'variant-f-v5',
     thumbnailFixtureId: themeGalleryFixtureId,
     thumbnailViewport: themeGalleryViewport,
     swatches: [

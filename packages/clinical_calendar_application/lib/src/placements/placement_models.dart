@@ -14,6 +14,7 @@ final class PlacementSnapshot {
     required this.derivedState,
     required this.awaitingConfirmationSessionCount,
     required this.scheduledFutureSessionCount,
+    this.scheduledFutureSessions = const [],
   });
 
   final ClinicalPlacement placement;
@@ -26,6 +27,7 @@ final class PlacementSnapshot {
   final ClinicalPlacementState derivedState;
   final int awaitingConfirmationSessionCount;
   final int scheduledFutureSessionCount;
+  final List<ClinicalSession> scheduledFutureSessions;
 
   bool get isReadyToComplete =>
       derivedState == ClinicalPlacementState.readyToComplete;

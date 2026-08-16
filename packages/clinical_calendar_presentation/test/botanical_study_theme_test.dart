@@ -83,12 +83,12 @@ void main() {
     );
   });
 
-  test('existing themes retain their default owned frame paths', () {
+  test('themes retain their approved owned frame paths', () {
     expect(
       const VariantFThemeBundle().shellRenderer.buildFrame(
         child: SizedBox.shrink(),
       ),
-      isA<VariantFTacticalFrame>(),
+      isA<ContainmentDroneFrame>(),
     );
     expect(
       const GraphiteThemeBundle().shellRenderer.buildFrame(

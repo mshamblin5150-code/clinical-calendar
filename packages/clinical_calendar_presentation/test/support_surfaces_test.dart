@@ -114,7 +114,15 @@ void main() {
           final actionRect = tester.getRect(
             find.byKey(const Key('back-action')),
           );
-          final backRect = tester.getRect(find.text('Back'));
+          final exitLabel = bundle.id == variantFThemeId
+              ? 'APPLICATION MENU'
+              : 'Back';
+          final backRect = tester.getRect(
+            find.descendant(
+              of: find.byKey(const Key('back-action')),
+              matching: find.text(exitLabel),
+            ),
+          );
           expect(actionRect.contains(backRect.topLeft), isTrue);
           expect(actionRect.contains(backRect.bottomRight), isTrue);
 

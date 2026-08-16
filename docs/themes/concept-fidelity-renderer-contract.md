@@ -6,8 +6,8 @@ This contract governs implementation and visual acceptance of Clinical
 Calendar themes that have an approved dashboard concept. It supersedes the
 fixed-layout requirements in the original additive-theme contract wherever
 those requirements prevent a runtime theme from matching its approved
-concept. The preservation boundary for Containment Drone 47-Alpha
-(`variant-f`) is unchanged.
+concept. Issue [#146](https://github.com/mshamblin5150-code/clinical-calendar/issues/146)
+adds the Containment Drone 47-Alpha (`variant-f`) amendment recorded below.
 
 ## Decision
 
@@ -57,14 +57,14 @@ slots. It may wrap those widgets in generic opt-in viewport policies, but the
 default path for another theme must not change. Theme code must not fork
 clinical state, persistence, validation, or workflow logic.
 
-Issue [#159](https://github.com/mshamblin5150-code/clinical-calendar/issues/159)
-also establishes one catalog-level visual invariant for the six concept
-themes: wherever an approved composition specifies the Axion delta, its
+Issues [#159](https://github.com/mshamblin5150-code/clinical-calendar/issues/159)
+and [#146](https://github.com/mshamblin5150-code/clinical-calendar/issues/146)
+also establish one catalog-level visual invariant for all seven themes:
+wherever an approved composition specifies the Axion delta, its
 underlying delta-and-orbit mark comes from the same catalog-owned source.
 This does not make the crown or shell shared. Each theme continues to own the
 mark's placement, scale, optional color treatment, semantics, surrounding
-material, and complete responsive composition. Containment Drone 47-Alpha is
-not a consumer of the shared mark.
+material, and complete responsive composition.
 
 Control coordinates and breakpoint numbers are therefore not catalog-wide
 invariants. Reachability, meaning, minimum usable size, semantic order, and
@@ -136,13 +136,19 @@ A rejected proof is retained only as historical evidence and must be labelled
 
 ## Containment Drone preservation boundary
 
-This contract does not authorize edits to frozen Variant F assets, geometry,
-renderer behavior, or accepted output. Generic policies introduced for a
-concept theme must be opt-in and default to the pre-existing behavior.
+Issue #146 authorizes the approved v2 Containment composition to become the
+applied `variant-f` renderer. It permits a new Containment-only shell,
+canonical Axion integration, opt-in shared-slot policies, refreshed Gallery
+thumbnail, and new `containment_drone_v2` proofs.
 
-Moving Variant F to a concept-owned renderer remains a separate convergence
-decision requiring exact reference-image equality, protected-asset checks,
-the full responsive suite, and fresh physical Android approval.
+The four frozen raster assets, `variant_f_theme.dart`,
+`variant_f_raster_assets.dart`, `mechanical_pixel_tiles.dart`,
+`tactical_frame.dart`, `responsive_shell.dart`, and every historical v1
+baseline remain byte-for-byte protected. Generic policies introduced for the
+new shell must be opt-in and default to pre-existing behavior for the other
+six renderer lanes. Automated responsive proof and fresh physical Android
+approval remain required; automation does not substitute for the physical
+gate.
 
 ## Adoption order
 

@@ -10,6 +10,7 @@ export 'src/code_only_presentation_recovery.dart';
 export 'src/coastal_light_frame.dart';
 export 'src/coastal_light_shell.dart';
 export 'src/coastal_light_theme.dart';
+export 'src/containment_drone_shell.dart';
 export 'src/calendar/calendar_data_source.dart';
 export 'src/calendar/calendar_models.dart';
 export 'src/calendar/calendar_period_view.dart';

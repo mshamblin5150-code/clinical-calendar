@@ -324,6 +324,10 @@ void main() {
     await tester.tap(find.byKey(const Key('preview-placement-edit-action')));
     await tester.pumpAndSettle();
     expect(find.text('IMPACT PREVIEW'), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const Key('confirm-placement-edit-action')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('confirm-placement-edit-action')));
     await tester.pumpAndSettle();
     expect(harness.controller.activePlacement!.progress.targetMinutes, 18000);
@@ -376,6 +380,64 @@ void main() {
       expect(harness.controller.placements, hasLength(2));
     },
   );
+
+  testWidgets(
+    'placement deletion is immediately visible and tappable in management',
+    (tester) async {
+      final harness = PlacementProgressHarness();
+      await harness.controller.load();
+      await _pump(
+        tester,
+        PlacementManagementPresentation(
+          promoteDeletionToHeader: true,
+          child: PlacementManagementSurface(
+            controller: harness.controller,
+            studentId: placementTestStudentId,
+          ),
+        ),
+        size: const Size(1024, 900),
+      );
+
+      final action = find.byKey(const Key('move-placement-to-trash-action'));
+      expect(action.hitTestable(), findsOneWidget);
+      expect(tester.getRect(action).bottom, lessThanOrEqualTo(900));
+    },
+  );
+
+  testWidgets('enlarged placement reflow remains opt-in', (tester) async {
+    final harness = PlacementProgressHarness();
+    await harness.controller.load();
+
+    Future<(double, double)> dateFieldTops({required bool enabled}) async {
+      final surface = PlacementManagementSurface(
+        controller: harness.controller,
+        studentId: placementTestStudentId,
+      );
+      await _pump(
+        tester,
+        enabled
+            ? PlacementManagementPresentation(
+                promoteDeletionToHeader: false,
+                adaptEnlargedText: true,
+                child: surface,
+              )
+            : surface,
+        size: const Size(1400, 1200),
+        textScaler: const TextScaler.linear(2),
+      );
+      return (
+        tester
+            .getTopLeft(find.byKey(const Key('placement-start-date-field')))
+            .dy,
+        tester.getTopLeft(find.byKey(const Key('placement-deadline-field'))).dy,
+      );
+    }
+
+    final defaultTops = await dateFieldTops(enabled: false);
+    expect(defaultTops.$1, defaultTops.$2);
+    final optInTops = await dateFieldTops(enabled: true);
+    expect(optInTops.$2, greaterThan(optInTops.$1));
+  });
 
   testWidgets(
     'confirming discards disclosed drafts and removes the aggregate',
@@ -521,8 +583,15 @@ void main() {
             .enabled,
         isFalse,
       );
-      await tester.ensureVisible(
+      await tester.scrollUntilVisible(
         find.byKey(const Key('reopen-placement-action')),
+        300,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const Key('placement-management-editor')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('reopen-placement-action')));
@@ -609,6 +678,7 @@ Future<void> _pump(
   WidgetTester tester,
   Widget child, {
   required Size size,
+  TextScaler textScaler = TextScaler.noScaling,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -617,6 +687,10 @@ Future<void> _pump(
   await tester.pumpWidget(
     MaterialApp(
       theme: buildVariantFTheme(),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+        child: child!,
+      ),
       home: Scaffold(body: SafeArea(child: child)),
     ),
   );

@@ -103,6 +103,29 @@ void main() {
     },
   );
 
+  test('collection mean-error allowance does not weaken the default bound', () {
+    final expected = img.Image(width: 100, height: 100)
+      ..clear(img.ColorRgb8(245, 245, 245));
+    final actual = img.Image.from(expected);
+
+    for (var index = 0; index < 200; index++) {
+      final position = (index * 37) % (actual.width * actual.height);
+      actual.setPixelRgb(
+        position % actual.width,
+        position ~/ actual.width,
+        181,
+        181,
+        181,
+      );
+    }
+
+    expect(proofImagesMatch(expected, actual), isFalse);
+    expect(
+      proofImagesMatch(expected, actual, meanChannelErrorTolerance: .0038),
+      isTrue,
+    );
+  });
+
   test(
     'reconfiguring a proof comparator replaces its prior tolerance',
     () async {

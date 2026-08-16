@@ -1,0 +1,20 @@
+{
+  "issue": 146,
+  "themeId": "variant-f",
+  "rendererId": "containment-drone-concept-renderer-v2",
+  "fixture": "fictional-family-medicine",
+  "platform": "windows-deterministic-candidate",
+  "runtimeAcceptance": "candidate-pending-maintainer-review",
+  "physicalAndroidApproval": "pending-fresh-sm-x920-run",
+  "proofs": {
+    "calendar-landscape-1536x1024.png": "01ad2386fd4e2f6d8ee12cd7ae558980fb11b99453f48cd31ff5e9ad1994b460",
+    "calendar-portrait-900x1440.png": "17f5e502a534d88840eebc754ed0709ed348e9812c676c04a217b7a7fb6a77c1",
+    "calendar-portrait-200-percent-900x1440.png": "7c3dfec77d2666be183029c1e235b6568b643d94cc796a7b5ff6d4520b99c800",
+    "candidate-v3-concept-vs-runtime-landscape-1536x1024.png": "6460f10096a8c18b26713bee13c5fbb845c5b8d03279e901c8c2960e42ae6874",
+    "theme-gallery-runtime-variant-f-v3.png": "3ceeabe7f4e07e032ac21e813d660675810c27e349da9820574afc397ae7ee11"
+  },
+  "containmentAssetSha256": {
+    "chassis-landscape-v3.png": "ecebd41e754f57dbc37a49089b457b14693602a7755303176b20b257e4f91903",
+    "chassis-portrait-v3.png": "fdb1c51fe0d61c0085bc332aff7e8fd96816c4d001af9a8745f6d42d9591b56c"
+  }
+}

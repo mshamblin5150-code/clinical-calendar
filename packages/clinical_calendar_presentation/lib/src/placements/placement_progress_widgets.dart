@@ -106,6 +106,7 @@ final class PlacementProgressWheel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = snapshot.progress;
+    final detailsScope = PlacementProgressDetailsScope.maybeOf(context);
     final fractions = _progressWheelFractions(progress);
     final instrument = GraphiteInstrumentScope.isActive(context);
     final touchWording = _usesTouchWording(touch);
@@ -117,13 +118,15 @@ final class PlacementProgressWheel extends StatelessWidget {
         '${_minutes(progress.scheduledMinutes)} Scheduled Hours, '
         '${_minutes(progress.unscheduledMinutes)} Unscheduled Hours, '
         '${_minutes(progress.overTargetMinutes)} Over-Target Hours. '
-        '${touchWording ? 'Tap' : 'Click'} to show the next Clinical Placement.';
+        '${detailsScope == null ? '${touchWording ? 'Tap' : 'Click'} to show the next Clinical Placement.' : '${touchWording ? 'Tap' : 'Click'} for detailed Clinical Placement progress.'}';
     return Semantics(
       button: true,
       label: semantics,
       child: InkWell(
         key: const Key('placement-progress-wheel'),
-        onTap: onCycle,
+        onTap: detailsScope == null
+            ? onCycle
+            : () => detailsScope.onOpenDetails(snapshot),
         customBorder: const CircleBorder(),
         child: SizedBox.square(
           dimension: effectiveDiameter,
@@ -134,18 +137,31 @@ final class PlacementProgressWheel extends StatelessWidget {
             unscheduledFraction: fractions.unscheduled,
             overTargetFraction: fractions.overTarget,
             instrument: instrument,
+            segmented:
+                PlacementProgressPanelPolicy.maybeOf(context)?.segmentedWheel ??
+                false,
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _minutes(progress.completedMinutes),
+                    detailsScope == null
+                        ? _minutes(progress.completedMinutes)
+                        : snapshot.placement.name,
+                    textAlign: detailsScope == null ? null : TextAlign.center,
+                    maxLines: detailsScope == null ? null : 2,
+                    overflow: detailsScope == null
+                        ? null
+                        : TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                   Text(
-                    'completed',
+                    detailsScope == null
+                        ? 'completed'
+                        : '${touchWording ? 'Tap' : 'Click'} for details',
+                    textAlign: detailsScope == null ? null : TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -158,6 +174,26 @@ final class PlacementProgressWheel extends StatelessWidget {
   }
 }
 
+/// Opt-in interaction policy used by a theme-owned progress instrument.
+/// The shared progress widget remains the source of metrics and semantics;
+/// only the public action changes from cycling to opening live details.
+final class PlacementProgressDetailsScope extends InheritedWidget {
+  const PlacementProgressDetailsScope({
+    required this.onOpenDetails,
+    required super.child,
+    super.key,
+  });
+
+  final ValueChanged<PlacementSnapshot> onOpenDetails;
+
+  static PlacementProgressDetailsScope? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<PlacementProgressDetailsScope>();
+
+  @override
+  bool updateShouldNotify(PlacementProgressDetailsScope oldWidget) =>
+      onOpenDetails != oldWidget.onOpenDetails;
+}
+
 /// Shared production wheel graphic used by the live progress surface and
 /// deterministic concept evidence. Fractions are normalized to the target.
 final class PlacementProgressWheelGraphic extends StatelessWidget {
@@ -167,20 +203,42 @@ final class PlacementProgressWheelGraphic extends StatelessWidget {
     required this.unscheduledFraction,
     this.overTargetFraction = 0,
     this.instrument = false,
+    this.segmented = false,
     required this.child,
     super.key,
   });
+
+  factory PlacementProgressWheelGraphic.forProgress({
+    required ClinicalPlacementProgress progress,
+    bool instrument = false,
+    bool segmented = false,
+    required Widget child,
+    Key? key,
+  }) {
+    final fractions = _progressWheelFractions(progress);
+    return PlacementProgressWheelGraphic(
+      key: key,
+      completedFraction: fractions.completed,
+      scheduledFraction: fractions.scheduled,
+      unscheduledFraction: fractions.unscheduled,
+      overTargetFraction: fractions.overTarget,
+      instrument: instrument,
+      segmented: segmented,
+      child: child,
+    );
+  }
 
   final double completedFraction;
   final double scheduledFraction;
   final double unscheduledFraction;
   final double overTargetFraction;
   final bool instrument;
+  final bool segmented;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: _ProgressWheelPainter(
+  Widget build(BuildContext context) {
+    final painter = _ProgressWheelPainter(
       completedFraction: completedFraction,
       scheduledFraction: scheduledFraction,
       unscheduledFraction: unscheduledFraction,
@@ -190,9 +248,33 @@ final class PlacementProgressWheelGraphic extends StatelessWidget {
         context,
       ).extension<ClinicalCalendarAdditiveColors>(),
       instrument: instrument,
-    ),
-    child: child,
-  );
+      segmented: segmented,
+    );
+    if (!segmented) {
+      return CustomPaint(painter: painter, child: child);
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final centerDiameter = constraints.biggest.shortestSide * .46;
+        return CustomPaint(
+          key: const Key('containment-progress-instrument'),
+          painter: painter,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Center(
+                child: SizedBox.square(
+                  key: const Key('containment-progress-center-disk'),
+                  dimension: centerDiameter,
+                ),
+              ),
+              child,
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// Opt-in layout policy for a theme-owned progress bay.
@@ -203,6 +285,9 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
     required this.compactLedger,
     this.conceptActionRail = false,
     this.emphasizeProjection = false,
+    this.segmentedWheel = false,
+    this.scrollContent = false,
+    this.wheelDiameter,
     required super.child,
     super.key,
   });
@@ -212,6 +297,9 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
   final bool compactLedger;
   final bool conceptActionRail;
   final bool emphasizeProjection;
+  final bool segmentedWheel;
+  final bool scrollContent;
+  final double? wheelDiameter;
 
   static PlacementProgressPanelPolicy? maybeOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<PlacementProgressPanelPolicy>();
@@ -222,13 +310,22 @@ final class PlacementProgressPanelPolicy extends InheritedWidget {
       wheelPadding != oldWidget.wheelPadding ||
       compactLedger != oldWidget.compactLedger ||
       conceptActionRail != oldWidget.conceptActionRail ||
-      emphasizeProjection != oldWidget.emphasizeProjection;
+      emphasizeProjection != oldWidget.emphasizeProjection ||
+      segmentedWheel != oldWidget.segmentedWheel ||
+      scrollContent != oldWidget.scrollContent ||
+      wheelDiameter != oldWidget.wheelDiameter;
 }
 
 /// Marks a placement panel embedded inside theme-owned housing so shared
 /// content does not paint a second tactical frame.
 final class EmbeddedPlacementPanelInterior extends InheritedWidget {
-  const EmbeddedPlacementPanelInterior({required super.child, super.key});
+  const EmbeddedPlacementPanelInterior({
+    required super.child,
+    this.outerScrollOwnsVerticalOverflow = false,
+    super.key,
+  });
+
+  final bool outerScrollOwnsVerticalOverflow;
 
   static bool isActive(BuildContext context) =>
       context
@@ -237,8 +334,16 @@ final class EmbeddedPlacementPanelInterior extends InheritedWidget {
           >() !=
       null;
 
+  static bool outerScrollOwnsOverflow(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<EmbeddedPlacementPanelInterior>()
+          ?.outerScrollOwnsVerticalOverflow ??
+      false;
+
   @override
-  bool updateShouldNotify(EmbeddedPlacementPanelInterior oldWidget) => false;
+  bool updateShouldNotify(EmbeddedPlacementPanelInterior oldWidget) =>
+      outerScrollOwnsVerticalOverflow !=
+      oldWidget.outerScrollOwnsVerticalOverflow;
 }
 
 final class PlacementProgressRail extends StatefulWidget {
@@ -347,6 +452,7 @@ final class _PlacementProgressPanelState extends State<PlacementProgressPanel> {
                         snapshot: snapshot,
                         touch: widget.touch,
                         onCycle: widget.onCycle,
+                        diameter: policy?.wheelDiameter ?? 142,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -363,6 +469,7 @@ final class _PlacementProgressPanelState extends State<PlacementProgressPanel> {
                         snapshot: snapshot,
                         touch: widget.touch,
                         onCycle: widget.onCycle,
+                        diameter: policy?.wheelDiameter ?? 142,
                       ),
                     ),
                   ),
@@ -1066,6 +1173,7 @@ final class _ProgressWheelPainter extends CustomPainter {
     required this.colors,
     required this.additiveColors,
     this.instrument = false,
+    this.segmented = false,
   });
   final double completedFraction;
   final double scheduledFraction;
@@ -1074,9 +1182,14 @@ final class _ProgressWheelPainter extends CustomPainter {
   final ClinicalCalendarColors colors;
   final ClinicalCalendarAdditiveColors? additiveColors;
   final bool instrument;
+  final bool segmented;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (segmented) {
+      _paintContainmentSegments(canvas, size);
+      return;
+    }
     if (instrument) {
       _paintInstrumentTicks(canvas, size);
     }
@@ -1135,7 +1248,138 @@ final class _ProgressWheelPainter extends CustomPainter {
       oldDelegate.overTargetFraction != overTargetFraction ||
       oldDelegate.colors != colors ||
       oldDelegate.additiveColors != additiveColors ||
-      oldDelegate.instrument != instrument;
+      oldDelegate.instrument != instrument ||
+      oldDelegate.segmented != segmented;
+
+  void _paintContainmentSegments(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final diameter = size.shortestSide;
+    final outerRadius = diameter * .49;
+    final segmentOuterRadius = diameter * .405;
+    final segmentInnerRadius = diameter * .292;
+    const count = 48;
+    const gap = .026;
+    final completedCount = (completedFraction * count).round().clamp(0, count);
+    final scheduledCount = (scheduledFraction * count).round().clamp(
+      0,
+      count - completedCount,
+    );
+    final instrumentGreen = additiveColors?.completed ?? colors.clinical;
+    final scheduledColor = colors.scheduled;
+
+    canvas.drawCircle(
+      center.translate(0, diameter * .018),
+      outerRadius,
+      Paint()..color = const Color(0xB0000000),
+    );
+    for (final ring in <(double, double, Color)>[
+      (outerRadius, diameter * .035, const Color(0xFF090D0A)),
+      (diameter * .462, diameter * .018, const Color(0xFF5E675E)),
+      (diameter * .438, diameter * .012, const Color(0xFF171F19)),
+      (diameter * .424, diameter * .008, const Color(0xFF7A8279)),
+      (diameter * .274, diameter * .020, const Color(0xFF0A0E0B)),
+      (diameter * .252, diameter * .008, const Color(0xFF596259)),
+    ]) {
+      canvas.drawCircle(
+        center,
+        ring.$1,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = ring.$2
+          ..color = ring.$3,
+      );
+    }
+
+    final centerRect = Rect.fromCircle(center: center, radius: diameter * .23);
+    canvas.drawCircle(
+      center,
+      diameter * .23,
+      Paint()
+        ..shader = const RadialGradient(
+          colors: [Color(0xFF101A12), Color(0xFF030705)],
+          stops: [.0, 1],
+        ).createShader(centerRect),
+    );
+    canvas.drawCircle(
+      center,
+      diameter * .23,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = diameter * .012
+        ..color = const Color(0xFF252E27),
+    );
+
+    for (var index = 0; index < count; index++) {
+      final angle = -math.pi / 2 + index * math.pi * 2 / count;
+      final sweep = math.pi * 2 / count - gap;
+      final completed = index < completedCount;
+      final scheduled =
+          index >= completedCount && index < completedCount + scheduledCount;
+      final outer = Rect.fromCircle(center: center, radius: segmentOuterRadius);
+      final inner = Rect.fromCircle(center: center, radius: segmentInnerRadius);
+      final path = Path()
+        ..arcTo(outer, angle, sweep, false)
+        ..arcTo(inner, angle + sweep, -sweep, false)
+        ..close();
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = completed
+              ? instrumentGreen
+              : scheduled
+              ? instrumentGreen.withValues(alpha: .68)
+              : const Color(0xFF1D2A1E)
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = const Color(0xFF050805)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = diameter * .0035,
+      );
+      if (scheduled) {
+        canvas.drawArc(
+          Rect.fromCircle(center: center, radius: diameter * .282),
+          angle,
+          sweep,
+          false,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = diameter * .018
+            ..color = scheduledColor,
+        );
+      }
+    }
+
+    final hardwarePaint = Paint()
+      ..color = const Color(0xFF697169)
+      ..strokeWidth = diameter * .008
+      ..strokeCap = StrokeCap.square;
+    for (var index = 0; index < 24; index++) {
+      final angle = index * math.pi * 2 / 24;
+      final inner = diameter * (index.isEven ? .43 : .445);
+      final outer = diameter * .475;
+      canvas.drawLine(
+        center + Offset(math.cos(angle), math.sin(angle)) * inner,
+        center + Offset(math.cos(angle), math.sin(angle)) * outer,
+        hardwarePaint,
+      );
+    }
+
+    if (overTargetFraction > 0) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: diameter * .472),
+        -math.pi / 2,
+        math.pi * 2 * overTargetFraction.clamp(0.0, 1.0),
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(2, diameter * .018)
+          ..color = additiveColors?.overTarget ?? colors.primaryText,
+      );
+    }
+  }
 
   void _paintInstrumentTicks(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
@@ -1368,7 +1612,11 @@ final class _TacticalPanel extends StatelessWidget {
         if (expandChild) Expanded(child: child) else child,
       ],
     );
-    final adaptiveContent = enlargedText
+    final policyRequestsScroll =
+        PlacementProgressPanelPolicy.maybeOf(context)?.scrollContent ?? false;
+    final adaptiveContent =
+        (policyRequestsScroll || enlargedText) &&
+            !EmbeddedPlacementPanelInterior.outerScrollOwnsOverflow(context)
         ? SingleChildScrollView(child: content)
         : content;
     if (FederationClassicPanelScope.isActive(context)) {

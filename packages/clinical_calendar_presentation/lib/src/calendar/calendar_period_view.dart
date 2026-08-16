@@ -67,6 +67,7 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
     this.useConceptMonthMarks = false,
     this.suppressProtectedHatch = false,
     this.clipDayDecoration = false,
+    this.allowLowHeightMonthScroll = false,
     this.useEnlargedTextLandscapeReflow,
     required super.child,
     super.key,
@@ -91,6 +92,7 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
   final bool useConceptMonthMarks;
   final bool suppressProtectedHatch;
   final bool clipDayDecoration;
+  final bool allowLowHeightMonthScroll;
   final bool? useEnlargedTextLandscapeReflow;
 
   static bool usesBoundedMonthGrid(BuildContext context) =>
@@ -180,6 +182,12 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
           ?.clipDayDecoration ??
       false;
 
+  static bool allowsLowHeightMonthScroll(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<CalendarPeriodViewportPolicy>()
+          ?.allowLowHeightMonthScroll ??
+      false;
+
   @override
   bool updateShouldNotify(CalendarPeriodViewportPolicy oldWidget) =>
       useBoundedMonthGrid != oldWidget.useBoundedMonthGrid ||
@@ -202,6 +210,7 @@ final class CalendarPeriodViewportPolicy extends InheritedWidget {
       useConceptMonthMarks != oldWidget.useConceptMonthMarks ||
       suppressProtectedHatch != oldWidget.suppressProtectedHatch ||
       clipDayDecoration != oldWidget.clipDayDecoration ||
+      allowLowHeightMonthScroll != oldWidget.allowLowHeightMonthScroll ||
       useEnlargedTextLandscapeReflow !=
           oldWidget.useEnlargedTextLandscapeReflow;
 }
@@ -1142,28 +1151,55 @@ final class _MonthView extends StatelessWidget {
       return _buildMonthGrid(context, dates, weekdayLabels, null);
     }
     return LayoutBuilder(
-      builder: (context, constraints) => Column(
-        key: const Key('month-view'),
-        children: [
-          _weekdayHeader(
-            context,
-            weekdayLabels,
-            height: weekdayHeaderHeight,
-            colored:
-                Theme.of(context)
-                    .extension<ClinicalCalendarPresentationPolicy>()
-                    ?.colorWeekdayHeader ??
-                false,
-          ),
-          _monthGrid(
-            context,
-            dates,
-            constraints.maxHeight - (showLegend ? 38 : 0),
-            weekdayHeaderHeight,
-          ),
-          if (showLegend) const _BotanicalMonthLegend(),
-        ],
-      ),
+      builder: (context, constraints) {
+        final coloredHeader =
+            Theme.of(context)
+                .extension<ClinicalCalendarPresentationPolicy>()
+                ?.colorWeekdayHeader ??
+            false;
+        final header = _weekdayHeader(
+          context,
+          weekdayLabels,
+          height: weekdayHeaderHeight,
+          colored: coloredHeader,
+        );
+        final legendHeight = showLegend ? 38.0 : 0.0;
+        final minimumGridHeight = 44.0 * weekRows;
+        if (CalendarPeriodViewportPolicy.allowsLowHeightMonthScroll(context) &&
+            constraints.maxHeight <
+                weekdayHeaderHeight + minimumGridHeight + legendHeight) {
+          return Column(
+            key: const Key('month-view'),
+            children: [
+              header,
+              Expanded(
+                child: SingleChildScrollView(
+                  child: _monthGrid(
+                    context,
+                    dates,
+                    weekdayHeaderHeight + minimumGridHeight,
+                    weekdayHeaderHeight,
+                  ),
+                ),
+              ),
+              if (showLegend) const _BotanicalMonthLegend(),
+            ],
+          );
+        }
+        return Column(
+          key: const Key('month-view'),
+          children: [
+            header,
+            _monthGrid(
+              context,
+              dates,
+              constraints.maxHeight - legendHeight,
+              weekdayHeaderHeight,
+            ),
+            if (showLegend) const _BotanicalMonthLegend(),
+          ],
+        );
+      },
     );
   }
 

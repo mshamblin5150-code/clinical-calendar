@@ -39,6 +39,10 @@ flutter:
     - assets/coastal_light_raster/dashboard-chassis-landscape-v1.png
     - assets/botanical_study_raster/panel-nine-slice-v1.png
     - assets/botanical_study_raster/dashboard-chassis-landscape-v2.png
+    - assets/containment_drone_v2/chassis-conduit-bridge.png
+    - assets/containment_drone_v2/panel-nine-slice-v2.png
+    - assets/containment_drone_v2/chassis-landscape-v3.png
+    - assets/containment_drone_v2/chassis-portrait-v3.png
     - assets/heritage_field_notes_fonts/OFL.txt
     - assets/heritage_field_notes_materials/field-archive-chassis.png
     - assets/heritage_field_notes_raster/panel-nine-slice-v1.png

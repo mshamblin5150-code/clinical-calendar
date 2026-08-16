@@ -352,6 +352,7 @@ ThemeData buildVariantFTheme({bool enhancedAccessibility = false}) {
         side: const BorderSide(color: VariantFColors.primary),
         elevation: 0,
         textStyle: const TextStyle(
+          fontFamily: 'Roboto',
           fontWeight: FontWeight.w700,
           letterSpacing: .7,
         ),
@@ -365,6 +366,7 @@ ThemeData buildVariantFTheme({bool enhancedAccessibility = false}) {
         minimumSize: const Size(44, 44),
         side: const BorderSide(color: VariantFColors.controlBorder),
         textStyle: const TextStyle(
+          fontFamily: 'Roboto',
           fontWeight: FontWeight.w700,
           letterSpacing: .7,
         ),
@@ -375,6 +377,7 @@ ThemeData buildVariantFTheme({bool enhancedAccessibility = false}) {
       style: TextButton.styleFrom(
         foregroundColor: VariantFColors.primary,
         textStyle: const TextStyle(
+          fontFamily: 'Roboto',
           fontWeight: FontWeight.w700,
           letterSpacing: .7,
         ),
@@ -400,7 +403,11 @@ ThemeData buildVariantFTheme({bool enhancedAccessibility = false}) {
           BeveledRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
         textStyle: const WidgetStatePropertyAll(
-          TextStyle(fontWeight: FontWeight.w700, letterSpacing: .6),
+          TextStyle(
+            fontFamily: 'Roboto',
+            fontWeight: FontWeight.w700,
+            letterSpacing: .6,
+          ),
         ),
       ),
     ),

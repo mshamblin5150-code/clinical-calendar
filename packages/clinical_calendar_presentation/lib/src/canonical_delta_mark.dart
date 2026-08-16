@@ -5,7 +5,8 @@ const canonicalDeltaMarkAsset = 'assets/shared_brand/axion-delta-mark.png';
 /// The single raster source for the Axion delta used by concept themes.
 ///
 /// Theme shells own this widget's size, placement, semantics, and optional
-/// color treatment. Containment Drone 47-Alpha does not use this mark.
+/// color treatment. Issue #146 extends this canonical source to Containment
+/// Drone 47-Alpha while leaving its surrounding crown theme-owned.
 final class CanonicalDeltaMark extends StatelessWidget {
   const CanonicalDeltaMark({
     this.size,

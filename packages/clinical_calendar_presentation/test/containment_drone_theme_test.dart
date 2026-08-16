@@ -1,0 +1,753 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_presentation/src/canonical_delta_mark.dart';
+import 'package:crypto/crypto.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'support/placement_progress_harness.dart';
+
+void main() {
+  const containment = VariantFThemeBundle();
+
+  test('v2 proof manifest pins the exact runtime evidence', () async {
+    final packageRoot =
+        Directory.current.path.endsWith('clinical_calendar_presentation')
+        ? Directory.current
+        : Directory('packages/clinical_calendar_presentation');
+    final repositoryRoot = packageRoot.parent.parent;
+    final proofRoot = Directory(
+      '${packageRoot.path}/test/baselines/containment_drone_v2/rejected/d4959ec',
+    );
+    final manifest =
+        jsonDecode(
+              await File(
+                '${repositoryRoot.path}/docs/themes/acceptance/proofs/'
+                'containment-drone-47-alpha-redesign-v2/'
+                'runtime-proof-manifest.json',
+              ).readAsString(),
+            )
+            as Map<String, dynamic>;
+    final proofs = (manifest['proofs'] as Map<String, dynamic>)
+        .cast<String, String>();
+    final containmentAssets =
+        (manifest['containmentAssetSha256'] as Map<String, dynamic>)
+            .cast<String, String>();
+
+    expect(manifest['rendererId'], containmentDroneRendererId);
+    expect(manifest['platform'], 'cross-host-reference');
+    expect(manifest['physicalAndroidApproval'], 'rejected');
+    expect(
+      Directory('${proofRoot.path}/reference')
+          .listSync()
+          .whereType<File>()
+          .map((file) => file.uri.pathSegments.last)
+          .toSet()
+          .length,
+      17,
+    );
+
+    final pinnedFiles = <String, File>{
+      for (final name in [
+        'calendar-landscape-1536x1024.png',
+        'calendar-portrait-900x1440.png',
+        'calendar-portrait-200-percent-900x1440.png',
+      ])
+        name: File('${proofRoot.path}/reference/$name'),
+      'concept-vs-runtime-landscape-1536x1024.png': File(
+        '${repositoryRoot.path}/docs/themes/acceptance/proofs/'
+        'containment-drone-47-alpha-redesign-v2/'
+        'concept-vs-runtime-landscape-1536x1024.png',
+      ),
+      'theme-gallery-runtime-variant-f-v2.png': File(
+        '${packageRoot.path}/assets/theme_gallery_runtime/variant-f-v2.png',
+      ),
+    };
+    for (final entry in pinnedFiles.entries) {
+      expect(
+        sha256.convert(await entry.value.readAsBytes()).toString(),
+        proofs[entry.key],
+        reason: entry.key,
+      );
+    }
+    for (final name in [
+      'chassis-conduit-bridge.png',
+      'panel-nine-slice-v2.png',
+    ]) {
+      final asset = File(
+        '${packageRoot.path}/assets/containment_drone_v2/$name',
+      );
+      expect(
+        sha256.convert(await asset.readAsBytes()).toString(),
+        containmentAssets[name],
+        reason: name,
+      );
+    }
+  });
+
+  test('Containment Drone owns the approved concept renderer', () {
+    expect(containment.id, variantFThemeId);
+    expect(containment.metadata.displayName, 'Containment Drone 47-Alpha');
+    expect(containment.shellRenderer, isA<ContainmentDroneShellRenderer>());
+    expect(containment.shellRenderer.rendererId, containmentDroneRendererId);
+    expect(containment.frame.assetPaths, contains(canonicalDeltaMarkAsset));
+    expect(containment.frame.assetPaths, contains(containmentDronePanelAsset));
+    expect(
+      containment.frame.assetPaths,
+      containsAll([
+        containmentDroneLandscapeChassisAsset,
+        containmentDronePortraitChassisAsset,
+      ]),
+    );
+    expect(
+      containment.shellRenderer.buildFrame(child: const SizedBox.shrink()),
+      isA<ContainmentDroneFrame>(),
+    );
+  });
+
+  test('rejected candidate v3 remains archived and hash-pinned', () async {
+    final packageRoot =
+        Directory.current.path.endsWith('clinical_calendar_presentation')
+        ? Directory.current
+        : Directory('packages/clinical_calendar_presentation');
+    final repositoryRoot = packageRoot.parent.parent;
+    final proofRoot = Directory(
+      '${repositoryRoot.path}/docs/themes/acceptance/proofs/'
+      'containment-drone-47-alpha-redesign-v2/rejected/a28bdb8',
+    );
+    final manifest =
+        jsonDecode(
+              await File(
+                '${proofRoot.path}/candidate-v3-runtime-proof-manifest.json',
+              ).readAsString(),
+            )
+            as Map<String, dynamic>;
+    final proofs = (manifest['proofs'] as Map<String, dynamic>)
+        .cast<String, String>();
+    final assets = (manifest['containmentAssetSha256'] as Map<String, dynamic>)
+        .cast<String, String>();
+
+    expect(manifest['physicalAndroidApproval'], 'pending-fresh-sm-x920-run');
+    final proofFiles = <String, File>{
+      'calendar-landscape-1536x1024.png': File(
+        '${packageRoot.path}/test/baselines/containment_drone_v2/rejected/'
+        'a28bdb8/reference/'
+        'calendar-landscape-1536x1024.png',
+      ),
+      'calendar-portrait-900x1440.png': File(
+        '${packageRoot.path}/test/baselines/containment_drone_v2/rejected/'
+        'a28bdb8/reference/'
+        'calendar-portrait-900x1440.png',
+      ),
+      'calendar-portrait-200-percent-900x1440.png': File(
+        '${packageRoot.path}/test/baselines/containment_drone_v2/rejected/'
+        'a28bdb8/reference/'
+        'calendar-portrait-200-percent-900x1440.png',
+      ),
+      'candidate-v3-concept-vs-runtime-landscape-1536x1024.png': File(
+        '${proofRoot.path}/'
+        'candidate-v3-concept-vs-runtime-landscape-1536x1024.png',
+      ),
+      'theme-gallery-runtime-variant-f-v3.png': File(
+        '${packageRoot.path}/test/baselines/containment_drone_v2/rejected/'
+        'a28bdb8/theme-gallery-shipped-variant-f-v3.png',
+      ),
+    };
+    for (final entry in proofFiles.entries) {
+      expect(
+        sha256.convert(await entry.value.readAsBytes()).toString(),
+        proofs[entry.key],
+        reason: entry.key,
+      );
+    }
+    for (final entry in assets.entries) {
+      final file = File(
+        '${packageRoot.path}/assets/containment_drone_v2/${entry.key}',
+      );
+      expect(
+        sha256.convert(await file.readAsBytes()).toString(),
+        entry.value,
+        reason: entry.key,
+      );
+    }
+  });
+
+  test('candidate v5 pins every deterministic review surface', () async {
+    final packageRoot =
+        Directory.current.path.endsWith('clinical_calendar_presentation')
+        ? Directory.current
+        : Directory('packages/clinical_calendar_presentation');
+    final repositoryRoot = packageRoot.parent.parent;
+    final proofRoot = Directory(
+      '${repositoryRoot.path}/docs/themes/acceptance/proofs/'
+      'containment-drone-47-alpha-redesign-v2',
+    );
+    final manifest =
+        jsonDecode(
+              await File(
+                '${proofRoot.path}/candidate-v5-runtime-proof-manifest.json',
+              ).readAsString(),
+            )
+            as Map<String, dynamic>;
+    final proofs = (manifest['proofs'] as Map<String, dynamic>)
+        .cast<String, String>();
+    final destinationProofs =
+        (manifest['destinationProofs'] as Map<String, dynamic>)
+            .cast<String, String>();
+
+    expect(
+      manifest['runtimeAcceptance'],
+      'candidate-pending-maintainer-deterministic-review',
+    );
+    expect(
+      manifest['physicalAndroidApproval'],
+      'not-run-awaiting-deterministic-approval',
+    );
+    for (final entry in proofs.entries) {
+      final file = File('${proofRoot.path}/${entry.key}');
+      expect(file.existsSync(), isTrue, reason: entry.key);
+      expect(
+        sha256.convert(await file.readAsBytes()).toString(),
+        entry.value,
+        reason: entry.key,
+      );
+    }
+    for (final entry in destinationProofs.entries) {
+      final file = File(
+        '${packageRoot.path}/test/baselines/containment_drone_v2/reference/'
+        '${entry.key}',
+      );
+      expect(file.existsSync(), isTrue, reason: entry.key);
+      expect(
+        sha256.convert(await file.readAsBytes()).toString(),
+        entry.value,
+        reason: entry.key,
+      );
+    }
+    final galleryGolden = File(
+      '${packageRoot.path}/test/goldens/theme_gallery_runtime/variant-f-v5.png',
+    );
+    final galleryAsset = File(
+      '${packageRoot.path}/assets/theme_gallery_runtime/variant-f-v5.png',
+    );
+    expect(await galleryAsset.readAsBytes(), await galleryGolden.readAsBytes());
+  });
+
+  test('the other six themes keep their existing renderer lanes', () {
+    const renderers = <ClinicalCalendarShellRenderer>[
+      GraphiteShellRenderer(),
+      FederationClassicShellRenderer(),
+      Federation2399ShellRenderer(),
+      HeritageFieldNotesShellRenderer(),
+      CoastalLightShellRenderer(),
+      BotanicalStudyShellRenderer(),
+    ];
+
+    for (final renderer in renderers) {
+      expect(renderer, isNot(isA<ContainmentDroneShellRenderer>()));
+    }
+  });
+
+  testWidgets('landscape composition exposes the approved live regions', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1536, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var menuCount = 0;
+    var addCount = 0;
+    var attentionCount = 0;
+    final destinations = <ClinicalCalendarDestination>[];
+
+    await tester.pumpWidget(
+      _app(
+        onOpenMenu: () => menuCount++,
+        onAddSchedule: () => addCount++,
+        onOpenAttention: () => attentionCount++,
+        onOpenDestination: destinations.add,
+      ),
+    );
+
+    expect(
+      find.byKey(const Key('containment-drone-landscape-shell')),
+      findsOneWidget,
+    );
+    expect(find.byType(ContainmentDroneChassis), findsOneWidget);
+    expect(find.byType(CanonicalDeltaMark), findsOneWidget);
+    expect(find.byKey(const Key('containment-drone-calendar-bay')), findsOne);
+    expect(find.byKey(const Key('containment-drone-placement-bay')), findsOne);
+    expect(find.byKey(const Key('containment-drone-planning-bay')), findsOne);
+    expect(find.byKey(const Key('containment-drone-insight-bay')), findsOne);
+    expect(
+      find.byKey(const Key('containment-drone-bottom-navigation')),
+      findsOne,
+    );
+
+    await tester.tap(find.byKey(const Key('application-menu-action')));
+    await tester.tap(find.byTooltip('Open Add Schedule'));
+    await tester.tap(find.byTooltip('Open Help'));
+    await tester.tap(find.byTooltip('Open Notifications'));
+    await tester.tap(find.byTooltip('Open Synchronization'));
+    await tester.tap(find.text('ATTENTION'));
+
+    expect(menuCount, 1);
+    expect(addCount, 1);
+    expect(attentionCount, 1);
+    expect(destinations, [
+      ClinicalCalendarDestination.help,
+      ClinicalCalendarDestination.notifications,
+      ClinicalCalendarDestination.synchronization,
+    ]);
+  });
+
+  testWidgets(
+    'landscape separates the concept crown and keeps it out of system chrome',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1536, 1024));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        _app(mediaPadding: const EdgeInsets.only(top: 48)),
+      );
+
+      final menuCrown = tester.getRect(
+        find.byKey(const Key('containment-drone-application-menu-crown')),
+      );
+      final commandCrown = tester.getRect(
+        find.byKey(const Key('containment-drone-command-actions-crown')),
+      );
+      final placementBay = tester.getRect(
+        find.byKey(const Key('containment-drone-placement-bay')),
+      );
+      final chassis = tester.getRect(
+        find.byKey(const Key('containment-drone-safe-paint-area')),
+      );
+
+      expect(chassis.top, greaterThanOrEqualTo(48));
+      expect(menuCrown.right, lessThanOrEqualTo(placementBay.right + 2));
+      expect(commandCrown.left, greaterThanOrEqualTo(placementBay.right));
+      expect(commandCrown.width, lessThan(1536 * .58));
+    },
+  );
+
+  testWidgets(
+    'landscape uses individually housed command cells and navigation keys',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1536, 1024));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_app());
+
+      final commandCrown = tester.getRect(
+        find.byKey(const Key('containment-drone-command-actions-crown')),
+      );
+      final commandCells = <Finder>[
+        find.byKey(const Key('containment-command-add-schedule')),
+        find.byKey(const Key('containment-command-help')),
+        find.byKey(const Key('containment-command-notifications')),
+        find.byKey(const Key('containment-command-synchronization')),
+      ];
+      final commandRects = commandCells.map(tester.getRect).toList();
+      for (final rect in commandRects) {
+        expect(rect.height, greaterThanOrEqualTo(50));
+        expect(rect.width, greaterThanOrEqualTo(125));
+        expect(commandCrown.contains(rect.topLeft), isTrue);
+        expect(commandCrown.contains(rect.bottomRight), isTrue);
+      }
+      for (var index = 1; index < commandRects.length; index++) {
+        expect(
+          commandRects[index].left - commandRects[index - 1].right,
+          greaterThanOrEqualTo(6),
+        );
+      }
+      expect(
+        find.byKey(const Key('containment-command-student-control')),
+        findsOneWidget,
+      );
+
+      final navigationKeys = <Finder>[
+        find.byKey(const Key('containment-navigation-today')),
+        find.byKey(const Key('containment-navigation-calendar')),
+        find.byKey(const Key('containment-navigation-placements')),
+        find.byKey(const Key('containment-navigation-attention')),
+        find.byKey(const Key('containment-navigation-settings')),
+      ];
+      final navigationRects = navigationKeys.map(tester.getRect).toList();
+      for (final rect in navigationRects) {
+        expect(rect.height, greaterThanOrEqualTo(58));
+        expect(rect.width, greaterThanOrEqualTo(180));
+      }
+      for (var index = 1; index < navigationRects.length; index++) {
+        expect(
+          navigationRects[index].left - navigationRects[index - 1].right,
+          greaterThanOrEqualTo(6),
+        );
+      }
+      expect(
+        find.byKey(const Key('containment-navigation-calendar-active')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'landscape insight and attention form the concept right instrument stack',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1536, 1024));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var attentionActionCount = 0;
+
+      await tester.pumpWidget(
+        _app(
+          slots: ResponsiveShellSlots(
+            centralContent: _slots.centralContent,
+            planningRegion: _slots.planningRegion,
+            placementDock: _slots.placementDock,
+            insightRail: _slots.insightRail,
+            mobilePlacementSummary: _slots.mobilePlacementSummary,
+            mobileAttention: Align(
+              alignment: Alignment.bottomCenter,
+              child: FilledButton(
+                key: const Key('proof-attention-action'),
+                onPressed: () => attentionActionCount++,
+                child: const Text('View all alerts'),
+              ),
+            ),
+            profileAvatar: _slots.profileAvatar,
+          ),
+        ),
+      );
+
+      final insight = tester.getRect(
+        find.byKey(const Key('containment-drone-insight-bay')),
+      );
+      final attention = tester.getRect(
+        find.byKey(const Key('containment-drone-attention-bay')),
+      );
+      final navigation = tester.getRect(
+        find.byKey(const Key('containment-drone-bottom-navigation')),
+      );
+
+      // Measured from the normative 1536x1024 concept: the attention housing
+      // starts near y=625 and continues to the navigation chassis near y=920.
+      expect(attention.top, lessThanOrEqualTo(1024 * .625));
+      expect(attention.height, greaterThanOrEqualTo(1024 * .27));
+      expect(attention.top - insight.bottom, inInclusiveRange(0, 12));
+      expect(attention.bottom, lessThanOrEqualTo(navigation.top));
+
+      await tester.tap(find.byKey(const Key('proof-attention-action')));
+      expect(attentionActionCount, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'portrait is an ordered scroll composition with fixed navigation',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1440));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_app());
+
+      expect(
+        find.byKey(const Key('containment-drone-portrait-shell')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('containment-drone-portrait-scroll')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('containment-drone-bottom-navigation')),
+        findsOneWidget,
+      );
+
+      final calendarTop = tester
+          .getTopLeft(find.byKey(const Key('containment-drone-calendar-bay')))
+          .dy;
+      final placementTop = tester
+          .getTopLeft(find.byKey(const Key('containment-drone-placement-bay')))
+          .dy;
+      final insightTop = tester
+          .getTopLeft(find.byKey(const Key('containment-drone-insight-bay')))
+          .dy;
+      final planningTop = tester
+          .getTopLeft(find.byKey(const Key('containment-drone-planning-bay')))
+          .dy;
+      expect(calendarTop, lessThan(placementTop));
+      expect(placementTop, insightTop);
+      expect(placementTop, lessThan(planningTop));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Containment wheel opens live placement details then shared management',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1536, 1024));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final destinations = <ClinicalCalendarDestination>[];
+      final harness = PlacementProgressHarness(
+        requireInitialSelfAssessments: true,
+      );
+      await harness.controller.load();
+
+      await tester.pumpWidget(
+        _app(
+          slots: ResponsiveShellSlots(
+            centralContent: const Text('Calendar'),
+            planningRegion: const Text('Planning'),
+            placementDock: const Text('Placements'),
+            insightRail: PlacementProgressPanel(
+              snapshot: harness.controller.activePlacement,
+              onCycle: () {},
+              touch: true,
+            ),
+            mobilePlacementSummary: const Text('Placements'),
+            mobileAttention: const Text('Attention'),
+            profileAvatar: const CircleAvatar(child: Text('AS')),
+          ),
+          onOpenDestination: destinations.add,
+        ),
+      );
+
+      final instrument = find.byKey(
+        const Key('containment-progress-instrument'),
+      );
+      expect(instrument, findsOneWidget);
+      final instrumentRect = tester.getRect(instrument);
+      expect(instrumentRect.width, greaterThanOrEqualTo(240));
+      expect(instrumentRect.height, instrumentRect.width);
+      expect(
+        find.byKey(const Key('containment-progress-center-disk')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('placement-progress-wheel')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('containment-placement-details')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('containment-placement-details-instrument')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('containment-placement-details-instrument')),
+          matching: find.byKey(const Key('containment-progress-instrument')),
+        ),
+        findsOneWidget,
+      );
+      for (final label in const [
+        'Completed Hours',
+        'Scheduled Hours',
+        'Remaining Hours',
+        'Unscheduled Hours',
+        'Over-Target Hours',
+        'UPCOMING CLINICAL SESSIONS',
+        'EVALUATION PLAN REQUIREMENTS',
+        'Initial Self-Assessment',
+        'Primary · Dr. Smith',
+        'Attached · Dr. Nguyen',
+      ]) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+      expect(
+        find.byKey(
+          const Key(
+            'placement-upcoming-session-50000000-0000-4000-8000-000000000000',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('08-20-2026 · 7:00 AM–7:00 PM'), findsOneWidget);
+      expect(find.text('Dr. Smith · UTC'), findsWidgets);
+      await tester.tap(find.byKey(const Key('manage-placement-from-details')));
+      await tester.pumpAndSettle();
+      expect(destinations, [ClinicalCalendarDestination.clinicalPlacements]);
+    },
+  );
+
+  testWidgets('destination shell is Containment-owned in both orientations', (
+    tester,
+  ) async {
+    for (final size in const [Size(1536, 1024), Size(900, 1440)]) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: containment.standardPresentation.createThemeData(),
+          home: containment.shellRenderer.buildDestination(
+            destination: ClinicalCalendarDestination.clinicalPlacements,
+            entry: DestinationEntry.applicationMenu,
+            onExit: _noop,
+            child: const Text('Live Clinical Placements destination'),
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const Key('containment-drone-destination-shell')),
+        findsOneWidget,
+      );
+      expect(find.byType(ContainmentDroneChassis), findsOneWidget);
+      expect(find.text('Live Clinical Placements destination'), findsOne);
+      expect(find.byKey(const Key('application-menu-action')), findsOneWidget);
+      expect(find.text('APPLICATION MENU'), findsOneWidget);
+      expect(
+        find.byKey(const Key('containment-destination-live-exit-control')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('containment-destination-identity-dial')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    }
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  });
+
+  testWidgets('default progress graphic stays outside Containment instrument', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: containment.standardPresentation.createThemeData(),
+        home: const SizedBox.square(
+          dimension: 200,
+          child: PlacementProgressWheelGraphic(
+            completedFraction: .5,
+            scheduledFraction: .25,
+            unscheduledFraction: .25,
+            child: SizedBox.shrink(),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const Key('containment-progress-instrument')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('containment-progress-center-disk')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact and 200 percent text preserve every required action', (
+    tester,
+  ) async {
+    for (final fixture in const [
+      (Size(320, 568), 1.0),
+      (Size(900, 1440), 2.0),
+      (Size(1536, 1024), 2.0),
+    ]) {
+      await tester.binding.setSurfaceSize(fixture.$1);
+      await tester.pumpWidget(_app(textScale: fixture.$2));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('application-menu-action')), findsOneWidget);
+      expect(find.byTooltip('Open Add Schedule'), findsOneWidget);
+      expect(
+        find.byKey(const Key('containment-drone-bottom-navigation')),
+        findsOneWidget,
+      );
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: '${fixture.$1} @ ${fixture.$2}x',
+      );
+    }
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  });
+
+  testWidgets('destination shell accepts all ten production identities', (
+    tester,
+  ) async {
+    for (final fixture in const [
+      (Size(320, 568), 1.0),
+      (Size(900, 1440), 1.0),
+      (Size(900, 1440), 2.0),
+      (Size(1536, 1024), 1.0),
+    ]) {
+      await tester.binding.setSurfaceSize(fixture.$1);
+      for (final destination in applicationMenuDestinations) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: containment.standardPresentation.createThemeData(),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(fixture.$2)),
+              child: child!,
+            ),
+            home: containment.shellRenderer.buildDestination(
+              destination: destination,
+              entry: DestinationEntry.applicationMenu,
+              onExit: _noop,
+              child: Text('Live ${destination.label} destination'),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          find.text('Live ${destination.label} destination'),
+          findsOneWidget,
+        );
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: '${destination.label} at ${fixture.$1} @ ${fixture.$2}x',
+        );
+      }
+    }
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  });
+}
+
+Widget _app({
+  ResponsiveShellSlots slots = _slots,
+  VoidCallback onOpenMenu = _noop,
+  ValueChanged<ClinicalCalendarDestination> onOpenDestination =
+      _ignoreDestination,
+  VoidCallback onOpenAttention = _noop,
+  VoidCallback onAddSchedule = _noop,
+  double textScale = 1,
+  EdgeInsets mediaPadding = EdgeInsets.zero,
+}) => MediaQuery(
+  data: MediaQueryData(
+    textScaler: TextScaler.linear(textScale),
+    padding: mediaPadding,
+  ),
+  child: MaterialApp(
+    theme: const VariantFVisualTheme().createThemeData(),
+    home: const VariantFThemeBundle().shellRenderer.build(
+      slots: slots,
+      environmentName: 'TEST',
+      onOpenMenu: onOpenMenu,
+      onOpenDestination: onOpenDestination,
+      onOpenAttention: onOpenAttention,
+      onAddSchedule: onAddSchedule,
+    ),
+  ),
+);
+
+const _slots = ResponsiveShellSlots(
+  centralContent: ColoredBox(color: Color(0xFF10231B), child: Text('Calendar')),
+  planningRegion: Text('Planning'),
+  placementDock: Text('Placements'),
+  insightRail: Text('Progress and attention'),
+  mobilePlacementSummary: Text('Placements'),
+  mobileAttention: Text('Attention'),
+  profileAvatar: CircleAvatar(child: Text('AS')),
+);
+
+void _noop() {}
+
+void _ignoreDestination(ClinicalCalendarDestination _) {}
