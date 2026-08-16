@@ -397,16 +397,22 @@ final class SqliteSynchronizationRepository
         'The synchronization conflict is already resolved.',
       );
     }
-    final local = _snapshot(_text(row, 'local_snapshot_json'));
-    final remote = _snapshot(_text(row, 'remote_snapshot_json'));
+    final localSource = _text(row, 'local_snapshot_json');
+    final remoteSource = _text(row, 'remote_snapshot_json');
     final selected = switch (choice) {
-      SynchronizationConflictResolutionChoice.localVersion => local,
-      SynchronizationConflictResolutionChoice.remoteVersion => remote,
+      SynchronizationConflictResolutionChoice.localVersion => _snapshot(
+        localSource,
+      ),
+      SynchronizationConflictResolutionChoice.remoteVersion => _snapshot(
+        remoteSource,
+      ),
       SynchronizationConflictResolutionChoice.correctedVersion => null,
-      SynchronizationConflictResolutionChoice.deleteVersion => local,
+      SynchronizationConflictResolutionChoice.deleteVersion => _snapshot(
+        localSource,
+      ),
     };
     if (choice == SynchronizationConflictResolutionChoice.remoteVersion &&
-        !_isEnvelope(remote)) {
+        !_isEnvelope(selected!)) {
       throw const RepositoryException(
         RepositoryFailureKind.concurrentModification,
         'The remote version has not been received yet.',
@@ -416,8 +422,17 @@ final class SqliteSynchronizationRepository
         choice == SynchronizationConflictResolutionChoice.correctedVersion
         ? _correctedValue(correctedValueJson)
         : _snapshotValue(selected!);
-    final baseEnvelope = _isEnvelope(remote) ? remote : local;
-    if (!_isEnvelope(baseEnvelope)) {
+    final local = switch (choice) {
+      SynchronizationConflictResolutionChoice.localVersion ||
+      SynchronizationConflictResolutionChoice.deleteVersion => selected,
+      _ => _trySnapshot(localSource),
+    };
+    final remote =
+        choice == SynchronizationConflictResolutionChoice.remoteVersion
+        ? selected
+        : _trySnapshot(remoteSource);
+    final baseEnvelope = remote != null && _isEnvelope(remote) ? remote : local;
+    if (baseEnvelope == null || !_isEnvelope(baseEnvelope)) {
       throw const RepositoryException(
         RepositoryFailureKind.corruptData,
         'The conflict does not contain a complete record snapshot.',
@@ -971,6 +986,17 @@ final class SqliteSynchronizationRepository
     RemoteSynchronizationChange change,
     DateTime appliedAtUtc,
   ) {
+    final incoming = _trySnapshot(change.payloadJson);
+    if (incoming == null ||
+        !isCompleteConflictSnapshotEnvelope(
+          incoming,
+          expectedEntityType: change.entityType,
+          expectedEntityId: change.entityId,
+          expectedStudentId: _studentId,
+          expectedRevision: change.revision,
+        )) {
+      return;
+    }
     final rows = _database.select(
       '''SELECT id, remote_snapshot_json FROM sync_conflicts
         WHERE student_id = ? AND entity_type = ? AND entity_id = ?
@@ -978,8 +1004,17 @@ final class SqliteSynchronizationRepository
       [_studentId, change.entityType, change.entityId, change.revision],
     );
     for (final row in rows) {
-      final current = _snapshot(_text(row, 'remote_snapshot_json'));
-      if (_isEnvelope(current)) continue;
+      final current = _trySnapshot(_text(row, 'remote_snapshot_json'));
+      if (current != null &&
+          isCompleteConflictSnapshotEnvelope(
+            current,
+            expectedEntityType: change.entityType,
+            expectedEntityId: change.entityId,
+            expectedStudentId: _studentId,
+            expectedRevision: change.revision,
+          )) {
+        continue;
+      }
       _database.execute(
         '''UPDATE sync_conflicts SET remote_snapshot_json = ?,
           updated_at_utc = ?, revision = revision + 1 WHERE id = ?''',
@@ -1039,7 +1074,8 @@ final class SqliteSynchronizationRepository
     }
 
     add(entityType, entityId);
-    final snapshot = _snapshot(localSnapshotJson);
+    final snapshot = _trySnapshot(localSnapshotJson);
+    if (snapshot == null) return values.values.toList(growable: false);
     if (!_isEnvelope(snapshot)) return values.values.toList(growable: false);
     final value = _snapshotValue(snapshot);
     if (rejectionCode == 'schedule_conflict' &&
@@ -1128,7 +1164,8 @@ final class SqliteSynchronizationRepository
         rejectionCode != 'schedule_conflict') {
       return null;
     }
-    final snapshot = _snapshot(localSnapshotJson);
+    final snapshot = _trySnapshot(localSnapshotJson);
+    if (snapshot == null) return null;
     if (_isEnvelope(snapshot) &&
         (entityType == 'work_shift' || entityType == 'clinical_session')) {
       final value = _snapshotValue(snapshot);
@@ -1187,9 +1224,29 @@ final class SqliteSynchronizationRepository
       [_studentId, entityType, entityId, localRevision, remoteRevision],
     );
     if (duplicate.isNotEmpty) {
-      final remote = _snapshot(remoteSnapshotJson);
-      final prior = _snapshot(_text(duplicate.single, 'remote_snapshot_json'));
-      if (_isEnvelope(remote) && !_isEnvelope(prior)) {
+      final remote = _trySnapshot(remoteSnapshotJson);
+      final prior = _trySnapshot(
+        _text(duplicate.single, 'remote_snapshot_json'),
+      );
+      final remoteIsComplete =
+          remote != null &&
+          isCompleteConflictSnapshotEnvelope(
+            remote,
+            expectedEntityType: entityType,
+            expectedEntityId: entityId,
+            expectedStudentId: _studentId,
+            expectedRevision: remoteRevision,
+          );
+      final priorIsComplete =
+          prior != null &&
+          isCompleteConflictSnapshotEnvelope(
+            prior,
+            expectedEntityType: entityType,
+            expectedEntityId: entityId,
+            expectedStudentId: _studentId,
+            expectedRevision: remoteRevision,
+          );
+      if (remoteIsComplete && !priorIsComplete) {
         _database.execute(
           '''UPDATE sync_conflicts SET remote_snapshot_json = ?,
             updated_at_utc = ?, revision = revision + 1 WHERE id = ?''',
@@ -1360,6 +1417,16 @@ Map<String, dynamic> _snapshot(String source) {
     );
   }
   return decoded;
+}
+
+Map<String, dynamic>? _trySnapshot(String source) {
+  try {
+    return _snapshot(source);
+  } on FormatException {
+    return null;
+  } on RepositoryException {
+    return null;
+  }
 }
 
 bool _isEnvelope(Map<String, dynamic> value) =>

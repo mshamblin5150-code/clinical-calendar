@@ -65,6 +65,100 @@ void main() {
     expect(harness.repository.correctedValueJson, contains('Merged'));
   });
 
+  testWidgets('malformed conflict version cannot be selected', (tester) async {
+    final original = _sameRecordConflict();
+    final harness = _Harness(
+      SynchronizationConflictRecord(
+        id: original.id,
+        studentId: original.studentId,
+        entityType: original.entityType,
+        entityId: original.entityId,
+        localRevision: original.localRevision,
+        remoteRevision: original.remoteRevision,
+        localSnapshotJson: 'legacy payload',
+        remoteSnapshotJson: original.remoteSnapshotJson,
+        rejectionCode: original.rejectionCode,
+        rejectionJson: original.rejectionJson,
+        detectedAtUtc: original.detectedAtUtc,
+        affectedRecords: original.affectedRecords,
+      ),
+    );
+    await harness.controller.load();
+    await _pump(tester, harness.controller, const Size(390, 844));
+
+    final local = tester.widget<FilledButton>(
+      find.byKey(const Key('choose-local-conflict-version')),
+    );
+    final remote = tester.widget<FilledButton>(
+      find.byKey(const Key('choose-remote-conflict-version')),
+    );
+
+    expect(local.onPressed, isNull);
+    expect(remote.onPressed, isNotNull);
+    expect(find.text('Complete version not received yet.'), findsOneWidget);
+  });
+
+  testWidgets('failed reload removes stale conflict actions', (tester) async {
+    final harness = _Harness(_sameRecordConflict());
+    await harness.controller.load();
+    harness.repository.failLoads = true;
+
+    await harness.controller.load();
+    await _pump(tester, harness.controller, const Size(390, 844));
+
+    expect(
+      find.text('Synchronization conflicts could not be loaded.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('retry-conflict-load-action')), findsOneWidget);
+    expect(find.byKey(Key('sync-conflict-$_conflictId')), findsNothing);
+    expect(
+      find.byKey(const Key('choose-local-conflict-version')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('malformed cross-record conflict disables resolution actions', (
+    tester,
+  ) async {
+    final original = _protectedDayConflict();
+    final harness = _Harness(
+      SynchronizationConflictRecord(
+        id: original.id,
+        studentId: original.studentId,
+        entityType: original.entityType,
+        entityId: original.entityId,
+        localRevision: original.localRevision,
+        remoteRevision: original.remoteRevision,
+        localSnapshotJson: 'legacy payload',
+        remoteSnapshotJson: original.remoteSnapshotJson,
+        rejectionCode: original.rejectionCode,
+        rejectionJson: original.rejectionJson,
+        detectedAtUtc: original.detectedAtUtc,
+        affectedRecords: original.affectedRecords,
+        planningWeekStartDate: original.planningWeekStartDate,
+      ),
+    );
+    await harness.controller.load();
+    await _pump(tester, harness.controller, const Size(390, 844));
+
+    final move = tester.widget<OutlinedButton>(
+      find.byKey(const Key('move-conflicting-record-action')),
+    );
+    final delete = tester.widget<OutlinedButton>(
+      find.byKey(const Key('delete-conflicting-record-action')),
+    );
+
+    expect(move.onPressed, isNull);
+    expect(delete.onPressed, isNull);
+    expect(
+      find.text(
+        'A complete version is required before resolving this conflict.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
     'cross-record conflict shows every record and truthful Planning Incomplete',
     (tester) async {
@@ -284,6 +378,7 @@ final class _ConflictRepository implements SynchronizationLocalRepository {
   final String originalRemote;
   SynchronizationConflictResolutionChoice? lastChoice;
   String? correctedValueJson;
+  bool failLoads = false;
 
   @override
   SynchronizationConflictRecord? findConflict({
@@ -295,7 +390,15 @@ final class _ConflictRepository implements SynchronizationLocalRepository {
   List<SynchronizationConflictRecord> listConflicts({
     required String studentId,
     bool includeResolved = false,
-  }) => record.isResolved && !includeResolved ? [] : [record];
+  }) {
+    if (failLoads) {
+      throw const RepositoryException(
+        RepositoryFailureKind.corruptData,
+        'A synchronization conflict snapshot is invalid.',
+      );
+    }
+    return record.isResolved && !includeResolved ? [] : [record];
+  }
 
   @override
   SynchronizationConflictResolutionReceipt resolveConflict({

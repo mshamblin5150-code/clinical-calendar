@@ -26,6 +26,89 @@ void main() {
     expect(repository.record.remoteSnapshotJson, contains('Other Device'));
   });
 
+  test(
+    'loads a legacy conflict when the remote snapshot is malformed',
+    () async {
+      final original = _sameRecordConflict();
+      final repository = _ConflictRepository(
+        SynchronizationConflictRecord(
+          id: original.id,
+          studentId: original.studentId,
+          entityType: original.entityType,
+          entityId: original.entityId,
+          localRevision: original.localRevision,
+          remoteRevision: original.remoteRevision,
+          localSnapshotJson: original.localSnapshotJson,
+          remoteSnapshotJson: 'legacy rejection payload',
+          rejectionCode: original.rejectionCode,
+          rejectionJson: original.rejectionJson,
+          detectedAtUtc: original.detectedAtUtc,
+          affectedRecords: original.affectedRecords,
+        ),
+      );
+
+      final snapshot = await _service(repository).load();
+
+      expect(snapshot.items, hasLength(1));
+      expect(snapshot.items.single.local.values['name'], 'This Device');
+      expect(snapshot.items.single.remote.isComplete, isFalse);
+      expect(snapshot.items.single.remote.values, isEmpty);
+    },
+  );
+
+  test('rejects a partial conflict envelope as incomplete', () async {
+    final original = _sameRecordConflict();
+    final repository = _ConflictRepository(
+      SynchronizationConflictRecord(
+        id: original.id,
+        studentId: original.studentId,
+        entityType: original.entityType,
+        entityId: original.entityId,
+        localRevision: original.localRevision,
+        remoteRevision: original.remoteRevision,
+        localSnapshotJson: original.localSnapshotJson,
+        remoteSnapshotJson: '{"schema_version":1,"value":{}}',
+        rejectionCode: original.rejectionCode,
+        rejectionJson: original.rejectionJson,
+        detectedAtUtc: original.detectedAtUtc,
+        affectedRecords: original.affectedRecords,
+      ),
+    );
+
+    final item = (await _service(repository).load()).items.single;
+
+    expect(item.remote.isComplete, isFalse);
+    expect(item.remote.values, isEmpty);
+  });
+
+  test('rejects a conflict envelope with a mismatched revision', () async {
+    final original = _sameRecordConflict();
+    final remote =
+        jsonDecode(original.remoteSnapshotJson) as Map<String, dynamic>;
+    remote['revision'] = original.remoteRevision + 1;
+    final repository = _ConflictRepository(
+      SynchronizationConflictRecord(
+        id: original.id,
+        studentId: original.studentId,
+        entityType: original.entityType,
+        entityId: original.entityId,
+        localRevision: original.localRevision,
+        remoteRevision: original.remoteRevision,
+        localSnapshotJson: original.localSnapshotJson,
+        remoteSnapshotJson: jsonEncode(remote),
+        rejectionCode: original.rejectionCode,
+        rejectionJson: original.rejectionJson,
+        detectedAtUtc: original.detectedAtUtc,
+        affectedRecords: original.affectedRecords,
+      ),
+    );
+
+    final item = (await _service(repository).load()).items.single;
+
+    expect(item.remote.isComplete, isFalse);
+    expect(item.remote.values, isEmpty);
+  });
+
   test('resolution is a revisioned resolve-conflict mutation', () async {
     final repository = _ConflictRepository(_sameRecordConflict());
     final synchronization = _Synchronization();
