@@ -1204,6 +1204,43 @@ void main() {
     },
   );
 
+  testWidgets(
+    'synchronization conflict load failure never opens the no-conflict panel',
+    (tester) async {
+      final repositories = _Repositories(
+        seedSynchronization: true,
+        seedConflictLoadFailure: true,
+      );
+      await _pumpAt(
+        tester,
+        const Size(390, 844),
+        dependencies: _dependencies(repositories: repositories),
+      );
+
+      await tester.tap(find.text('ATTENTION').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Synchronization needs attention'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('synchronization-conflict-resolution-surface')),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Synchronization conflicts could not be loaded.'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('retry-conflict-load-action')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('synchronization-attention-surface')),
+        findsNothing,
+      );
+    },
+  );
+
   test('partial root registry rejects an unavailable theme', () {
     expect(
       () => ClinicalCalendarThemeBundleRegistry.standard.resolveRoot(
@@ -2198,12 +2235,16 @@ final class _Repositories implements RepositoryRegistry {
     bool seedLifecycle = false,
     bool seedSynchronization = false,
     bool seedConflict = false,
+    bool seedConflictLoadFailure = false,
     bool seedAcademicAssignment = false,
   }) {
     settings = _SettingsStore();
     profile = _ProfileStore();
     activePlacement = _ActivePlacementStore(seeded: seedLifecycle);
-    synchronization = _ConflictSynchronizationRepository(seedConflict);
+    synchronization = _ConflictSynchronizationRepository(
+      seedConflict,
+      loadFails: seedConflictLoadFailure,
+    );
     repositories = _ReadRepositories(
       seedLifecycle: seedLifecycle,
       seedSynchronization: seedSynchronization,
@@ -2426,11 +2467,12 @@ final class _ConflictWriteRepositories
 
 final class _ConflictSynchronizationRepository
     implements SynchronizationLocalRepository {
-  _ConflictSynchronizationRepository(bool seeded)
+  _ConflictSynchronizationRepository(bool seeded, {this.loadFails = false})
     : _record = seeded ? _conflictRecord() : null,
       originalLocal = seeded ? _conflictRecord().localSnapshotJson : null,
       originalRemote = seeded ? _conflictRecord().remoteSnapshotJson : null;
 
+  final bool loadFails;
   SynchronizationConflictRecord? _record;
   final String? originalLocal;
   final String? originalRemote;
@@ -2456,6 +2498,12 @@ final class _ConflictSynchronizationRepository
     required String studentId,
     bool includeResolved = false,
   }) {
+    if (loadFails) {
+      throw const RepositoryException(
+        RepositoryFailureKind.corruptData,
+        'A synchronization conflict snapshot is invalid.',
+      );
+    }
     final record = _record;
     if (record == null || (record.isResolved && !includeResolved)) return [];
     return [record];

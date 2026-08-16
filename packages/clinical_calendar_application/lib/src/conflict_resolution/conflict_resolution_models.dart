@@ -18,19 +18,41 @@ final class ConflictVersionSnapshot {
     required this.values,
   });
 
-  factory ConflictVersionSnapshot.fromJson(String source) {
-    final decoded = jsonDecode(source);
-    if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('Conflict snapshot must be an object.');
+  factory ConflictVersionSnapshot._incomplete() => ConflictVersionSnapshot._(
+    isComplete: false,
+    revision: null,
+    values: const <String, Object?>{},
+  );
+
+  factory ConflictVersionSnapshot.fromJson(
+    String source, {
+    String? expectedEntityType,
+    String? expectedEntityId,
+    String? expectedStudentId,
+    int? expectedRevision,
+  }) {
+    Object? decoded;
+    try {
+      decoded = jsonDecode(source);
+    } on FormatException {
+      return ConflictVersionSnapshot._incomplete();
     }
-    final value = decoded['value'];
+    if (decoded is! Map<String, dynamic>) {
+      return ConflictVersionSnapshot._incomplete();
+    }
+    final revision = decoded['revision'];
+    final isComplete = isCompleteConflictSnapshotEnvelope(
+      decoded,
+      expectedEntityType: expectedEntityType,
+      expectedEntityId: expectedEntityId,
+      expectedStudentId: expectedStudentId,
+      expectedRevision: expectedRevision,
+    );
+    if (!isComplete) return ConflictVersionSnapshot._incomplete();
     return ConflictVersionSnapshot._(
-      isComplete:
-          decoded['schema_version'] == 1 && value is Map<String, dynamic>,
-      revision: decoded['revision'] is int ? decoded['revision'] as int : null,
-      values: value is Map<String, dynamic>
-          ? Map.unmodifiable(value)
-          : const <String, Object?>{},
+      isComplete: true,
+      revision: revision,
+      values: Map.unmodifiable(decoded['value'] as Map<String, dynamic>),
     );
   }
 
@@ -43,8 +65,20 @@ final class ConflictVersionSnapshot {
 
 final class ConflictResolutionItem {
   ConflictResolutionItem(this.record)
-    : local = ConflictVersionSnapshot.fromJson(record.localSnapshotJson),
-      remote = ConflictVersionSnapshot.fromJson(record.remoteSnapshotJson);
+    : local = ConflictVersionSnapshot.fromJson(
+        record.localSnapshotJson,
+        expectedEntityType: record.entityType,
+        expectedEntityId: record.entityId,
+        expectedStudentId: record.studentId,
+        expectedRevision: record.localRevision,
+      ),
+      remote = ConflictVersionSnapshot.fromJson(
+        record.remoteSnapshotJson,
+        expectedEntityType: record.entityType,
+        expectedEntityId: record.entityId,
+        expectedStudentId: record.studentId,
+        expectedRevision: record.remoteRevision,
+      );
 
   final SynchronizationConflictRecord record;
   final ConflictVersionSnapshot local;
@@ -66,6 +100,37 @@ final class ConflictResolutionItem {
       ..sort();
     return fields;
   }
+}
+
+bool isCompleteConflictSnapshotEnvelope(
+  Map<String, dynamic> value, {
+  required String? expectedEntityType,
+  required String? expectedEntityId,
+  required String? expectedStudentId,
+  required int? expectedRevision,
+}) {
+  final revision = value['revision'];
+  final deletedAtUtc = value['deleted_at_utc'];
+  return value['schema_version'] == 1 &&
+      value['value'] is Map<String, dynamic> &&
+      revision is int &&
+      revision >= 0 &&
+      revision == expectedRevision &&
+      value['entity_type'] is String &&
+      value['entity_type'] == expectedEntityType &&
+      value['entity_id'] is String &&
+      value['entity_id'] == expectedEntityId &&
+      value['student_id'] is String &&
+      value['student_id'] == expectedStudentId &&
+      _isUtcTimestamp(value['created_at_utc']) &&
+      _isUtcTimestamp(value['updated_at_utc']) &&
+      (deletedAtUtc == null || _isUtcTimestamp(deletedAtUtc));
+}
+
+bool _isUtcTimestamp(Object? value) {
+  if (value is! String) return false;
+  final parsed = DateTime.tryParse(value);
+  return parsed != null && parsed.isUtc;
 }
 
 final class ConflictResolutionSnapshot {

@@ -15,6 +15,7 @@ final class ConflictResolutionController extends ChangeNotifier {
   String? get error => _error;
 
   Future<void> load() => _run(() async {
+    _snapshot = null;
     _snapshot = await _service.load();
   });
 
