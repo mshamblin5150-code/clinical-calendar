@@ -349,10 +349,11 @@ final class SchedulingApplicationService {
     return SchedulingMutationResult<WorkShift>.committed([record]);
   });
 
-  Future<SchedulingMutationResult<ClinicalSession>> moveClinicalSession({
+  Future<SchedulingMutationResult<ClinicalSession>> reviseClinicalSession({
     required String studentId,
     required String id,
     required ZonedInterval plannedInterval,
+    required String preceptorId,
   }) => _repositories.mutate((repositories) {
     final current = _required(
       repositories.clinicalSessions.find(studentId: studentId, id: id),
@@ -364,8 +365,9 @@ final class SchedulingApplicationService {
       current.value.clinicalPlacementId,
     ).value;
     _requirePlacementOpen(placement);
-    final moved = current.value.reschedule(
+    final moved = current.value.revisePlannedDetails(
       plannedInterval: plannedInterval,
+      preceptorId: preceptorId,
       today: _today(_clock.nowUtc(), plannedInterval.startOffset),
     );
     placement.validateClinicalSession(moved);

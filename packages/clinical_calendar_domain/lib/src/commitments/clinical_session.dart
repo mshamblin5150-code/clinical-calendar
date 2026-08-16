@@ -131,8 +131,9 @@ final class ClinicalSession {
     return _copyWith(state: ClinicalSessionState.missed);
   }
 
-  ClinicalSession reschedule({
+  ClinicalSession revisePlannedDetails({
     required ZonedInterval plannedInterval,
+    required String preceptorId,
     required LocalDate today,
   }) {
     if (state == ClinicalSessionState.cancelled ||
@@ -153,7 +154,7 @@ final class ClinicalSession {
     return ClinicalSession._(
       id: id,
       clinicalPlacementId: clinicalPlacementId,
-      preceptorId: preceptorId,
+      preceptorId: requireIdentifier(preceptorId, 'Preceptor id'),
       plannedInterval: plannedInterval,
       state: nextState,
     );

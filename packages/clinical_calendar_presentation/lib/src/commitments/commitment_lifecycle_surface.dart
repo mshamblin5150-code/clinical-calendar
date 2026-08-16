@@ -178,7 +178,7 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
         context,
         summary: _workSummary(record.value),
         primaryLabel: 'Move or save corrected times',
-        onPrimary: _saveTimed,
+        onPrimary: _saveCommitmentDetails,
         onDelete: () => _confirmDelete(context),
       ),
       ClinicalSessionLifecycleSnapshot() => _clinicalEditor(context),
@@ -244,7 +244,7 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
             session.state != ClinicalSessionState.missed) ...[
           OutlinedButton.icon(
             key: const Key('save-lifecycle-times-action'),
-            onPressed: widget.controller.isBusy ? null : _saveTimed,
+            onPressed: widget.controller.isBusy ? null : _saveCommitmentDetails,
             icon: const Icon(Icons.drive_file_move_outline),
             label: Text(
               session.state == ClinicalSessionState.completed
@@ -451,13 +451,16 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
     }
   }
 
-  Future<void> _saveTimed() async {
+  Future<void> _saveCommitmentDetails() async {
     try {
       setState(() => _validation = null);
-      await widget.controller.moveOrCorrect(
+      await widget.controller.saveCommitmentDetails(
         date: parseCommitmentDate(_date.text),
         startTime: parseFlexibleCommitmentTime(_start.text),
         endTime: parseFlexibleCommitmentTime(_end.text),
+        preceptorId: widget.snapshot is ClinicalSessionLifecycleSnapshot
+            ? _preceptorId
+            : null,
       );
     } on Object catch (error) {
       setState(() => _validation = error.toString());

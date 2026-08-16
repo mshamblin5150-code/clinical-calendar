@@ -60,12 +60,14 @@ void main() {
         DateTime.utc(2026, 8, 1, 17),
       ).complete(actual);
 
-      final movedToToday = completed.reschedule(
+      final movedToToday = completed.revisePlannedDetails(
         plannedInterval: _interval(LocalDate(2026, 8, 3), '0800', '1200'),
+        preceptorId: completed.preceptorId,
         today: LocalDate(2026, 8, 3),
       );
-      final movedToPast = movedToToday.reschedule(
+      final movedToPast = movedToToday.revisePlannedDetails(
         plannedInterval: _interval(LocalDate(2026, 8, 2), '0800', '1200'),
+        preceptorId: movedToToday.preceptorId,
         today: LocalDate(2026, 8, 3),
       );
 

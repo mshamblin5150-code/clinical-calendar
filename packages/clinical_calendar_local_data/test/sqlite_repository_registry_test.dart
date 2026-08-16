@@ -335,6 +335,95 @@ void main() {
     },
   );
 
+  test('Clinical Session Preceptor reassignment survives restart', () async {
+    await registry.initialize();
+    final fixture = _DomainFixture();
+    final alternate = Preceptor(id: _id(18), name: 'Taylor Morgan');
+    final placement = ClinicalPlacement.create(
+      id: fixture.placement.id,
+      name: fixture.placement.name,
+      targetHours: fixture.placement.targetHours,
+      startDate: fixture.placement.startDate,
+      completionDeadline: fixture.placement.completionDeadline,
+      attachedPreceptorIds: [fixture.preceptor.id, alternate.id],
+      primaryPreceptorId: fixture.preceptor.id,
+      evaluationPlanId: fixture.evaluationPlan.id,
+    );
+    final session = ClinicalSession.schedule(
+      id: fixture.clinicalSession.id,
+      clinicalPlacementId: placement.id,
+      preceptorId: fixture.preceptor.id,
+      plannedInterval: fixture.clinicalSession.plannedInterval,
+      asOfUtc: _baseTime,
+    );
+    await registry.mutate((repositories) {
+      repositories.preceptors.put(
+        studentId: _studentId,
+        value: fixture.preceptor,
+        expectedRevision: 0,
+        mutation: _mutation(110),
+      );
+      repositories.preceptors.put(
+        studentId: _studentId,
+        value: alternate,
+        expectedRevision: 0,
+        mutation: _mutation(111),
+      );
+      repositories.clinicalPlacements.put(
+        studentId: _studentId,
+        value: placement,
+        expectedRevision: 0,
+        mutation: _mutation(112),
+      );
+      repositories.evaluationPlans.put(
+        studentId: _studentId,
+        value: fixture.evaluationPlan,
+        expectedRevision: 0,
+        mutation: _mutation(113),
+      );
+      repositories.clinicalSessions.put(
+        studentId: _studentId,
+        value: session,
+        expectedRevision: 0,
+        mutation: _mutation(114),
+      );
+    });
+    final service = SchedulingApplicationService(
+      registry,
+      _FixedClock(_baseTime.add(const Duration(hours: 3))),
+      identifiers,
+    );
+
+    final result = await service.reviseClinicalSession(
+      studentId: _studentId,
+      id: session.id,
+      plannedInterval: session.plannedInterval,
+      preceptorId: alternate.id,
+    );
+    expect(result.records.single.value.preceptorId, alternate.id);
+
+    await database.close();
+    databaseIsOpen = false;
+    database = await ClinicalCalendarDatabase.open(
+      path: databasePath,
+      secureStorage: MemorySecureStorage(_key),
+    );
+    databaseIsOpen = true;
+    registry = _registry(database, identifiers);
+    await registry.initialize();
+
+    await registry.read((repositories) {
+      final reloaded = repositories.clinicalSessions.find(
+        studentId: _studentId,
+        id: session.id,
+      )!;
+      expect(reloaded.value.id, session.id);
+      expect(reloaded.value.clinicalPlacementId, placement.id);
+      expect(reloaded.value.preceptorId, alternate.id);
+      expect(reloaded.value.state, ClinicalSessionState.scheduled);
+    });
+  });
+
   test('pending outbox orders relationship owners before dependents', () async {
     await registry.initialize();
     final fixture = _DomainFixture();
