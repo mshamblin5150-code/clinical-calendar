@@ -25,7 +25,7 @@ typedef SynchronizationTriggerFailureObserver =
 /// synchronization's own acknowledgement and cursor transactions would wake
 /// synchronization recursively.
 final class SynchronizationTriggeringRepositoryRegistry
-    implements RepositoryRegistry {
+    implements RepositoryRegistry, ClinicalPlacementAggregateDeletionStore {
   SynchronizationTriggeringRepositoryRegistry({
     required this.base,
     required this.synchronization,
@@ -55,6 +55,39 @@ final class SynchronizationTriggeringRepositoryRegistry
     final result = await base.mutate(callback);
     _wakeAfterCommit();
     return result;
+  }
+
+  ClinicalPlacementAggregateDeletionStore get _placementDeletionStore {
+    if (base case ClinicalPlacementAggregateDeletionStore store) {
+      return store;
+    }
+    throw const RepositoryException(
+      RepositoryFailureKind.persistenceFailure,
+      'Clinical Placement recovery is not available in this build.',
+    );
+  }
+
+  @override
+  Future<ClinicalPlacementDeletionPreview> previewClinicalPlacementDeletion({
+    required String clinicalPlacementId,
+    required int unsavedSchedulingDraftCount,
+  }) => _placementDeletionStore.previewClinicalPlacementDeletion(
+    clinicalPlacementId: clinicalPlacementId,
+    unsavedSchedulingDraftCount: unsavedSchedulingDraftCount,
+  );
+
+  @override
+  Future<void> moveClinicalPlacementAggregateToTrash({
+    required ClinicalPlacementDeletionPreview preview,
+    required String aggregateMutationId,
+    required DateTime deletedAtUtc,
+  }) async {
+    await _placementDeletionStore.moveClinicalPlacementAggregateToTrash(
+      preview: preview,
+      aggregateMutationId: aggregateMutationId,
+      deletedAtUtc: deletedAtUtc,
+    );
+    _wakeAfterCommit();
   }
 
   /// Completes after scheduled and coalesced commit triggers have settled.

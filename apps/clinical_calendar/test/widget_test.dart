@@ -5,6 +5,7 @@ import 'package:clinical_calendar/main.dart' as app;
 import 'package:clinical_calendar/config/app_environment.dart';
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
+import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_local_data/clinical_calendar_local_data.dart';
 import 'package:clinical_calendar_platform/clinical_calendar_platform.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
@@ -225,7 +226,7 @@ void main() {
   );
 
   test(
-    'configured authenticated composition decorates only application writes',
+    'configured authenticated composition preserves Clinical Placement Trash workflow',
     () async {
       const studentId = '00000000-0000-4000-8000-000000000021';
       final repositories = _Repositories();
@@ -260,6 +261,21 @@ void main() {
       expect(root.onRealtimeHint, isNotNull);
       expect(root.connectivityChanges, isNotNull);
       expect(connectivity.currentCalls, 1);
+
+      final placements = PlacementApplicationService(
+        repositories: root.dependencies.repositories,
+        clock: _FixedClock(),
+        identifiers: const _Identifiers(studentId),
+        studentId: studentId,
+      );
+      final preview = await placements.previewDeletion(
+        clinicalPlacementId: studentId,
+      );
+      expect(preview.clinicalPlacementName, 'Family Medicine');
+      await placements.moveToTrash(preview: preview);
+      await decorated.waitForSynchronizationIdle();
+      expect(repositories.deletionPreviewCalls, 1);
+      expect(repositories.deletionMoveCalls, 1);
     },
   );
 
@@ -743,7 +759,11 @@ final class _Identifiers implements IdentifierGenerator {
   String nextIdentifier() => value;
 }
 
-final class _Repositories implements RepositoryRegistry {
+final class _Repositories
+    implements RepositoryRegistry, ClinicalPlacementAggregateDeletionStore {
+  int deletionPreviewCalls = 0;
+  int deletionMoveCalls = 0;
+
   @override
   Future<void> initialize() async {}
 
@@ -756,6 +776,45 @@ final class _Repositories implements RepositoryRegistry {
   Future<R> read<R>(
     R Function(LocalReadRepositories repositories) callback,
   ) async => throw UnimplementedError();
+
+  @override
+  Future<ClinicalPlacementDeletionPreview> previewClinicalPlacementDeletion({
+    required String clinicalPlacementId,
+    required int unsavedSchedulingDraftCount,
+  }) async {
+    deletionPreviewCalls++;
+    return ClinicalPlacementDeletionPreview(
+      clinicalPlacementId: clinicalPlacementId,
+      clinicalPlacementName: 'Family Medicine',
+      clinicalPlacementState: ClinicalPlacementState.active,
+      memberRevisions: const {},
+      scheduledClinicalSessionCount: 0,
+      awaitingConfirmationClinicalSessionCount: 0,
+      completedClinicalSessionCount: 0,
+      cancelledClinicalSessionCount: 0,
+      missedClinicalSessionCount: 0,
+      clinicalSessionCompletedMinutes: 0,
+      historicalHoursEntryCount: 0,
+      historicalCompletedMinutes: 0,
+      evaluationRequirementCount: 0,
+      documentedEvaluationRequirementCount: 0,
+      scheduleTemplateCount: 0,
+      reminderStateCount: 0,
+      attachedPreceptorRelationshipCount: 1,
+      unsavedSchedulingDraftCount: unsavedSchedulingDraftCount,
+      clearsActivePlacementSelection: true,
+      hasUnresolvedSynchronizationConflicts: false,
+    );
+  }
+
+  @override
+  Future<void> moveClinicalPlacementAggregateToTrash({
+    required ClinicalPlacementDeletionPreview preview,
+    required String aggregateMutationId,
+    required DateTime deletedAtUtc,
+  }) async {
+    deletionMoveCalls++;
+  }
 }
 
 final class _ConnectivitySource implements app.ConnectivityStatusSource {
