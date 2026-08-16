@@ -73,7 +73,7 @@ jobs:
             -ExpectedSignerSha256 $env:ANDROID_SIGNING_CERT_SHA256 `
             -OutputPath (Join-Path $env:RUNNER_TEMP 'release-size-ledger.json')
 
-      - name: Build and verify signer-matched profile APK
+      - name: Rebuild and verify signer-matched release and profile APKs
         shell: pwsh
         env:
           CLINICAL_CALENDAR_ENVIRONMENT: private-release
@@ -84,6 +84,9 @@ jobs:
           CLINICAL_CALENDAR_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_SIGNING_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
         run: |
+          ./tool/android/package_signed_apk.ps1 `
+            -FlutterExecutable (Get-Command flutter).Source `
+            -ExpectedSignerSha256 $env:ANDROID_SIGNING_CERT_SHA256
           ./tool/android/package_signed_profile_apk.ps1 `
             -FlutterExecutable (Get-Command flutter).Source `
             -ExpectedSignerSha256 $env:ANDROID_SIGNING_CERT_SHA256
