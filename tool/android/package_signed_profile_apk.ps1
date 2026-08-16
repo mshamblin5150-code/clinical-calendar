@@ -42,6 +42,8 @@ try {
 & (Join-Path $PSScriptRoot 'verify_signed_apk.ps1') `
     -ApkPath $apkPath `
     -ExpectedSignerSha256 $ExpectedSignerSha256
+& (Join-Path $PSScriptRoot 'verify_presentation_assets_in_apk.ps1') `
+    -ApkPath $apkPath
 
 $checksumPath = Join-Path $applicationPath 'build/app/outputs/flutter-apk/app-profile.apk.sha256'
 if (-not (Test-Path -LiteralPath $checksumPath -PathType Leaf)) {
