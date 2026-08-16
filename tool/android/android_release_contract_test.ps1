@@ -28,6 +28,7 @@ $requiredWorkflowFragments = @(
     'CLINICAL_CALENDAR_ENVIRONMENT: private-release',
     'vars.CLINICAL_CALENDAR_SUPABASE_URL',
     'secrets.CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY',
+    'package_signed_apk.ps1',
     'package_signed_profile_apk.ps1',
     'capture_release_size_ledger.ps1',
     'release-size-ledger.json',
