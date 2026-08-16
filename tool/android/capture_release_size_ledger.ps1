@@ -106,6 +106,10 @@ try {
     }
 } finally {
     [IO.File]::WriteAllText($pubspecPath, $originalPubspec, [Text.UTF8Encoding]::new($false))
+    # The marginal builds intentionally stage only a slice of the production
+    # assets. Clear those generated outputs after restoring pubspec.yaml so the
+    # following release/profile build cannot reuse the final ledger slice.
+    Remove-GeneratedAssetOutputs
 }
 
 $result = [ordered]@{

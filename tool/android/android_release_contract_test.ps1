@@ -83,7 +83,9 @@ foreach ($fragment in @(
         throw "Release-size ledger capture is missing required fragment: $fragment"
     }
 }
-
+if ($ledgerCapture -notmatch '(?s)finally\s*\{.*WriteAllText\(\$pubspecPath,\s*\$originalPubspec.*Remove-GeneratedAssetOutputs') {
+    throw 'Release-size ledger capture must clear staged Flutter assets after restoring the production pubspec.'
+}
 $profilePackagerPath = Join-Path $repositoryRoot 'tool/android/package_signed_profile_apk.ps1'
 if (-not (Test-Path -LiteralPath $profilePackagerPath -PathType Leaf)) {
     throw 'Protected Android profile packaging script is missing.'
@@ -97,6 +99,15 @@ foreach ($fragment in @(
 )) {
     if (-not $profilePackager.Contains($fragment)) {
         throw "Android profile packaging is missing required fragment: $fragment"
+    }
+}
+$assetVerifierPath = Join-Path $repositoryRoot 'tool/android/verify_presentation_assets_in_apk.ps1'
+if (-not (Test-Path -LiteralPath $assetVerifierPath -PathType Leaf)) {
+    throw 'Android presentation-asset verifier is missing.'
+}
+foreach ($packagingScript in @($packager, $profilePackager)) {
+    if (-not $packagingScript.Contains('verify_presentation_assets_in_apk.ps1')) {
+        throw 'Every protected Android APK packager must verify declared presentation assets.'
     }
 }
 

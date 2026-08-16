@@ -47,3 +47,5 @@ try {
 & (Join-Path $PSScriptRoot 'verify_signed_apk.ps1') `
     -ApkPath $apkPath `
     -ExpectedSignerSha256 $ExpectedSignerSha256
+& (Join-Path $PSScriptRoot 'verify_presentation_assets_in_apk.ps1') `
+    -ApkPath $apkPath
