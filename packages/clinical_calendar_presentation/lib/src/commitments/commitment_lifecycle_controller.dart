@@ -79,10 +79,11 @@ final class CommitmentLifecycleController extends ChangeNotifier {
     endTime: endTime,
   ).elapsedMinutes;
 
-  Future<void> moveOrCorrect({
+  Future<void> saveCommitmentDetails({
     required LocalDate date,
     required LocalTime startTime,
     required LocalTime endTime,
+    required String? preceptorId,
   }) => _mutate(() async {
     final current = _requireSnapshot();
     final interval = draftInterval(
@@ -96,10 +97,15 @@ final class CommitmentLifecycleController extends ChangeNotifier {
         id: current.id,
         plannedInterval: interval,
       ),
-      ClinicalSessionLifecycleSnapshot() => await service.moveClinicalSession(
+      ClinicalSessionLifecycleSnapshot() => await service.reviseClinicalSession(
         studentId: studentId,
         id: current.id,
         plannedInterval: interval,
+        preceptorId:
+            preceptorId ??
+            (throw const DomainValidationException(
+              'A Clinical Session requires a Preceptor.',
+            )),
       ),
       ProtectedDayLifecycleSnapshot() => throw const DomainValidationException(
         'A Protected Day does not have start and end times.',

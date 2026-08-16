@@ -8,6 +8,7 @@ const _studentId = '10000000-0000-4000-8000-000000000001';
 const _placementId = '20000000-0000-4000-8000-000000000001';
 const _primaryId = '30000000-0000-4000-8000-000000000001';
 const _alternateId = '30000000-0000-4000-8000-000000000002';
+const _detachedId = '30000000-0000-4000-8000-000000000003';
 const _pastSessionId = '40000000-0000-4000-8000-000000000001';
 const _futureSessionId = '40000000-0000-4000-8000-000000000002';
 const _workShiftId = '50000000-0000-4000-8000-000000000001';
@@ -52,6 +53,50 @@ void main() {
       expect(saved.preceptorId, _alternateId);
       expect(find.text('Completed'), findsOneWidget);
       expect(harness.changed, 1);
+    },
+  );
+
+  testWidgets(
+    'Scheduled Session saves another attached Preceptor and reloads it',
+    (tester) async {
+      final harness = _Harness();
+      await harness.controller.open(
+        kind: CommitmentLifecycleKind.clinicalSession,
+        id: _futureSessionId,
+      );
+      await _pump(tester, harness.surface(), const Size(768, 900));
+
+      await tester.tap(find.byKey(const Key('lifecycle-preceptor-field')));
+      await tester.pumpAndSettle();
+      expect(find.text('Dr. Detached'), findsNothing);
+      await tester.tap(find.text('Dr. Nguyen').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('save-lifecycle-times-action')));
+      await tester.pumpAndSettle();
+
+      final saved = harness.repositories.clinicalSessions
+          .find(studentId: _studentId, id: _futureSessionId)!
+          .value;
+      expect(saved.id, _futureSessionId);
+      expect(saved.clinicalPlacementId, _placementId);
+      expect(saved.plannedInterval.startDate, LocalDate(2026, 8, 20));
+      expect(saved.plannedInterval.startTime, LocalTime(8, 0));
+      expect(saved.plannedInterval.endTime, LocalTime(16, 0));
+      expect(saved.plannedInterval.timeZone, TimeZoneId('UTC'));
+      expect(saved.plannedInterval.startOffset, UtcOffset.utc);
+      expect(saved.plannedInterval.endOffset, UtcOffset.utc);
+      expect(saved.state, ClinicalSessionState.scheduled);
+      expect(saved.preceptorId, _alternateId);
+      expect(harness.changed, 1);
+
+      await harness.controller.reload();
+      expect(
+        (harness.controller.snapshot! as ClinicalSessionLifecycleSnapshot)
+            .record
+            .value
+            .preceptorId,
+        _alternateId,
+      );
     },
   );
 
@@ -314,7 +359,8 @@ final class _Harness {
   void _seed() {
     repositories.preceptors
       ..seed(Preceptor(id: _primaryId, name: 'Dr. Smith'))
-      ..seed(Preceptor(id: _alternateId, name: 'Dr. Nguyen'));
+      ..seed(Preceptor(id: _alternateId, name: 'Dr. Nguyen'))
+      ..seed(Preceptor(id: _detachedId, name: 'Dr. Detached'));
     repositories.clinicalPlacements.seed(
       ClinicalPlacement.create(
         id: _placementId,

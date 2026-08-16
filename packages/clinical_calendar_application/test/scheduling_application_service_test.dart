@@ -278,10 +278,11 @@ void main() {
       shift.plannedMinutes,
     );
 
-    final rejected = await service.moveClinicalSession(
+    final rejected = await service.reviseClinicalSession(
       studentId: _studentId,
       id: session.id,
       plannedInterval: _interval(14, 8, 10),
+      preceptorId: session.preceptorId,
     );
     expect(rejected.committed, isFalse);
     expect(
@@ -295,10 +296,11 @@ void main() {
       LocalDate(2026, 8, 12),
     );
 
-    final movedPast = await service.moveClinicalSession(
+    final movedPast = await service.reviseClinicalSession(
       studentId: _studentId,
       id: session.id,
       plannedInterval: _interval(8, 13, 17),
+      preceptorId: session.preceptorId,
     );
     expect(movedPast.records.single.value.preceptorId, alternate.id);
     expect(
@@ -306,6 +308,76 @@ void main() {
       ClinicalSessionState.awaitingConfirmation,
     );
   });
+
+  test(
+    'reassigns an existing Scheduled Session and refreshes its projections',
+    () async {
+      final session = ClinicalSession.schedule(
+        id: _id(42),
+        clinicalPlacementId: placement.id,
+        preceptorId: primary.id,
+        plannedInterval: _interval(18, 9, 15),
+        asOfUtc: _now,
+      );
+      registry.repositories.clinicalSessions.seed(_studentId, session);
+
+      final result = await service.reviseClinicalSession(
+        studentId: _studentId,
+        id: session.id,
+        plannedInterval: session.plannedInterval,
+        preceptorId: alternate.id,
+      );
+
+      final saved = result.records.single.value;
+      expect(saved.id, session.id);
+      expect(saved.clinicalPlacementId, placement.id);
+      expect(saved.plannedInterval, same(session.plannedInterval));
+      expect(saved.state, ClinicalSessionState.scheduled);
+      expect(saved.preceptorId, alternate.id);
+
+      final calendar = await service.readCalendarPeriod(
+        studentId: _studentId,
+        firstDate: LocalDate(2026, 8, 18),
+        lastDate: LocalDate(2026, 8, 18),
+      );
+      expect(
+        calendar.clinicalAssignmentsBySessionId[session.id]!.preceptorName,
+        alternate.name,
+      );
+    },
+  );
+
+  test(
+    'rejects reassignment to a detached Preceptor without mutation',
+    () async {
+      final detached = Preceptor(id: _id(12), name: 'Detached');
+      registry.repositories.preceptors.seed(_studentId, detached);
+      final session = ClinicalSession.schedule(
+        id: _id(43),
+        clinicalPlacementId: placement.id,
+        preceptorId: primary.id,
+        plannedInterval: _interval(18, 9, 15),
+        asOfUtc: _now,
+      );
+      registry.repositories.clinicalSessions.seed(_studentId, session);
+
+      await expectLater(
+        service.reviseClinicalSession(
+          studentId: _studentId,
+          id: session.id,
+          plannedInterval: session.plannedInterval,
+          preceptorId: detached.id,
+        ),
+        throwsA(isA<DomainValidationException>()),
+      );
+
+      expect(
+        registry.repositories.clinicalSessions.values.single.preceptorId,
+        primary.id,
+      );
+      expect(registry.repositories.mutations, isEmpty);
+    },
+  );
 
   test('moving a Completed Session to today clears Completed Hours', () async {
     final completed = ClinicalSession.restore(
@@ -318,10 +390,11 @@ void main() {
     );
     registry.repositories.clinicalSessions.seed(_studentId, completed);
 
-    final moved = await service.moveClinicalSession(
+    final moved = await service.reviseClinicalSession(
       studentId: _studentId,
       id: completed.id,
       plannedInterval: _interval(10, 9, 12),
+      preceptorId: completed.preceptorId,
     );
 
     expect(moved.records.single.value.state, ClinicalSessionState.scheduled);
