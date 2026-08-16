@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
+import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_sync/synchronization.dart';
 import 'package:test/test.dart';
 
@@ -71,6 +72,65 @@ void main() {
 
     await expectLater(registry.mutate((_) => 1), throwsStateError);
     await Future<void>.delayed(Duration.zero);
+    expect(target.afterLocalSaveCalls, 0);
+  });
+
+  test(
+    'forwards Clinical Placement aggregate deletion and wakes after commit',
+    () async {
+      final base = _PlacementDeletionRegistry();
+      final target = _TriggerTarget();
+      final registry = SynchronizationTriggeringRepositoryRegistry(
+        base: base,
+        synchronization: target,
+        onTriggerFailure: (_, _) {},
+      );
+
+      final preview = await registry.previewClinicalPlacementDeletion(
+        clinicalPlacementId: _placementId,
+        unsavedSchedulingDraftCount: 2,
+      );
+      expect(preview.clinicalPlacementName, 'Family Medicine');
+      expect(base.previewCalls, 1);
+      expect(target.afterLocalSaveCalls, 0);
+
+      await registry.moveClinicalPlacementAggregateToTrash(
+        preview: preview,
+        aggregateMutationId: _aggregateMutationId,
+        deletedAtUtc: _deletedAtUtc,
+      );
+      await registry.waitForSynchronizationIdle();
+
+      expect(base.moveCalls, 1);
+      expect(base.lastAggregateMutationId, _aggregateMutationId);
+      expect(base.lastDeletedAtUtc, _deletedAtUtc);
+      expect(target.afterLocalSaveCalls, 1);
+    },
+  );
+
+  test('failed Clinical Placement aggregate deletion does not wake', () async {
+    final base = _PlacementDeletionRegistry()..failMove = true;
+    final target = _TriggerTarget();
+    final registry = SynchronizationTriggeringRepositoryRegistry(
+      base: base,
+      synchronization: target,
+      onTriggerFailure: (_, _) {},
+    );
+    final preview = await registry.previewClinicalPlacementDeletion(
+      clinicalPlacementId: _placementId,
+      unsavedSchedulingDraftCount: 0,
+    );
+
+    await expectLater(
+      registry.moveClinicalPlacementAggregateToTrash(
+        preview: preview,
+        aggregateMutationId: _aggregateMutationId,
+        deletedAtUtc: _deletedAtUtc,
+      ),
+      throwsStateError,
+    );
+    await Future<void>.delayed(Duration.zero);
+
     expect(target.afterLocalSaveCalls, 0);
   });
 
@@ -178,6 +238,73 @@ final class _Registry implements RepositoryRegistry {
     }
     if (R == int) return mutationCount as R;
     return null as R;
+  }
+}
+
+const _placementId = '00000000-0000-4000-8000-000000000101';
+const _aggregateMutationId = '00000000-0000-4000-8000-000000000102';
+final _deletedAtUtc = DateTime.utc(2026, 8, 16, 12);
+
+final class _PlacementDeletionRegistry
+    implements RepositoryRegistry, ClinicalPlacementAggregateDeletionStore {
+  int previewCalls = 0;
+  int moveCalls = 0;
+  bool failMove = false;
+  String? lastAggregateMutationId;
+  DateTime? lastDeletedAtUtc;
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<R> read<R>(R Function(LocalReadRepositories repositories) callback) =>
+      throw UnimplementedError();
+
+  @override
+  Future<R> mutate<R>(
+    R Function(LocalWriteRepositories repositories) callback,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<ClinicalPlacementDeletionPreview> previewClinicalPlacementDeletion({
+    required String clinicalPlacementId,
+    required int unsavedSchedulingDraftCount,
+  }) async {
+    previewCalls++;
+    return ClinicalPlacementDeletionPreview(
+      clinicalPlacementId: clinicalPlacementId,
+      clinicalPlacementName: 'Family Medicine',
+      clinicalPlacementState: ClinicalPlacementState.active,
+      memberRevisions: const {'clinical_placement:$_placementId': 1},
+      scheduledClinicalSessionCount: 0,
+      awaitingConfirmationClinicalSessionCount: 0,
+      completedClinicalSessionCount: 0,
+      cancelledClinicalSessionCount: 0,
+      missedClinicalSessionCount: 0,
+      clinicalSessionCompletedMinutes: 0,
+      historicalHoursEntryCount: 0,
+      historicalCompletedMinutes: 0,
+      evaluationRequirementCount: 0,
+      documentedEvaluationRequirementCount: 0,
+      scheduleTemplateCount: 0,
+      reminderStateCount: 0,
+      attachedPreceptorRelationshipCount: 1,
+      unsavedSchedulingDraftCount: unsavedSchedulingDraftCount,
+      clearsActivePlacementSelection: true,
+      hasUnresolvedSynchronizationConflicts: false,
+    );
+  }
+
+  @override
+  Future<void> moveClinicalPlacementAggregateToTrash({
+    required ClinicalPlacementDeletionPreview preview,
+    required String aggregateMutationId,
+    required DateTime deletedAtUtc,
+  }) async {
+    moveCalls++;
+    if (failMove) throw StateError('aggregate deletion failed');
+    lastAggregateMutationId = aggregateMutationId;
+    lastDeletedAtUtc = deletedAtUtc;
   }
 }
 
