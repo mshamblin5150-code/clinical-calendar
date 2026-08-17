@@ -54,6 +54,7 @@ final class DurableSynchronizationService
   bool _connected;
   bool _shutDown = false;
   bool _rerunRequested = false;
+  bool _explicitRerunRequested = false;
   Future<SynchronizationResult>? _active;
 
   Future<SynchronizationHealthSnapshot> health() => _repositories.read(
@@ -107,12 +108,13 @@ final class DurableSynchronizationService
     final active = _active;
     if (active != null) {
       _rerunRequested = true;
+      _explicitRerunRequested |= trigger == SynchronizationTrigger.explicit;
       return active;
     }
     final completer = Completer<SynchronizationResult>();
     _active = completer.future;
     unawaited(
-      _drain()
+      _drain(trigger)
           .then(completer.complete, onError: completer.completeError)
           .whenComplete(() => _active = null),
     );
@@ -126,20 +128,30 @@ final class DurableSynchronizationService
     _shutDown = true;
     _connected = false;
     _rerunRequested = false;
+    _explicitRerunRequested = false;
     _retryScheduler.cancel();
     await _active;
   }
 
-  Future<SynchronizationResult> _drain() async {
+  Future<SynchronizationResult> _drain(
+    SynchronizationTrigger initialTrigger,
+  ) async {
+    var trigger = initialTrigger;
     SynchronizationResult result;
     do {
       _rerunRequested = false;
-      result = await _runOneCycle();
+      result = await _runOneCycle(trigger);
+      trigger = _explicitRerunRequested
+          ? SynchronizationTrigger.explicit
+          : SynchronizationTrigger.retry;
+      _explicitRerunRequested = false;
     } while (_rerunRequested && _connected);
     return result;
   }
 
-  Future<SynchronizationResult> _runOneCycle() async {
+  Future<SynchronizationResult> _runOneCycle(
+    SynchronizationTrigger trigger,
+  ) async {
     final startedAt = _now();
     if (!_connected) {
       await _markHealth(
@@ -159,7 +171,9 @@ final class DurableSynchronizationService
       final pending = await _repositories.read(
         (repositories) => repositories.outbox.pending(
           studentId: _studentId,
-          asOfUtc: _now(),
+          asOfUtc: trigger == SynchronizationTrigger.explicit
+              ? _manualRetryCutoffUtc
+              : _now(),
           limit: pageSize,
         ),
       );
@@ -484,6 +498,8 @@ final class DurableSynchronizationService
     return value;
   }
 }
+
+final _manualRetryCutoffUtc = DateTime.utc(9999, 12, 31, 23, 59, 59);
 
 enum _PushDisposition { accepted, conflict, terminalFailure, retryScheduled }
 

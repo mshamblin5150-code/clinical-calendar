@@ -280,6 +280,121 @@ void main() {
   );
 
   test(
+    'configured authenticated Sync Now flushes a deferred queue before Clinical Placement Trash',
+    () async {
+      const studentId = '00000000-0000-4000-8000-000000000021';
+      final directory = await Directory.systemTemp.createTemp(
+        'clinical-calendar-authenticated-sync-',
+      );
+      final databasePath =
+          '${directory.path}${Platform.pathSeparator}clinical_calendar.sqlite3';
+      final storage = _MemorySecureStorage();
+      final identifiers = _SequentialIdentifiers(100);
+      final connectivity = _ConnectivitySource(initial: true);
+      final transport = _RecoveringTransport();
+      SqliteRepositoryRegistry? registry;
+      DurableSynchronizationService? synchronization;
+      try {
+        final root = await app.buildProductionApplication(
+          secureStorage: storage,
+          identifiers: identifiers,
+          authenticatedStudentId: studentId,
+          repositoryBootstrap: (owner, secureStorage, generator) async {
+            final database = await ClinicalCalendarDatabase.open(
+              path: databasePath,
+              secureStorage: secureStorage,
+            );
+            registry = SqliteRepositoryRegistry(
+              studentId: owner,
+              database: database,
+              identifierGenerator: generator,
+            );
+            await registry!.initialize();
+            final placements = PlacementApplicationService(
+              repositories: registry!,
+              clock: _FixedClock(),
+              identifiers: generator,
+              studentId: owner,
+            );
+            final preceptor = await placements.createPreceptor(
+              name: 'Dr. Rivera',
+            );
+            await placements.createPlacement(
+              CreatePlacementRequest(
+                name: 'Internal Medicine',
+                targetHours: TargetHours.fromWholeHours(90),
+                startDate: LocalDate(2026, 8, 1),
+                completionDeadline: LocalDate(2026, 12, 31),
+                primaryPreceptorId: preceptor.id,
+                evaluationPlanConfiguration: EvaluationPlanConfiguration(
+                  initialSelfAssessmentRequired: false,
+                  interimReviewCadenceMinutes: 6000,
+                  finalSelfAssessmentRequired: false,
+                  finalPlacementReviewRequired: false,
+                ),
+              ),
+            );
+            return registry!;
+          },
+          environment: const AppEnvironment(
+            name: 'test',
+            supabaseUrl: 'https://project.supabase.co',
+            supabasePublishableKey: 'public-client-key',
+          ),
+          accessTokenProvider: () async => 'current-access-token',
+          synchronizationTransport: transport,
+          retryScheduler: _RetryScheduler(),
+          connectivitySource: connectivity,
+          onSynchronizationFailure: (_, _) {},
+          clock: _FixedClock(),
+        );
+        synchronization =
+            root.dependencies.synchronization as DurableSynchronizationService;
+
+        expect(
+          (await synchronization.syncNow()).disposition,
+          SynchronizationDisposition.deferred,
+        );
+        expect((await synchronization.health()).pendingCount, greaterThan(0));
+
+        expect(
+          (await synchronization.syncNow()).disposition,
+          SynchronizationDisposition.synchronized,
+        );
+        expect((await synchronization.health()).pendingCount, 0);
+
+        final placements = PlacementApplicationService(
+          repositories: root.dependencies.repositories,
+          clock: _FixedClock(),
+          identifiers: identifiers,
+          studentId: studentId,
+        );
+        final placement = (await placements.placements()).single;
+        final preview = await placements.previewDeletion(
+          clinicalPlacementId: placement.placement.id,
+        );
+        expect(preview.hasUnresolvedSynchronizationConflicts, isFalse);
+        await placements.moveToTrash(preview: preview);
+        final decorated =
+            root.dependencies.repositories
+                as SynchronizationTriggeringRepositoryRegistry;
+        await decorated.waitForSynchronizationIdle();
+
+        expect(await placements.placements(), isEmpty);
+        final trash = await registry!.listTrash(nowUtc: _FixedClock().nowUtc());
+        expect(trash, hasLength(1));
+        expect(trash.single.displayName, 'Internal Medicine');
+        expect(trash.single.isExpiredAt(_FixedClock().nowUtc()), isFalse);
+      } finally {
+        await synchronization?.shutdown();
+        await registry?.close();
+        await connectivity.controller.close();
+        if (await directory.exists()) await directory.delete(recursive: true);
+      }
+    },
+  );
+
+  test(
     'missing or failed session stays offline without starting connectivity',
     () async {
       const studentId = '00000000-0000-4000-8000-000000000021';
@@ -759,6 +874,16 @@ final class _Identifiers implements IdentifierGenerator {
   String nextIdentifier() => value;
 }
 
+final class _SequentialIdentifiers implements IdentifierGenerator {
+  _SequentialIdentifiers(this.next);
+
+  int next;
+
+  @override
+  String nextIdentifier() =>
+      '00000000-0000-4000-8000-${(next++).toString().padLeft(12, '0')}';
+}
+
 final class _Repositories
     implements RepositoryRegistry, ClinicalPlacementAggregateDeletionStore {
   int deletionPreviewCalls = 0;
@@ -844,6 +969,32 @@ final class _Transport implements SynchronizationTransport {
   @override
   Future<SynchronizationPushResult> push(OutboxOperation operation) =>
       throw UnimplementedError();
+}
+
+final class _RecoveringTransport implements SynchronizationTransport {
+  bool failNextPush = true;
+  int cursor = 0;
+
+  @override
+  Future<List<RemoteSynchronizationChange>> pull({
+    required int afterCursor,
+    required int limit,
+  }) async => const [];
+
+  @override
+  Future<SynchronizationPushResult> push(OutboxOperation operation) async {
+    if (failNextPush) {
+      failNextPush = false;
+      throw const SynchronizationTransportException(
+        'server_unavailable',
+        offline: false,
+      );
+    }
+    return SynchronizationPushResult.accepted(
+      cursor: ++cursor,
+      revision: operation.baseRevision + 1,
+    );
+  }
 }
 
 final class _RetryScheduler implements SynchronizationRetryScheduler {
