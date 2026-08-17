@@ -89,6 +89,32 @@ void main() {
     );
     expect(find.textContaining('access-token-secret'), findsNothing);
   });
+
+  testWidgets('Sync Now exposes only a safe deferred failure reference', (
+    tester,
+  ) async {
+    final synchronization = _SynchronizationService(
+      const SynchronizationResult(
+        SynchronizationDisposition.deferred,
+        detail: 'invalid_request',
+      ),
+    );
+    await _pumpSynchronization(tester, synchronization);
+
+    await tester.tap(find.byKey(const Key('sync-now-action')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Reference: invalid_request.'), findsOneWidget);
+
+    synchronization.result = const SynchronizationResult(
+      SynchronizationDisposition.deferred,
+      detail: 'access_token_secret',
+    );
+    await tester.tap(find.byKey(const Key('sync-now-action')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('access_token_secret'), findsNothing);
+  });
 }
 
 Future<void> _pumpSynchronization(
