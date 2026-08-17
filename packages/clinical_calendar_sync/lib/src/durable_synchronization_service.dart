@@ -53,7 +53,7 @@ final class DurableSynchronizationService
 
   bool _connected;
   bool _shutDown = false;
-  bool _rerunRequested = false;
+  SynchronizationTrigger? _pendingRerunTrigger;
   Future<SynchronizationResult>? _active;
 
   Future<SynchronizationHealthSnapshot> health() => _repositories.read(
@@ -106,13 +106,13 @@ final class DurableSynchronizationService
     }
     final active = _active;
     if (active != null) {
-      _rerunRequested = true;
+      _pendingRerunTrigger = _coalesceTrigger(_pendingRerunTrigger, trigger);
       return active;
     }
     final completer = Completer<SynchronizationResult>();
     _active = completer.future;
     unawaited(
-      _drain()
+      _drain(trigger)
           .then(completer.complete, onError: completer.completeError)
           .whenComplete(() => _active = null),
     );
@@ -125,21 +125,29 @@ final class DurableSynchronizationService
     if (_shutDown) return;
     _shutDown = true;
     _connected = false;
-    _rerunRequested = false;
+    _pendingRerunTrigger = null;
     _retryScheduler.cancel();
     await _active;
   }
 
-  Future<SynchronizationResult> _drain() async {
+  Future<SynchronizationResult> _drain(
+    SynchronizationTrigger initialTrigger,
+  ) async {
+    var trigger = initialTrigger;
     SynchronizationResult result;
-    do {
-      _rerunRequested = false;
-      result = await _runOneCycle();
-    } while (_rerunRequested && _connected);
+    while (true) {
+      _pendingRerunTrigger = null;
+      result = await _runOneCycle(trigger);
+      final pendingTrigger = _pendingRerunTrigger;
+      if (pendingTrigger == null || !_connected) break;
+      trigger = pendingTrigger;
+    }
     return result;
   }
 
-  Future<SynchronizationResult> _runOneCycle() async {
+  Future<SynchronizationResult> _runOneCycle(
+    SynchronizationTrigger trigger,
+  ) async {
     final startedAt = _now();
     if (!_connected) {
       await _markHealth(
@@ -160,6 +168,11 @@ final class DurableSynchronizationService
         (repositories) => repositories.outbox.pending(
           studentId: _studentId,
           asOfUtc: _now(),
+          policy: OutboxPendingPolicy(
+            retryEligibility: trigger == SynchronizationTrigger.explicit
+                ? OutboxRetryEligibility.includeDeferred
+                : OutboxRetryEligibility.due,
+          ),
           limit: pageSize,
         ),
       );
@@ -483,6 +496,17 @@ final class DurableSynchronizationService
     if (!value.isUtc) throw StateError('Clock must return UTC.');
     return value;
   }
+}
+
+SynchronizationTrigger _coalesceTrigger(
+  SynchronizationTrigger? pending,
+  SynchronizationTrigger incoming,
+) {
+  if (pending == SynchronizationTrigger.explicit ||
+      incoming == SynchronizationTrigger.explicit) {
+    return SynchronizationTrigger.explicit;
+  }
+  return incoming;
 }
 
 enum _PushDisposition { accepted, conflict, terminalFailure, retryScheduled }

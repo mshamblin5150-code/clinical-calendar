@@ -1167,6 +1167,45 @@ void main() {
   });
 
   testWidgets(
+    'Sync Now transitions a newly discovered conflict into resolution',
+    (tester) async {
+      final repositories = _Repositories(seedSynchronization: true);
+      await _pumpAt(
+        tester,
+        const Size(390, 844),
+        dependencies: _dependencies(
+          repositories: repositories,
+          synchronization: _Synchronization(
+            result: const SynchronizationResult(
+              SynchronizationDisposition.deferred,
+            ),
+            onSynchronize: repositories.synchronization.seedConflict,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('ATTENTION').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Synchronization needs attention'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('synchronization-attention-surface')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('sync-now-action')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('synchronization-conflict-resolution-surface')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('This device version'), findsOneWidget);
+      expect(find.textContaining('Other device version'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'synchronization conflict opens resolution and preserves originals',
     (tester) async {
       final repositories = _Repositories(
@@ -1192,7 +1231,10 @@ void main() {
       expect(find.textContaining('Other device version'), findsOneWidget);
       await tester.tap(find.byKey(const Key('choose-local-conflict-version')));
       await tester.pumpAndSettle();
-      expect(find.text('No Sync Conflicts need attention.'), findsOneWidget);
+      expect(
+        find.byKey(const Key('synchronization-attention-surface')),
+        findsOneWidget,
+      );
       expect(repositories.synchronization.originalsPreserved, isTrue);
 
       await tester.tap(find.byKey(const Key('contextual-back-action')));
@@ -2219,16 +2261,18 @@ final class _ExportSaver implements NativeByteFileSaver {
       throw UnimplementedError();
 }
 
-ApplicationDependencies _dependencies({_Repositories? repositories}) =>
-    ApplicationDependencies(
-      repositories: repositories ?? _Repositories(),
-      clock: _Clock(),
-      identifiers: _Identifiers(),
-      synchronization: _Synchronization(),
-      notifications: _Notifications(),
-      secureStorage: _SecureStorage(),
-      files: _Files(),
-    );
+ApplicationDependencies _dependencies({
+  _Repositories? repositories,
+  SynchronizationService? synchronization,
+}) => ApplicationDependencies(
+  repositories: repositories ?? _Repositories(),
+  clock: _Clock(),
+  identifiers: _Identifiers(),
+  synchronization: synchronization ?? _Synchronization(),
+  notifications: _Notifications(),
+  secureStorage: _SecureStorage(),
+  files: _Files(),
+);
 
 final class _Repositories implements RepositoryRegistry {
   _Repositories({
@@ -2480,6 +2524,10 @@ final class _ConflictSynchronizationRepository
   bool get originalsPreserved =>
       _record?.localSnapshotJson == originalLocal &&
       _record?.remoteSnapshotJson == originalRemote;
+
+  void seedConflict() {
+    _record = _conflictRecord();
+  }
 
   @override
   SynchronizationHealthSnapshot inspect({
@@ -2889,6 +2937,7 @@ final class _EmptyOutbox implements OutboxReadRepository {
   List<OutboxOperation> pending({
     required String studentId,
     required DateTime asOfUtc,
+    OutboxPendingPolicy policy = const OutboxPendingPolicy(),
     int limit = 100,
   }) => <OutboxOperation>[];
 }
@@ -2898,6 +2947,7 @@ final class _PendingOutbox implements OutboxReadRepository {
   List<OutboxOperation> pending({
     required String studentId,
     required DateTime asOfUtc,
+    OutboxPendingPolicy policy = const OutboxPendingPolicy(),
     int limit = 100,
   }) => [
     OutboxOperation(
@@ -2938,9 +2988,21 @@ final class _Identifiers implements IdentifierGenerator {
 }
 
 final class _Synchronization implements SynchronizationService {
+  _Synchronization({
+    this.result = const SynchronizationResult(
+      SynchronizationDisposition.offline,
+    ),
+    this.onSynchronize,
+  });
+
+  final SynchronizationResult result;
+  final void Function()? onSynchronize;
+
   @override
-  Future<SynchronizationResult> synchronize() async =>
-      const SynchronizationResult(SynchronizationDisposition.offline);
+  Future<SynchronizationResult> synchronize() async {
+    onSynchronize?.call();
+    return result;
+  }
 }
 
 final class _Notifications implements NotificationService {

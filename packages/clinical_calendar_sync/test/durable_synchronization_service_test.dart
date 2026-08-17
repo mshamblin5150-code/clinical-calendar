@@ -375,6 +375,32 @@ void main() {
     },
   );
 
+  test(
+    'explicit Sync Now retries queued changes before backoff expires',
+    () async {
+      await _putPreceptor(first.registry, 'Retry Now', 60, clock.nowUtc());
+      final service = _service(first, server, clock);
+      server.nextPushError = const SynchronizationTransportException(
+        'server_unavailable',
+        offline: false,
+      );
+
+      expect(
+        (await service.afterLocalSave()).disposition,
+        SynchronizationDisposition.deferred,
+      );
+      expect((await service.health()).pendingCount, 1);
+      expect(server.pushCalls, 1);
+
+      expect(
+        (await service.syncNow()).disposition,
+        SynchronizationDisposition.synchronized,
+      );
+      expect((await service.health()).pendingCount, 0);
+      expect(server.pushCalls, 2);
+    },
+  );
+
   test('offline and twenty-four-hour pending health remain truthful', () async {
     await _putPreceptor(first.registry, 'Offline Save', 7, clock.nowUtc());
     final service = _service(first, server, clock);

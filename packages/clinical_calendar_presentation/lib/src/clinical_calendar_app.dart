@@ -1147,20 +1147,14 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   Future<void> _openSynchronization() async {
     await _conflictController.load();
     if (!mounted) return;
-    final conflicts = _conflictController.snapshot;
     await _openContextualRoute(
       title: 'Synchronization',
-      child:
-          _conflictController.error != null ||
-              (conflicts != null && conflicts.hasConflicts)
-          ? SynchronizationConflictResolutionSurface(
-              controller: _conflictController,
-              onOpenRecordAction: _openConflictRecord,
-            )
-          : SynchronizationAttentionSurface(
-              synchronization: widget.dependencies.synchronization,
-              onSynchronized: refreshAuthoritativeSettings,
-            ),
+      child: _SynchronizationDestinationSurface(
+        controller: _conflictController,
+        synchronization: widget.dependencies.synchronization,
+        onSynchronized: refreshAuthoritativeSettings,
+        onOpenRecordAction: _openConflictRecord,
+      ),
     );
     await _reloadSchedulingSurfaces();
   }
@@ -1987,6 +1981,44 @@ final class _CallbackExportReauthenticationGate
 
   @override
   Future<bool> reauthenticate({required String reason}) => callback(reason);
+}
+
+final class _SynchronizationDestinationSurface extends StatelessWidget {
+  const _SynchronizationDestinationSurface({
+    required this.controller,
+    required this.synchronization,
+    required this.onSynchronized,
+    required this.onOpenRecordAction,
+  });
+
+  final ConflictResolutionController controller;
+  final SynchronizationService synchronization;
+  final Future<void> Function() onSynchronized;
+  final void Function(
+    SynchronizationConflictEntityReference record,
+    CrossRecordResolutionAction action,
+  )
+  onOpenRecordAction;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: controller,
+    builder: (context, _) {
+      final conflicts = controller.snapshot;
+      if (controller.error != null ||
+          (conflicts != null && conflicts.hasConflicts)) {
+        return SynchronizationConflictResolutionSurface(
+          controller: controller,
+          onOpenRecordAction: onOpenRecordAction,
+        );
+      }
+      return SynchronizationAttentionSurface(
+        synchronization: synchronization,
+        onSynchronized: onSynchronized,
+        onSynchronizationAttempted: controller.load,
+      );
+    },
+  );
 }
 
 final class _RecoveryOtpDialog extends StatefulWidget {
