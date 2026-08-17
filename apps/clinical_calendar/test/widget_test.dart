@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:clinical_calendar/main.dart' as app;
@@ -319,7 +320,7 @@ void main() {
             final preceptor = await placements.createPreceptor(
               name: 'Dr. Rivera',
             );
-            await placements.createPlacement(
+            final placement = await placements.createPlacement(
               CreatePlacementRequest(
                 name: 'Internal Medicine',
                 targetHours: TargetHours.fromWholeHours(90),
@@ -331,6 +332,32 @@ void main() {
                   interimReviewCadenceMinutes: 6000,
                   finalSelfAssessmentRequired: false,
                   finalPlacementReviewRequired: false,
+                ),
+              ),
+            );
+            final session = ClinicalSession.schedule(
+              id: generator.nextIdentifier(),
+              clinicalPlacementId: placement.placement.id,
+              preceptorId: preceptor.id,
+              plannedInterval: ZonedInterval(
+                startDate: LocalDate(2026, 8, 4),
+                startTime: LocalTime(9, 0),
+                endTime: LocalTime(12, 0),
+                timeZone: TimeZoneId('America/New_York'),
+                startOffset: UtcOffset.inMinutes(-4 * 60),
+                endOffset: UtcOffset.inMinutes(-4 * 60),
+              ),
+              asOfUtc: _FixedClock().nowUtc(),
+            );
+            await registry!.mutate(
+              (repositories) => repositories.clinicalSessions.put(
+                studentId: owner,
+                value: session,
+                expectedRevision: 0,
+                mutation: MutationToken(
+                  operationId: generator.nextIdentifier(),
+                  idempotencyKey: generator.nextIdentifier(),
+                  occurredAtUtc: _FixedClock().nowUtc(),
                 ),
               ),
             );
@@ -374,7 +401,7 @@ void main() {
           clinicalPlacementId: placement.placement.id,
         );
         expect(preview.hasUnresolvedSynchronizationConflicts, isFalse);
-        expect(preview.clinicalSessionCount, 0);
+        expect(preview.clinicalSessionCount, 1);
         expect(preview.evaluationRequirementCount, 0);
         expect(preview.attachedPreceptorRelationshipCount, 1);
         expect(preview.clearsActivePlacementSelection, isTrue);
@@ -397,7 +424,7 @@ void main() {
         expect(trash, hasLength(1));
         expect(trash.single.displayName, 'Internal Medicine');
         expect(trash.single.entityType, 'clinical_placement_aggregate');
-        expect(trash.single.dependentRecordCount, 1);
+        expect(trash.single.dependentRecordCount, 2);
         expect(trash.single.isExpiredAt(_FixedClock().nowUtc()), isFalse);
 
         final restoredAt = _FixedClock().nowUtc().add(
@@ -1003,12 +1030,17 @@ final class _Transport implements SynchronizationTransport {
 final class _RecoveringTransport implements SynchronizationTransport {
   bool failNextPush = true;
   int cursor = 0;
+  final changes = <RemoteSynchronizationChange>[];
+  Map<String, dynamic>? placementPayload;
 
   @override
   Future<List<RemoteSynchronizationChange>> pull({
     required int afterCursor,
     required int limit,
-  }) async => const [];
+  }) async => changes
+      .where((change) => change.cursor > afterCursor)
+      .take(limit)
+      .toList();
 
   @override
   Future<SynchronizationPushResult> push(OutboxOperation operation) async {
@@ -1019,8 +1051,38 @@ final class _RecoveringTransport implements SynchronizationTransport {
         offline: false,
       );
     }
+    final acceptedCursor = ++cursor;
+    changes.add(
+      RemoteSynchronizationChange(
+        cursor: acceptedCursor,
+        entityType: operation.entityType,
+        entityId: operation.entityId,
+        revision: operation.baseRevision + 1,
+        operationType: operation.type,
+        payloadJson: operation.payloadJson,
+      ),
+    );
+    if (operation.entityType == 'clinical_placement') {
+      placementPayload = jsonDecode(operation.payloadJson);
+    } else if (operation.entityType == 'clinical_session' &&
+        placementPayload != null) {
+      final revisedPlacement = Map<String, dynamic>.from(placementPayload!)
+        ..['revision'] = 2
+        ..['updated_at_utc'] = '2026-08-03T12:01:00.000Z';
+      changes.add(
+        RemoteSynchronizationChange(
+          cursor: ++cursor,
+          entityType: 'clinical_placement',
+          entityId: revisedPlacement['entity_id'] as String,
+          revision: 2,
+          operationType: OutboxOperationType.upsert,
+          payloadJson: jsonEncode(revisedPlacement),
+        ),
+      );
+      placementPayload = null;
+    }
     return SynchronizationPushResult.accepted(
-      cursor: ++cursor,
+      cursor: acceptedCursor,
       revision: operation.baseRevision + 1,
     );
   }

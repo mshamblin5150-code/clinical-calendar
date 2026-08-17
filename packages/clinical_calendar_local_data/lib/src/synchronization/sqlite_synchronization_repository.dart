@@ -827,6 +827,7 @@ final class SqliteSynchronizationRepository
     if (attachments is! List || attachments.isEmpty) {
       throw const FormatException('Clinical Placement attachments missing.');
     }
+    final desiredAttachments = attachments.cast<String>().map(_uuid).toSet();
     _upsert('clinical_placements', {
       ...common,
       'name': value['name'],
@@ -836,17 +837,27 @@ final class SqliteSynchronizationRepository
       'lifecycle_state': value['lifecycle_state'],
       'primary_preceptor_id': value['primary_preceptor_id'],
     });
-    _database.execute(
-      'DELETE FROM placement_preceptors WHERE student_id = ? '
+    final existingAttachments = _database.select(
+      'SELECT preceptor_id FROM placement_preceptors WHERE student_id = ? '
       'AND placement_id = ?',
       [_studentId, entityId],
     );
-    for (final preceptorId in attachments.cast<String>()) {
+    final existingIds = {
+      for (final row in existingAttachments) _text(row, 'preceptor_id'),
+    };
+    for (final preceptorId in existingIds.difference(desiredAttachments)) {
+      _database.execute(
+        'DELETE FROM placement_preceptors WHERE student_id = ? '
+        'AND placement_id = ? AND preceptor_id = ?',
+        [_studentId, entityId, preceptorId],
+      );
+    }
+    for (final preceptorId in desiredAttachments.difference(existingIds)) {
       _database.execute(
         '''INSERT INTO placement_preceptors
           (placement_id, preceptor_id, student_id, attached_at_utc)
           VALUES (?, ?, ?, ?)''',
-        [entityId, _uuid(preceptorId), _studentId, common['updated_at_utc']],
+        [entityId, preceptorId, _studentId, common['updated_at_utc']],
       );
     }
   }
