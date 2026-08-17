@@ -374,6 +374,18 @@ void main() {
           clinicalPlacementId: placement.placement.id,
         );
         expect(preview.hasUnresolvedSynchronizationConflicts, isFalse);
+        expect(preview.clinicalSessionCount, 0);
+        expect(preview.evaluationRequirementCount, 0);
+        expect(preview.attachedPreceptorRelationshipCount, 1);
+        expect(preview.clearsActivePlacementSelection, isTrue);
+
+        // Cancelling the impact preview performs no mutation.
+        expect(await placements.placements(), hasLength(1));
+        expect(
+          await registry!.listTrash(nowUtc: _FixedClock().nowUtc()),
+          isEmpty,
+        );
+
         await placements.moveToTrash(preview: preview);
         final decorated =
             root.dependencies.repositories
@@ -384,7 +396,24 @@ void main() {
         final trash = await registry!.listTrash(nowUtc: _FixedClock().nowUtc());
         expect(trash, hasLength(1));
         expect(trash.single.displayName, 'Internal Medicine');
+        expect(trash.single.entityType, 'clinical_placement_aggregate');
+        expect(trash.single.dependentRecordCount, 1);
         expect(trash.single.isExpiredAt(_FixedClock().nowUtc()), isFalse);
+
+        final restoredAt = _FixedClock().nowUtc().add(
+          const Duration(minutes: 1),
+        );
+        await registry!.restoreTrash(
+          trashId: trash.single.id,
+          restoredAtUtc: restoredAt,
+          mutation: MutationToken(
+            operationId: identifiers.nextIdentifier(),
+            idempotencyKey: identifiers.nextIdentifier(),
+            occurredAtUtc: restoredAt,
+          ),
+        );
+        expect(await placements.placements(), hasLength(1));
+        expect(await registry!.listTrash(nowUtc: restoredAt), isEmpty);
       } finally {
         await synchronization?.shutdown();
         await registry?.close();

@@ -53,8 +53,7 @@ final class DurableSynchronizationService
 
   bool _connected;
   bool _shutDown = false;
-  bool _rerunRequested = false;
-  bool _explicitRerunRequested = false;
+  SynchronizationTrigger? _pendingRerunTrigger;
   Future<SynchronizationResult>? _active;
 
   Future<SynchronizationHealthSnapshot> health() => _repositories.read(
@@ -107,8 +106,7 @@ final class DurableSynchronizationService
     }
     final active = _active;
     if (active != null) {
-      _rerunRequested = true;
-      _explicitRerunRequested |= trigger == SynchronizationTrigger.explicit;
+      _pendingRerunTrigger = _coalesceTrigger(_pendingRerunTrigger, trigger);
       return active;
     }
     final completer = Completer<SynchronizationResult>();
@@ -127,8 +125,7 @@ final class DurableSynchronizationService
     if (_shutDown) return;
     _shutDown = true;
     _connected = false;
-    _rerunRequested = false;
-    _explicitRerunRequested = false;
+    _pendingRerunTrigger = null;
     _retryScheduler.cancel();
     await _active;
   }
@@ -138,14 +135,13 @@ final class DurableSynchronizationService
   ) async {
     var trigger = initialTrigger;
     SynchronizationResult result;
-    do {
-      _rerunRequested = false;
+    while (true) {
+      _pendingRerunTrigger = null;
       result = await _runOneCycle(trigger);
-      trigger = _explicitRerunRequested
-          ? SynchronizationTrigger.explicit
-          : SynchronizationTrigger.retry;
-      _explicitRerunRequested = false;
-    } while (_rerunRequested && _connected);
+      final pendingTrigger = _pendingRerunTrigger;
+      if (pendingTrigger == null || !_connected) break;
+      trigger = pendingTrigger;
+    }
     return result;
   }
 
@@ -171,9 +167,10 @@ final class DurableSynchronizationService
       final pending = await _repositories.read(
         (repositories) => repositories.outbox.pending(
           studentId: _studentId,
-          asOfUtc: trigger == SynchronizationTrigger.explicit
-              ? _manualRetryCutoffUtc
-              : _now(),
+          asOfUtc: _now(),
+          retryEligibility: trigger == SynchronizationTrigger.explicit
+              ? OutboxRetryEligibility.includeDeferred
+              : OutboxRetryEligibility.due,
           limit: pageSize,
         ),
       );
@@ -499,7 +496,16 @@ final class DurableSynchronizationService
   }
 }
 
-final _manualRetryCutoffUtc = DateTime.utc(9999, 12, 31, 23, 59, 59);
+SynchronizationTrigger _coalesceTrigger(
+  SynchronizationTrigger? pending,
+  SynchronizationTrigger incoming,
+) {
+  if (pending == SynchronizationTrigger.explicit ||
+      incoming == SynchronizationTrigger.explicit) {
+    return SynchronizationTrigger.explicit;
+  }
+  return incoming;
+}
 
 enum _PushDisposition { accepted, conflict, terminalFailure, retryScheduled }
 

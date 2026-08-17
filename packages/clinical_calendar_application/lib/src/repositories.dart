@@ -241,10 +241,13 @@ final class OutboxOperation {
   bool get isTerminallyRejected => terminalRejectedAtUtc != null;
 }
 
+enum OutboxRetryEligibility { due, includeDeferred }
+
 abstract interface class OutboxReadRepository {
   List<OutboxOperation> pending({
     required String studentId,
     required DateTime asOfUtc,
+    OutboxRetryEligibility retryEligibility = OutboxRetryEligibility.due,
     int limit = 100,
   });
 }

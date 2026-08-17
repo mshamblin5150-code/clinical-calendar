@@ -781,6 +781,7 @@ final class _FakeOutbox implements OutboxMaintenanceRepository {
   List<OutboxOperation> pending({
     required String studentId,
     required DateTime asOfUtc,
+    OutboxRetryEligibility retryEligibility = OutboxRetryEligibility.due,
     int limit = 100,
   }) => const [];
 
