@@ -54,8 +54,7 @@ final class _SynchronizationAttentionSurfaceState
             'Synchronization complete.',
           SynchronizationDisposition.offline =>
             'Synchronization is offline. Local changes remain queued.',
-          SynchronizationDisposition.deferred =>
-            'Synchronization is deferred. Local changes remain queued.',
+          SynchronizationDisposition.deferred => _deferredStatus(result.detail),
         };
       });
     } on Object {
@@ -107,6 +106,31 @@ final class _SynchronizationAttentionSurfaceState
     ],
   );
 }
+
+String _deferredStatus(String? detail) {
+  const message = 'Synchronization is deferred. Local changes remain queued.';
+  final reference = detail?.trim();
+  if (reference == null ||
+      !_publicSynchronizationReferences.contains(reference)) {
+    return message;
+  }
+  return '$message\nReference: $reference.';
+}
+
+const _publicSynchronizationReferences = {
+  'cursor_or_payload_failure',
+  'failed',
+  'incomplete_aggregate_batch',
+  'invalid_pull_response',
+  'invalid_push_response',
+  'invalid_request',
+  'invalid_rpc_response',
+  'network_unavailable',
+  'rate_limited',
+  'retry_deferred',
+  'server_unavailable',
+  'unauthenticated',
+};
 
 final class AttentionRail extends StatelessWidget {
   const AttentionRail({
