@@ -168,9 +168,11 @@ final class DurableSynchronizationService
         (repositories) => repositories.outbox.pending(
           studentId: _studentId,
           asOfUtc: _now(),
-          retryEligibility: trigger == SynchronizationTrigger.explicit
-              ? OutboxRetryEligibility.includeDeferred
-              : OutboxRetryEligibility.due,
+          policy: OutboxPendingPolicy(
+            retryEligibility: trigger == SynchronizationTrigger.explicit
+                ? OutboxRetryEligibility.includeDeferred
+                : OutboxRetryEligibility.due,
+          ),
           limit: pageSize,
         ),
       );

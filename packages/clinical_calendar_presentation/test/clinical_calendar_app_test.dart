@@ -2937,7 +2937,7 @@ final class _EmptyOutbox implements OutboxReadRepository {
   List<OutboxOperation> pending({
     required String studentId,
     required DateTime asOfUtc,
-    OutboxRetryEligibility retryEligibility = OutboxRetryEligibility.due,
+    OutboxPendingPolicy policy = const OutboxPendingPolicy(),
     int limit = 100,
   }) => <OutboxOperation>[];
 }
@@ -2947,7 +2947,7 @@ final class _PendingOutbox implements OutboxReadRepository {
   List<OutboxOperation> pending({
     required String studentId,
     required DateTime asOfUtc,
-    OutboxRetryEligibility retryEligibility = OutboxRetryEligibility.due,
+    OutboxPendingPolicy policy = const OutboxPendingPolicy(),
     int limit = 100,
   }) => [
     OutboxOperation(

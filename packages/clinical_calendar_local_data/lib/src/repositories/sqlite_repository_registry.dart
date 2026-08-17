@@ -3046,7 +3046,7 @@ final class _OutboxRepository implements OutboxMaintenanceRepository {
   List<OutboxOperation> pending({
     required String studentId,
     required DateTime asOfUtc,
-    OutboxRetryEligibility retryEligibility = OutboxRetryEligibility.due,
+    OutboxPendingPolicy policy = const OutboxPendingPolicy(),
     int limit = 100,
   }) {
     repositories.requireActive();
@@ -3061,7 +3061,7 @@ final class _OutboxRepository implements OutboxMaintenanceRepository {
           FROM outbox_operations
           WHERE student_id = ? AND acknowledged_at_utc IS NULL
           AND terminal_rejected_at_utc IS NULL
-          ${retryEligibility == OutboxRetryEligibility.due ? 'AND (next_attempt_at_utc IS NULL OR next_attempt_at_utc <= ?)' : ''}
+          ${policy.retryEligibility == OutboxRetryEligibility.due ? 'AND (next_attempt_at_utc IS NULL OR next_attempt_at_utc <= ?)' : ''}
         )
         SELECT * FROM eligible
         ORDER BY
@@ -3099,7 +3099,8 @@ final class _OutboxRepository implements OutboxMaintenanceRepository {
           created_at_utc, id LIMIT ?''',
       [
         repositories.registry.studentId,
-        if (retryEligibility == OutboxRetryEligibility.due) _utc(asOfUtc),
+        if (policy.retryEligibility == OutboxRetryEligibility.due)
+          _utc(asOfUtc),
         limit,
       ],
     );

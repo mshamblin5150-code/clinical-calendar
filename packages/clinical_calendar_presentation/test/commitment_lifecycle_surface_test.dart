@@ -602,7 +602,7 @@ final class _Outbox implements OutboxMaintenanceRepository {
   List<OutboxOperation> pending({
     required String studentId,
     required DateTime asOfUtc,
-    OutboxRetryEligibility retryEligibility = OutboxRetryEligibility.due,
+    OutboxPendingPolicy policy = const OutboxPendingPolicy(),
     int limit = 100,
   }) => const [];
 
