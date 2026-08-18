@@ -80,6 +80,34 @@ void main() {
     expect(find.text('Clinical Placement'), findsNothing);
   });
 
+  testWidgets('restore shows the safe recovery failure detail', (tester) async {
+    const safeMessage =
+        'The Clinical Placement recovery group changed after deletion.';
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildVariantFTheme(),
+        home: TrashRecoverySurface(
+          loadTrash: () async => [_entry()],
+          restore: (_) async => throw const RecoveryException(
+            RecoveryFailureKind.concurrentModification,
+            safeMessage,
+          ),
+          permanentlyDelete: (_) async {},
+          clearTrash: () async {},
+          loadSnapshots: () async => [],
+          previewSnapshot: (_) async => throw UnimplementedError(),
+          restoreSnapshot: (_, _) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Restore'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(safeMessage), findsOneWidget);
+  });
+
   for (final size in [const Size(320, 568), const Size(1024, 768)]) {
     testWidgets('responsive recovery surface fits ${size.width}', (
       tester,
