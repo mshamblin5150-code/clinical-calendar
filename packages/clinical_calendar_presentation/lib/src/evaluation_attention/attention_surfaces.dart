@@ -25,7 +25,8 @@ final class SynchronizationAttentionSurface extends StatefulWidget {
 
   final SynchronizationService synchronization;
   final Future<void> Function()? onSynchronized;
-  final Future<void> Function()? onSynchronizationAttempted;
+  final Future<void> Function(SynchronizationResult result)?
+  onSynchronizationAttempted;
 
   @override
   State<SynchronizationAttentionSurface> createState() =>
@@ -46,7 +47,7 @@ final class _SynchronizationAttentionSurfaceState
     try {
       final result = await widget.synchronization.synchronize();
       await widget.onSynchronized?.call();
-      await widget.onSynchronizationAttempted?.call();
+      await widget.onSynchronizationAttempted?.call(result);
       if (!mounted) return;
       setState(() {
         _status = switch (result.disposition) {

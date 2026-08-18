@@ -1983,7 +1983,7 @@ final class _CallbackExportReauthenticationGate
   Future<bool> reauthenticate({required String reason}) => callback(reason);
 }
 
-final class _SynchronizationDestinationSurface extends StatelessWidget {
+final class _SynchronizationDestinationSurface extends StatefulWidget {
   const _SynchronizationDestinationSurface({
     required this.controller,
     required this.synchronization,
@@ -2001,21 +2001,55 @@ final class _SynchronizationDestinationSurface extends StatelessWidget {
   onOpenRecordAction;
 
   @override
+  State<_SynchronizationDestinationSurface> createState() =>
+      _SynchronizationDestinationSurfaceState();
+}
+
+final class _SynchronizationDestinationSurfaceState
+    extends State<_SynchronizationDestinationSurface> {
+  bool _conflictReported = false;
+
+  Future<void> _afterSynchronization(SynchronizationResult result) async {
+    await widget.controller.load();
+    if (!mounted) return;
+    final conflictReported =
+        result.detail ==
+            PublicSynchronizationFailureReference.conflictNeedsAttention &&
+        !(widget.controller.snapshot?.hasConflicts ?? false);
+    if (_conflictReported != conflictReported) {
+      setState(() => _conflictReported = conflictReported);
+    }
+  }
+
+  Future<void> _refreshConflicts() async {
+    await widget.controller.load();
+    if (!mounted ||
+        !_conflictReported ||
+        !(widget.controller.snapshot?.hasConflicts ?? false)) {
+      return;
+    }
+    setState(() => _conflictReported = false);
+  }
+
+  @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: controller,
+    listenable: widget.controller,
     builder: (context, _) {
-      final conflicts = controller.snapshot;
-      if (controller.error != null ||
+      final conflicts = widget.controller.snapshot;
+      if (_conflictReported ||
+          widget.controller.error != null ||
           (conflicts != null && conflicts.hasConflicts)) {
         return SynchronizationConflictResolutionSurface(
-          controller: controller,
-          onOpenRecordAction: onOpenRecordAction,
+          controller: widget.controller,
+          onOpenRecordAction: widget.onOpenRecordAction,
+          conflictReported: _conflictReported,
+          onRefresh: _refreshConflicts,
         );
       }
       return SynchronizationAttentionSurface(
-        synchronization: synchronization,
-        onSynchronized: onSynchronized,
-        onSynchronizationAttempted: controller.load,
+        synchronization: widget.synchronization,
+        onSynchronized: widget.onSynchronized,
+        onSynchronizationAttempted: _afterSynchronization,
       );
     },
   );

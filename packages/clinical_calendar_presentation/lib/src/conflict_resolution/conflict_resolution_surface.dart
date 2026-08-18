@@ -16,11 +16,15 @@ final class SynchronizationConflictResolutionSurface extends StatelessWidget {
   const SynchronizationConflictResolutionSurface({
     required this.controller,
     this.onOpenRecordAction,
+    this.conflictReported = false,
+    this.onRefresh,
     super.key,
   });
 
   final ConflictResolutionController controller;
   final OpenConflictRecordAction? onOpenRecordAction;
+  final bool conflictReported;
+  final Future<void> Function()? onRefresh;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -36,8 +40,10 @@ final class SynchronizationConflictResolutionSurface extends StatelessWidget {
               child: _Header(
                 conflictCount: snapshot?.items.length ?? 0,
                 planningIncompleteCount: snapshot?.planningIncompleteCount ?? 0,
+                detailsUnavailable:
+                    conflictReported && !(snapshot?.hasConflicts ?? false),
                 busy: controller.busy,
-                onRefresh: controller.load,
+                onRefresh: onRefresh ?? controller.load,
               ),
             ),
           ),
@@ -56,12 +62,20 @@ final class SynchronizationConflictResolutionSurface extends StatelessWidget {
               hasScrollBody: false,
               child: controller.error == null
                   ? const Center(child: CircularProgressIndicator())
-                  : _ConflictLoadFailure(onRetry: controller.load),
+                  : _ConflictLoadFailure(onRetry: onRefresh ?? controller.load),
             )
           else if (!snapshot.hasConflicts)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(child: Text('No Sync Conflicts need attention.')),
+              child: Center(
+                child: Text(
+                  conflictReported
+                      ? 'Synchronization reported a conflict, but its details '
+                            'could not be loaded. Refresh before continuing.'
+                      : 'No Sync Conflicts need attention.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
             )
           else
             SliverPadding(
@@ -128,12 +142,14 @@ final class _Header extends StatelessWidget {
   const _Header({
     required this.conflictCount,
     required this.planningIncompleteCount,
+    required this.detailsUnavailable,
     required this.busy,
     required this.onRefresh,
   });
 
   final int conflictCount;
   final int planningIncompleteCount;
+  final bool detailsUnavailable;
   final bool busy;
   final VoidCallback onRefresh;
 
@@ -151,8 +167,11 @@ final class _Header extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '$conflictCount need attention. Both originals remain in '
-              'resolution history.',
+              detailsUnavailable
+                  ? 'A conflict was reported. Its details and count are not '
+                        'available yet.'
+                  : '$conflictCount need attention. Both originals remain in '
+                        'resolution history.',
             ),
             if (planningIncompleteCount > 0)
               Text(
