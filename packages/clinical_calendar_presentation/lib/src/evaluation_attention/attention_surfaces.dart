@@ -119,6 +119,14 @@ String _deferredStatus(String? detail) {
 
 const _publicSynchronizationReferences = {
   'cursor_or_payload_failure',
+  'cursor_or_payload_not_found',
+  'cursor_or_payload_ownership_mismatch',
+  'cursor_or_payload_concurrent_modification',
+  'cursor_or_payload_idempotency_conflict',
+  'cursor_or_payload_corrupt_data',
+  'cursor_or_payload_persistence_failure',
+  'cursor_or_payload_closed',
+  'cursor_or_payload_uninitialized',
   'failed',
   'incomplete_aggregate_batch',
   'invalid_pull_response',

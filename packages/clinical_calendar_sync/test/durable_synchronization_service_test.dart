@@ -573,6 +573,7 @@ void main() {
 
       final firstAttempt = await _service(second, server, clock).syncNow();
       expect(firstAttempt.disposition, SynchronizationDisposition.deferred);
+      expect(firstAttempt.detail, 'cursor_or_payload_corrupt_data');
       expect(await _cursor(second.registry), 2);
       expect(second.database.select('SELECT * FROM evaluation_plans'), isEmpty);
 
@@ -585,7 +586,7 @@ void main() {
       expect(await _cursor(second.registry), 2);
       expect(
         (await _service(second, server, clock).health()).failureCode,
-        'cursor_or_payload_failure',
+        'cursor_or_payload_corrupt_data',
       );
     },
   );
