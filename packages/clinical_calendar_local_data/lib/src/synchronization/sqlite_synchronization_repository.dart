@@ -441,12 +441,23 @@ final class SqliteSynchronizationRepository
     final entityType = _text(row, 'entity_type');
     final entityId = _text(row, 'entity_id');
     final remoteRevision = _integer(row, 'remote_revision');
+    final resolutionBaseRevision =
+        _database
+                .select(
+                  '''SELECT max(resolution_base_revision) AS revision
+                    FROM sync_conflicts
+                    WHERE student_id = ? AND entity_type = ? AND entity_id = ?
+                      AND resolved_at_utc IS NULL''',
+                  [_studentId, entityType, entityId],
+                )
+                .single['revision']
+            as int;
     final envelope = <String, dynamic>{
       'schema_version': 1,
       'entity_type': entityType,
       'entity_id': entityId,
       'student_id': _studentId,
-      'revision': remoteRevision + 1,
+      'revision': resolutionBaseRevision + 1,
       'created_at_utc': baseEnvelope['created_at_utc'],
       'updated_at_utc': mutation.occurredAtUtc.toIso8601String(),
       'deleted_at_utc':
@@ -478,7 +489,7 @@ final class SqliteSynchronizationRepository
         entityType,
         entityId,
         operationTypeValue,
-        remoteRevision,
+        resolutionBaseRevision,
         payloadJson,
         mutation.occurredAtUtc.toIso8601String(),
       ],
@@ -488,6 +499,7 @@ final class SqliteSynchronizationRepository
       'operation_id': mutation.operationId,
       'local_revision': _integer(row, 'local_revision'),
       'remote_revision': remoteRevision,
+      'resolution_base_revision': resolutionBaseRevision,
     });
     _database.execute(
       '''UPDATE sync_conflicts SET revision = revision + 1,
@@ -507,7 +519,7 @@ final class SqliteSynchronizationRepository
       entityType: entityType,
       entityId: entityId,
       type: operationType,
-      baseRevision: remoteRevision,
+      baseRevision: resolutionBaseRevision,
       payloadJson: payloadJson,
     );
     return SynchronizationConflictResolutionReceipt(
@@ -1008,6 +1020,22 @@ final class SqliteSynchronizationRepository
         )) {
       return;
     }
+    _database.execute(
+      '''UPDATE sync_conflicts
+        SET resolution_base_revision = max(resolution_base_revision, ?),
+          updated_at_utc = ?, revision = revision + 1
+        WHERE student_id = ? AND entity_type = ? AND entity_id = ?
+          AND resolved_at_utc IS NULL
+          AND resolution_base_revision < ?''',
+      [
+        change.revision,
+        appliedAtUtc.toIso8601String(),
+        _studentId,
+        change.entityType,
+        change.entityId,
+        change.revision,
+      ],
+    );
     final rows = _database.select(
       '''SELECT id, remote_snapshot_json FROM sync_conflicts
         WHERE student_id = ? AND entity_type = ? AND entity_id = ?
@@ -1275,10 +1303,11 @@ final class SqliteSynchronizationRepository
       '''INSERT INTO sync_conflicts
         (id, student_id, revision, created_at_utc, updated_at_utc,
          deleted_at_utc, entity_type, entity_id, local_revision,
-         remote_revision, local_snapshot_json, remote_snapshot_json,
+         remote_revision, resolution_base_revision,
+         local_snapshot_json, remote_snapshot_json,
          detected_at_utc, resolved_at_utc, resolution_json,
          rejection_code, rejection_json)
-        VALUES (?, ?, 1, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)''',
+        VALUES (?, ?, 1, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)''',
       [
         id,
         _studentId,
@@ -1287,6 +1316,7 @@ final class SqliteSynchronizationRepository
         entityType,
         entityId,
         localRevision,
+        remoteRevision,
         remoteRevision,
         localSnapshotJson,
         remoteSnapshotJson,

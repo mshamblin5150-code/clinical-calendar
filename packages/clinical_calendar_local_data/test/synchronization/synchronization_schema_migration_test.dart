@@ -18,6 +18,53 @@ const _planId = '00000000-0000-4000-8000-000000000004';
 const _legacySettingsId = '00000000-0000-4000-8000-000000000005';
 
 void main() {
+  test('version seventeen conflict heads retain their remote revision', () {
+    final raw = sqlite3.openInMemory();
+    final runner = DatabaseMigrationRunner.forTesting((version, _) {
+      if (version == 18) throw StateError('stop at version seventeen');
+    });
+    try {
+      runner.migrate(raw, 0);
+    } on ClinicalCalendarDatabaseException catch (error) {
+      expect(error.kind, DatabaseFailureKind.migrationFailed);
+    }
+    expect(raw.userVersion, 17);
+    raw.execute(
+      '''INSERT INTO student_profiles
+        (id, student_id, revision, created_at_utc, updated_at_utc, display_name)
+        VALUES (?, ?, 0, ?, ?, 'Student')''',
+      [_studentId, _studentId, _createdAt, _createdAt],
+    );
+    raw.execute(
+      '''INSERT INTO sync_conflicts
+        (id, student_id, revision, created_at_utc, updated_at_utc,
+         entity_type, entity_id, local_revision, remote_revision,
+         local_snapshot_json, remote_snapshot_json, detected_at_utc,
+         rejection_code, rejection_json)
+        VALUES (?, ?, 1, ?, ?, 'preceptor', ?, 8, 7, '{}', '{}', ?,
+          'stale_revision', '{"code":"stale_revision"}')''',
+      [
+        '00000000-0000-4000-8000-000000000006',
+        _studentId,
+        _createdAt,
+        _createdAt,
+        _preceptorId,
+        _createdAt,
+      ],
+    );
+
+    const DatabaseMigrationRunner().migrate(raw, 17);
+
+    expect(raw.userVersion, DatabaseMigrationRunner.latestVersion);
+    expect(
+      raw
+          .select('SELECT resolution_base_revision FROM sync_conflicts')
+          .single['resolution_base_revision'],
+      7,
+    );
+    raw.close();
+  });
+
   test(
     'pre-catalog settings migrate to variant-f in storage and pending synchronization',
     () async {

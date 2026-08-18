@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 17;
+  static const latestVersion = 18;
 
   final MigrationTestHook? _testHook;
 
@@ -776,5 +776,12 @@ final Map<int, List<String>> _statements = {
       ON trash(student_id, aggregate_mutation_id)
       WHERE aggregate_mutation_id IS NOT NULL
         AND permanently_deleted_at_utc IS NULL''',
+  ],
+  18: [
+    '''ALTER TABLE sync_conflicts
+      ADD COLUMN resolution_base_revision INTEGER NOT NULL DEFAULT 0
+      CHECK (resolution_base_revision >= 0)''',
+    '''UPDATE sync_conflicts
+      SET resolution_base_revision = remote_revision''',
   ],
 };

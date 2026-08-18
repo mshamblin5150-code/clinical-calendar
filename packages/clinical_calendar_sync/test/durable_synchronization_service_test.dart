@@ -555,6 +555,95 @@ void main() {
   );
 
   test(
+    'resolving an older same-record conflict uses the latest known remote revision',
+    () async {
+      final firstSync = _service(first, server, clock);
+      final secondSync = _service(second, server, clock);
+      await _putPreceptor(first.registry, 'Shared', 50, clock.nowUtc());
+      await firstSync.syncNow();
+      await secondSync.syncNow();
+
+      clock.advance(const Duration(minutes: 1));
+      await _putPreceptor(
+        second.registry,
+        'Tablet first original',
+        51,
+        clock.nowUtc(),
+      );
+      await _putPreceptor(
+        first.registry,
+        'Other device revision 2',
+        52,
+        clock.nowUtc(),
+      );
+      await firstSync.syncNow();
+      await secondSync.syncNow();
+
+      clock.advance(const Duration(minutes: 1));
+      await _putPreceptor(
+        second.registry,
+        'Tablet second original',
+        53,
+        clock.nowUtc(),
+      );
+      await _putPreceptor(
+        first.registry,
+        'Other device revision 3',
+        54,
+        clock.nowUtc(),
+      );
+      await firstSync.syncNow();
+      await secondSync.syncNow();
+
+      clock.advance(const Duration(minutes: 1));
+      await _putPreceptor(
+        first.registry,
+        'Other device revision 4',
+        55,
+        clock.nowUtc(),
+      );
+      await firstSync.syncNow();
+      await secondSync.syncNow();
+
+      final open = await second.registry.read((repositories) {
+        final sync = repositories as SynchronizationLocalReadRepositories;
+        return sync.synchronization.listConflicts(studentId: _studentId);
+      });
+      expect(open, hasLength(2));
+      expect(open.first.localSnapshotJson, contains('Tablet first original'));
+
+      clock.advance(const Duration(minutes: 1));
+      final receipt = await second.registry.mutate((repositories) {
+        final sync = repositories as SynchronizationLocalWriteRepositories;
+        return sync.synchronization.resolveConflict(
+          studentId: _studentId,
+          conflictId: open.first.id,
+          choice: SynchronizationConflictResolutionChoice.localVersion,
+          mutation: MutationToken(
+            operationId: _id(9990),
+            idempotencyKey: _id(9991),
+            occurredAtUtc: clock.nowUtc(),
+          ),
+        );
+      });
+
+      expect(receipt.operation.payloadJson, contains('Tablet first original'));
+      expect(
+        (await secondSync.syncNow()).disposition,
+        SynchronizationDisposition.deferred,
+      );
+      final remaining = await second.registry.read((repositories) {
+        final sync = repositories as SynchronizationLocalReadRepositories;
+        return sync.synchronization.listConflicts(studentId: _studentId);
+      });
+      expect(remaining, hasLength(1));
+      expect(receipt.operation.baseRevision, 4);
+      expect(server.records['preceptor/$_preceptorId']!['revision'], 5);
+      expect(await _preceptorName(second.registry), 'Tablet first original');
+    },
+  );
+
+  test(
     'legacy Evaluation Plan without an association stops at its cursor after restart',
     () async {
       server.feed.addAll([
