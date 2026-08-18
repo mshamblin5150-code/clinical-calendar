@@ -478,6 +478,21 @@ final class SqliteSynchronizationRepository
         ? 'delete'
         : 'resolve_conflict';
     _database.execute(
+      '''UPDATE outbox_operations SET terminal_rejection_code = ?,
+        terminal_rejected_at_utc = ?, last_failure_code = ?
+        WHERE student_id = ? AND entity_type = ? AND entity_id = ?
+          AND acknowledged_at_utc IS NULL
+          AND terminal_rejected_at_utc IS NULL''',
+      [
+        'superseded_by_resolution',
+        mutation.occurredAtUtc.toIso8601String(),
+        'superseded_by_resolution',
+        _studentId,
+        entityType,
+        entityId,
+      ],
+    );
+    _database.execute(
       '''INSERT INTO outbox_operations
         (id, student_id, idempotency_key, entity_type, entity_id,
          operation_type, base_revision, payload_json, created_at_utc)
@@ -500,17 +515,20 @@ final class SqliteSynchronizationRepository
       'local_revision': _integer(row, 'local_revision'),
       'remote_revision': remoteRevision,
       'resolution_base_revision': resolutionBaseRevision,
+      'selected_conflict_id': normalizedConflictId,
     });
     _database.execute(
       '''UPDATE sync_conflicts SET revision = revision + 1,
         updated_at_utc = ?, resolved_at_utc = ?, resolution_json = ?
-        WHERE student_id = ? AND id = ?''',
+        WHERE student_id = ? AND entity_type = ? AND entity_id = ?
+          AND resolved_at_utc IS NULL''',
       [
         mutation.occurredAtUtc.toIso8601String(),
         mutation.occurredAtUtc.toIso8601String(),
         resolutionJson,
         _studentId,
-        normalizedConflictId,
+        entityType,
+        entityId,
       ],
     );
     final operation = OutboxOperation(

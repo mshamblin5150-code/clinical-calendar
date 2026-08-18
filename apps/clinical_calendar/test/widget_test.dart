@@ -451,7 +451,7 @@ void main() {
   );
 
   test(
-    'configured authenticated conflict choice decrements durable attention',
+    'configured authenticated choice clears superseded durable attention',
     () async {
       const studentId = '00000000-0000-4000-8000-000000000021';
       const preceptorId = '00000000-0000-4000-8000-000000000022';
@@ -562,8 +562,8 @@ void main() {
         );
         final after = await conflicts.load();
 
-        expect(after.items, hasLength(1));
-        expect((await synchronization.health()).unresolvedConflictCount, 1);
+        expect(after.items, isEmpty);
+        expect((await synchronization.health()).unresolvedConflictCount, 0);
         expect(transport.currentName(preceptorId), 'Tablet first original');
       } finally {
         await synchronization?.shutdown();

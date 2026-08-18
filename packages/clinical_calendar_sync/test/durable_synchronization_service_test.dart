@@ -555,7 +555,7 @@ void main() {
   );
 
   test(
-    'resolving an older same-record conflict uses the latest known remote revision',
+    'one resolution supersedes older same-record conflicts and queued edits',
     () async {
       final firstSync = _service(first, server, clock);
       final secondSync = _service(second, server, clock);
@@ -628,15 +628,27 @@ void main() {
       });
 
       expect(receipt.operation.payloadJson, contains('Tablet first original'));
-      expect(
-        (await secondSync.syncNow()).disposition,
-        SynchronizationDisposition.deferred,
-      );
       final remaining = await second.registry.read((repositories) {
         final sync = repositories as SynchronizationLocalReadRepositories;
         return sync.synchronization.listConflicts(studentId: _studentId);
       });
-      expect(remaining, hasLength(1));
+      expect(remaining, isEmpty);
+      expect(
+        second.database
+            .select(
+              '''SELECT count(*) AS count FROM outbox_operations
+                 WHERE student_id = ? AND entity_type = 'preceptor'
+                   AND entity_id = ? AND acknowledged_at_utc IS NULL
+                   AND terminal_rejected_at_utc IS NULL''',
+              [_studentId, _preceptorId],
+            )
+            .single['count'],
+        1,
+      );
+      expect(
+        (await secondSync.syncNow()).disposition,
+        SynchronizationDisposition.synchronized,
+      );
       expect(receipt.operation.baseRevision, 4);
       expect(server.records['preceptor/$_preceptorId']!['revision'], 5);
       expect(await _preceptorName(second.registry), 'Tablet first original');
