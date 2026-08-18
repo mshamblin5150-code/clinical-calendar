@@ -301,6 +301,8 @@ final class _TrashRecoverySurfaceState extends State<TrashRecoverySurface> {
     });
     try {
       await action();
+    } on RecoveryException catch (error) {
+      _message = error.safeMessage;
     } on Object {
       _message = 'Recovery could not be completed safely.';
     } finally {
