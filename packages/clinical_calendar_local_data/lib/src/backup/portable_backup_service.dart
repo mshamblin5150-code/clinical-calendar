@@ -902,6 +902,7 @@ void _insert(Database db, String table, Map<String, Object?> row) {
 void _validateUuidColumns(Map<String, Object?> row) {
   for (final entry in row.entries) {
     if ((entry.key == 'id' || entry.key.endsWith('_id')) &&
+        entry.key != 'subject_entity_id' &&
         entry.value != null) {
       _uuid(entry.value as String);
     }

@@ -93,6 +93,46 @@ void main() {
     },
   );
 
+  test('reminder subject identifiers survive a portable backup', () async {
+    const compositeSubjectId = '$_placementId:lead-742';
+    source.execute(
+      '''INSERT INTO reminder_state
+         (id, student_id, revision, created_at_utc, updated_at_utc,
+          deleted_at_utc, reminder_type, subject_entity_id,
+          scheduled_for_utc, occurrence_key)
+         VALUES (?, ?, 1, ?, ?, NULL, 'protectedDayPlanning', ?, ?, ?)''',
+      [
+        _reminderId,
+        _studentId,
+        _createdAt,
+        _createdAt,
+        compositeSubjectId,
+        _createdAt,
+        'protectedDayPlanning:$compositeSubjectId:base',
+      ],
+    );
+    final service = _service(source, sink, crypto);
+    final encrypted = await service.createEncryptedBackup(
+      passphrase: _passphrase,
+      createdAtUtc: DateTime.parse(_createdAt),
+    );
+
+    final preview = await _service(
+      target,
+      sink,
+      crypto,
+    ).previewRestore(encryptedBytes: encrypted, passphrase: _passphrase);
+
+    expect(
+      preview.items.where(
+        (item) =>
+            item.identity.table == 'reminder_state' &&
+            item.identity.key['id'] == _reminderId,
+      ),
+      hasLength(1),
+    );
+  });
+
   test('unique salt and nonce make identical backups different', () async {
     final service = _service(source, sink, crypto);
     final first = await service.createEncryptedBackup(
