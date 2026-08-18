@@ -451,6 +451,130 @@ void main() {
   );
 
   test(
+    'configured authenticated conflict choice decrements durable attention',
+    () async {
+      const studentId = '00000000-0000-4000-8000-000000000021';
+      const preceptorId = '00000000-0000-4000-8000-000000000022';
+      final directory = await Directory.systemTemp.createTemp(
+        'clinical-calendar-authenticated-conflict-resolution-',
+      );
+      final databasePath =
+          '${directory.path}${Platform.pathSeparator}clinical_calendar.sqlite3';
+      final identifiers = _SequentialIdentifiers(400);
+      final connectivity = _ConnectivitySource(initial: true);
+      final transport = _RevisionedTransport();
+      SqliteRepositoryRegistry? registry;
+      DurableSynchronizationService? synchronization;
+      Future<void> putLocal(String name) async {
+        final current = await registry!.read(
+          (repositories) => repositories.preceptors.find(
+            studentId: studentId,
+            id: preceptorId,
+          ),
+        );
+        await registry!.mutate(
+          (repositories) => repositories.preceptors.put(
+            studentId: studentId,
+            value: Preceptor(id: preceptorId, name: name),
+            expectedRevision: current?.revision ?? 0,
+            mutation: MutationToken(
+              operationId: identifiers.nextIdentifier(),
+              idempotencyKey: identifiers.nextIdentifier(),
+              occurredAtUtc: _FixedClock().nowUtc(),
+            ),
+          ),
+        );
+      }
+
+      try {
+        final root = await app.buildProductionApplication(
+          secureStorage: _MemorySecureStorage(),
+          identifiers: identifiers,
+          authenticatedStudentId: studentId,
+          repositoryBootstrap: (owner, secureStorage, generator) async {
+            final database = await ClinicalCalendarDatabase.open(
+              path: databasePath,
+              secureStorage: secureStorage,
+            );
+            registry = SqliteRepositoryRegistry(
+              studentId: owner,
+              database: database,
+              identifierGenerator: generator,
+            );
+            await registry!.initialize();
+            return registry!;
+          },
+          environment: const AppEnvironment(
+            name: 'test',
+            supabaseUrl: 'https://project.supabase.co',
+            supabasePublishableKey: 'public-client-key',
+          ),
+          accessTokenProvider: () async => 'current-access-token',
+          synchronizationTransport: transport,
+          retryScheduler: _RetryScheduler(),
+          connectivitySource: connectivity,
+          onSynchronizationFailure: (_, _) {},
+          clock: _FixedClock(),
+        );
+        synchronization =
+            root.dependencies.synchronization as DurableSynchronizationService;
+
+        await putLocal('Shared');
+        await synchronization.syncNow();
+        await putLocal('Tablet first original');
+        transport.putRemotePreceptor(
+          studentId: studentId,
+          preceptorId: preceptorId,
+          name: 'Other device revision 2',
+        );
+        await synchronization.syncNow();
+        await putLocal('Tablet second original');
+        transport.putRemotePreceptor(
+          studentId: studentId,
+          preceptorId: preceptorId,
+          name: 'Other device revision 3',
+        );
+        await synchronization.syncNow();
+        transport.putRemotePreceptor(
+          studentId: studentId,
+          preceptorId: preceptorId,
+          name: 'Other device revision 4',
+        );
+        await synchronization.syncNow();
+
+        final conflicts = ConflictResolutionApplicationService(
+          repositories: root.dependencies.repositories,
+          clock: _FixedClock(),
+          identifiers: identifiers,
+          studentId: studentId,
+          synchronization: synchronization,
+        );
+        final before = await conflicts.load();
+        expect(before.items, hasLength(2));
+        expect(
+          before.items.first.local.values['name'],
+          'Tablet first original',
+        );
+
+        await conflicts.resolve(
+          conflictId: before.items.first.record.id,
+          choice: SynchronizationConflictResolutionChoice.localVersion,
+        );
+        final after = await conflicts.load();
+
+        expect(after.items, hasLength(1));
+        expect((await synchronization.health()).unresolvedConflictCount, 1);
+        expect(transport.currentName(preceptorId), 'Tablet first original');
+      } finally {
+        await synchronization?.shutdown();
+        await registry?.close();
+        await connectivity.controller.close();
+        if (await directory.exists()) await directory.delete(recursive: true);
+      }
+    },
+  );
+
+  test(
     'missing or failed session stays offline without starting connectivity',
     () async {
       const studentId = '00000000-0000-4000-8000-000000000021';
@@ -1084,6 +1208,98 @@ final class _RecoveringTransport implements SynchronizationTransport {
     return SynchronizationPushResult.accepted(
       cursor: acceptedCursor,
       revision: operation.baseRevision + 1,
+    );
+  }
+}
+
+final class _RevisionedTransport implements SynchronizationTransport {
+  final records = <String, Map<String, dynamic>>{};
+  final changes = <RemoteSynchronizationChange>[];
+  int cursor = 0;
+
+  void putRemotePreceptor({
+    required String studentId,
+    required String preceptorId,
+    required String name,
+  }) {
+    final key = 'preceptor/$preceptorId';
+    final current = records[key];
+    final revision = (current?['revision'] as int? ?? 0) + 1;
+    final payload = <String, dynamic>{
+      'schema_version': 1,
+      'entity_type': 'preceptor',
+      'entity_id': preceptorId,
+      'student_id': studentId,
+      'revision': revision,
+      'created_at_utc':
+          current?['created_at_utc'] ??
+          _FixedClock().nowUtc().toIso8601String(),
+      'updated_at_utc': _FixedClock().nowUtc().toIso8601String(),
+      'deleted_at_utc': null,
+      'value': {
+        'name': name,
+        'organization_or_site': null,
+        'phone': null,
+        'email': null,
+        'scheduling_notes': null,
+      },
+    };
+    records[key] = payload;
+    changes.add(
+      RemoteSynchronizationChange(
+        cursor: ++cursor,
+        entityType: 'preceptor',
+        entityId: preceptorId,
+        revision: revision,
+        operationType: OutboxOperationType.upsert,
+        payloadJson: jsonEncode(payload),
+      ),
+    );
+  }
+
+  String? currentName(String preceptorId) =>
+      (records['preceptor/$preceptorId']?['value']
+              as Map<String, dynamic>?)?['name']
+          as String?;
+
+  @override
+  Future<List<RemoteSynchronizationChange>> pull({
+    required int afterCursor,
+    required int limit,
+  }) async => changes
+      .where((change) => change.cursor > afterCursor)
+      .take(limit)
+      .toList();
+
+  @override
+  Future<SynchronizationPushResult> push(OutboxOperation operation) async {
+    final key = '${operation.entityType}/${operation.entityId}';
+    final currentRevision = records[key]?['revision'] as int? ?? 0;
+    if (operation.baseRevision != currentRevision) {
+      return SynchronizationPushResult.rejected(
+        code: 'stale_revision',
+        rejectionJson: jsonEncode({
+          'code': 'stale_revision',
+          'current_revision': currentRevision,
+        }),
+      );
+    }
+    final payload = jsonDecode(operation.payloadJson) as Map<String, dynamic>;
+    records[key] = payload;
+    final acceptedCursor = ++cursor;
+    changes.add(
+      RemoteSynchronizationChange(
+        cursor: acceptedCursor,
+        entityType: operation.entityType,
+        entityId: operation.entityId,
+        revision: payload['revision'] as int,
+        operationType: operation.type,
+        payloadJson: operation.payloadJson,
+      ),
+    );
+    return SynchronizationPushResult.accepted(
+      cursor: acceptedCursor,
+      revision: payload['revision'] as int,
     );
   }
 }
