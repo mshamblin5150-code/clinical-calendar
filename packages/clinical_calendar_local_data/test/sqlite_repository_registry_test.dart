@@ -1111,6 +1111,8 @@ void main() {
         preceptorId: fixture.preceptor.id,
       );
       await registry.mutate((repositories) {
+        final reminderRepositories =
+            repositories as ReminderLocalWriteRepositories;
         repositories.preceptors.put(
           studentId: _studentId,
           value: fixture.preceptor,
@@ -1146,6 +1148,19 @@ void main() {
           clinicalPlacementId: fixture.placement.id,
           expectedRevision: 0,
           mutation: _mutation(185),
+        );
+        reminderRepositories.reminderStates.put(
+          studentId: _studentId,
+          value: ReminderState(
+            id: _id(187),
+            occurrenceKey:
+                'protectedDayPlanning:${fixture.placement.id}:lead-742',
+            kind: ReminderKind.protectedDayPlanning,
+            subjectEntityId: '${fixture.placement.id}:lead-742',
+            scheduledForUtc: _baseTime.add(const Duration(days: 1)),
+          ),
+          expectedRevision: 0,
+          mutation: _mutation(186),
         );
       });
       final service = PlacementApplicationService(
@@ -1307,6 +1322,8 @@ void main() {
         fixture.placement.id,
       );
       await registry.read((repositories) {
+        final reminderRepositories =
+            repositories as ReminderLocalReadRepositories;
         expect(
           repositories.clinicalSessions.find(
             studentId: _studentId,
@@ -1318,6 +1335,13 @@ void main() {
           repositories.historicalHoursEntries.find(
             studentId: _studentId,
             id: history.id,
+          ),
+          isNotNull,
+        );
+        expect(
+          reminderRepositories.reminderStates.find(
+            studentId: _studentId,
+            id: _id(187),
           ),
           isNotNull,
         );
