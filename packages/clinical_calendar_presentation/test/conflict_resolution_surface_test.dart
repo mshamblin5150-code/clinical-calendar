@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
@@ -15,6 +16,23 @@ const _affectedId = '00000000-0000-4000-8000-000000000004';
 final _now = DateTime.utc(2026, 8, 3, 12);
 
 void main() {
+  test('a refresh requested during a load is coalesced', () async {
+    final harness = _Harness(_sameRecordConflict());
+    harness.repository.hideConflict = true;
+    harness.registry.deferNextRead();
+
+    final firstLoad = harness.controller.load();
+    await harness.registry.readStarted;
+    harness.repository.hideConflict = false;
+
+    final overlappingLoad = harness.controller.load();
+    harness.registry.releaseRead();
+    await Future.wait([firstLoad, overlappingLoad]);
+
+    expect(harness.controller.snapshot!.items, hasLength(1));
+    expect(harness.registry.readCount, 2);
+  });
+
   testWidgets('shows both originals and resolves through an explicit choice', (
     tester,
   ) async {
@@ -257,9 +275,10 @@ Future<void> _pump(
 final class _Harness {
   _Harness(SynchronizationConflictRecord conflict)
     : repository = _ConflictRepository(conflict) {
+    registry = _Registry(_Repositories(repository));
     controller = ConflictResolutionController(
       ConflictResolutionApplicationService(
-        repositories: _Registry(_Repositories(repository)),
+        repositories: registry,
         clock: _Clock(),
         identifiers: _Identifiers(),
         studentId: _studentId,
@@ -268,6 +287,7 @@ final class _Harness {
   }
 
   final _ConflictRepository repository;
+  late final _Registry registry;
   late final ConflictResolutionController controller;
 }
 
@@ -343,6 +363,21 @@ String _envelope(
 final class _Registry implements RepositoryRegistry {
   _Registry(this.repositories);
   final _Repositories repositories;
+  Completer<void>? _readStarted;
+  Completer<void>? _releaseRead;
+  int readCount = 0;
+
+  Future<void> get readStarted => _readStarted!.future;
+
+  void deferNextRead() {
+    _readStarted = Completer<void>();
+    _releaseRead = Completer<void>();
+  }
+
+  void releaseRead() {
+    _releaseRead!.complete();
+    _releaseRead = null;
+  }
 
   @override
   Future<void> initialize() async {}
@@ -350,7 +385,16 @@ final class _Registry implements RepositoryRegistry {
   @override
   Future<R> read<R>(
     R Function(LocalReadRepositories repositories) callback,
-  ) async => callback(repositories);
+  ) async {
+    readCount++;
+    final result = callback(repositories);
+    final release = _releaseRead;
+    if (release != null) {
+      _readStarted!.complete();
+      await release.future;
+    }
+    return result;
+  }
 
   @override
   Future<R> mutate<R>(
@@ -379,6 +423,7 @@ final class _ConflictRepository implements SynchronizationLocalRepository {
   SynchronizationConflictResolutionChoice? lastChoice;
   String? correctedValueJson;
   bool failLoads = false;
+  bool hideConflict = false;
 
   @override
   SynchronizationConflictRecord? findConflict({
@@ -397,7 +442,9 @@ final class _ConflictRepository implements SynchronizationLocalRepository {
         'A synchronization conflict snapshot is invalid.',
       );
     }
-    return record.isResolved && !includeResolved ? [] : [record];
+    return hideConflict || (record.isResolved && !includeResolved)
+        ? []
+        : [record];
   }
 
   @override
