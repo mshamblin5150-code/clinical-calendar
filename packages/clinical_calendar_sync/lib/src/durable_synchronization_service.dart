@@ -202,10 +202,11 @@ final class DurableSynchronizationService
       await _recordCycleFailure(error.code, offline: error.offline);
       return _failureResult(offline: error.offline);
     } on RepositoryException catch (error) {
-      await _recordCycleFailure('cursor_or_payload_failure', offline: false);
+      final failureCode = _cursorOrPayloadFailureReference(error.kind);
+      await _recordCycleFailure(failureCode, offline: false);
       return SynchronizationResult(
         SynchronizationDisposition.deferred,
-        detail: error.message,
+        detail: failureCode,
       );
     }
 
@@ -497,6 +498,27 @@ final class DurableSynchronizationService
     return value;
   }
 }
+
+String _cursorOrPayloadFailureReference(
+  RepositoryFailureKind kind,
+) => switch (kind) {
+  RepositoryFailureKind.notFound =>
+    PublicSynchronizationFailureReference.cursorOrPayloadNotFound,
+  RepositoryFailureKind.ownershipMismatch =>
+    PublicSynchronizationFailureReference.cursorOrPayloadOwnershipMismatch,
+  RepositoryFailureKind.concurrentModification =>
+    PublicSynchronizationFailureReference.cursorOrPayloadConcurrentModification,
+  RepositoryFailureKind.idempotencyConflict =>
+    PublicSynchronizationFailureReference.cursorOrPayloadIdempotencyConflict,
+  RepositoryFailureKind.corruptData =>
+    PublicSynchronizationFailureReference.cursorOrPayloadCorruptData,
+  RepositoryFailureKind.persistenceFailure =>
+    PublicSynchronizationFailureReference.cursorOrPayloadPersistenceFailure,
+  RepositoryFailureKind.closed =>
+    PublicSynchronizationFailureReference.cursorOrPayloadClosed,
+  RepositoryFailureKind.uninitialized =>
+    PublicSynchronizationFailureReference.cursorOrPayloadUninitialized,
+};
 
 SynchronizationTrigger _coalesceTrigger(
   SynchronizationTrigger? pending,

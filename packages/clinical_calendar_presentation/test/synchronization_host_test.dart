@@ -108,6 +108,18 @@ void main() {
 
     synchronization.result = const SynchronizationResult(
       SynchronizationDisposition.deferred,
+      detail: 'cursor_or_payload_persistence_failure',
+    );
+    await tester.tap(find.byKey(const Key('sync-now-action')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Reference: cursor_or_payload_persistence_failure.'),
+      findsOneWidget,
+    );
+
+    synchronization.result = const SynchronizationResult(
+      SynchronizationDisposition.deferred,
       detail: 'access_token_secret',
     );
     await tester.tap(find.byKey(const Key('sync-now-action')));
