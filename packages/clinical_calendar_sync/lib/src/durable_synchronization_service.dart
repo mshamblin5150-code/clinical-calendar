@@ -499,21 +499,26 @@ final class DurableSynchronizationService
   }
 }
 
-String _cursorOrPayloadFailureReference(RepositoryFailureKind kind) =>
-    switch (kind) {
-      RepositoryFailureKind.notFound => 'cursor_or_payload_not_found',
-      RepositoryFailureKind.ownershipMismatch =>
-        'cursor_or_payload_ownership_mismatch',
-      RepositoryFailureKind.concurrentModification =>
-        'cursor_or_payload_concurrent_modification',
-      RepositoryFailureKind.idempotencyConflict =>
-        'cursor_or_payload_idempotency_conflict',
-      RepositoryFailureKind.corruptData => 'cursor_or_payload_corrupt_data',
-      RepositoryFailureKind.persistenceFailure =>
-        'cursor_or_payload_persistence_failure',
-      RepositoryFailureKind.closed => 'cursor_or_payload_closed',
-      RepositoryFailureKind.uninitialized => 'cursor_or_payload_uninitialized',
-    };
+String _cursorOrPayloadFailureReference(
+  RepositoryFailureKind kind,
+) => switch (kind) {
+  RepositoryFailureKind.notFound =>
+    PublicSynchronizationFailureReference.cursorOrPayloadNotFound,
+  RepositoryFailureKind.ownershipMismatch =>
+    PublicSynchronizationFailureReference.cursorOrPayloadOwnershipMismatch,
+  RepositoryFailureKind.concurrentModification =>
+    PublicSynchronizationFailureReference.cursorOrPayloadConcurrentModification,
+  RepositoryFailureKind.idempotencyConflict =>
+    PublicSynchronizationFailureReference.cursorOrPayloadIdempotencyConflict,
+  RepositoryFailureKind.corruptData =>
+    PublicSynchronizationFailureReference.cursorOrPayloadCorruptData,
+  RepositoryFailureKind.persistenceFailure =>
+    PublicSynchronizationFailureReference.cursorOrPayloadPersistenceFailure,
+  RepositoryFailureKind.closed =>
+    PublicSynchronizationFailureReference.cursorOrPayloadClosed,
+  RepositoryFailureKind.uninitialized =>
+    PublicSynchronizationFailureReference.cursorOrPayloadUninitialized,
+};
 
 SynchronizationTrigger _coalesceTrigger(
   SynchronizationTrigger? pending,

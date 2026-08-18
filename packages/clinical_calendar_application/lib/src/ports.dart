@@ -8,6 +8,45 @@ abstract interface class IdentifierGenerator {
 
 enum SynchronizationDisposition { offline, synchronized, deferred }
 
+abstract final class PublicSynchronizationFailureReference {
+  static const cursorOrPayloadFailure = 'cursor_or_payload_failure';
+  static const cursorOrPayloadNotFound = 'cursor_or_payload_not_found';
+  static const cursorOrPayloadOwnershipMismatch =
+      'cursor_or_payload_ownership_mismatch';
+  static const cursorOrPayloadConcurrentModification =
+      'cursor_or_payload_concurrent_modification';
+  static const cursorOrPayloadIdempotencyConflict =
+      'cursor_or_payload_idempotency_conflict';
+  static const cursorOrPayloadCorruptData = 'cursor_or_payload_corrupt_data';
+  static const cursorOrPayloadPersistenceFailure =
+      'cursor_or_payload_persistence_failure';
+  static const cursorOrPayloadClosed = 'cursor_or_payload_closed';
+  static const cursorOrPayloadUninitialized = 'cursor_or_payload_uninitialized';
+
+  static const values = {
+    cursorOrPayloadFailure,
+    cursorOrPayloadNotFound,
+    cursorOrPayloadOwnershipMismatch,
+    cursorOrPayloadConcurrentModification,
+    cursorOrPayloadIdempotencyConflict,
+    cursorOrPayloadCorruptData,
+    cursorOrPayloadPersistenceFailure,
+    cursorOrPayloadClosed,
+    cursorOrPayloadUninitialized,
+    'failed',
+    'incomplete_aggregate_batch',
+    'invalid_pull_response',
+    'invalid_push_response',
+    'invalid_request',
+    'invalid_rpc_response',
+    'network_unavailable',
+    'rate_limited',
+    'retry_deferred',
+    'server_unavailable',
+    'unauthenticated',
+  };
+}
+
 final class SynchronizationResult {
   const SynchronizationResult(this.disposition, {this.detail});
 

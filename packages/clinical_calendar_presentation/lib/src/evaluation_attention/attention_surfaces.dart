@@ -111,34 +111,11 @@ String _deferredStatus(String? detail) {
   const message = 'Synchronization is deferred. Local changes remain queued.';
   final reference = detail?.trim();
   if (reference == null ||
-      !_publicSynchronizationReferences.contains(reference)) {
+      !PublicSynchronizationFailureReference.values.contains(reference)) {
     return message;
   }
   return '$message\nReference: $reference.';
 }
-
-const _publicSynchronizationReferences = {
-  'cursor_or_payload_failure',
-  'cursor_or_payload_not_found',
-  'cursor_or_payload_ownership_mismatch',
-  'cursor_or_payload_concurrent_modification',
-  'cursor_or_payload_idempotency_conflict',
-  'cursor_or_payload_corrupt_data',
-  'cursor_or_payload_persistence_failure',
-  'cursor_or_payload_closed',
-  'cursor_or_payload_uninitialized',
-  'failed',
-  'incomplete_aggregate_batch',
-  'invalid_pull_response',
-  'invalid_push_response',
-  'invalid_request',
-  'invalid_rpc_response',
-  'network_unavailable',
-  'rate_limited',
-  'retry_deferred',
-  'server_unavailable',
-  'unauthenticated',
-};
 
 final class AttentionRail extends StatelessWidget {
   const AttentionRail({
