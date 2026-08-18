@@ -1819,9 +1819,11 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
           ),
         );
       case ClinicalCalendarDestination.synchronization:
-        return SynchronizationAttentionSurface(
+        return _SynchronizationDestinationSurface(
+          controller: _conflictController,
           synchronization: widget.dependencies.synchronization,
           onSynchronized: refreshAuthoritativeSettings,
+          onOpenRecordAction: _openConflictRecord,
         );
       case ClinicalCalendarDestination.settings:
         final devicePolicy = _notificationDevicePolicy;

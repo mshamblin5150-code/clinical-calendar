@@ -567,6 +567,41 @@ void main() {
     expect(find.byKey(const Key('close-action')), findsOneWidget);
   });
 
+  testWidgets('direct synchronization destination routes a reported conflict', (
+    tester,
+  ) async {
+    final repositories = _Repositories(seedSynchronization: true);
+    await _pumpAt(
+      tester,
+      const Size(390, 844),
+      dependencies: _dependencies(
+        repositories: repositories,
+        synchronization: _Synchronization(
+          result: const SynchronizationResult(
+            SynchronizationDisposition.deferred,
+            detail:
+                PublicSynchronizationFailureReference.conflictNeedsAttention,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Open Synchronization'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sync-now-action')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('synchronization-conflict-resolution-surface')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('details could not be loaded'), findsOneWidget);
+    expect(
+      find.byKey(const Key('synchronization-attention-surface')),
+      findsNothing,
+    );
+  });
+
   testWidgets('portrait tablet uses the approved Containment reading order', (
     tester,
   ) async {
