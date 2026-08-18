@@ -9,6 +9,11 @@ abstract interface class IdentifierGenerator {
 enum SynchronizationDisposition { offline, synchronized, deferred }
 
 abstract final class PublicSynchronizationFailureReference {
+  static const pushRetryScheduled = 'push_retry_scheduled';
+  static const pullTransportFailure = 'pull_transport_failure';
+  static const conflictNeedsAttention = 'conflict_needs_attention';
+  static const terminalRejection = 'terminal_rejection';
+  static const pendingAfterCycle = 'pending_after_cycle';
   static const cursorOrPayloadFailure = 'cursor_or_payload_failure';
   static const cursorOrPayloadNotFound = 'cursor_or_payload_not_found';
   static const cursorOrPayloadOwnershipMismatch =
@@ -24,6 +29,11 @@ abstract final class PublicSynchronizationFailureReference {
   static const cursorOrPayloadUninitialized = 'cursor_or_payload_uninitialized';
 
   static const values = {
+    pushRetryScheduled,
+    pullTransportFailure,
+    conflictNeedsAttention,
+    terminalRejection,
+    pendingAfterCycle,
     cursorOrPayloadFailure,
     cursorOrPayloadNotFound,
     cursorOrPayloadOwnershipMismatch,

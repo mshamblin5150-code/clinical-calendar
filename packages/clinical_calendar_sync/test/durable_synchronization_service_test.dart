@@ -308,9 +308,11 @@ void main() {
         offline: false,
       );
 
+      final firstAttempt = await service.afterLocalSave();
+      expect(firstAttempt.disposition, SynchronizationDisposition.deferred);
       expect(
-        (await service.afterLocalSave()).disposition,
-        SynchronizationDisposition.deferred,
+        firstAttempt.detail,
+        PublicSynchronizationFailureReference.pushRetryScheduled,
       );
       final failed = await service.health();
       expect(failed.disposition, SynchronizationHealthDisposition.failed);
@@ -374,6 +376,27 @@ void main() {
       expect(server.feed, hasLength(1));
     },
   );
+
+  test('offline push failure remains a truthful offline result', () async {
+    await _putPreceptor(first.registry, 'Offline Push', 61, clock.nowUtc());
+    final service = _service(first, server, clock);
+    server.nextPushError = const SynchronizationTransportException(
+      'network_unavailable',
+      offline: true,
+    );
+
+    final result = await service.syncNow();
+
+    expect(result.disposition, SynchronizationDisposition.offline);
+    expect(
+      result.detail,
+      PublicSynchronizationFailureReference.pushRetryScheduled,
+    );
+    expect(
+      (await service.health()).disposition,
+      SynchronizationHealthDisposition.offline,
+    );
+  });
 
   test(
     'explicit Sync Now retries queued changes before backoff expires',
@@ -442,6 +465,10 @@ void main() {
     final secondResult = await _service(second, server, clock).syncNow();
 
     expect(secondResult.disposition, SynchronizationDisposition.deferred);
+    expect(
+      secondResult.detail,
+      PublicSynchronizationFailureReference.conflictNeedsAttention,
+    );
     final health = await _service(second, server, clock).health();
     expect(
       health.disposition,
