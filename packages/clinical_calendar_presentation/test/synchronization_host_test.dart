@@ -108,6 +108,18 @@ void main() {
 
     synchronization.result = const SynchronizationResult(
       SynchronizationDisposition.deferred,
+      detail: 'push_retry_scheduled',
+    );
+    await tester.tap(find.byKey(const Key('sync-now-action')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Reference: push_retry_scheduled.'),
+      findsOneWidget,
+    );
+
+    synchronization.result = const SynchronizationResult(
+      SynchronizationDisposition.deferred,
       detail: 'cursor_or_payload_persistence_failure',
     );
     await tester.tap(find.byKey(const Key('sync-now-action')));

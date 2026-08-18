@@ -181,7 +181,12 @@ final class DurableSynchronizationService
       for (final operation in pending) {
         final result = await _push(operation);
         if (result.disposition == _PushDisposition.retryScheduled) {
-          return _failureResult();
+          return SynchronizationResult(
+            result.offline
+                ? SynchronizationDisposition.offline
+                : SynchronizationDisposition.deferred,
+            detail: PublicSynchronizationFailureReference.pushRetryScheduled,
+          );
         }
         if (result.disposition == _PushDisposition.terminalFailure) {
           terminalFailure = result.rejectionCode ?? 'terminal_rejection';
@@ -200,7 +205,12 @@ final class DurableSynchronizationService
       await _pullAll();
     } on SynchronizationTransportException catch (error) {
       await _recordCycleFailure(error.code, offline: error.offline);
-      return _failureResult(offline: error.offline);
+      return SynchronizationResult(
+        error.offline
+            ? SynchronizationDisposition.offline
+            : SynchronizationDisposition.deferred,
+        detail: PublicSynchronizationFailureReference.pullTransportFailure,
+      );
     } on RepositoryException catch (error) {
       final failureCode = _cursorOrPayloadFailureReference(error.kind);
       await _recordCycleFailure(failureCode, offline: false);
@@ -233,13 +243,18 @@ final class DurableSynchronizationService
     if (snapshot.pendingCount > 0 && snapshot.nextRetryAtUtc != null) {
       _scheduleRetry(snapshot.nextRetryAtUtc!);
     }
+    final publicReference = snapshot.unresolvedConflictCount > 0
+        ? PublicSynchronizationFailureReference.conflictNeedsAttention
+        : terminalFailure != null
+        ? PublicSynchronizationFailureReference.terminalRejection
+        : snapshot.pendingCount > 0
+        ? PublicSynchronizationFailureReference.pendingAfterCycle
+        : null;
     return SynchronizationResult(
       disposition == SynchronizationHealthDisposition.synced
           ? SynchronizationDisposition.synchronized
           : SynchronizationDisposition.deferred,
-      detail: disposition == SynchronizationHealthDisposition.synced
-          ? null
-          : disposition.name,
+      detail: publicReference,
     );
   }
 
@@ -250,7 +265,10 @@ final class DurableSynchronizationService
       response = await _transport.push(operation);
     } on SynchronizationTransportException catch (error) {
       await _recordOperationFailure(operation, error.code, error.offline);
-      return const _PushOutcome(_PushDisposition.retryScheduled);
+      return _PushOutcome(
+        _PushDisposition.retryScheduled,
+        offline: error.offline,
+      );
     }
     _boundary.reached(SynchronizationBoundary.afterPushBeforeLocalCommit);
     if (response.accepted) {
@@ -481,17 +499,6 @@ final class DurableSynchronizationService
     ),
   );
 
-  Future<SynchronizationResult> _failureResult({bool offline = false}) async {
-    final snapshot = await health();
-    return SynchronizationResult(
-      offline ||
-              snapshot.disposition == SynchronizationHealthDisposition.offline
-          ? SynchronizationDisposition.offline
-          : SynchronizationDisposition.deferred,
-      detail: snapshot.failureCode,
-    );
-  }
-
   DateTime _now() {
     final value = _clock.nowUtc();
     if (!value.isUtc) throw StateError('Clock must return UTC.');
@@ -534,10 +541,15 @@ SynchronizationTrigger _coalesceTrigger(
 enum _PushDisposition { accepted, conflict, terminalFailure, retryScheduled }
 
 final class _PushOutcome {
-  const _PushOutcome(this.disposition, {this.rejectionCode});
+  const _PushOutcome(
+    this.disposition, {
+    this.rejectionCode,
+    this.offline = false,
+  });
 
   final _PushDisposition disposition;
   final String? rejectionCode;
+  final bool offline;
 }
 
 final class _AggregateEnvelope {
