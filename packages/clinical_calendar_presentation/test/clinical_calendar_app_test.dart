@@ -1206,6 +1206,122 @@ void main() {
   );
 
   testWidgets(
+    'a conflict result cannot fall back to the ordinary Sync Now panel',
+    (tester) async {
+      final repositories = _Repositories(seedSynchronization: true);
+      await _pumpAt(
+        tester,
+        const Size(390, 844),
+        dependencies: _dependencies(
+          repositories: repositories,
+          synchronization: _Synchronization(
+            result: const SynchronizationResult(
+              SynchronizationDisposition.deferred,
+              detail:
+                  PublicSynchronizationFailureReference.conflictNeedsAttention,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('ATTENTION').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Synchronization needs attention'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('sync-now-action')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('synchronization-conflict-resolution-surface')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('details could not be loaded'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('details and count are not available'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('0 need attention'), findsNothing);
+      expect(
+        find.byKey(const Key('synchronization-attention-surface')),
+        findsNothing,
+      );
+
+      repositories.synchronization.seedConflict();
+      await tester.tap(find.byTooltip('Refresh Sync Conflicts'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('This device version'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('choose-local-conflict-version')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('synchronization-attention-surface')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('details could not be loaded'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a failed conflict detail load recovers through retry and resolution',
+    (tester) async {
+      final repositories = _Repositories(seedSynchronization: true);
+      var initialSync = true;
+      await _pumpAt(
+        tester,
+        const Size(390, 844),
+        dependencies: _dependencies(
+          repositories: repositories,
+          synchronization: _Synchronization(
+            result: const SynchronizationResult(
+              SynchronizationDisposition.deferred,
+              detail:
+                  PublicSynchronizationFailureReference.conflictNeedsAttention,
+            ),
+            onSynchronize: () {
+              if (!initialSync) return;
+              initialSync = false;
+              repositories.synchronization.seedConflict();
+              repositories.synchronization.loadFails = true;
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('ATTENTION').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Synchronization needs attention'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('sync-now-action')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Synchronization conflicts could not be loaded.'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('details and count are not available'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('0 need attention'), findsNothing);
+
+      repositories.synchronization.loadFails = false;
+      await tester.tap(find.byKey(const Key('retry-conflict-load-action')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('This device version'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('choose-local-conflict-version')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('synchronization-attention-surface')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('details could not be loaded'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'synchronization conflict opens resolution and preserves originals',
     (tester) async {
       final repositories = _Repositories(
@@ -2516,7 +2632,7 @@ final class _ConflictSynchronizationRepository
       originalLocal = seeded ? _conflictRecord().localSnapshotJson : null,
       originalRemote = seeded ? _conflictRecord().remoteSnapshotJson : null;
 
-  final bool loadFails;
+  bool loadFails;
   SynchronizationConflictRecord? _record;
   final String? originalLocal;
   final String? originalRemote;
