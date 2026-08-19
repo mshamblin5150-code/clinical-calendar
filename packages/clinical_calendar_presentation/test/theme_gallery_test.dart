@@ -533,7 +533,10 @@ void main() {
       expect(find.text('Applied'), findsNothing);
       expect(find.text('Fallback in use'), findsOneWidget);
       expect(find.text('Selected'), findsOneWidget);
-      expect(find.text('Unchanged'), findsNothing);
+      expect(
+        find.textContaining(RegExp('unchanged', caseSensitive: false)),
+        findsNothing,
+      );
       expect(
         find.bySemanticsLabel('Canvas semantic role, near-black graphite'),
         findsOneWidget,
@@ -554,15 +557,20 @@ void main() {
         find.bySemanticsLabel('Urgent semantic role, signal coral'),
         findsOneWidget,
       );
+      final traversal = tester.semantics.simulatedAccessibilityTraversal(
+        startNode: find.semantics.byLabel('Theme Gallery'),
+      );
       expect(
-        tester.semantics.simulatedAccessibilityTraversal(
-          startNode: find.semantics.byLabel('Theme Gallery'),
-        ),
+        traversal.map((node) => node.label).join(' '),
+        isNot(contains(RegExp('unchanged', caseSensitive: false))),
+      );
+      expect(
+        traversal,
         containsAllInOrder([
           isSemantics(
             label:
                 'Containment Drone 47-Alpha, The accepted gunmetal tactical '
-                'identity, preserved unchanged.',
+                'identity.',
           ),
           isSemantics(
             label:
