@@ -7,7 +7,7 @@
   "runtimeAcceptance": "candidate-pending-maintainer-deterministic-review",
   "physicalAndroidApproval": "not-run-awaiting-deterministic-approval",
   "proofs": {
-    "candidate-v5-calendar-compact.png": "e6e9b1ceaaf2fe211ad52ab3bbddde40cd4efca9323e45517c8ccd7777a82ea4",
+    "candidate-v5-calendar-compact.png": "9a0a7ee4c2eeca9fac874805bc1bcb01d995788ea05b69199f90556291d16e81",
     "candidate-v5-calendar-landscape-1536x1024.png": "1f9182adf672f5eeca284babb90a2abfce0e27a25777a9d803cbe7c9655b2c66",
     "candidate-v5-calendar-landscape-menu-open-1536x1024.png": "290d89706328ed3efca4fb53978268feefdb644d5389867a126c6795aeb53d47",
     "candidate-v5-calendar-landscape-progress-open-1536x1024.png": "f1d6e7df910202ffe03047de7e0746db4f51f503fc6c3e48588eb9688c580dad",
@@ -26,7 +26,7 @@
     "destination-exports.png": "58ba251bbf6a71ab11ab7e948b610b0c1e1cf5003670157c1960c125daa79ef2",
     "destination-help.png": "fd8e258df047663df0b1f464eabc9a8d1be3b2093a82d889c9a133babc9bd245",
     "destination-notifications.png": "b67fa96e77e1b58d27443f6f1bfd13777da9d8dd1042bb804bdb8aee6b665f24",
-    "destination-settings.png": "a57314b62b3aeaa6da0ec541d912f80265e6878188262dcf0562f9d5fbb75647",
+    "destination-settings.png": "9fb978276d6cf5db28ee3cb91f1d9c5358d10eba581ecb4b10c6e5a032209cc6",
     "destination-studentProfile.png": "45d69b160104573fbafd5cd574218c5ebcba673404d80a4879173ab7aa46bf69",
     "destination-synchronization.png": "646e03ef0fbbdcebd608c26738df23f63875c75477d1b7eb998e391c3b3cf59d",
     "destination-trashRecovery.png": "c20844ac41a5ca64780dbe906b725eda51cae44345218f7bdb86b2cf921277ac"

@@ -81,7 +81,8 @@ Settings replaces the one-option theme selector with the approved
 - **Selected** means only that a candidate is being inspected; it does not
   change the Calendar;
 - **Applied** identifies the authoritative persisted theme;
-- Containment Drone 47-Alpha is explicitly labelled **Unchanged**;
+- Containment Drone 47-Alpha uses the same current-state labels as every other
+  theme, without a historical preservation label;
 - selecting a row never exposes direct Apply; a successful full-app Preview is
   required before commitment; and
 - during Preview, a persistent control names the previewed identity, says
@@ -195,8 +196,8 @@ Acceptance boundaries:
 
 - every row shows its approved name and personality, deterministic runtime
   thumbnail, five ordered and labelled swatches, and current state;
-- Applied, Selected, Unchanged, Previewing, Not saved, and Fallback in use are
-  distinct and never inferred from color alone; and
+- Applied, Selected, Previewing, Not saved, and Fallback in use are distinct
+  and never inferred from color alone; and
 - the gallery never exposes theme download, customization, gender labels,
   automatic light/dark switching, or direct Apply.
 

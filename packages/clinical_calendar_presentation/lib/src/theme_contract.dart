@@ -1273,8 +1273,7 @@ final class VariantFThemeBundle implements ClinicalCalendarThemeBundle {
   ThemeCatalogMetadata get metadata => const ThemeCatalogMetadata(
     themeId: variantFThemeId,
     displayName: 'Containment Drone 47-Alpha',
-    personality:
-        'The accepted gunmetal tactical identity, preserved unchanged.',
+    personality: 'The accepted gunmetal tactical identity.',
   );
 
   @override

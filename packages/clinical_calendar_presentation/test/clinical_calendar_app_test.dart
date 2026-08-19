@@ -7,6 +7,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_presentation/src/canonical_delta_mark.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -2167,6 +2168,7 @@ Future<void> _pumpAcceptedRenderAt(
     await tester.runAsync(() async {
       for (final asset in const [
         'assets/variant_f_raster/panel-nine-slice-v2.png',
+        canonicalDeltaMarkAsset,
         containmentDroneChassisBridgeAsset,
         containmentDronePanelAsset,
         containmentDroneLandscapeChassisAsset,
