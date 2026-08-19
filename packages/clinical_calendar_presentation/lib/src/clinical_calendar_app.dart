@@ -50,6 +50,7 @@ typedef ExportWorkflowFactory =
 typedef ScheduleDateFactory = ZonedScheduleDate Function(LocalDate date);
 typedef CandidateThemePreflight =
     Future<void> Function(ClinicalCalendarThemeBundle candidate);
+typedef TodayResolver = LocalDate Function(DateTime nowUtc);
 
 const _androidMemoryLifecycle = MethodChannel(
   'com.clinicalcalendar.clinical_calendar/memory_lifecycle',
@@ -129,6 +130,7 @@ final class ClinicalCalendarApp extends StatefulWidget {
     this.recoveryService,
     this.recoveryProofGate,
     this.scheduleDateFactory,
+    this.todayResolver,
     this.onPresentationRestart,
     super.key,
   });
@@ -162,7 +164,10 @@ final class ClinicalCalendarApp extends StatefulWidget {
   final RecoveryApplicationService? recoveryService;
   final OneShotRecoveryReauthenticationGate? recoveryProofGate;
   final ScheduleDateFactory? scheduleDateFactory;
+  final TodayResolver? todayResolver;
   final VoidCallback? onPresentationRestart;
+
+  LocalDate resolveToday() => _resolveToday(dependencies, todayResolver);
 
   @override
   State<ClinicalCalendarApp> createState() => _ClinicalCalendarAppState();
@@ -423,6 +428,7 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
                     widget.notificationDevicePolicyStore,
                 notificationDeviceClass: widget.notificationDeviceClass,
                 scheduleDateFactory: widget.scheduleDateFactory,
+                todayResolver: widget.todayResolver,
               ),
             ),
           ),
@@ -568,6 +574,7 @@ final class _ApplicationHost extends StatefulWidget {
     required this.notificationDevicePolicyStore,
     required this.notificationDeviceClass,
     required this.scheduleDateFactory,
+    required this.todayResolver,
     super.key,
   });
 
@@ -592,6 +599,7 @@ final class _ApplicationHost extends StatefulWidget {
   final NotificationDevicePolicyStore? notificationDevicePolicyStore;
   final NotificationDeviceClass? notificationDeviceClass;
   final ScheduleDateFactory? scheduleDateFactory;
+  final TodayResolver? todayResolver;
 
   @override
   State<_ApplicationHost> createState() => _ApplicationHostState();
@@ -1674,7 +1682,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
               key: ValueKey('calendar-period-view-$_calendarRevision'),
               dataSource: _assignmentCalendarDataSource,
               studentId: widget.studentId,
-              today: _today(widget.dependencies.clock),
+              today: _resolveToday(widget.dependencies, widget.todayResolver),
               weekStartsOn: settings.weekStart,
               twelveHourTime:
                   settings.timeDisplay == TimeDisplayPreference.twelveHour,
@@ -2452,7 +2460,10 @@ ZonedScheduleDate _zonedScheduleDate(LocalDate date) => ZonedScheduleDate(
 bool _sameDates(Set<LocalDate> left, Set<LocalDate> right) =>
     left.length == right.length && left.containsAll(right);
 
-LocalDate _today(Clock clock) {
-  final now = clock.nowUtc();
-  return LocalDate(now.year, now.month, now.day);
+LocalDate _resolveToday(
+  ApplicationDependencies dependencies,
+  TodayResolver? resolver,
+) {
+  final now = dependencies.clock.nowUtc();
+  return resolver?.call(now) ?? LocalDate(now.year, now.month, now.day);
 }
