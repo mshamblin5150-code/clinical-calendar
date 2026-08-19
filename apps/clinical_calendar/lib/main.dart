@@ -454,6 +454,10 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     recoveryStore: recoveryStore,
     recoveryService: recoveryService,
     recoveryProofGate: recoveryProofGate,
+    todayResolver: (nowUtc) {
+      final local = timeZones.toLocal(nowUtc, resolvedTimeZoneId);
+      return LocalDate(local.year, local.month, local.day);
+    },
     scheduleDateFactory: (date) => ZonedScheduleDate.resolvingOffsets(
       date: date,
       timeZone: TimeZoneId(resolvedTimeZoneId),

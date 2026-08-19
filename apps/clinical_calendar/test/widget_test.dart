@@ -52,6 +52,28 @@ void main() {
     },
   );
 
+  test('production Calendar resolves Today in the device time zone', () async {
+    const studentId = '00000000-0000-4000-8000-000000000021';
+    final root = await app.buildProductionApplication(
+      secureStorage: _MemorySecureStorage(),
+      identifiers: const _Identifiers(studentId),
+      authenticatedStudentId: studentId,
+      repositoryBootstrap: (_, _, _) async => _Repositories(),
+      clock: const _UtcBoundaryClock(),
+      deviceTimeZoneId: 'America/New_York',
+    );
+
+    expect(root.resolveToday(), LocalDate(2026, 8, 18));
+    expect(
+      root.todayResolver!(DateTime.utc(2026, 8, 19, 3, 59)),
+      LocalDate(2026, 8, 18),
+    );
+    expect(
+      root.todayResolver!(DateTime.utc(2026, 8, 19, 4)),
+      LocalDate(2026, 8, 19),
+    );
+  });
+
   test(
     'production local removal closes SQLCipher before deleting exact files',
     () async {
@@ -1315,6 +1337,13 @@ final class _RetryScheduler implements SynchronizationRetryScheduler {
 final class _FixedClock implements Clock {
   @override
   DateTime nowUtc() => DateTime.utc(2026, 8, 3, 12);
+}
+
+final class _UtcBoundaryClock implements Clock {
+  const _UtcBoundaryClock();
+
+  @override
+  DateTime nowUtc() => DateTime.utc(2026, 8, 19, 0, 27);
 }
 
 final class _NativeSaver implements NativeByteFileSaver {
