@@ -414,7 +414,7 @@ void main() {
       expect(find.text('Containment Drone 47-Alpha'), findsWidgets);
       expect(find.text('Graphite'), findsWidgets);
       expect(find.text('Applied'), findsOneWidget);
-      expect(find.text('Unchanged'), findsOneWidget);
+      expect(find.text('Unchanged'), findsNothing);
       expect(find.text('Selected'), findsOneWidget);
       expect(
         find.byKey(const Key('theme-gallery-thumbnail-variant-f')),
@@ -533,7 +533,7 @@ void main() {
       expect(find.text('Applied'), findsNothing);
       expect(find.text('Fallback in use'), findsOneWidget);
       expect(find.text('Selected'), findsOneWidget);
-      expect(find.text('Unchanged'), findsOneWidget);
+      expect(find.text('Unchanged'), findsNothing);
       expect(
         find.bySemanticsLabel('Canvas semantic role, near-black graphite'),
         findsOneWidget,
@@ -562,7 +562,7 @@ void main() {
           isSemantics(
             label:
                 'Containment Drone 47-Alpha, The accepted gunmetal tactical '
-                'identity, preserved unchanged., Unchanged',
+                'identity, preserved unchanged.',
           ),
           isSemantics(
             label:

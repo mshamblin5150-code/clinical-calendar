@@ -780,7 +780,6 @@ List<String> _stateLabels({
       .isFallback;
   return [
     if (!appliedUsesFallback && bundle.id == appliedThemeId) 'Applied',
-    if (bundle.id == variantFThemeId) 'Unchanged',
     if (bundle.id == selectedThemeId) 'Selected',
     if (appliedUsesFallback && bundle.id == graphiteThemeId) 'Fallback in use',
   ];
