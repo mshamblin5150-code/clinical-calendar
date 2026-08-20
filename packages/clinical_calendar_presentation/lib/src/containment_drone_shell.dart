@@ -502,10 +502,17 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                       child: KeyedSubtree(
                         key: const Key('insight-rail'),
                         child: SingleChildScrollView(
-                          child: _progressDetailsScope(
-                            slots.insightRail,
-                            wheelDiameter: 190,
-                            sideBySide: true,
+                          key: const Key(
+                            'containment-drone-placement-progress-scroll',
+                          ),
+                          primary: false,
+                          child: EmbeddedPlacementPanelInterior(
+                            outerScrollOwnsVerticalOverflow: true,
+                            child: _progressDetailsScope(
+                              slots.insightRail,
+                              wheelDiameter: 190,
+                              sideBySide: true,
+                            ),
                           ),
                         ),
                       ),

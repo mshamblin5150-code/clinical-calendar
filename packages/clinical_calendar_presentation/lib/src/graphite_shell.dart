@@ -5,6 +5,7 @@ import 'calendar/calendar_period_view.dart';
 import 'canonical_delta_mark.dart';
 import 'graphite_frame.dart';
 import 'graphite_instrument_scope.dart';
+import 'placements/placement_progress_widgets.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
@@ -536,8 +537,11 @@ final class GraphiteApplicationShell extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: _GraphitePlacementHousing(
-                                    child: GraphiteInstrumentScope(
-                                      child: slots.mobilePlacementSummary,
+                                    child: EmbeddedPlacementPanelInterior(
+                                      outerScrollOwnsVerticalOverflow: true,
+                                      child: GraphiteInstrumentScope(
+                                        child: slots.mobilePlacementSummary,
+                                      ),
                                     ),
                                   ),
                                 ),
