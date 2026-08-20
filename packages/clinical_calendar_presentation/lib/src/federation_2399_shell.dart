@@ -259,7 +259,16 @@ final class Federation2399ApplicationShell extends StatelessWidget {
                                       ),
                                       accent: _Federation2399BayAccent.cyan,
                                       shape: _Federation2399BayShape.placement,
-                                      child: slots.mobilePlacementSummary,
+                                      child: SingleChildScrollView(
+                                        key: const Key(
+                                          'federation-2399-placement-scroll',
+                                        ),
+                                        primary: false,
+                                        child: EmbeddedPlacementPanelInterior(
+                                          outerScrollOwnsVerticalOverflow: true,
+                                          child: slots.mobilePlacementSummary,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
