@@ -443,10 +443,14 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                                           'heritage-field-notes-mobile-placements-scroll',
                                         ),
                                         primary: false,
-                                        child: EmbeddedPlacementPanelInterior(
-                                          outerScrollOwnsVerticalOverflow: true,
-                                          child: HeritageFieldNotesPanelScope(
-                                            child: slots.mobilePlacementSummary,
+                                        child: PlacementWheelScrollOwner(
+                                          child: EmbeddedPlacementPanelInterior(
+                                            outerScrollOwnsVerticalOverflow:
+                                                true,
+                                            child: HeritageFieldNotesPanelScope(
+                                              child:
+                                                  slots.mobilePlacementSummary,
+                                            ),
                                           ),
                                         ),
                                       ),

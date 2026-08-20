@@ -119,59 +119,85 @@ final class PlacementProgressWheel extends StatelessWidget {
         '${_minutes(progress.unscheduledMinutes)} Unscheduled Hours, '
         '${_minutes(progress.overTargetMinutes)} Over-Target Hours. '
         '${detailsScope == null ? '${touchWording ? 'Tap' : 'Click'} to show the next Clinical Placement.' : '${touchWording ? 'Tap' : 'Click'} for detailed Clinical Placement progress.'}';
-    return Semantics(
-      button: true,
-      label: semantics,
-      child: InkWell(
-        key: const Key('placement-progress-wheel'),
-        onTap: detailsScope == null
-            ? onCycle
-            : () => detailsScope.onOpenDetails(snapshot),
-        customBorder: const CircleBorder(),
-        child: SizedBox.square(
-          dimension: effectiveDiameter,
-          child: PlacementProgressWheelGraphic(
-            key: instrument ? const Key('graphite-live-detailed-wheel') : null,
-            completedFraction: fractions.completed,
-            scheduledFraction: fractions.scheduled,
-            unscheduledFraction: fractions.unscheduled,
-            overTargetFraction: fractions.overTarget,
-            instrument: instrument,
-            segmented:
-                PlacementProgressPanelPolicy.maybeOf(context)?.segmentedWheel ??
-                false,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    detailsScope == null
-                        ? _minutes(progress.completedMinutes)
-                        : snapshot.placement.name,
-                    textAlign: detailsScope == null ? null : TextAlign.center,
-                    maxLines: detailsScope == null ? null : 2,
-                    overflow: detailsScope == null
-                        ? null
-                        : TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  Text(
-                    detailsScope == null
-                        ? 'completed'
-                        : '${touchWording ? 'Tap' : 'Click'} for details',
-                    textAlign: detailsScope == null ? null : TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
+    final graphic = SizedBox.square(
+      dimension: effectiveDiameter,
+      child: PlacementProgressWheelGraphic(
+        key: instrument ? const Key('graphite-live-detailed-wheel') : null,
+        completedFraction: fractions.completed,
+        scheduledFraction: fractions.scheduled,
+        unscheduledFraction: fractions.unscheduled,
+        overTargetFraction: fractions.overTarget,
+        instrument: instrument,
+        segmented:
+            PlacementProgressPanelPolicy.maybeOf(context)?.segmentedWheel ??
+            false,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                detailsScope == null
+                    ? _minutes(progress.completedMinutes)
+                    : snapshot.placement.name,
+                textAlign: detailsScope == null ? null : TextAlign.center,
+                maxLines: detailsScope == null ? null : 2,
+                overflow: detailsScope == null ? null : TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
-            ),
+              Text(
+                detailsScope == null
+                    ? 'completed'
+                    : '${touchWording ? 'Tap' : 'Click'} for details',
+                textAlign: detailsScope == null ? null : TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ),
         ),
       ),
     );
+    final wheelTap = detailsScope == null
+        ? onCycle
+        : () => detailsScope.onOpenDetails(snapshot);
+    final scrollPosition = _PlacementWheelScrollPositionScope.maybeOf(context);
+    final wheel = Semantics(
+      button: true,
+      label: semantics,
+      child: InkWell(
+        key: const Key('placement-progress-wheel'),
+        onTap: wheelTap,
+        customBorder: const CircleBorder(),
+        child: graphic,
+      ),
+    );
+    return scrollPosition == null
+        ? wheel
+        : _OuterScrollDragSurface(position: scrollPosition, child: wheel);
   }
+}
+
+final class _OuterScrollDragSurface extends StatelessWidget {
+  const _OuterScrollDragSurface({required this.position, required this.child});
+
+  final ScrollPosition position;
+  final Widget child;
+
+  void _updateDrag(DragUpdateDetails details) {
+    final next = (position.pixels - (details.primaryDelta ?? 0)).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    position.jumpTo(next);
+  }
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onVerticalDragUpdate: _updateDrag,
+    child: child,
+  );
 }
 
 /// Opt-in interaction policy used by a theme-owned progress instrument.
@@ -344,6 +370,37 @@ final class EmbeddedPlacementPanelInterior extends InheritedWidget {
   bool updateShouldNotify(EmbeddedPlacementPanelInterior oldWidget) =>
       outerScrollOwnsVerticalOverflow !=
       oldWidget.outerScrollOwnsVerticalOverflow;
+}
+
+/// Opts a theme-owned wheel into driving its nearest vertical scroll position
+/// directly while preserving the wheel's tap action.
+final class PlacementWheelScrollOwner extends StatelessWidget {
+  const PlacementWheelScrollOwner({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final position = Scrollable.maybeOf(context)?.position;
+    return _PlacementWheelScrollPositionScope(position: position, child: child);
+  }
+}
+
+final class _PlacementWheelScrollPositionScope extends InheritedWidget {
+  const _PlacementWheelScrollPositionScope({
+    required this.position,
+    required super.child,
+  });
+
+  final ScrollPosition? position;
+
+  static ScrollPosition? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<_PlacementWheelScrollPositionScope>()
+      ?.position;
+
+  @override
+  bool updateShouldNotify(_PlacementWheelScrollPositionScope oldWidget) =>
+      position != oldWidget.position;
 }
 
 final class PlacementProgressRail extends StatefulWidget {

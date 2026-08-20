@@ -537,10 +537,12 @@ final class GraphiteApplicationShell extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: _GraphitePlacementHousing(
-                                    child: EmbeddedPlacementPanelInterior(
-                                      outerScrollOwnsVerticalOverflow: true,
-                                      child: GraphiteInstrumentScope(
-                                        child: slots.mobilePlacementSummary,
+                                    child: PlacementWheelScrollOwner(
+                                      child: EmbeddedPlacementPanelInterior(
+                                        outerScrollOwnsVerticalOverflow: true,
+                                        child: GraphiteInstrumentScope(
+                                          child: slots.mobilePlacementSummary,
+                                        ),
                                       ),
                                     ),
                                   ),
