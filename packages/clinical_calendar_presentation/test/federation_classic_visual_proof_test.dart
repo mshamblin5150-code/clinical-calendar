@@ -152,7 +152,8 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v9/federation_classic_portrait_900x1440.png',
+        'goldens/federation_classic_issue_221/'
+        'federation_classic_portrait_900x1440.png',
       ),
     );
   });
@@ -171,7 +172,7 @@ void main() {
     final calendar = tester.getRect(
       find.byKey(const Key('federation-classic-calendar-bay')),
     );
-    expect(navigation.right, lessThan(calendar.left));
+    expect(navigation.top, greaterThan(calendar.bottom));
     expect(navigation.bottom, lessThanOrEqualTo(1440));
     expect(
       find.byKey(const Key('federation-classic-portrait-scroll')),
@@ -187,7 +188,7 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v9/'
+        'goldens/federation_classic_issue_221/'
         'federation_classic_portrait_200_percent_900x1440.png',
       ),
     );

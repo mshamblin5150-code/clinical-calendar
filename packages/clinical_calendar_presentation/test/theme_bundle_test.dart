@@ -983,10 +983,10 @@ void main() {
     },
   );
 
-  testWidgets('Federation Classic owned controls preserve shell callbacks', (
+  testWidgets('Federation Classic portrait navigation preserves callbacks', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1536, 1024));
+    await tester.binding.setSurfaceSize(const Size(900, 1440));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     var menuCount = 0;
     var addCount = 0;
@@ -1009,6 +1009,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(
+      find.byKey(const Key('federation-classic-portrait-shell')),
+      findsOneWidget,
+    );
     await tester.tap(find.byTooltip('Open menu'));
     await tester.tap(find.byTooltip('Add schedule'));
     await tester.tap(find.byTooltip('Help'));
@@ -1073,12 +1077,11 @@ void main() {
     final navigation = tester.getRect(
       find.byKey(const Key('federation-classic-bottom-navigation')),
     );
-    expect(navigation.right, lessThan(calendar.left));
+    expect(navigation.top, greaterThan(calendar.bottom));
     expect(calendar.top, lessThan(planning.top));
     expect(planning.top, lessThan(placements.top));
     expect(placements.top, lessThan(insight.top));
     expect(navigation.bottom, lessThanOrEqualTo(1440));
-    expect(navigation.top, lessThanOrEqualTo(calendar.top));
     expect(
       find.byKey(const Key('federation-classic-portrait-scroll')),
       findsOneWidget,
