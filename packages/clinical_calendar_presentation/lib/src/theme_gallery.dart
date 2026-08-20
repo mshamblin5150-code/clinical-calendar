@@ -206,54 +206,60 @@ final class _ThemeMasterRow extends StatelessWidget {
   final FocusOnKeyEventCallback onKeyEvent;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    selected: selected,
-    excludeSemantics: true,
-    label: [
-      bundle.metadata.displayName,
-      bundle.metadata.personality,
-      ...stateLabels,
-    ].join(', '),
-    child: Focus(
-      focusNode: focusNode,
-      onKeyEvent: onKeyEvent,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: Key('theme-gallery-row-${bundle.id}'),
-          onTap: () {
-            focusNode.requestFocus();
-            onTap();
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  bundle.metadata.displayName,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 4),
-                Text(bundle.metadata.personality),
-                if (stateLabels.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final label in stateLabels) Chip(label: Text(label)),
-                    ],
+  Widget build(BuildContext context) {
+    void selectTheme() {
+      focusNode.requestFocus();
+      onTap();
+    }
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      excludeSemantics: true,
+      label: [
+        bundle.metadata.displayName,
+        bundle.metadata.personality,
+        ...stateLabels,
+      ].join(', '),
+      onTap: selectTheme,
+      child: Focus(
+        focusNode: focusNode,
+        onKeyEvent: onKeyEvent,
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            key: Key('theme-gallery-row-${bundle.id}'),
+            onTap: selectTheme,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    bundle.metadata.displayName,
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
+                  const SizedBox(height: 4),
+                  Text(bundle.metadata.personality),
+                  if (stateLabels.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final label in stateLabels)
+                          Chip(label: Text(label)),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 final class _ThemeDetail extends StatelessWidget {

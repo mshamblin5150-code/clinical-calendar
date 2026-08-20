@@ -1456,7 +1456,7 @@ void main() {
       addTearDown(preview.dispose);
       await _pumpAt(
         tester,
-        const Size(390, 844),
+        const Size(1536, 1024),
         dependencies: _dependencies(repositories: repositories),
         themePreviewController: preview,
         candidateThemePreflight: (_) async {},
@@ -1475,7 +1475,15 @@ void main() {
       );
       await tester.drag(settingsScroll.first, const Offset(0, -300));
       await tester.pumpAndSettle();
-      await preview.preview(graphiteThemeId, preflight: (_) async {});
+      await tester.tap(find.byKey(const Key('theme-gallery-row-graphite')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('theme-gallery-thumbnail-graphite')),
+        findsOneWidget,
+      );
+      expect(find.text('Preview Graphite'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('preview-selected-theme')));
       await tester.pumpAndSettle();
       expect(preview.previewUnavailable, isFalse);
       expect(preview.isPreviewing, isTrue);

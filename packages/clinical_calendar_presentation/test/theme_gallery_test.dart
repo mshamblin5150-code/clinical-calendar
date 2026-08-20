@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
@@ -392,6 +393,49 @@ void main() {
     await tester.pump();
 
     expect(previewed, graphiteThemeId);
+  });
+
+  testWidgets('tablet theme cards expose candidate selection to TalkBack', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.binding.setSurfaceSize(const Size(1024, 768));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const VariantFVisualTheme().createThemeData(),
+        home: Scaffold(
+          body: ThemeGallery(
+            appliedThemeId: variantFThemeId,
+            selectedThemeId: variantFThemeId,
+            onPreview: (_) async {},
+          ),
+        ),
+      ),
+    );
+
+    final graphiteCard = find.byKey(const Key('theme-gallery-row-graphite'));
+    expect(graphiteCard, findsOneWidget);
+    final graphiteNode = tester.getSemantics(graphiteCard);
+    final graphiteData = graphiteNode.getSemanticsData();
+    expect(graphiteData.hasAction(ui.SemanticsAction.tap), isTrue);
+    expect(graphiteData.flagsCollection.isButton, isTrue);
+
+    tester.platformDispatcher.onSemanticsActionEvent!(
+      ui.SemanticsActionEvent(
+        type: ui.SemanticsAction.tap,
+        viewId: tester.view.viewId,
+        nodeId: graphiteNode.id,
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('theme-gallery-thumbnail-graphite')),
+      findsOneWidget,
+    );
+    expect(find.text('Preview Graphite'), findsOneWidget);
+    semantics.dispose();
   });
 
   testWidgets(
