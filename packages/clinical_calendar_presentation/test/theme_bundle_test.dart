@@ -1090,6 +1090,21 @@ void main() {
       find.byKey(const Key('federation-classic-help-action')),
       findsOneWidget,
     );
+    for (final (index, label) in const [
+      (0, 'TODAY'),
+      (1, 'CALENDAR'),
+      (2, 'PLACEMENTS'),
+      (3, 'ATTENTION'),
+      (4, 'SETTINGS'),
+    ]) {
+      final navigationItem = find.byKey(
+        Key('federation-classic-navigation-$index'),
+      );
+      expect(tester.getSemantics(navigationItem).label, label);
+      final target = tester.getRect(navigationItem);
+      expect(target.width, greaterThanOrEqualTo(44));
+      expect(target.height, greaterThanOrEqualTo(44));
+    }
     expect(tester.takeException(), isNull);
   });
 

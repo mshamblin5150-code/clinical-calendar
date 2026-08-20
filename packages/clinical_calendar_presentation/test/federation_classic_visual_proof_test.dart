@@ -184,6 +184,18 @@ void main() {
     );
     expect(find.byTooltip('Open menu'), findsOneWidget);
     expect(find.byTooltip('Add schedule'), findsOneWidget);
+    for (final control in [
+      find.byTooltip('Open menu'),
+      find.byTooltip('Add schedule'),
+      find.byTooltip('Help'),
+      find.text('AB'),
+    ]) {
+      final target = tester.getRect(control);
+      expect(target.left, greaterThanOrEqualTo(0));
+      expect(target.top, greaterThanOrEqualTo(0));
+      expect(target.right, lessThanOrEqualTo(900));
+      expect(target.bottom, lessThanOrEqualTo(1440));
+    }
 
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
