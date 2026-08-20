@@ -2,8 +2,8 @@
 
 Issue: [#221](https://github.com/mshamblin5150-code/clinical-calendar/issues/221)
 
-Status: **Automated tablet evidence passes; physical Android-tablet
-acceptance remains pending.**
+Status: **Automated tablet evidence passes; maintainer visual acceptance was
+approved on the physical Android tablet on 2026-08-20.**
 
 This repair preserves the accepted Federation Classic identity, landscape
 composition, live workflows, and navigation mappings. At the 900 by 1440
@@ -37,6 +37,13 @@ bd85184da0fbba4f8e90e3d0758b80f7397c2441949e26a089c19496e819727c  federation_cla
 
 ## Physical Android-tablet gate
 
-The maintainer must still verify the portrait Calendar on the Android tablet,
-including all five bottom-deck actions, TalkBack order, and 200 percent system
-text. Automated evidence does not grant visual approval.
+The maintainer approved the physical portrait Calendar composition on
+2026-08-20 after build 46 was installed in place on the intended Samsung
+SM-X920. The physical interaction pass confirmed that all five bottom-deck
+actions reach their intended destinations and return successfully.
+
+Manual TalkBack and physical 200 percent system-text checks were not performed.
+The deterministic accessibility evidence covers semantic order, minimum target
+size, destination reachability, and the 200 percent portrait composition; those
+automated checks pass. This approval records visual acceptance without
+misrepresenting the unperformed manual accessibility checks.
