@@ -22,13 +22,25 @@ const _calendarBayKeys = <String, String>{
 };
 
 void main() {
-  setUpAll(() {
+  setUpAll(() async {
     if (!Platform.isWindows) {
       goldenFileComparator = createProofGoldenComparator(
         goldenFileComparator,
         highDeltaPixelTolerance: .0045,
       );
     }
+    await loadProofFonts(includeRuntimeAliases: true);
+    final packageRoot =
+        Directory.current.path.endsWith('clinical_calendar_presentation')
+        ? Directory.current
+        : Directory('packages/clinical_calendar_presentation');
+    final fieldArchiveFont = await File(
+      '${packageRoot.path}/assets/heritage_field_notes_fonts/'
+      'RobotoCondensed-Variable.ttf',
+    ).readAsBytes();
+    await (FontLoader(
+      'FieldArchiveCondensed',
+    )..addFont(Future.value(ByteData.sublistView(fieldArchiveFont)))).load();
   });
 
   testWidgets('runtime thumbnail renders the deterministic month grid', (
@@ -68,29 +80,41 @@ void main() {
     expect(find.byKey(const Key('theme-thumbnail-day-cell-42')), findsNothing);
   });
 
-  testWidgets('profile thumbnail uses the pinned renderer-generated asset', (
+  testWidgets('every profile thumbnail uses its renderer-generated asset', (
     tester,
   ) async {
-    final bundle = ClinicalCalendarThemeBundleRegistry
-        .standard
-        .selectableBundles
-        .singleWhere((candidate) => candidate.id == graphiteThemeId);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SizedBox(
-          width: 800,
-          child: ThemeRuntimeThumbnail(bundle: bundle, useBakedAsset: true),
+    for (final bundle
+        in ClinicalCalendarThemeBundleRegistry.standard.galleryBundles) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox(
+            width: 800,
+            child: ThemeRuntimeThumbnail(bundle: bundle, useBakedAsset: true),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.byType(Image), findsOneWidget);
-    expect(find.byType(GraphiteApplicationShell), findsNothing);
-    expect(
-      find.byKey(const Key('theme-gallery-thumbnail-graphite')),
-      findsOneWidget,
-    );
+      expect(find.byType(Image), findsOneWidget, reason: bundle.id);
+      final image = tester.widget<Image>(find.byType(Image));
+      final provider = image.image as AssetImage;
+      final assetId = bundle.gallery.runtimeThumbnailAssetId ?? bundle.id;
+      expect(
+        provider.assetName,
+        themeRuntimeThumbnailAssetPath(assetId),
+        reason: bundle.id,
+      );
+      expect(
+        provider.package,
+        'clinical_calendar_presentation',
+        reason: bundle.id,
+      );
+      expect(
+        find.byKey(Key('theme-gallery-thumbnail-${bundle.id}')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull, reason: bundle.id);
+    }
   });
 
   test(

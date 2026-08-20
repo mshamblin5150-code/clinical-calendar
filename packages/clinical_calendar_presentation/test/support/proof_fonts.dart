@@ -39,7 +39,7 @@ Future<void> prepareProofEnvironment() async {
   await loadProofFonts();
 }
 
-Future<void> loadProofFonts() async {
+Future<void> loadProofFonts({bool includeRuntimeAliases = false}) async {
   final candidates = <Directory>[];
   final fontPairs = <({File roboto, File icons})>[];
 
@@ -115,7 +115,7 @@ Future<void> loadProofFonts() async {
       '${directory.path}${Platform.pathSeparator}materialicons-regular.otf',
     );
     if (roboto.existsSync() && icons.existsSync()) {
-      await _loadFont('ProofRoboto', roboto);
+      await _loadProofRoboto(roboto, includeRuntimeAliases);
       await _loadFont('MaterialIcons', icons);
       return;
     }
@@ -123,12 +123,19 @@ Future<void> loadProofFonts() async {
 
   for (final pair in fontPairs) {
     if (!pair.roboto.existsSync() || !pair.icons.existsSync()) continue;
-    await _loadFont('ProofRoboto', pair.roboto);
+    await _loadProofRoboto(pair.roboto, includeRuntimeAliases);
     await _loadFont('MaterialIcons', pair.icons);
     return;
   }
 
   throw StateError('Bundled Flutter proof fonts were not found.');
+}
+
+Future<void> _loadProofRoboto(File roboto, bool includeRuntimeAliases) async {
+  await _loadFont('ProofRoboto', roboto);
+  if (!includeRuntimeAliases) return;
+  await _loadFont('Ahem', roboto);
+  await _loadFont('Roboto', roboto);
 }
 
 ({File roboto, File icons}) _devToolsFontPair(String flutterBin) {
