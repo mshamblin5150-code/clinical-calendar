@@ -183,6 +183,9 @@ void main() {
   ) async {
     await _pumpProof(tester, const Size(900, 1440));
 
+    expect(find.byKey(const Key('placement-progress-wheel')), findsOneWidget);
+    expect(find.byType(VariantFTacticalFrame), findsNothing);
+
     await expectLater(
       find.byKey(const Key('federation-2399-proof')),
       matchesGoldenFile(
@@ -238,6 +241,17 @@ void main() {
     position.jumpTo(position.maxScrollExtent);
     await tester.pumpAndSettle();
 
+    final placementScrollable = find.descendant(
+      of: find.byKey(const Key('federation-2399-placement-scroll')),
+      matching: find.byType(Scrollable),
+    );
+    expect(placementScrollable, findsOneWidget);
+    final placementPosition = tester
+        .state<ScrollableState>(placementScrollable)
+        .position;
+    placementPosition.jumpTo(placementPosition.maxScrollExtent);
+    await tester.pumpAndSettle();
+
     final placements = tester.getRect(
       find.byKey(const Key('federation-2399-placement-bay')),
     );
@@ -248,8 +262,16 @@ void main() {
     expect(placements.top, lessThan(navigation.top));
     expect(attention.bottom, greaterThan(0));
     expect(attention.top, lessThan(navigation.top));
-    expect(find.text('PLACEMENT STATUS'), findsOneWidget);
+    expect(find.text('INTERNAL MEDICINE'), findsOneWidget);
     expect(find.text('NEEDS ATTENTION'), findsWidgets);
+    expect(
+      find.byKey(const Key('cycle-placement-action')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('toggle-preceptor-breakdown')).hitTestable(),
+      findsOneWidget,
+    );
 
     await expectLater(
       find.byKey(const Key('federation-2399-proof')),
@@ -853,15 +875,10 @@ final class _PlacementSummaryProof extends StatelessWidget {
   const _PlacementSummaryProof();
 
   @override
-  Widget build(BuildContext context) => const Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      _SectionTitle('PLACEMENT STATUS'),
-      SizedBox(height: 10),
-      _MetricLine('0 / 90 hr completed', Federation2399Colors.completed),
-      _MetricLine('8 hr scheduled', Federation2399Colors.scheduled),
-      _MetricLine('82 hr unscheduled', Federation2399Colors.unscheduled),
-    ],
+  Widget build(BuildContext context) => PlacementProgressPanel(
+    snapshot: _proofPlacementSnapshot(),
+    onCycle: _noop,
+    touch: true,
   );
 }
 

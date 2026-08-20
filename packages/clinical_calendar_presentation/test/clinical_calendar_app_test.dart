@@ -2000,6 +2000,47 @@ void main() {
   );
 
   testWidgets(
+    'Federation 2399 portrait owns the Clinical Placement progress housing',
+    (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final repositories = _Repositories(seedLifecycle: true);
+      final preview = ThemePreviewController(
+        registry: ClinicalCalendarThemeBundleRegistry.standard,
+        authoritativeThemeId: federation2399ThemeId,
+        initialRevision: 1,
+      );
+      addTearDown(preview.dispose);
+
+      await _pumpAt(
+        tester,
+        const Size(900, 1440),
+        dependencies: _dependencies(repositories: repositories),
+        themePreviewController: preview,
+      );
+
+      expect(
+        find.byKey(const Key('federation-2399-portrait-shell')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('placement-progress-wheel')), findsOneWidget);
+      expect(
+        find.byKey(const Key('federation-2399-placement-scroll')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('federation-2399-placement-scroll')),
+          matching: find.byType(Scrollable),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(VariantFTacticalFrame), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'Coastal Light owns shared live workflow housings without forking slots',
     (tester) async {
       final repositories = _Repositories(seedLifecycle: true);
