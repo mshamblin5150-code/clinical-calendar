@@ -6,6 +6,7 @@ import 'canonical_delta_mark.dart';
 import 'heritage_field_notes_frame.dart';
 import 'heritage_field_notes_panel_scope.dart';
 import 'heritage_field_notes_theme.dart';
+import 'placements/placement_progress_widgets.dart';
 import 'responsive_shell.dart';
 import 'variant_f_theme.dart';
 
@@ -441,8 +442,12 @@ final class HeritageFieldNotesApplicationShell extends StatelessWidget {
                                         key: const Key(
                                           'heritage-field-notes-mobile-placements-scroll',
                                         ),
-                                        child: HeritageFieldNotesPanelScope(
-                                          child: slots.mobilePlacementSummary,
+                                        primary: false,
+                                        child: EmbeddedPlacementPanelInterior(
+                                          outerScrollOwnsVerticalOverflow: true,
+                                          child: HeritageFieldNotesPanelScope(
+                                            child: slots.mobilePlacementSummary,
+                                          ),
                                         ),
                                       ),
                                     ),

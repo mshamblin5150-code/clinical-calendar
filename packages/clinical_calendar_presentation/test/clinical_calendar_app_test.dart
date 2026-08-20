@@ -2041,6 +2041,97 @@ void main() {
   );
 
   testWidgets(
+    'affected portrait themes scroll both ways from the progress wheel',
+    (tester) async {
+      const cases = [
+        (
+          themeId: variantFThemeId,
+          scrollKey: Key('containment-drone-placement-progress-scroll'),
+        ),
+        (themeId: graphiteThemeId, scrollKey: Key('graphite-portrait-scroll')),
+        (
+          themeId: heritageFieldNotesThemeId,
+          scrollKey: Key('heritage-field-notes-mobile-placements-scroll'),
+        ),
+      ];
+
+      for (final testCase in cases) {
+        final repositories = _Repositories(seedLifecycle: true);
+        final preview = ThemePreviewController(
+          registry: ClinicalCalendarThemeBundleRegistry.standard,
+          authoritativeThemeId: testCase.themeId,
+          initialRevision: 1,
+        );
+        addTearDown(preview.dispose);
+
+        await _pumpAt(
+          tester,
+          const Size(1056, 1691),
+          dependencies: _dependencies(repositories: repositories),
+          themePreviewController: preview,
+        );
+
+        if (testCase.themeId == variantFThemeId) {
+          expect(
+            find.byKey(const Key('containment-drone-portrait-shell')),
+            findsOneWidget,
+          );
+        }
+
+        final wheel = find.byKey(const Key('placement-progress-wheel'));
+        final scrollable = find.descendant(
+          of: find.byKey(testCase.scrollKey),
+          matching: find.byType(Scrollable),
+        );
+        expect(wheel, findsOneWidget, reason: testCase.themeId);
+        expect(
+          find.byKey(testCase.scrollKey),
+          findsOneWidget,
+          reason: testCase.themeId,
+        );
+        expect(scrollable, findsWidgets, reason: testCase.themeId);
+        final position = tester
+            .state<ScrollableState>(scrollable.first)
+            .position;
+        expect(
+          position.maxScrollExtent,
+          greaterThan(0),
+          reason: testCase.themeId,
+        );
+        await tester.ensureVisible(wheel);
+        final initialOffset =
+            (position.maxScrollExtent < 60
+                    ? position.maxScrollExtent / 2
+                    : position.pixels.clamp(
+                        30.0,
+                        position.maxScrollExtent - 30,
+                      ))
+                .toDouble();
+        position.jumpTo(initialOffset);
+        await tester.pump();
+
+        await tester.drag(wheel, const Offset(0, -30));
+        await tester.pumpAndSettle();
+        final afterUpwardDrag = position.pixels;
+        expect(
+          afterUpwardDrag,
+          greaterThan(initialOffset),
+          reason: testCase.themeId,
+        );
+
+        await tester.drag(wheel, const Offset(0, 30));
+        await tester.pumpAndSettle();
+        expect(
+          position.pixels,
+          lessThan(afterUpwardDrag),
+          reason: testCase.themeId,
+        );
+        expect(tester.takeException(), isNull, reason: testCase.themeId);
+      }
+    },
+  );
+
+  testWidgets(
     'Coastal Light owns shared live workflow housings without forking slots',
     (tester) async {
       final repositories = _Repositories(seedLifecycle: true);
