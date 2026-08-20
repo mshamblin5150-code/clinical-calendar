@@ -87,6 +87,25 @@ foreach ($fragment in @(
 if ($ledgerCapture -notmatch '(?s)finally\s*\{.*WriteAllText\(\$pubspecPath,\s*\$originalPubspec.*Remove-GeneratedAssetOutputs') {
     throw 'Release-size ledger capture must clear staged Flutter assets after restoring the production pubspec.'
 }
+$activeGalleryAssets = @(
+    'assets/theme_gallery_runtime/variant-f-v5.png',
+    'assets/theme_gallery_runtime/graphite.png',
+    'assets/theme_gallery_runtime/federation-classic.png',
+    'assets/theme_gallery_runtime/federation-2399.png',
+    'assets/theme_gallery_runtime/coastal-calm.png',
+    'assets/theme_gallery_runtime/botanical-study.png',
+    'assets/theme_gallery_runtime/heritage-field-notes.png'
+)
+foreach ($assetPath in $activeGalleryAssets) {
+    $absoluteAssetPath = Join-Path $repositoryRoot "packages/clinical_calendar_presentation/$assetPath"
+    $assetSha256 = (Get-FileHash -LiteralPath $absoluteAssetPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if (-not $ledgerCapture.Contains("Path = '$assetPath'")) {
+        throw "Release-size ledger does not attribute the active Gallery asset: $assetPath"
+    }
+    if (-not $ledgerCapture.Contains("Sha256 = '$assetSha256'")) {
+        throw "Release-size ledger has a stale Gallery asset hash: $assetPath"
+    }
+}
 $profilePackagerPath = Join-Path $repositoryRoot 'tool/android/package_signed_profile_apk.ps1'
 if (-not (Test-Path -LiteralPath $profilePackagerPath -PathType Leaf)) {
     throw 'Protected Android profile packaging script is missing.'
