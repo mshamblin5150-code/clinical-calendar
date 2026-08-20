@@ -506,12 +506,14 @@ final class ContainmentDroneApplicationShell extends StatelessWidget {
                             'containment-drone-placement-progress-scroll',
                           ),
                           primary: false,
-                          child: EmbeddedPlacementPanelInterior(
-                            outerScrollOwnsVerticalOverflow: true,
-                            child: _progressDetailsScope(
-                              slots.insightRail,
-                              wheelDiameter: 190,
-                              sideBySide: true,
+                          child: PlacementWheelScrollOwner(
+                            child: EmbeddedPlacementPanelInterior(
+                              outerScrollOwnsVerticalOverflow: true,
+                              child: _progressDetailsScope(
+                                slots.insightRail,
+                                wheelDiameter: 190,
+                                sideBySide: true,
+                              ),
                             ),
                           ),
                         ),

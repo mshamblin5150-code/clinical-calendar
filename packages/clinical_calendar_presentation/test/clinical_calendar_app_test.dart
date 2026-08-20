@@ -2099,6 +2099,34 @@ void main() {
           reason: testCase.themeId,
         );
         await tester.ensureVisible(wheel);
+        await focusWithKeyboard(tester, wheel);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        if (testCase.themeId == variantFThemeId) {
+          expect(
+            find.byKey(const Key('containment-placement-details')),
+            findsOneWidget,
+          );
+          await tester.tap(find.byTooltip('Close placement details'));
+          await tester.pumpAndSettle();
+        }
+
+        expect(
+          tester.widget<InkWell>(wheel).onTap,
+          isNotNull,
+          reason: testCase.themeId,
+        );
+        await tester.tap(wheel);
+        await tester.pumpAndSettle();
+        if (testCase.themeId == variantFThemeId) {
+          expect(
+            find.byKey(const Key('containment-placement-details')),
+            findsOneWidget,
+          );
+          await tester.tap(find.byTooltip('Close placement details'));
+          await tester.pumpAndSettle();
+        }
+
         final initialOffset =
             (position.maxScrollExtent < 60
                     ? position.maxScrollExtent / 2
@@ -2126,6 +2154,7 @@ void main() {
           lessThan(afterUpwardDrag),
           reason: testCase.themeId,
         );
+
         expect(tester.takeException(), isNull, reason: testCase.themeId);
       }
     },
