@@ -152,7 +152,8 @@ void main() {
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v9/federation_classic_portrait_900x1440.png',
+        'goldens/federation_classic_issue_221/'
+        'federation_classic_portrait_900x1440.png',
       ),
     );
   });
@@ -171,7 +172,7 @@ void main() {
     final calendar = tester.getRect(
       find.byKey(const Key('federation-classic-calendar-bay')),
     );
-    expect(navigation.right, lessThan(calendar.left));
+    expect(navigation.top, greaterThan(calendar.bottom));
     expect(navigation.bottom, lessThanOrEqualTo(1440));
     expect(
       find.byKey(const Key('federation-classic-portrait-scroll')),
@@ -183,11 +184,23 @@ void main() {
     );
     expect(find.byTooltip('Open menu'), findsOneWidget);
     expect(find.byTooltip('Add schedule'), findsOneWidget);
+    for (final control in [
+      find.byTooltip('Open menu'),
+      find.byTooltip('Add schedule'),
+      find.byTooltip('Help'),
+      find.text('AB'),
+    ]) {
+      final target = tester.getRect(control);
+      expect(target.left, greaterThanOrEqualTo(0));
+      expect(target.top, greaterThanOrEqualTo(0));
+      expect(target.right, lessThanOrEqualTo(900));
+      expect(target.bottom, lessThanOrEqualTo(1440));
+    }
 
     await expectLater(
       find.byKey(const Key('federation-classic-proof')),
       matchesGoldenFile(
-        'goldens/federation_classic_v9/'
+        'goldens/federation_classic_issue_221/'
         'federation_classic_portrait_200_percent_900x1440.png',
       ),
     );
