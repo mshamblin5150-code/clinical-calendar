@@ -289,7 +289,7 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
     if (!mounted) return;
     setState(() {
       _error = _message(error);
-      _refusalCode = error.code;
+      _refusalCode = identityRefusalCode(error.code);
     });
   }
 
@@ -552,3 +552,8 @@ String _message(IdentityException error) => switch (error.code) {
   _ when error.offline => 'A connection is required for account deletion.',
   _ => 'The request could not be completed. Try again.',
 };
+
+String identityRefusalCode(String code) =>
+    RegExp(r'^[a-z][a-z0-9_]{0,79}$').hasMatch(code)
+    ? code
+    : 'account_erasure_refused';

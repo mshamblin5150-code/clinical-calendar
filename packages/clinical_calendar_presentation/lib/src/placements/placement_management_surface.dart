@@ -588,6 +588,11 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
         if (widget.controller.editPreview case final preview?) ...[
           const SizedBox(height: 12),
           _ImpactPreviewPanel(preview: preview),
+          if (!preview.canConfirm)
+            const TicketRefusalOffer(
+              screen: 'Clinical Placement management',
+              refusalCode: 'placement_edit_blocked',
+            ),
           const SizedBox(height: 8),
           FilledButton(
             key: const Key('confirm-placement-edit-action'),

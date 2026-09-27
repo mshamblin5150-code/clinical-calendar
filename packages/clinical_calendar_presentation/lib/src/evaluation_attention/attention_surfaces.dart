@@ -125,13 +125,14 @@ String? _synchronizationRefusalCode(String? detail) {
   return reference != null &&
           PublicSynchronizationFailureReference.values.contains(reference)
       ? reference
-      : null;
+      : 'synchronization_deferred';
 }
 
 String _deferredStatus(String? detail) {
   const message = 'Synchronization is deferred. Local changes remain queued.';
-  final reference = _synchronizationRefusalCode(detail);
-  if (reference == null) {
+  final reference = detail?.trim();
+  if (reference == null ||
+      !PublicSynchronizationFailureReference.values.contains(reference)) {
     return message;
   }
   return '$message\nReference: $reference.';

@@ -298,6 +298,10 @@ void main() {
     expect(find.text('SAVE BLOCKED'), findsOneWidget);
     expect(find.textContaining('fall outside'), findsOneWidget);
     expect(
+      find.byKey(const Key('ticket-refusal-placement_edit_blocked')),
+      findsOneWidget,
+    );
+    expect(
       tester
           .widget<FilledButton>(
             find.byKey(const Key('confirm-placement-edit-action')),
@@ -691,7 +695,11 @@ Future<void> _pump(
         data: MediaQuery.of(context).copyWith(textScaler: textScaler),
         child: child!,
       ),
-      home: Scaffold(body: SafeArea(child: child)),
+      home: TicketSupportScope(
+        actions: TicketActivityLog(),
+        onOpenRefusal: (_) async {},
+        child: Scaffold(body: SafeArea(child: child)),
+      ),
     ),
   );
   await tester.pump();

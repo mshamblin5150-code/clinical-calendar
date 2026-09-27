@@ -2,12 +2,43 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/src/scheduling/batch_scheduling_controller.dart';
 import 'package:clinical_calendar_presentation/src/scheduling/staged_batch_scheduling_tray.dart';
+import 'package:clinical_calendar_presentation/src/scheduling/scheduling_refusal_code.dart';
 import 'package:clinical_calendar_presentation/src/tickets/ticket_surfaces.dart';
 import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('every scheduling failure kind has an exact content-free code', () {
+    const expected = {
+      SchedulingUseCaseFailureKind.notFound: 'schedule_not_found',
+      SchedulingUseCaseFailureKind.emptyBatch: 'empty_schedule_batch',
+      SchedulingUseCaseFailureKind.duplicateDate: 'duplicate_schedule_date',
+      SchedulingUseCaseFailureKind.completedPlacement:
+          'completed_placement_refusal',
+      SchedulingUseCaseFailureKind.templateTypeMismatch:
+          'schedule_template_type_mismatch',
+      SchedulingUseCaseFailureKind.incompleteClinicalAssignment:
+          'incomplete_clinical_assignment',
+      SchedulingUseCaseFailureKind.incompleteTimeRange: 'incomplete_time_range',
+      SchedulingUseCaseFailureKind.deletionNotConfirmed:
+          'deletion_not_confirmed',
+      SchedulingUseCaseFailureKind.importedWorkShiftReadOnly:
+          'imported_work_shift_read_only',
+      SchedulingUseCaseFailureKind.protectedDayMoveChangesWeek:
+          'protected_day_move_changes_week',
+    };
+    expect(expected.keys, unorderedEquals(SchedulingUseCaseFailureKind.values));
+    for (final entry in expected.entries) {
+      expect(
+        schedulingUseCaseRefusalCode(
+          SchedulingUseCaseException(entry.key, 'user-visible message'),
+        ),
+        entry.value,
+      );
+    }
+  });
+
   test('reset intents preserve dates and set correct defaults', () {
     final controller = _controller();
     addTearDown(controller.dispose);

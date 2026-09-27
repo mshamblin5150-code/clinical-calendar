@@ -311,7 +311,7 @@ final class _TrashRecoverySurfaceState extends State<TrashRecoverySurface> {
       await action();
     } on RecoveryException catch (error) {
       _message = error.safeMessage;
-      _refusalCode = _recoveryRefusalCode(error.kind);
+      _refusalCode = recoveryRefusalCode(error.kind);
     } on Object {
       _message = 'Recovery could not be completed safely.';
       _refusalCode = 'recovery_failed';
@@ -321,7 +321,7 @@ final class _TrashRecoverySurfaceState extends State<TrashRecoverySurface> {
   }
 }
 
-String _recoveryRefusalCode(RecoveryFailureKind kind) => switch (kind) {
+String recoveryRefusalCode(RecoveryFailureKind kind) => switch (kind) {
   RecoveryFailureKind.notFound => 'recovery_not_found',
   RecoveryFailureKind.expired => 'recovery_expired',
   RecoveryFailureKind.confirmationRequired => 'recovery_confirmation_required',

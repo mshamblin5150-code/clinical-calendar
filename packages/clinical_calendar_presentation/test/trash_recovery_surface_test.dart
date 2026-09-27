@@ -8,6 +8,24 @@ import 'package:flutter_test/flutter_test.dart';
 final _now = DateTime.utc(2026, 8, 4, 12);
 
 void main() {
+  test('every recovery failure kind has an exact content-free code', () {
+    const expected = {
+      RecoveryFailureKind.notFound: 'recovery_not_found',
+      RecoveryFailureKind.expired: 'recovery_expired',
+      RecoveryFailureKind.confirmationRequired:
+          'recovery_confirmation_required',
+      RecoveryFailureKind.authenticationFailed:
+          'recovery_authentication_failed',
+      RecoveryFailureKind.invariantViolation: 'recovery_invariant_violation',
+      RecoveryFailureKind.concurrentModification:
+          'recovery_concurrent_modification',
+    };
+    expect(expected.keys, unorderedEquals(RecoveryFailureKind.values));
+    for (final entry in expected.entries) {
+      expect(recoveryRefusalCode(entry.key), entry.value);
+    }
+  });
+
   testWidgets('Trash restore and permanent delete are deliberate', (
     tester,
   ) async {

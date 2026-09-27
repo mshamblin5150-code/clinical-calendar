@@ -7,6 +7,7 @@ import 'package:clinical_calendar_presentation/src/federation_2399_console_scope
 import 'package:clinical_calendar_presentation/src/graphite_theme.dart';
 import 'package:clinical_calendar_presentation/src/graphite_instrument_scope.dart';
 import 'package:clinical_calendar_presentation/src/theme_contract.dart';
+import 'package:clinical_calendar_presentation/src/tickets/ticket_surfaces.dart';
 import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -137,6 +138,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.textContaining('Do not enter patient information'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const Key('ticket-refusal-invalid_evaluation_documentation'),
+        ),
         findsOneWidget,
       );
       expect(harness.gateway.lastDocumentation, isNull);
@@ -302,7 +309,11 @@ Future<void> _pump(
           : const VariantFThemeBundle().marks,
       child: MaterialApp(
         theme: graphite ? buildGraphiteTheme() : buildVariantFTheme(),
-        home: Scaffold(body: SafeArea(child: child)),
+        home: TicketSupportScope(
+          actions: TicketActivityLog(),
+          onOpenRefusal: (_) async {},
+          child: Scaffold(body: SafeArea(child: child)),
+        ),
       ),
     ),
   );

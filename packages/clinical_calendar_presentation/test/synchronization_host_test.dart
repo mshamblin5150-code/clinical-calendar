@@ -229,6 +229,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('access_token_secret'), findsNothing);
+    expect(
+      find.byKey(const Key('ticket-refusal-synchronization_deferred')),
+      findsOneWidget,
+    );
   });
 }
 
