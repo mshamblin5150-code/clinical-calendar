@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
+import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_local_data/clinical_calendar_local_data.dart';
 import 'package:clinical_calendar_platform/clinical_calendar_web_identity_platform.dart';
 import 'package:clinical_calendar_platform/clinical_calendar_web_platform.dart';
@@ -166,6 +167,11 @@ Future<ClinicalCalendarApp> buildWebApplication({
     initiallyConnected: initiallyConnected,
   );
   final coordinator = SynchronizationTriggerCoordinator(synchronization);
+  final workScheduleFeedGateway = SupabaseWorkScheduleFeedRelayGateway(
+    projectUri: environment.synchronizationProjectUri!,
+    publishableKey: environment.supabasePublishableKey,
+    accessTokenProvider: identity.currentAccessToken,
+  );
   final initialSynchronization = await coordinator.onLaunchOrResume();
   if (initialSynchronization.disposition !=
       SynchronizationDisposition.synchronized) {
@@ -265,6 +271,8 @@ Future<ClinicalCalendarApp> buildWebApplication({
     pendingSynchronizationCountChanges: pending.changes,
     connectivityChanges: source.changes,
     onConnectivityChanged: connectivityChanged,
+    workScheduleFeedGateway: workScheduleFeedGateway,
+    workScheduleTimeZone: TimeZoneId(browser.timeZoneName),
     identity: identity,
     identityEmail: session.email,
     onLocalCopyRemoved: onLocalCopyRemoved,

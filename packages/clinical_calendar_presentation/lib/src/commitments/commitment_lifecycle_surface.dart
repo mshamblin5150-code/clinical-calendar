@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../date_input.dart';
 import '../time_input.dart';
 import '../variant_f_theme.dart';
+import '../calendar/calendar_models.dart';
 import 'commitment_lifecycle_controller.dart';
 
 final class CommitmentLifecycleSurface extends StatelessWidget {
@@ -12,6 +13,7 @@ final class CommitmentLifecycleSurface extends StatelessWidget {
     required this.controller,
     required this.studentId,
     this.twelveHourTime = false,
+    this.conflictNotices = const [],
     this.onClose,
     super.key,
   }) : assert(
@@ -22,6 +24,7 @@ final class CommitmentLifecycleSurface extends StatelessWidget {
   final CommitmentLifecycleController controller;
   final String studentId;
   final bool twelveHourTime;
+  final List<CalendarScheduleConflictNotice> conflictNotices;
   final VoidCallback? onClose;
 
   @override
@@ -61,6 +64,7 @@ final class CommitmentLifecycleSurface extends StatelessWidget {
                   controller: controller,
                   snapshot: snapshot,
                   twelveHourTime: twelveHourTime,
+                  conflictNotices: conflictNotices,
                   onDeleted: onClose,
                 ),
               ),
@@ -107,6 +111,7 @@ final class _LifecycleEditor extends StatefulWidget {
     required this.controller,
     required this.snapshot,
     required this.twelveHourTime,
+    required this.conflictNotices,
     required this.onDeleted,
     super.key,
   });
@@ -114,6 +119,7 @@ final class _LifecycleEditor extends StatefulWidget {
   final CommitmentLifecycleController controller;
   final CommitmentLifecycleSnapshot snapshot;
   final bool twelveHourTime;
+  final List<CalendarScheduleConflictNotice> conflictNotices;
   final VoidCallback? onDeleted;
 
   @override
@@ -174,13 +180,16 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
   Widget build(BuildContext context) => SingleChildScrollView(
     padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
     child: switch (widget.snapshot) {
-      WorkShiftLifecycleSnapshot(:final record) => _timedEditor(
-        context,
-        summary: _workSummary(record.value),
-        primaryLabel: 'Move or save corrected times',
-        onPrimary: _saveCommitmentDetails,
-        onDelete: () => _confirmDelete(context),
-      ),
+      WorkShiftLifecycleSnapshot(:final record) =>
+        record.value.isImported
+            ? _importedWorkShift(record.value)
+            : _timedEditor(
+                context,
+                summary: _workSummary(record.value),
+                primaryLabel: 'Move or save corrected times',
+                onPrimary: _saveCommitmentDetails,
+                onDelete: () => _confirmDelete(context),
+              ),
       ClinicalSessionLifecycleSnapshot() => _clinicalEditor(context),
       ProtectedDayLifecycleSnapshot(:final record) => _protectedDayEditor(
         context,
@@ -196,6 +205,13 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ClinicalSummary(snapshot: snapshot),
+        if (widget.conflictNotices.isNotEmpty)
+          _LifecycleMessage(
+            key: const Key('clinical-session-schedule-conflict'),
+            message:
+                'Schedule Conflict: ${widget.conflictNotices.map((notice) => notice.message).toSet().join('; ')}',
+            urgent: true,
+          ),
         const SizedBox(height: 14),
         _dateField(),
         const SizedBox(height: 10),
@@ -590,6 +606,26 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
       'Scheduled · ${_minutesLabel(shift.plannedMinutes)}',
     ],
     tone: context.clinicalColors.workMachinery,
+  );
+
+  Widget _importedWorkShift(WorkShift shift) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _SummaryPanel(
+        icon: Icons.event_repeat_outlined,
+        title: 'Imported Work Shift',
+        lines: [
+          formatUsDate(shift.plannedInterval.startDate),
+          _range(shift.plannedInterval),
+          'From ${shift.workScheduleFeedName}',
+        ],
+        tone: context.clinicalColors.workMachinery,
+      ),
+      const SizedBox(height: 14),
+      const Text(
+        'This shift is read-only. Its Work Schedule Feed owns upcoming changes.',
+      ),
+    ],
   );
 
   String _range(ZonedInterval interval) {

@@ -118,6 +118,9 @@ final class _BrowserRuntime implements BrowserRuntime {
   String get deviceName => 'Safari on iPhone';
 
   @override
+  String get timeZoneName => 'America/New_York';
+
+  @override
   Future<CommonDatabase> openInMemorySqlite() async => sqlite3.openInMemory();
 }
 

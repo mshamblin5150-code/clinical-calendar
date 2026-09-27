@@ -140,6 +140,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   Stream<bool>? connectivityChanges;
   DurableSynchronizationService? durableSynchronization;
   TicketGateway? ticketGateway;
+  WorkScheduleFeedRelayGateway? workScheduleFeedGateway;
   var initiallyConnected = false;
   var minimumSyncBuildRequired = false;
   Stream<bool>? minimumSyncBuildRequiredChanges;
@@ -193,6 +194,11 @@ Future<ClinicalCalendarApp> buildProductionApplication({
       projectUri: configuredEnvironment.synchronizationProjectUri!,
       publishableKey: configuredEnvironment.supabasePublishableKey,
       accessTokenProvider: accessTokenProvider!,
+    );
+    workScheduleFeedGateway = SupabaseWorkScheduleFeedRelayGateway(
+      projectUri: configuredEnvironment.synchronizationProjectUri!,
+      publishableKey: configuredEnvironment.supabasePublishableKey,
+      accessTokenProvider: accessTokenProvider,
     );
   }
 
@@ -493,6 +499,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     connectivityChanges: connectivityChanges,
     onConnectivityChanged: onConnectivityChanged,
     ticketGateway: ticketGateway,
+    workScheduleFeedGateway: workScheduleFeedGateway,
+    workScheduleTimeZone: TimeZoneId(resolvedTimeZoneId),
     ticketConnected: initiallyConnected,
     ticketClientContext: _ticketClientContext(buildNumber),
     onRealtimeHint: onRealtimeHint,

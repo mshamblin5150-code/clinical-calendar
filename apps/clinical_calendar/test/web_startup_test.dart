@@ -297,6 +297,7 @@ void main() {
       connectivitySource: _Connectivity(),
     );
 
+    expect(application.workScheduleTimeZone, TimeZoneId('America/New_York'));
     final preceptors = await application.dependencies.repositories.read(
       (repositories) => repositories.preceptors.list(studentId: _studentId),
     );
@@ -329,6 +330,9 @@ final class _BrowserRuntime implements BrowserRuntime {
 
   @override
   String get deviceName => 'Chrome on Windows';
+
+  @override
+  String get timeZoneName => 'America/New_York';
 
   @override
   Future<CommonDatabase> openInMemorySqlite() async => sqlite3.openInMemory();

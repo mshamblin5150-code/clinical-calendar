@@ -65,3 +65,4 @@ export 'src/mechanical_pixel_tiles.dart';
 export 'src/time_input.dart';
 export 'src/variant_f_theme.dart';
 export 'src/variant_f_raster_assets.dart';
+export 'src/work_schedule_feeds/work_schedule_feed_surface.dart';
