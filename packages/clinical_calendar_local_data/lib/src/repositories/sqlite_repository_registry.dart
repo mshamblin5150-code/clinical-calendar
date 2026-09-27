@@ -1128,6 +1128,7 @@ final class SqliteRepositoryRegistry
   );
 
   String _recoveryTable(String entityType) => switch (entityType) {
+    'work_schedule_feed' => 'work_schedule_feeds',
     'work_shift' || 'clinical_session' => 'commitments',
     'protected_day' => 'protected_days',
     'schedule_template' => 'schedule_templates',
@@ -1324,6 +1325,13 @@ void _restoreTombstone(
         entityId,
         mutation,
       );
+    case 'work_schedule_feed':
+      _restoreRecord(
+        repositories.workScheduleFeeds,
+        repositories.registry.studentId,
+        entityId,
+        mutation,
+      );
     case 'clinical_session':
       _restoreRecord(
         repositories.clinicalSessions,
@@ -1495,6 +1503,7 @@ final class _RestoreOutboxIntentSink
     }
     final entityType = switch (table) {
       'student_profiles' => 'student_profile',
+      'work_schedule_feeds' => 'work_schedule_feed',
       'preceptors' => 'preceptor',
       'clinical_placements' => 'clinical_placement',
       'commitments' => switch (_text(intent.row, 'commitment_type')) {
@@ -1645,6 +1654,7 @@ final class _RestoreOutboxTarget {
 
   int get dependencyRank => switch (entityType) {
     'student_profile' => 0,
+    'work_schedule_feed' => 1,
     'preceptor' ||
     'protected_day' ||
     'work_shift' ||
@@ -1674,6 +1684,9 @@ Map<String, Object?> _restorePayloadValue(
         ? null
         : base64Encode(row['avatar_bytes']! as List<int>),
   },
+  'work_schedule_feeds' => _encodeWorkScheduleFeed(
+    _decodeWorkScheduleFeed(row),
+  ),
   'preceptors' => _encodePreceptor(_decodePreceptor(row)),
   'clinical_placements' => _encodeClinicalPlacementPayload(
     _decodeClinicalPlacement(repositories, row),
@@ -1723,12 +1736,23 @@ final class _Repositories
         ReminderLocalWriteRepositories,
         SynchronizationLocalWriteRepositories,
         AcademicAssignmentLocalWriteRepositories,
-        ClassCatalogLocalWriteRepositories {
+        ClassCatalogLocalWriteRepositories,
+        WorkScheduleFeedLocalWriteRepositories {
   _Repositories(this.registry, {required this.writable});
 
   final SqliteRepositoryRegistry registry;
   final bool writable;
   bool _active = true;
+
+  @override
+  late final workScheduleFeeds = _EntityRepository<WorkScheduleFeed>(
+    this,
+    table: 'work_schedule_feeds',
+    entityType: 'work_schedule_feed',
+    idOf: (value) => value.id,
+    encode: _encodeWorkScheduleFeed,
+    decode: _decodeWorkScheduleFeed,
+  );
 
   @override
   late final workShifts = _EntityRepository<WorkShift>(
@@ -2401,6 +2425,7 @@ Map<String, Object?> _encodeWorkShift(WorkShift value) => {
   'preceptor_id': null,
   'work_schedule_feed_id': value.workScheduleFeedId,
   'work_schedule_feed_name': value.workScheduleFeedName,
+  'source_event_uid': value.sourceEventUid,
   ..._intervalColumns(value.plannedInterval, 'planned_'),
   'actual_start_date': null,
   'actual_end_date': null,
@@ -2418,6 +2443,7 @@ WorkShift _decodeWorkShift(Map<String, Object?> row) {
   }
   final feedId = _nullableText(row, 'work_schedule_feed_id');
   final feedName = _nullableText(row, 'work_schedule_feed_name');
+  final sourceEventUid = _nullableText(row, 'source_event_uid');
   if ((feedId == null) != (feedName == null)) throw const FormatException();
   return feedId == null
       ? WorkShift(
@@ -2429,7 +2455,53 @@ WorkShift _decodeWorkShift(Map<String, Object?> row) {
           plannedInterval: _interval(row, 'planned_'),
           workScheduleFeedId: feedId,
           workScheduleFeedName: feedName!,
+          sourceEventUid: sourceEventUid,
         );
+}
+
+Map<String, Object?> _encodeWorkScheduleFeed(WorkScheduleFeed value) => {
+  'name': value.name,
+  'feed_url': value.url.toString(),
+  'skip_words_json': jsonEncode(value.skipWords),
+  'last_checked_at_utc': _utc(value.lastCheckedAtUtc),
+  'last_successful_update_at_utc': _utc(value.lastSuccessfulUpdateAtUtc),
+  'not_imported_json': jsonEncode([
+    for (final event in value.notImported)
+      {
+        'source_event_uid': event.sourceEventUid,
+        'title': event.title,
+        'reason': event.reason.name,
+      },
+  ]),
+  'held_reason': value.heldReason,
+};
+
+WorkScheduleFeed _decodeWorkScheduleFeed(Map<String, Object?> row) {
+  final skipWords = jsonDecode(_text(row, 'skip_words_json'));
+  final notImported = jsonDecode(_text(row, 'not_imported_json'));
+  if (skipWords is! List || notImported is! List) throw const FormatException();
+  return WorkScheduleFeed(
+    id: _identifier(_text(row, 'id')),
+    name: _text(row, 'name'),
+    url: Uri.parse(_text(row, 'feed_url')),
+    skipWords: skipWords.cast<String>(),
+    lastCheckedAtUtc: _dateTime(row, 'last_checked_at_utc'),
+    lastSuccessfulUpdateAtUtc: _dateTime(row, 'last_successful_update_at_utc'),
+    notImported: [
+      for (final item in notImported)
+        if (item is Map<String, dynamic>)
+          WorkScheduleFeedNotImportedEvent(
+            sourceEventUid: item['source_event_uid'] as String,
+            title: item['title'] as String,
+            reason: WorkScheduleFeedNotImportedReason.values.byName(
+              item['reason'] as String,
+            ),
+          )
+        else
+          throw const FormatException(),
+    ],
+    heldReason: _nullableText(row, 'held_reason'),
+  );
 }
 
 Map<String, Object?> _encodeClinicalSession(ClinicalSession value) {
@@ -3094,6 +3166,7 @@ final class _OutboxRepository implements OutboxMaintenanceRepository {
             END
             ELSE CASE entity_type
               WHEN 'student_profile' THEN 0
+              WHEN 'work_schedule_feed' THEN 1
               WHEN 'preceptor' THEN 1
               WHEN 'protected_day' THEN 1
               WHEN 'work_shift' THEN 1

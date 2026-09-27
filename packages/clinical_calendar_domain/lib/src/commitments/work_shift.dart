@@ -14,14 +14,23 @@ final class WorkScheduleFeedReference {
 final class WorkShift {
   WorkShift({required String id, required this.plannedInterval})
     : id = requireIdentifier(id, 'Work Shift id'),
-      workScheduleFeed = null;
+      workScheduleFeed = null,
+      sourceEventUid = null;
 
   WorkShift.imported({
     required String id,
     required this.plannedInterval,
     required String workScheduleFeedId,
     required String workScheduleFeedName,
+    String? sourceEventUid,
   }) : id = requireIdentifier(id, 'Imported Work Shift id'),
+       sourceEventUid = sourceEventUid == null
+           ? null
+           : requireIdentifier(
+               sourceEventUid,
+               'Source event UID',
+               maximumLength: 1024,
+             ),
        workScheduleFeed = WorkScheduleFeedReference(
          id: workScheduleFeedId,
          name: workScheduleFeedName,
@@ -30,6 +39,7 @@ final class WorkShift {
   final String id;
   final ZonedInterval plannedInterval;
   final WorkScheduleFeedReference? workScheduleFeed;
+  final String? sourceEventUid;
 
   String? get workScheduleFeedId => workScheduleFeed?.id;
   String? get workScheduleFeedName => workScheduleFeed?.name;

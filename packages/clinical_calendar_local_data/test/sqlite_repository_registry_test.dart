@@ -63,6 +63,83 @@ void main() {
   });
 
   test(
+    'Work Schedule Feeds and source event UIDs round-trip and enqueue sync',
+    () async {
+      await registry.initialize();
+      final feed = WorkScheduleFeed(
+        id: '00000000-0000-4000-8000-000000000120',
+        name: 'ER Schedule',
+        url: Uri.parse('https://example.invalid/private/token.ics'),
+        lastCheckedAtUtc: _baseTime,
+        lastSuccessfulUpdateAtUtc: _baseTime,
+        notImported: [
+          WorkScheduleFeedNotImportedEvent(
+            sourceEventUid: 'pto-1',
+            title: 'PTO',
+            reason: WorkScheduleFeedNotImportedReason.skipWord,
+          ),
+        ],
+      );
+      final shift = WorkShift.imported(
+        id: '00000000-0000-4000-8000-000000000121',
+        plannedInterval: ZonedInterval(
+          startDate: LocalDate(2026, 8, 12),
+          startTime: LocalTime(7, 0),
+          endTime: LocalTime(19, 0),
+          timeZone: TimeZoneId('America/New_York'),
+          startOffset: UtcOffset.inMinutes(-240),
+          endOffset: UtcOffset.inMinutes(-240),
+        ),
+        workScheduleFeedId: feed.id,
+        workScheduleFeedName: feed.name,
+        sourceEventUid: 'shift-1',
+      );
+
+      await registry.mutate((repositories) {
+        final feeds = repositories as WorkScheduleFeedLocalWriteRepositories;
+        feeds.workScheduleFeeds.put(
+          studentId: _studentId,
+          value: feed,
+          expectedRevision: 0,
+          mutation: _mutation(40),
+        );
+        repositories.workShifts.put(
+          studentId: _studentId,
+          value: shift,
+          expectedRevision: 0,
+          mutation: _mutation(41),
+        );
+      });
+
+      await registry.read((repositories) {
+        final feeds = repositories as WorkScheduleFeedLocalReadRepositories;
+        final restored = feeds.workScheduleFeeds.find(
+          studentId: _studentId,
+          id: feed.id,
+        )!;
+        expect(restored.value.url, feed.url);
+        expect(restored.value.notImported.single.title, 'PTO');
+        expect(
+          repositories.workShifts
+              .find(studentId: _studentId, id: shift.id)!
+              .value
+              .sourceEventUid,
+          'shift-1',
+        );
+        expect(
+          repositories.outbox
+              .pending(
+                studentId: _studentId,
+                asOfUtc: _baseTime.add(const Duration(days: 1)),
+              )
+              .map((operation) => operation.entityType),
+          ['work_schedule_feed', 'work_shift'],
+        );
+      });
+    },
+  );
+
+  test(
     'local removal preview excludes only rejected audit rows with accepted replacements',
     () async {
       await registry.initialize();

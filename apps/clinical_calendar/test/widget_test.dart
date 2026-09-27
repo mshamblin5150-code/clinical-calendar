@@ -19,7 +19,7 @@ void main() {
   test('sync build number matches the application package build', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
 
-    expect(app.currentSyncBuildNumber, 46);
+    expect(app.currentSyncBuildNumber, 47);
     expect(pubspec, contains('version: 0.1.0+${app.currentSyncBuildNumber}'));
   });
 

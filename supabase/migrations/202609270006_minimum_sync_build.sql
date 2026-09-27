@@ -2,6 +2,10 @@
 -- was changed by a newer release. Pull remains available so an old client can
 -- stay current while its durable local pushes wait for an application update.
 
+grant clinical_calendar_sync_executor to postgres;
+grant create on schema clinical_calendar_sync to clinical_calendar_sync_executor;
+grant create on schema public to clinical_calendar_sync_executor;
+
 create table clinical_calendar_sync.sync_configuration (
   singleton boolean primary key default true check (singleton),
   minimum_sync_build integer not null check (minimum_sync_build > 0),
@@ -144,3 +148,4 @@ grant execute on function public.apply_sync_operation(
 revoke create on schema clinical_calendar_sync
   from clinical_calendar_sync_executor;
 revoke create on schema public from clinical_calendar_sync_executor;
+revoke clinical_calendar_sync_executor from postgres;
