@@ -11,7 +11,7 @@ final class ExportWorkflowService {
   final ExportSnapshotSource data;
   final ExportEncoder encoder;
   final ExportReauthenticationGate reauthentication;
-  final NativeByteFileSaver fileSaver;
+  final ByteFileSaver fileSaver;
 
   Future<ExportOutcome> exportPlacementPdf(String placementId) async => _save(
     await encoder.encodePlacementPdf(await data.placement(placementId)),
@@ -39,15 +39,15 @@ final class ExportWorkflowService {
 
   Future<ExportOutcome> _save(ExportArtifact artifact) async {
     final outcome = await fileSaver.save(
-      NativeFileSaveRequest(
+      FileSaveRequest(
         suggestedFileName: artifact.suggestedFileName,
         mimeType: artifact.mimeType,
         bytes: artifact.bytes,
       ),
     );
     return switch (outcome) {
-      NativeFileSaveOutcome.saved => ExportOutcome.saved,
-      NativeFileSaveOutcome.cancelled => ExportOutcome.cancelled,
+      FileSaveOutcome.saved => ExportOutcome.saved,
+      FileSaveOutcome.cancelled => ExportOutcome.cancelled,
     };
   }
 }

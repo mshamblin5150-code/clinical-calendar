@@ -235,6 +235,53 @@ void main() {
     },
   );
 
+  test(
+    'web application offers downloads and explains native-only features',
+    () async {
+      final identifiers = _Identifiers();
+      final clock = const _Clock();
+      final gateway = _IdentityGateway();
+      final storage = _MemorySecureStorage();
+      final identity = PasswordlessIdentityService(
+        gateway: gateway,
+        secureStorage: storage,
+        identifiers: identifiers,
+        clock: clock,
+        currentDevice: DeviceDescriptor(
+          name: 'Safari on iPhone',
+          platform: DevicePlatform.web,
+        ),
+      );
+      final session = await gateway.verifySignInCode(
+        'student@example.com',
+        '123456',
+      );
+
+      final application = await web.buildWebApplication(
+        session: session,
+        identity: identity,
+        secureStorage: storage,
+        identifiers: identifiers,
+        clock: clock,
+        environment: _environment,
+        browser: _BrowserRuntime(),
+        synchronizationTransport: _Transport(),
+        retryScheduler: _RetryScheduler(),
+        connectivitySource: _Connectivity(),
+      );
+
+      expect(application.exportWorkflowFactory, isNotNull);
+      expect(
+        application.clientCapabilities.backups,
+        ClientCapabilityHost.installedApps,
+      );
+      expect(
+        application.clientCapabilities.reminders,
+        ClientCapabilityHost.installedApps,
+      );
+    },
+  );
+
   testWidgets('initial web sync downloads another Connected Device data', (
     tester,
   ) async {

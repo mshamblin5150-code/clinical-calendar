@@ -5,6 +5,7 @@ export 'src/assignments/academic_assignment_surface.dart';
 export 'src/additive_theme_shell.dart';
 export 'src/additive_semantic_colors.dart';
 export 'src/clinical_calendar_app.dart';
+export 'src/client_capabilities.dart';
 export 'src/accessibility_tokens.dart';
 export 'src/code_only_presentation_recovery.dart';
 export 'src/coastal_light_frame.dart';

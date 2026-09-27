@@ -3,6 +3,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../responsive_shell.dart';
+import '../client_capabilities.dart';
 import '../theme_contract.dart';
 import '../theme_gallery.dart';
 import '../time_input.dart';
@@ -73,6 +74,7 @@ final class SettingsTemplatesSurface extends StatefulWidget {
     this.clinicalDefaults = const [],
     this.deviceNotifications,
     this.onSaveDeviceNotifications,
+    this.reminderHost = ClientCapabilityHost.thisClient,
     this.authoritativeThemeId,
     this.onPreviewTheme,
     this.onOpenWorkScheduleFeeds,
@@ -92,6 +94,7 @@ final class SettingsTemplatesSurface extends StatefulWidget {
   final List<ClinicalTemplateDefaultOption> clinicalDefaults;
   final DeviceNotificationPreferences? deviceNotifications;
   final SaveDeviceNotificationPreferences? onSaveDeviceNotifications;
+  final ClientCapabilityHost reminderHost;
   final String? authoritativeThemeId;
   final PreviewTheme? onPreviewTheme;
   final VoidCallback? onOpenWorkScheduleFeeds;
@@ -362,305 +365,324 @@ final class _SettingsTemplatesSurfaceState
               ),
               const SizedBox(height: 12),
             ],
-            Text(
-              'NOTIFICATION PREFERENCES',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Material(
-              color: Colors.transparent,
-              child: SwitchListTile(
-                key: const Key('work-shift-notifications-setting'),
-                contentPadding: EdgeInsets.zero,
-                title: _switchTitle(
-                  'Work Shift reminders',
-                  _notifications.upcomingWorkShiftsEnabled,
+            ...switch (widget.reminderHost) {
+              ClientCapabilityHost.installedApps => [
+                Text(
+                  'NOTIFICATION PREFERENCES',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                subtitle: Text(
-                  _notifications.upcomingWorkShiftsEnabled
-                      ? 'Scheduled using the lead times below.'
-                      : 'Muted — no Work Shift notifications.',
-                ),
-                value: _notifications.upcomingWorkShiftsEnabled,
-                onChanged: (value) => setState(
-                  () => _notifications = _notifications.copyWith(
-                    upcomingWorkShiftsEnabled: value,
-                  ),
-                ),
-              ),
-            ),
-            Material(
-              color: Colors.transparent,
-              child: SwitchListTile(
-                key: const Key('clinical-session-notifications-setting'),
-                contentPadding: EdgeInsets.zero,
-                title: _switchTitle(
-                  'Clinical Session reminders',
-                  _notifications.upcomingClinicalSessionsEnabled,
-                ),
-                subtitle: Text(
-                  _notifications.upcomingClinicalSessionsEnabled
-                      ? 'Scheduled using the lead times below.'
-                      : 'Muted — no Clinical Session notifications.',
-                ),
-                value: _notifications.upcomingClinicalSessionsEnabled,
-                onChanged: (value) => setState(
-                  () => _notifications = _notifications.copyWith(
-                    upcomingClinicalSessionsEnabled: value,
-                  ),
-                ),
-              ),
-            ),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _leadTimeField(
-                  key: const Key('work-shift-first-lead-setting'),
-                  label: 'First Work Shift reminder',
-                  valueMinutes: _notifications.workShiftFirstLeadMinutes,
-                  enabled: _notifications.upcomingWorkShiftsEnabled,
-                  onChanged: (value) => _notifications = _notifications
-                      .copyWith(workShiftFirstLeadMinutes: value),
-                ),
-                _leadTimeField(
-                  key: const Key('work-shift-second-lead-setting'),
-                  label: 'Second Work Shift reminder',
-                  valueMinutes: _notifications.workShiftSecondLeadMinutes,
-                  enabled: _notifications.upcomingWorkShiftsEnabled,
-                  onChanged: (value) => _notifications = _notifications
-                      .copyWith(workShiftSecondLeadMinutes: value),
-                ),
-                _leadTimeField(
-                  key: const Key('clinical-session-first-lead-setting'),
-                  label: 'First Clinical Session reminder',
-                  valueMinutes: _notifications.clinicalSessionFirstLeadMinutes,
-                  enabled: _notifications.upcomingClinicalSessionsEnabled,
-                  onChanged: (value) => _notifications = _notifications
-                      .copyWith(clinicalSessionFirstLeadMinutes: value),
-                ),
-                _leadTimeField(
-                  key: const Key('clinical-session-second-lead-setting'),
-                  label: 'Second Clinical Session reminder',
-                  valueMinutes: _notifications.clinicalSessionSecondLeadMinutes,
-                  enabled: _notifications.upcomingClinicalSessionsEnabled,
-                  onChanged: (value) => _notifications = _notifications
-                      .copyWith(clinicalSessionSecondLeadMinutes: value),
+                const SizedBox(height: 8),
+                const Text(
+                  ClinicalCalendarClientCapabilities.installedAppReminderNote,
+                  key: Key('reminder-availability-message'),
                 ),
               ],
-            ),
-            Material(
-              color: Colors.transparent,
-              child: SwitchListTile(
-                key: const Key('weekly-summary-setting'),
-                contentPadding: EdgeInsets.zero,
-                title: _switchTitle(
-                  'Weekly summary',
-                  _notifications.weeklySummaryEnabled,
+              ClientCapabilityHost.thisClient => [
+                Text(
+                  'NOTIFICATION PREFERENCES',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                subtitle: Text(
-                  _notifications.weeklySummaryEnabled
-                      ? 'Scheduled at the day and time below.'
-                      : 'Muted — no weekly summary notification.',
-                ),
-                value: _notifications.weeklySummaryEnabled,
-                onChanged: (value) => setState(
-                  () => _notifications = _notifications.copyWith(
-                    weeklySummaryEnabled: value,
-                  ),
-                ),
-              ),
-            ),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _field(
-                  DropdownButtonFormField<int>(
-                    key: const Key('weekly-summary-weekday-setting'),
-                    isExpanded: true,
-                    initialValue: _notifications.weeklySummaryWeekday,
-                    decoration: const InputDecoration(labelText: 'Summary day'),
-                    items: const [
-                      DropdownMenuItem(
-                        value: DateTime.monday,
-                        child: Text('Monday'),
-                      ),
-                      DropdownMenuItem(
-                        value: DateTime.tuesday,
-                        child: Text('Tuesday'),
-                      ),
-                      DropdownMenuItem(
-                        value: DateTime.wednesday,
-                        child: Text('Wednesday'),
-                      ),
-                      DropdownMenuItem(
-                        value: DateTime.thursday,
-                        child: Text('Thursday'),
-                      ),
-                      DropdownMenuItem(
-                        value: DateTime.friday,
-                        child: Text('Friday'),
-                      ),
-                      DropdownMenuItem(
-                        value: DateTime.saturday,
-                        child: Text('Saturday'),
-                      ),
-                      DropdownMenuItem(
-                        value: DateTime.sunday,
-                        child: Text('Sunday'),
-                      ),
-                    ],
+                Material(
+                  color: Colors.transparent,
+                  child: SwitchListTile(
+                    key: const Key('work-shift-notifications-setting'),
+                    contentPadding: EdgeInsets.zero,
+                    title: _switchTitle(
+                      'Work Shift reminders',
+                      _notifications.upcomingWorkShiftsEnabled,
+                    ),
+                    subtitle: Text(
+                      _notifications.upcomingWorkShiftsEnabled
+                          ? 'Scheduled using the lead times below.'
+                          : 'Muted — no Work Shift notifications.',
+                    ),
+                    value: _notifications.upcomingWorkShiftsEnabled,
                     onChanged: (value) => setState(
                       () => _notifications = _notifications.copyWith(
-                        weeklySummaryWeekday: value!,
+                        upcomingWorkShiftsEnabled: value,
                       ),
                     ),
                   ),
                 ),
-                _timeField(
-                  key: const Key('weekly-summary-hour-setting'),
-                  label: 'Summary time',
-                  value: LocalTime(
-                    _notifications.weeklySummaryHour,
-                    _notifications.weeklySummaryMinute,
-                  ),
-                  enabled: _notifications.weeklySummaryEnabled,
-                  onChanged: (value) =>
-                      _notifications = _notifications.copyWith(
-                        weeklySummaryHour: value.hour,
-                        weeklySummaryMinute: value.minute,
+                Material(
+                  color: Colors.transparent,
+                  child: SwitchListTile(
+                    key: const Key('clinical-session-notifications-setting'),
+                    contentPadding: EdgeInsets.zero,
+                    title: _switchTitle(
+                      'Clinical Session reminders',
+                      _notifications.upcomingClinicalSessionsEnabled,
+                    ),
+                    subtitle: Text(
+                      _notifications.upcomingClinicalSessionsEnabled
+                          ? 'Scheduled using the lead times below.'
+                          : 'Muted — no Clinical Session notifications.',
+                    ),
+                    value: _notifications.upcomingClinicalSessionsEnabled,
+                    onChanged: (value) => setState(
+                      () => _notifications = _notifications.copyWith(
+                        upcomingClinicalSessionsEnabled: value,
                       ),
-                ),
-              ],
-            ),
-            Material(
-              color: Colors.transparent,
-              child: SwitchListTile(
-                key: const Key('backup-reminders-setting'),
-                contentPadding: EdgeInsets.zero,
-                title: _switchTitle(
-                  'Portable backup reminders',
-                  _notifications.backupRemindersEnabled,
-                ),
-                subtitle: Text(
-                  _notifications.backupRemindersEnabled
-                      ? 'Scheduled using the day intervals below.'
-                      : 'Muted — no portable backup notifications.',
-                ),
-                value: _notifications.backupRemindersEnabled,
-                onChanged: (value) => setState(
-                  () => _notifications = _notifications.copyWith(
-                    backupRemindersEnabled: value,
-                  ),
-                ),
-              ),
-            ),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _minutesField(
-                  key: const Key('no-backup-reminder-days-setting'),
-                  label: 'First backup reminder (days)',
-                  value: _notifications.noBackupReminderDays,
-                  onChanged: (value) => _notifications = _notifications
-                      .copyWith(noBackupReminderDays: value),
-                ),
-                _minutesField(
-                  key: const Key('stale-backup-reminder-days-setting'),
-                  label: 'Stale backup reminder (days)',
-                  value: _notifications.staleBackupReminderDays,
-                  onChanged: (value) => _notifications = _notifications
-                      .copyWith(staleBackupReminderDays: value),
-                ),
-              ],
-            ),
-            if (_deviceNotifications case final device?) ...[
-              const SizedBox(height: 12),
-              Text(
-                'THIS DEVICE',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              Material(
-                color: Colors.transparent,
-                child: SwitchListTile(
-                  key: const Key('device-notification-delivery-setting'),
-                  contentPadding: EdgeInsets.zero,
-                  title: _switchTitle(
-                    'System notification delivery',
-                    device.deliveryEnabled,
-                  ),
-                  subtitle: Text(
-                    device.deliveryEnabled
-                        ? 'On — this device may deliver enabled reminders.'
-                        : 'Muted — this device will deliver no notifications.',
-                  ),
-                  value: device.deliveryEnabled,
-                  onChanged: (value) => setState(
-                    () => _deviceNotifications = device.copyWith(
-                      deliveryEnabled: value,
                     ),
                   ),
                 ),
-              ),
-              Material(
-                color: Colors.transparent,
-                child: SwitchListTile(
-                  key: const Key('device-detailed-preview-setting'),
-                  contentPadding: EdgeInsets.zero,
-                  title: _switchTitle(
-                    'Detailed lock-screen previews',
-                    device.detailedPreview,
-                    disabledLabel: 'Off',
-                  ),
-                  subtitle: Text(
-                    device.detailedPreview
-                        ? 'On — may include Clinical Placement details.'
-                        : 'Off — lock-screen notifications stay generic.',
-                  ),
-                  value: device.detailedPreview,
-                  onChanged: (value) => setState(
-                    () => _deviceNotifications = device.copyWith(
-                      detailedPreview: value,
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _leadTimeField(
+                      key: const Key('work-shift-first-lead-setting'),
+                      label: 'First Work Shift reminder',
+                      valueMinutes: _notifications.workShiftFirstLeadMinutes,
+                      enabled: _notifications.upcomingWorkShiftsEnabled,
+                      onChanged: (value) => _notifications = _notifications
+                          .copyWith(workShiftFirstLeadMinutes: value),
+                    ),
+                    _leadTimeField(
+                      key: const Key('work-shift-second-lead-setting'),
+                      label: 'Second Work Shift reminder',
+                      valueMinutes: _notifications.workShiftSecondLeadMinutes,
+                      enabled: _notifications.upcomingWorkShiftsEnabled,
+                      onChanged: (value) => _notifications = _notifications
+                          .copyWith(workShiftSecondLeadMinutes: value),
+                    ),
+                    _leadTimeField(
+                      key: const Key('clinical-session-first-lead-setting'),
+                      label: 'First Clinical Session reminder',
+                      valueMinutes:
+                          _notifications.clinicalSessionFirstLeadMinutes,
+                      enabled: _notifications.upcomingClinicalSessionsEnabled,
+                      onChanged: (value) => _notifications = _notifications
+                          .copyWith(clinicalSessionFirstLeadMinutes: value),
+                    ),
+                    _leadTimeField(
+                      key: const Key('clinical-session-second-lead-setting'),
+                      label: 'Second Clinical Session reminder',
+                      valueMinutes:
+                          _notifications.clinicalSessionSecondLeadMinutes,
+                      enabled: _notifications.upcomingClinicalSessionsEnabled,
+                      onChanged: (value) => _notifications = _notifications
+                          .copyWith(clinicalSessionSecondLeadMinutes: value),
+                    ),
+                  ],
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: SwitchListTile(
+                    key: const Key('weekly-summary-setting'),
+                    contentPadding: EdgeInsets.zero,
+                    title: _switchTitle(
+                      'Weekly summary',
+                      _notifications.weeklySummaryEnabled,
+                    ),
+                    subtitle: Text(
+                      _notifications.weeklySummaryEnabled
+                          ? 'Scheduled at the day and time below.'
+                          : 'Muted — no weekly summary notification.',
+                    ),
+                    value: _notifications.weeklySummaryEnabled,
+                    onChanged: (value) => setState(
+                      () => _notifications = _notifications.copyWith(
+                        weeklySummaryEnabled: value,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _timeField(
-                    key: const Key('device-quiet-start-setting'),
-                    label: 'Quiet hours start',
-                    value: LocalTime(
-                      device.quietStartsAtHour,
-                      device.quietStartsAtMinute,
-                    ),
-                    enabled: true,
-                    onChanged: (value) =>
-                        _deviceNotifications = device.copyWith(
-                          quietStartsAtHour: value.hour,
-                          quietStartsAtMinute: value.minute,
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _field(
+                      DropdownButtonFormField<int>(
+                        key: const Key('weekly-summary-weekday-setting'),
+                        isExpanded: true,
+                        initialValue: _notifications.weeklySummaryWeekday,
+                        decoration: const InputDecoration(
+                          labelText: 'Summary day',
                         ),
-                  ),
-                  _timeField(
-                    key: const Key('device-quiet-end-setting'),
-                    label: 'Quiet hours end',
-                    value: LocalTime(
-                      device.quietEndsAtHour,
-                      device.quietEndsAtMinute,
-                    ),
-                    enabled: true,
-                    onChanged: (value) =>
-                        _deviceNotifications = device.copyWith(
-                          quietEndsAtHour: value.hour,
-                          quietEndsAtMinute: value.minute,
+                        items: const [
+                          DropdownMenuItem(
+                            value: DateTime.monday,
+                            child: Text('Monday'),
+                          ),
+                          DropdownMenuItem(
+                            value: DateTime.tuesday,
+                            child: Text('Tuesday'),
+                          ),
+                          DropdownMenuItem(
+                            value: DateTime.wednesday,
+                            child: Text('Wednesday'),
+                          ),
+                          DropdownMenuItem(
+                            value: DateTime.thursday,
+                            child: Text('Thursday'),
+                          ),
+                          DropdownMenuItem(
+                            value: DateTime.friday,
+                            child: Text('Friday'),
+                          ),
+                          DropdownMenuItem(
+                            value: DateTime.saturday,
+                            child: Text('Saturday'),
+                          ),
+                          DropdownMenuItem(
+                            value: DateTime.sunday,
+                            child: Text('Sunday'),
+                          ),
+                        ],
+                        onChanged: (value) => setState(
+                          () => _notifications = _notifications.copyWith(
+                            weeklySummaryWeekday: value!,
+                          ),
                         ),
+                      ),
+                    ),
+                    _timeField(
+                      key: const Key('weekly-summary-hour-setting'),
+                      label: 'Summary time',
+                      value: LocalTime(
+                        _notifications.weeklySummaryHour,
+                        _notifications.weeklySummaryMinute,
+                      ),
+                      enabled: _notifications.weeklySummaryEnabled,
+                      onChanged: (value) =>
+                          _notifications = _notifications.copyWith(
+                            weeklySummaryHour: value.hour,
+                            weeklySummaryMinute: value.minute,
+                          ),
+                    ),
+                  ],
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: SwitchListTile(
+                    key: const Key('backup-reminders-setting'),
+                    contentPadding: EdgeInsets.zero,
+                    title: _switchTitle(
+                      'Portable backup reminders',
+                      _notifications.backupRemindersEnabled,
+                    ),
+                    subtitle: Text(
+                      _notifications.backupRemindersEnabled
+                          ? 'Scheduled using the day intervals below.'
+                          : 'Muted — no portable backup notifications.',
+                    ),
+                    value: _notifications.backupRemindersEnabled,
+                    onChanged: (value) => setState(
+                      () => _notifications = _notifications.copyWith(
+                        backupRemindersEnabled: value,
+                      ),
+                    ),
+                  ),
+                ),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _minutesField(
+                      key: const Key('no-backup-reminder-days-setting'),
+                      label: 'First backup reminder (days)',
+                      value: _notifications.noBackupReminderDays,
+                      onChanged: (value) => _notifications = _notifications
+                          .copyWith(noBackupReminderDays: value),
+                    ),
+                    _minutesField(
+                      key: const Key('stale-backup-reminder-days-setting'),
+                      label: 'Stale backup reminder (days)',
+                      value: _notifications.staleBackupReminderDays,
+                      onChanged: (value) => _notifications = _notifications
+                          .copyWith(staleBackupReminderDays: value),
+                    ),
+                  ],
+                ),
+                if (_deviceNotifications case final device?) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'THIS DEVICE',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Material(
+                    color: Colors.transparent,
+                    child: SwitchListTile(
+                      key: const Key('device-notification-delivery-setting'),
+                      contentPadding: EdgeInsets.zero,
+                      title: _switchTitle(
+                        'System notification delivery',
+                        device.deliveryEnabled,
+                      ),
+                      subtitle: Text(
+                        device.deliveryEnabled
+                            ? 'On — this device may deliver enabled reminders.'
+                            : 'Muted — this device will deliver no notifications.',
+                      ),
+                      value: device.deliveryEnabled,
+                      onChanged: (value) => setState(
+                        () => _deviceNotifications = device.copyWith(
+                          deliveryEnabled: value,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Material(
+                    color: Colors.transparent,
+                    child: SwitchListTile(
+                      key: const Key('device-detailed-preview-setting'),
+                      contentPadding: EdgeInsets.zero,
+                      title: _switchTitle(
+                        'Detailed lock-screen previews',
+                        device.detailedPreview,
+                        disabledLabel: 'Off',
+                      ),
+                      subtitle: Text(
+                        device.detailedPreview
+                            ? 'On — may include Clinical Placement details.'
+                            : 'Off — lock-screen notifications stay generic.',
+                      ),
+                      value: device.detailedPreview,
+                      onChanged: (value) => setState(
+                        () => _deviceNotifications = device.copyWith(
+                          detailedPreview: value,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _timeField(
+                        key: const Key('device-quiet-start-setting'),
+                        label: 'Quiet hours start',
+                        value: LocalTime(
+                          device.quietStartsAtHour,
+                          device.quietStartsAtMinute,
+                        ),
+                        enabled: true,
+                        onChanged: (value) =>
+                            _deviceNotifications = device.copyWith(
+                              quietStartsAtHour: value.hour,
+                              quietStartsAtMinute: value.minute,
+                            ),
+                      ),
+                      _timeField(
+                        key: const Key('device-quiet-end-setting'),
+                        label: 'Quiet hours end',
+                        value: LocalTime(
+                          device.quietEndsAtHour,
+                          device.quietEndsAtMinute,
+                        ),
+                        enabled: true,
+                        onChanged: (value) =>
+                            _deviceNotifications = device.copyWith(
+                              quietEndsAtHour: value.hour,
+                              quietEndsAtMinute: value.minute,
+                            ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ],
+              ],
+            },
           ],
         ),
       ),

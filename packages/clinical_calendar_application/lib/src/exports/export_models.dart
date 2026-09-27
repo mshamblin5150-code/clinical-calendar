@@ -61,8 +61,8 @@ final class ExportArtifact {
   final List<int> bytes;
 }
 
-final class NativeFileSaveRequest {
-  NativeFileSaveRequest({
+final class FileSaveRequest {
+  FileSaveRequest({
     required this.suggestedFileName,
     required this.mimeType,
     required Iterable<int> bytes,
@@ -85,15 +85,15 @@ abstract interface class ExportReauthenticationGate {
   Future<bool> reauthenticate({required String reason});
 }
 
-enum NativeFileSaveOutcome { saved, cancelled }
+enum FileSaveOutcome { saved, cancelled }
 
-/// Opens the platform's native save UI and writes [NativeFileSaveRequest.bytes]
-/// to the destination chosen by the user.
+/// Opens the platform's save or download flow for [FileSaveRequest.bytes].
 ///
 /// This byte-oriented boundary is also suitable for portable backup artifacts;
-/// callers never need filesystem-path access to Android/iOS document URIs.
-abstract interface class NativeByteFileSaver {
-  Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request);
+/// Callers never need filesystem-path access to Android/iOS document URIs or
+/// browser download destinations.
+abstract interface class ByteFileSaver {
+  Future<FileSaveOutcome> save(FileSaveRequest request);
 }
 
 enum ExportOutcome { saved, cancelled, authenticationFailed }

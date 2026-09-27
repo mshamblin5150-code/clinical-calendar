@@ -254,6 +254,27 @@ Future<ClinicalCalendarApp> buildWebApplication({
     await pending.refresh();
   }
 
+  final exportData = ExportDataService(
+    applicationRepositories,
+    PlacementApplicationService(
+      repositories: applicationRepositories,
+      clock: clock,
+      identifiers: identifiers,
+      studentId: session.studentId,
+    ),
+    clock,
+    session.studentId,
+  );
+  final exportFileSaver = WebExportFileSaver();
+  ExportWorkflowService buildExportWorkflow(
+    ExportReauthenticationGate reauthentication,
+  ) => ExportWorkflowService(
+    data: exportData,
+    encoder: const DartExportEncoder(),
+    reauthentication: reauthentication,
+    fileSaver: exportFileSaver,
+  );
+
   return ClinicalCalendarApp(
     dependencies: ApplicationDependencies(
       repositories: applicationRepositories,
@@ -295,6 +316,8 @@ Future<ClinicalCalendarApp> buildWebApplication({
     identity: identity,
     identityEmail: session.email,
     onLocalCopyRemoved: onLocalCopyRemoved,
+    clientCapabilities: ClinicalCalendarClientCapabilities.web,
+    exportWorkflowFactory: buildExportWorkflow,
   );
 }
 

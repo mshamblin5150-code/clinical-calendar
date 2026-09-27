@@ -18,7 +18,7 @@ void main() {
       platform: NativeSavePlatform.windows,
     ).save(_request());
 
-    expect(outcome, NativeFileSaveOutcome.cancelled);
+    expect(outcome, FileSaveOutcome.cancelled);
     expect(platform.suggestedName, 'clinical-export.json');
     expect(platform.extensions, ['json']);
   });
@@ -34,7 +34,7 @@ void main() {
       platform: NativeSavePlatform.windows,
     ).save(_request());
 
-    expect(outcome, NativeFileSaveOutcome.saved);
+    expect(outcome, FileSaveOutcome.saved);
     expect(File(destination).readAsBytesSync(), [
       123,
       34,
@@ -54,7 +54,7 @@ void main() {
       platform: NativeSavePlatform.android,
     ).save(_request());
 
-    expect(outcome, NativeFileSaveOutcome.saved);
+    expect(outcome, FileSaveOutcome.saved);
     expect(platform.fileName, 'clinical-export.json');
     expect(platform.bytes, [123, 34, 118, 34, 58, 49, 125]);
   });
@@ -66,11 +66,11 @@ void main() {
       platform: NativeSavePlatform.ios,
     ).save(_request());
 
-    expect(outcome, NativeFileSaveOutcome.cancelled);
+    expect(outcome, FileSaveOutcome.cancelled);
   });
 }
 
-NativeFileSaveRequest _request() => NativeFileSaveRequest(
+FileSaveRequest _request() => FileSaveRequest(
   suggestedFileName: 'clinical-export.json',
   mimeType: 'application/json',
   bytes: const [123, 34, 118, 34, 58, 49, 125],

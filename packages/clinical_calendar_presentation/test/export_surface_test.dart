@@ -170,15 +170,15 @@ final class _Reauthentication implements ExportReauthenticationGate {
   }
 }
 
-final class _Saver implements NativeByteFileSaver {
+final class _Saver implements ByteFileSaver {
   _Saver(this.log);
 
   final List<String> log;
 
   @override
-  Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request) async {
+  Future<FileSaveOutcome> save(FileSaveRequest request) async {
     log.add('picker');
     log.add('write');
-    return NativeFileSaveOutcome.saved;
+    return FileSaveOutcome.saved;
   }
 }
