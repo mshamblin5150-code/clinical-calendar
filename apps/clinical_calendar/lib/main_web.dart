@@ -16,6 +16,7 @@ import 'browser_runtime.dart';
 import 'browser_runtime_contracts.dart';
 import 'config/app_environment.dart';
 import 'sync_build_number.dart';
+import 'ticket_diagnostic_composition.dart';
 import 'web_build_version_runtime.dart';
 import 'web_device_descriptor.dart';
 import 'web_identity_runtime.dart';
@@ -197,6 +198,11 @@ Future<ClinicalCalendarApp> buildWebApplication({
     onCommitted: pending.afterCommit,
   );
   await pending.initialize();
+  final ticketGateway = SupabaseTicketGateway(
+    projectUri: environment.synchronizationProjectUri!,
+    publishableKey: environment.supabasePublishableKey,
+    accessTokenProvider: identity.currentAccessToken,
+  );
 
   var themeId = variantFThemeId;
   var enhancedAccessibility = false;
@@ -273,6 +279,19 @@ Future<ClinicalCalendarApp> buildWebApplication({
     onConnectivityChanged: connectivityChanged,
     workScheduleFeedGateway: workScheduleFeedGateway,
     workScheduleTimeZone: TimeZoneId(browser.timeZoneName),
+    ticketGateway: ticketGateway,
+    ticketConnected: initiallyConnected,
+    ticketClientContext: TicketClientContext(
+      build: currentSyncBuildNumber.toString(),
+      device: browser.deviceName,
+      platform: DevicePlatform.web.name,
+    ),
+    ticketDiagnosticBuilder: () => buildTicketDiagnosticSnapshot(
+      repositories: applicationRepositories,
+      studentId: session.studentId,
+      build: currentSyncBuildNumber.toString(),
+      timeZone: browser.timeZoneName,
+    ),
     identity: identity,
     identityEmail: session.email,
     onLocalCopyRemoved: onLocalCopyRemoved,

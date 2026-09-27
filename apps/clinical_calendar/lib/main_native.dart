@@ -18,6 +18,7 @@ import 'package:flutter/services.dart';
 
 import 'config/app_environment.dart';
 import 'sync_build_number.dart';
+import 'ticket_diagnostic_composition.dart';
 import 'web_build_version_runtime.dart';
 
 export 'sync_build_number.dart';
@@ -501,6 +502,12 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     ticketGateway: ticketGateway,
     workScheduleFeedGateway: workScheduleFeedGateway,
     workScheduleTimeZone: TimeZoneId(resolvedTimeZoneId),
+    ticketDiagnosticBuilder: () => buildTicketDiagnosticSnapshot(
+      repositories: applicationRepositories,
+      studentId: studentId,
+      build: buildNumber.toString(),
+      timeZone: resolvedTimeZoneId,
+    ),
     ticketConnected: initiallyConnected,
     ticketClientContext: _ticketClientContext(buildNumber),
     onRealtimeHint: onRealtimeHint,

@@ -113,6 +113,9 @@ final class TicketRefusalOffer extends StatelessWidget {
   }
 }
 
+typedef TicketDiagnosticBuilderCallback =
+    Future<TicketDiagnosticSnapshot> Function();
+
 final class TicketApplicationMenu extends StatelessWidget {
   const TicketApplicationMenu({
     required this.onDestinationSelected,
@@ -322,11 +325,13 @@ final class _PutInTicketSurfaceState extends State<PutInTicketSurface> {
 final class TicketsSurface extends StatefulWidget {
   const TicketsSurface({
     required this.gateway,
+    this.diagnosticBuilder,
     this.onOpenApplicationMenu,
     super.key,
   });
 
   final TicketGateway gateway;
+  final TicketDiagnosticBuilderCallback? diagnosticBuilder;
   final VoidCallback? onOpenApplicationMenu;
 
   @override
@@ -374,6 +379,7 @@ final class _TicketsSurfaceState extends State<TicketsSurface> {
           gateway: widget.gateway,
           initialTicket: ticket,
           maintainer: _maintainer,
+          diagnosticBuilder: widget.diagnosticBuilder,
           onOpenApplicationMenu: widget.onOpenApplicationMenu,
         ),
       ),
@@ -425,12 +431,14 @@ final class _TicketDetailPage extends StatefulWidget {
     required this.gateway,
     required this.initialTicket,
     required this.maintainer,
+    required this.diagnosticBuilder,
     required this.onOpenApplicationMenu,
   });
 
   final TicketGateway gateway;
   final Ticket initialTicket;
   final bool maintainer;
+  final TicketDiagnosticBuilderCallback? diagnosticBuilder;
   final VoidCallback? onOpenApplicationMenu;
 
   @override
@@ -438,10 +446,21 @@ final class _TicketDetailPage extends StatefulWidget {
 }
 
 final class _TicketDetailPageState extends State<_TicketDetailPage> {
+  final _question = TextEditingController();
+  final _answer = TextEditingController();
   Ticket? _ticket;
+  List<TicketThreadEntry> _thread = const [];
+  TicketDiagnosticSnapshot? _diagnosticPreview;
   Object? _error;
   bool _working = false;
   String? _message;
+
+  @override
+  void dispose() {
+    _question.dispose();
+    _answer.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -454,7 +473,21 @@ final class _TicketDetailPageState extends State<_TicketDetailPage> {
       final ticket = widget.maintainer
           ? await widget.gateway.openForMaintainer(widget.initialTicket.id)
           : await widget.gateway.openForSender(widget.initialTicket.id);
-      if (mounted) setState(() => _ticket = ticket);
+      final thread = await widget.gateway.readThread(ticket.id);
+      TicketDiagnosticSnapshot? preview;
+      if (!widget.maintainer &&
+          ticket.status == TicketStatus.waitingOnYou &&
+          thread.lastOrNull?.kind == TicketThreadEntryKind.diagnosticRequest &&
+          widget.diagnosticBuilder != null) {
+        preview = await widget.diagnosticBuilder!();
+      }
+      if (mounted) {
+        setState(() {
+          _ticket = ticket;
+          _thread = thread;
+          _diagnosticPreview = preview;
+        });
+      }
     } catch (error) {
       if (mounted) setState(() => _error = error);
     }
@@ -542,6 +575,92 @@ final class _TicketDetailPageState extends State<_TicketDetailPage> {
     }
   }
 
+  Future<void> _askQuestion() async {
+    final text = _question.text.trim();
+    if (text.isEmpty) {
+      setState(() => _message = 'Write a question first.');
+      return;
+    }
+    await _run(() async {
+      final ticket = await widget.gateway.askQuestion(
+        _ticket!.id,
+        question: text,
+      );
+      _question.clear();
+      return ticket;
+    });
+  }
+
+  Future<void> _answerQuestion(TicketThreadEntry request) async {
+    final text = _answer.text.trim();
+    if (text.isEmpty) {
+      setState(() => _message = 'Write an answer first.');
+      return;
+    }
+    await _run(() async {
+      final ticket = await widget.gateway.answerQuestion(
+        _ticket!.id,
+        request.id,
+        answer: text,
+      );
+      _answer.clear();
+      return ticket;
+    });
+  }
+
+  Future<void> _requestDiagnostic() =>
+      _run(() => widget.gateway.requestDiagnostic(_ticket!.id));
+
+  Future<void> _attachDiagnostic(TicketThreadEntry request) async {
+    final preview = _diagnosticPreview;
+    if (preview == null) return;
+    await _run(
+      () => widget.gateway.attachDiagnostic(_ticket!.id, request.id, preview),
+    );
+  }
+
+  Future<void> _declineDiagnostic(TicketThreadEntry request) =>
+      _run(() => widget.gateway.declineDiagnostic(_ticket!.id, request.id));
+
+  Future<void> _run(Future<Ticket> Function() command) async {
+    setState(() {
+      _working = true;
+      _message = null;
+    });
+    try {
+      final ticket = await command();
+      final thread = await widget.gateway.readThread(ticket.id);
+      if (mounted) {
+        setState(() {
+          _ticket = ticket;
+          _thread = thread;
+          _message = null;
+        });
+      }
+    } on TicketThreadRejected catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = switch (error.reason) {
+            TicketThreadRefusal.questionInvalid => 'Check the question.',
+            TicketThreadRefusal.ticketNotReady =>
+              'This Ticket is not ready for another request.',
+            TicketThreadRefusal.answerInvalid => 'Check the answer.',
+            TicketThreadRefusal.responseNotWaiting =>
+              'This request is no longer waiting for a response.',
+            TicketThreadRefusal.questionLimitReached =>
+              'This Ticket has reached its two-request limit.',
+            TicketThreadRefusal.diagnosticInvalid =>
+              'The diagnostic could not be attached safely.',
+          };
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _message = 'The Ticket was not updated.');
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -560,90 +679,237 @@ final class _TicketDetailPageState extends State<_TicketDetailPage> {
         ? const Center(child: Text('This Ticket could not be opened.'))
         : _ticket == null
         ? const Center(child: CircularProgressIndicator())
-        : SelectionArea(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Text(
-                  _ticket!.kind.label,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                Text(_ticket!.status.label),
-                if (_ticket!.reopenedAtUtc != null) const Text('Reopened'),
-                if (widget.maintainer)
-                  Text('Student ${_shortId(_ticket!.senderId)}'),
-                if (_ticket!.closeReason case final reason?) ...[
-                  const SizedBox(height: 20),
-                  Text(
-                    'Closing reason',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(reason),
-                ],
-                if (_ticket!.reopenNote case final note?) ...[
-                  const SizedBox(height: 20),
-                  Text(
-                    'Reopening note',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(note),
-                ],
-                const SizedBox(height: 20),
-                Text(
-                  'Ticket text',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 6),
-                Text(_ticket!.text),
-                const SizedBox(height: 20),
-                Text(
-                  'Attached context',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 6),
-                Text(ticketContextSummary(_ticket!.context)),
-                if (widget.maintainer && !_ticket!.status.isClosed) ...[
-                  const SizedBox(height: 20),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      FilledButton(
-                        onPressed: _working
-                            ? null
-                            : () => _close(TicketStatus.done),
-                        child: const Text('Close as Done'),
-                      ),
-                      OutlinedButton(
-                        onPressed: _working
-                            ? null
-                            : () => _close(TicketStatus.wontDo),
-                        child: const Text("Close as Won't do"),
-                      ),
-                    ],
-                  ),
-                ] else if (!widget.maintainer && _ticket!.status.isClosed) ...[
-                  const SizedBox(height: 20),
-                  if (_ticket!.canReopen)
-                    FilledButton.tonal(
-                      onPressed: _working ? null : _reopen,
-                      child: const Text('Reopen Ticket'),
-                    )
-                  else
-                    const Text(
-                      'This Ticket can no longer be reopened. Please put in a new Ticket if you still need help.',
+        : ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              SelectionArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _ticket!.kind.label,
+                      style: Theme.of(context).textTheme.headlineSmall,
                     ),
-                ],
-                if (_message case final message?) ...[
-                  const SizedBox(height: 12),
-                  Semantics(liveRegion: true, child: Text(message)),
-                ],
+                    Text(_ticket!.status.label),
+                    if (_ticket!.reopenedAtUtc != null) const Text('Reopened'),
+                    if (widget.maintainer)
+                      Text('Student ${_shortId(_ticket!.senderId)}'),
+                    if (_ticket!.closeReason case final reason?) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        'Closing reason',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(reason),
+                    ],
+                    if (_ticket!.reopenNote case final note?) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        'Reopening note',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(note),
+                    ],
+                    const SizedBox(height: 20),
+                    Text(
+                      'Ticket text',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(_ticket!.text),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Attached context',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(ticketContextSummary(_ticket!.context)),
+                  ],
+                ),
+              ),
+              if (widget.maintainer && !_ticket!.status.isClosed) ...[
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton(
+                      onPressed: _working
+                          ? null
+                          : () => _close(TicketStatus.done),
+                      child: const Text('Close as Done'),
+                    ),
+                    OutlinedButton(
+                      onPressed: _working
+                          ? null
+                          : () => _close(TicketStatus.wontDo),
+                      child: const Text("Close as Won't do"),
+                    ),
+                  ],
+                ),
+              ] else if (!widget.maintainer && _ticket!.status.isClosed) ...[
+                const SizedBox(height: 20),
+                if (_ticket!.canReopen)
+                  FilledButton.tonal(
+                    onPressed: _working ? null : _reopen,
+                    child: const Text('Reopen Ticket'),
+                  )
+                else
+                  const Text(
+                    'This Ticket can no longer be reopened. Please put in a new Ticket if you still need help.',
+                  ),
               ],
-            ),
+              const SizedBox(height: 20),
+              Text(
+                'Private thread',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 6),
+              if (_thread.isEmpty) const Text('No messages yet.'),
+              for (final entry in _thread) _threadEntry(entry),
+              if (widget.maintainer) ..._maintainerControls(),
+              if (!widget.maintainer) ..._senderControls(),
+              if (_message != null) ...[
+                const SizedBox(height: 8),
+                Semantics(liveRegion: true, child: Text(_message!)),
+              ],
+            ],
           ),
   );
+
+  Widget _threadEntry(TicketThreadEntry entry) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(switch (entry.kind) {
+            TicketThreadEntryKind.question => 'Maintainer question',
+            TicketThreadEntryKind.answer => 'Sender answer',
+            TicketThreadEntryKind.diagnosticRequest =>
+              'The Maintainer asked for a diagnostic',
+            TicketThreadEntryKind.diagnosticAttached => 'Diagnostic attached',
+            TicketThreadEntryKind.diagnosticDeclined => 'Diagnostic declined',
+          }, style: Theme.of(context).textTheme.labelLarge),
+          if (entry.text != null) ...[
+            const SizedBox(height: 4),
+            Text(entry.text!),
+          ],
+          if (entry.diagnostic != null) ...[
+            const SizedBox(height: 4),
+            Text(entry.diagnostic!.previewLines.join('\n')),
+          ],
+        ],
+      ),
+    ),
+  );
+
+  List<Widget> _maintainerControls() {
+    final ticket = _ticket!;
+    return [
+      const SizedBox(height: 12),
+      Text('Questions or diagnostics: ${ticket.questionCount} of 2'),
+      if (ticket.status == TicketStatus.seen && ticket.questionCount < 2) ...[
+        const SizedBox(height: 12),
+        TextField(
+          key: const Key('ticket-question'),
+          controller: _question,
+          enabled: !_working,
+          maxLength: 1000,
+          minLines: 2,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            labelText: 'Question for the sender',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        Wrap(
+          spacing: 8,
+          children: [
+            FilledButton(
+              onPressed: _working ? null : _askQuestion,
+              child: const Text('Ask sender'),
+            ),
+            OutlinedButton(
+              onPressed: _working ? null : _requestDiagnostic,
+              child: const Text('Request diagnostic'),
+            ),
+          ],
+        ),
+      ],
+    ];
+  }
+
+  List<Widget> _senderControls() {
+    if (_ticket!.status != TicketStatus.waitingOnYou || _thread.isEmpty) {
+      return const [];
+    }
+    final request = _thread.last;
+    if (request.kind == TicketThreadEntryKind.question) {
+      return [
+        const SizedBox(height: 12),
+        TextField(
+          key: const Key('ticket-answer'),
+          controller: _answer,
+          enabled: !_working,
+          maxLength: 1000,
+          minLines: 2,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            labelText: 'Your answer',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton(
+            onPressed: _working ? null : () => _answerQuestion(request),
+            child: const Text('Send answer'),
+          ),
+        ),
+      ];
+    }
+    if (request.kind != TicketThreadEntryKind.diagnosticRequest) {
+      return const [];
+    }
+    final preview = _diagnosticPreview;
+    return [
+      const SizedBox(height: 12),
+      const Text(
+        'Preview everything that will be attached. It contains structural '
+        'counts and settings, never names, notes, locations, Preceptors, '
+        'class titles, or feed URLs.',
+      ),
+      const SizedBox(height: 8),
+      if (preview == null)
+        const Text('The diagnostic preview is unavailable.')
+      else
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(preview.previewLines.join('\n')),
+          ),
+        ),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        children: [
+          FilledButton(
+            onPressed: _working || preview == null
+                ? null
+                : () => _attachDiagnostic(request),
+            child: const Text('Attach'),
+          ),
+          OutlinedButton(
+            onPressed: _working ? null : () => _declineDiagnostic(request),
+            child: const Text('Decline'),
+          ),
+        ],
+      ),
+    ];
+  }
 }
 
 Future<String?> _ticketTextDialog(
