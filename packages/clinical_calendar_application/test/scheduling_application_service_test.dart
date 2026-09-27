@@ -339,6 +339,46 @@ void main() {
     );
   });
 
+  test('Imported Work Shifts cannot be moved or deleted by hand', () async {
+    final imported = WorkShift.imported(
+      id: _id(42),
+      plannedInterval: _interval(12, 7, 11),
+      workScheduleFeedId: 'feed-1',
+      workScheduleFeedName: 'ER Schedule',
+    );
+    registry.repositories.workShifts.seed(_studentId, imported);
+
+    final failures = <Future<Object?>>[
+      service.moveWorkShift(
+        studentId: _studentId,
+        id: imported.id,
+        plannedInterval: _interval(14, 7, 11),
+      ),
+      service.deleteWorkShift(
+        ErroneousDeletionRequest(
+          studentId: _studentId,
+          id: imported.id,
+          reason: ErroneousDeletionReason.erroneous,
+          confirmed: true,
+        ),
+      ),
+    ];
+
+    for (final failure in failures) {
+      await expectLater(
+        failure,
+        throwsA(
+          isA<SchedulingUseCaseException>().having(
+            (error) => error.kind,
+            'kind',
+            SchedulingUseCaseFailureKind.importedWorkShiftReadOnly,
+          ),
+        ),
+      );
+    }
+    expect(registry.repositories.workShifts.values.single, same(imported));
+  });
+
   test(
     'reassigns an existing Scheduled Session and refreshes its projections',
     () async {

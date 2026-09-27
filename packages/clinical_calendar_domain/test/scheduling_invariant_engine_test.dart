@@ -380,6 +380,31 @@ void main() {
     expect(next!.workShifts.map((shift) => shift.id), ['original', 'valid']);
     expect(existing.workShifts.map((shift) => shift.id), ['original']);
   });
+
+  test('a mixed invalid batch still commits its Imported Work Shift', () {
+    final existing = SchedulingState(
+      clinicalSessions: [
+        _session('clinical-1', ClinicalSessionState.scheduled),
+      ],
+    );
+    final batch = SchedulingBatch(
+      workShifts: [
+        WorkShift.imported(
+          id: 'imported-1',
+          plannedInterval: _interval(LocalDate(2026, 8, 3), '1000', '1200'),
+          workScheduleFeedId: 'feed-1',
+          workScheduleFeedName: 'ER Schedule',
+        ),
+        _work('hand-entered-1', '2026-08-03', '1000', '1200'),
+      ],
+    );
+
+    final next = engine.commitBatchIfValid(existing: existing, batch: batch);
+
+    expect(next, isNotNull);
+    expect(next!.workShifts.map((shift) => shift.id), ['imported-1']);
+    expect(engine.flaggedConflictsFor(next), hasLength(1));
+  });
 }
 
 WorkShift _work(String id, String date, String start, String end) =>

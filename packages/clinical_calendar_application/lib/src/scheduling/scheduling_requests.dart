@@ -154,6 +154,7 @@ enum SchedulingUseCaseFailureKind {
   incompleteClinicalAssignment,
   incompleteTimeRange,
   deletionNotConfirmed,
+  importedWorkShiftReadOnly,
   protectedDayMoveChangesWeek,
 }
 

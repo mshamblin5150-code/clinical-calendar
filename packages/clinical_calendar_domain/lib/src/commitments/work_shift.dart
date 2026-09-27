@@ -1,12 +1,20 @@
 import '../domain_validation.dart';
 import '../time/zoned_interval.dart';
 
+final class WorkScheduleFeedReference {
+  WorkScheduleFeedReference({required String id, required String name})
+    : id = requireIdentifier(id, 'Work Schedule Feed id'),
+      name = requireIdentifier(name, 'Work Schedule Feed name');
+
+  final String id;
+  final String name;
+}
+
 /// A time-zone-specific employment commitment.
 final class WorkShift {
   WorkShift({required String id, required this.plannedInterval})
     : id = requireIdentifier(id, 'Work Shift id'),
-      workScheduleFeedId = null,
-      workScheduleFeedName = null;
+      workScheduleFeed = null;
 
   WorkShift.imported({
     required String id,
@@ -14,21 +22,19 @@ final class WorkShift {
     required String workScheduleFeedId,
     required String workScheduleFeedName,
   }) : id = requireIdentifier(id, 'Imported Work Shift id'),
-       workScheduleFeedId = requireIdentifier(
-         workScheduleFeedId,
-         'Work Schedule Feed id',
-       ),
-       workScheduleFeedName = requireIdentifier(
-         workScheduleFeedName,
-         'Work Schedule Feed name',
+       workScheduleFeed = WorkScheduleFeedReference(
+         id: workScheduleFeedId,
+         name: workScheduleFeedName,
        );
 
   final String id;
   final ZonedInterval plannedInterval;
-  final String? workScheduleFeedId;
-  final String? workScheduleFeedName;
+  final WorkScheduleFeedReference? workScheduleFeed;
 
-  bool get isImported => workScheduleFeedId != null;
+  String? get workScheduleFeedId => workScheduleFeed?.id;
+  String? get workScheduleFeedName => workScheduleFeed?.name;
+
+  bool get isImported => workScheduleFeed != null;
 
   int get plannedMinutes => plannedInterval.elapsedMinutes;
 }

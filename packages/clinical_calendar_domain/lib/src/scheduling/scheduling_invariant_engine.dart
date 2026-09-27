@@ -38,8 +38,7 @@ final class ScheduleConflict {
   const ScheduleConflict({
     required this.violation,
     required this.importedWorkShiftId,
-    required this.workScheduleFeedId,
-    required this.workScheduleFeedName,
+    required this.workScheduleFeed,
     required this.conflictDate,
     this.conflictingCommitmentId,
     this.protectedDayId,
@@ -47,8 +46,9 @@ final class ScheduleConflict {
 
   final ScheduleInvariantViolation violation;
   final String importedWorkShiftId;
-  final String workScheduleFeedId;
-  final String workScheduleFeedName;
+  final WorkScheduleFeedReference workScheduleFeed;
+  String get workScheduleFeedId => workScheduleFeed.id;
+  String get workScheduleFeedName => workScheduleFeed.name;
   final LocalDate conflictDate;
   final String? conflictingCommitmentId;
   final String? protectedDayId;
@@ -106,8 +106,7 @@ final class SchedulingInvariantEngine {
   final CalendarWeekConfiguration weekConfiguration;
 
   bool intervalsOverlap(ZonedInterval left, ZonedInterval right) =>
-      left.startInstantUtc.isBefore(right.endInstantUtc) &&
-      right.startInstantUtc.isBefore(left.endInstantUtc);
+      _intervalsOverlap(left, right);
 
   bool commitmentTouchesProtectedDay(
     ZonedInterval interval,
@@ -186,44 +185,29 @@ final class SchedulingInvariantEngine {
       }
     }
 
-    for (
-      var leftIndex = 0;
-      leftIndex < proposedCommitments.length;
-      leftIndex++
-    ) {
-      for (
-        var rightIndex = leftIndex + 1;
-        rightIndex < proposedCommitments.length;
-        rightIndex++
-      ) {
-        final left = proposedCommitments[leftIndex];
-        final right = proposedCommitments[rightIndex];
-        if (intervalsOverlap(left.interval, right.interval)) {
-          final date = _overlapDate(left.interval, right.interval);
-          if (!left.isImported) {
-            errors.add(
-              _commitmentError(
-                ScheduleInvariantViolation.commitmentOverlap,
-                left,
-                right.id,
-                date,
-              ),
-            );
-          }
-          if (!right.isImported) {
-            errors.add(
-              _commitmentError(
-                ScheduleInvariantViolation.commitmentOverlap,
-                right,
-                left.id,
-                _overlapDate(right.interval, left.interval),
-              ),
-            );
-          }
-        }
+    for (final pair in _overlappingPairs(proposedCommitments)) {
+      final date = _overlapDate(pair.left.interval, pair.right.interval);
+      if (!pair.left.isImported) {
+        errors.add(
+          _commitmentError(
+            ScheduleInvariantViolation.commitmentOverlap,
+            pair.left,
+            pair.right.id,
+            date,
+          ),
+        );
+      }
+      if (!pair.right.isImported) {
+        errors.add(
+          _commitmentError(
+            ScheduleInvariantViolation.commitmentOverlap,
+            pair.right,
+            pair.left.id,
+            _overlapDate(pair.right.interval, pair.left.interval),
+          ),
+        );
       }
     }
-
     final allProtectedDays = <ProtectedDay>[
       ...existing.protectedDays,
       ...batch.protectedDays,
@@ -320,29 +304,20 @@ final class SchedulingInvariantEngine {
   List<ScheduleConflict> flaggedConflictsFor(SchedulingState state) {
     final commitments = _activeCommitments(state);
     final conflicts = <ScheduleConflict>[];
-    for (var leftIndex = 0; leftIndex < commitments.length; leftIndex++) {
-      for (
-        var rightIndex = leftIndex + 1;
-        rightIndex < commitments.length;
-        rightIndex++
-      ) {
-        final left = commitments[leftIndex];
-        final right = commitments[rightIndex];
-        if (!intervalsOverlap(left.interval, right.interval)) continue;
-        final imported = left.isImported
-            ? left
-            : (right.isImported ? right : null);
-        if (imported == null) continue;
-        final other = identical(imported, left) ? right : left;
-        conflicts.add(
-          _scheduleConflict(
-            violation: ScheduleInvariantViolation.commitmentOverlap,
-            imported: imported,
-            conflictDate: _overlapDate(imported.interval, other.interval),
-            conflictingCommitmentId: other.id,
-          ),
-        );
-      }
+    for (final pair in _overlappingPairs(commitments)) {
+      final imported = pair.left.isImported
+          ? pair.left
+          : (pair.right.isImported ? pair.right : null);
+      if (imported == null) continue;
+      final other = identical(imported, pair.left) ? pair.right : pair.left;
+      conflicts.add(
+        _scheduleConflict(
+          violation: ScheduleInvariantViolation.commitmentOverlap,
+          imported: imported,
+          conflictDate: _overlapDate(imported.interval, other.interval),
+          conflictingCommitmentId: other.id,
+        ),
+      );
     }
     for (final commitment in commitments.where((value) => value.isImported)) {
       for (final protectedDay in state.protectedDays) {
@@ -365,24 +340,31 @@ final class SchedulingInvariantEngine {
     return List.unmodifiable(conflicts);
   }
 
-  /// Produces a new snapshot only when the whole batch is valid.
+  /// Commits the whole valid batch, or only its Imported Work Shifts when a
+  /// hand-entered item is invalid. Imported Work Shifts are never refused.
   SchedulingState? commitBatchIfValid({
     required SchedulingState existing,
     required SchedulingBatch batch,
   }) {
     final result = validateBatch(existing: existing, batch: batch);
-    if (!result.canCommit) {
+    final importedWorkShifts = batch.workShifts
+        .where((shift) => shift.isImported)
+        .toList(growable: false);
+    if (!result.canCommit && importedWorkShifts.isEmpty) {
       return null;
     }
     return SchedulingState(
-      workShifts: <WorkShift>[...existing.workShifts, ...batch.workShifts],
+      workShifts: <WorkShift>[
+        ...existing.workShifts,
+        ...(result.canCommit ? batch.workShifts : importedWorkShifts),
+      ],
       clinicalSessions: <ClinicalSession>[
         ...existing.clinicalSessions,
-        ...batch.clinicalSessions,
+        if (result.canCommit) ...batch.clinicalSessions,
       ],
       protectedDays: <ProtectedDay>[
         ...existing.protectedDays,
-        ...batch.protectedDays,
+        if (result.canCommit) ...batch.protectedDays,
       ],
     );
   }
@@ -392,16 +374,14 @@ final class _ActiveCommitment {
   const _ActiveCommitment({
     required this.id,
     required this.interval,
-    this.workScheduleFeedId,
-    this.workScheduleFeedName,
+    this.workScheduleFeed,
   });
 
   final String id;
   final ZonedInterval interval;
-  final String? workScheduleFeedId;
-  final String? workScheduleFeedName;
+  final WorkScheduleFeedReference? workScheduleFeed;
 
-  bool get isImported => workScheduleFeedId != null;
+  bool get isImported => workScheduleFeed != null;
 }
 
 List<_ActiveCommitment> _activeCommitments(Object source) {
@@ -415,8 +395,7 @@ List<_ActiveCommitment> _activeCommitments(Object source) {
       _ActiveCommitment(
         id: shift.id,
         interval: shift.plannedInterval,
-        workScheduleFeedId: shift.workScheduleFeedId,
-        workScheduleFeedName: shift.workScheduleFeedName,
+        workScheduleFeed: shift.workScheduleFeed,
       ),
     for (final session in clinicalSessions)
       if (session.state != ClinicalSessionState.cancelled &&
@@ -439,12 +418,33 @@ ScheduleConflict _scheduleConflict({
 }) => ScheduleConflict(
   violation: violation,
   importedWorkShiftId: imported.id,
-  workScheduleFeedId: imported.workScheduleFeedId!,
-  workScheduleFeedName: imported.workScheduleFeedName!,
+  workScheduleFeed: imported.workScheduleFeed!,
   conflictDate: conflictDate,
   conflictingCommitmentId: conflictingCommitmentId,
   protectedDayId: protectedDayId,
 );
+
+Iterable<({_ActiveCommitment left, _ActiveCommitment right})> _overlappingPairs(
+  List<_ActiveCommitment> commitments,
+) sync* {
+  for (var leftIndex = 0; leftIndex < commitments.length; leftIndex++) {
+    for (
+      var rightIndex = leftIndex + 1;
+      rightIndex < commitments.length;
+      rightIndex++
+    ) {
+      final left = commitments[leftIndex];
+      final right = commitments[rightIndex];
+      if (_intervalsOverlap(left.interval, right.interval)) {
+        yield (left: left, right: right);
+      }
+    }
+  }
+}
+
+bool _intervalsOverlap(ZonedInterval left, ZonedInterval right) =>
+    left.startInstantUtc.isBefore(right.endInstantUtc) &&
+    right.startInstantUtc.isBefore(left.endInstantUtc);
 
 SchedulingError _commitmentError(
   ScheduleInvariantViolation violation,

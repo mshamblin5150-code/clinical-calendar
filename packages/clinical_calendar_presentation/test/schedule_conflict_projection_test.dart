@@ -9,16 +9,20 @@ void main() {
         ScheduleConflict(
           violation: ScheduleInvariantViolation.commitmentOverlap,
           importedWorkShiftId: 'imported-1',
-          workScheduleFeedId: 'feed-1',
-          workScheduleFeedName: 'ER Schedule',
+          workScheduleFeed: WorkScheduleFeedReference(
+            id: 'feed-1',
+            name: 'ER Schedule',
+          ),
           conflictDate: LocalDate(2026, 8, 12),
           conflictingCommitmentId: 'clinical-1',
         ),
         ScheduleConflict(
           violation: ScheduleInvariantViolation.commitmentTouchesProtectedDay,
           importedWorkShiftId: 'imported-2',
-          workScheduleFeedId: 'feed-1',
-          workScheduleFeedName: 'ER Schedule',
+          workScheduleFeed: WorkScheduleFeedReference(
+            id: 'feed-1',
+            name: 'ER Schedule',
+          ),
           conflictDate: LocalDate(2026, 8, 13),
           protectedDayId: 'protected-1',
         ),
