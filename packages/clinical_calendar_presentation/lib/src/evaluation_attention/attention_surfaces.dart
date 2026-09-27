@@ -10,6 +10,7 @@ import '../heritage_field_notes_panel_scope.dart';
 import '../insight_rail_presentation_policy.dart';
 import '../responsive_shell.dart';
 import '../theme_contract.dart';
+import '../tickets/ticket_surfaces.dart';
 import '../variant_f_theme.dart';
 import 'evaluation_attention_controller.dart';
 
@@ -37,12 +38,14 @@ final class _SynchronizationAttentionSurfaceState
     extends State<SynchronizationAttentionSurface> {
   bool _busy = false;
   String? _status;
+  String? _refusalCode;
 
   Future<void> _syncNow() async {
     if (_busy) return;
     setState(() {
       _busy = true;
       _status = null;
+      _refusalCode = null;
     });
     try {
       final result = await widget.synchronization.synchronize();
@@ -50,6 +53,9 @@ final class _SynchronizationAttentionSurfaceState
       await widget.onSynchronizationAttempted?.call(result);
       if (!mounted) return;
       setState(() {
+        _refusalCode = result.disposition == SynchronizationDisposition.deferred
+            ? _synchronizationRefusalCode(result.detail)
+            : null;
         _status = switch (result.disposition) {
           SynchronizationDisposition.synchronized =>
             'Synchronization complete.',
@@ -61,6 +67,7 @@ final class _SynchronizationAttentionSurfaceState
     } on Object {
       if (!mounted) return;
       setState(() {
+        _refusalCode = 'synchronization_failed';
         _status =
             'Synchronization could not complete. Local changes remain queued.';
       });
@@ -100,12 +107,25 @@ final class _SynchronizationAttentionSurfaceState
             if (_status != null) ...[
               const SizedBox(height: 10),
               Text(_status!, key: const Key('synchronization-status')),
+              if (_refusalCode case final code?)
+                TicketRefusalOffer(
+                  screen: 'Synchronization',
+                  refusalCode: code,
+                ),
             ],
           ],
         ),
       ),
     ],
   );
+}
+
+String? _synchronizationRefusalCode(String? detail) {
+  final reference = detail?.trim();
+  return reference != null &&
+          PublicSynchronizationFailureReference.values.contains(reference)
+      ? reference
+      : 'synchronization_deferred';
 }
 
 String _deferredStatus(String? detail) {

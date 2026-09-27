@@ -2,11 +2,43 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/src/scheduling/batch_scheduling_controller.dart';
 import 'package:clinical_calendar_presentation/src/scheduling/staged_batch_scheduling_tray.dart';
+import 'package:clinical_calendar_presentation/src/scheduling/scheduling_refusal_code.dart';
+import 'package:clinical_calendar_presentation/src/tickets/ticket_surfaces.dart';
 import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('every scheduling failure kind has an exact content-free code', () {
+    const expected = {
+      SchedulingUseCaseFailureKind.notFound: 'schedule_not_found',
+      SchedulingUseCaseFailureKind.emptyBatch: 'empty_schedule_batch',
+      SchedulingUseCaseFailureKind.duplicateDate: 'duplicate_schedule_date',
+      SchedulingUseCaseFailureKind.completedPlacement:
+          'completed_placement_refusal',
+      SchedulingUseCaseFailureKind.templateTypeMismatch:
+          'schedule_template_type_mismatch',
+      SchedulingUseCaseFailureKind.incompleteClinicalAssignment:
+          'incomplete_clinical_assignment',
+      SchedulingUseCaseFailureKind.incompleteTimeRange: 'incomplete_time_range',
+      SchedulingUseCaseFailureKind.deletionNotConfirmed:
+          'deletion_not_confirmed',
+      SchedulingUseCaseFailureKind.importedWorkShiftReadOnly:
+          'imported_work_shift_read_only',
+      SchedulingUseCaseFailureKind.protectedDayMoveChangesWeek:
+          'protected_day_move_changes_week',
+    };
+    expect(expected.keys, unorderedEquals(SchedulingUseCaseFailureKind.values));
+    for (final entry in expected.entries) {
+      expect(
+        schedulingUseCaseRefusalCode(
+          SchedulingUseCaseException(entry.key, 'user-visible message'),
+        ),
+        entry.value,
+      );
+    }
+  });
+
   test('reset intents preserve dates and set correct defaults', () {
     final controller = _controller();
     addTearDown(controller.dispose);
@@ -200,6 +232,23 @@ void main() {
     expect(controller.preceptorId, 'preceptor-other');
   });
 
+  testWidgets('date-selection refusal offers a Ticket with its stable code', (
+    tester,
+  ) async {
+    final controller = _controller(selectedDates: const []);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_app(controller));
+
+    await tester.tap(find.byKey(const Key('batch-next')));
+    await tester.pump();
+
+    expect(find.text('Select at least one calendar date.'), findsOne);
+    expect(
+      find.byKey(const Key('ticket-refusal-select_at_least_one_calendar_date')),
+      findsOne,
+    );
+  });
+
   testWidgets('Review rows show and change each effective Preceptor', (
     tester,
   ) async {
@@ -252,6 +301,7 @@ void main() {
     await tester.tap(find.byKey(const Key('batch-next')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Schedule Conflict'), findsOne);
+    expect(find.byKey(const Key('ticket-refusal-schedule_conflict')), findsOne);
     expect(
       tester
           .widget<FilledButton>(find.byKey(const Key('batch-apply')))
@@ -334,6 +384,35 @@ void main() {
     expect(controller.selectedDates, hasLength(2));
     expect(controller.clinicalPlacementId, 'placement-active');
     expect(find.textContaining('staged entries are unchanged'), findsOne);
+    expect(
+      find.byKey(const Key('ticket-refusal-batch_apply_failed')),
+      findsOne,
+    );
+  });
+
+  testWidgets('apply-time conflict refusal offers a Ticket with its code', (
+    tester,
+  ) async {
+    final operations = _Operations(refuseApplyWithConflict: true);
+    final controller = _controller(
+      operations: operations,
+      selectedDates: [_date(3)],
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_app(controller));
+
+    await tester.tap(find.byKey(const Key('batch-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('batch-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('batch-apply')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Correct or remove every conflict'), findsOne);
+    expect(
+      find.byKey(const Key('ticket-refusal-batch_apply_conflict')),
+      findsOne,
+    );
   });
 
   testWidgets(
@@ -448,14 +527,18 @@ Widget _app(
   TextScaler textScaler = TextScaler.noScaling,
 }) => MaterialApp(
   theme: buildVariantFTheme(),
-  home: Builder(
-    builder: (context) => MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: textScaler),
-      child: Scaffold(
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(8),
-            child: StagedBatchSchedulingTray(controller: controller),
+  home: TicketSupportScope(
+    actions: TicketActivityLog(),
+    onOpenRefusal: (_) async {},
+    child: Builder(
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+        child: Scaffold(
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(8),
+              child: StagedBatchSchedulingTray(controller: controller),
+            ),
           ),
         ),
       ),
@@ -475,11 +558,13 @@ final class _Operations implements BatchSchedulingOperations {
     Set<LocalDate>? conflictingDates,
     this.conflictingPreceptorId,
     this.failApply = false,
+    this.refuseApplyWithConflict = false,
   }) : conflictingDates = conflictingDates ?? {};
 
   final Set<LocalDate> conflictingDates;
   final String? conflictingPreceptorId;
   final bool failApply;
+  final bool refuseApplyWithConflict;
   int applyCalls = 0;
   int reviewCalls = 0;
   BatchSchedulingDraft? lastAppliedDraft;
@@ -519,6 +604,20 @@ final class _Operations implements BatchSchedulingOperations {
     applyCalls++;
     lastAppliedDraft = draft;
     if (failApply) throw StateError('simulated persistence failure');
+    if (refuseApplyWithConflict) {
+      return BatchSchedulingApplyResult(
+        persistedCount: 0,
+        conflicts: [
+          SchedulingError(
+            violation: ScheduleInvariantViolation.commitmentOverlap,
+            proposedId: 'preview-0',
+            proposedDate: draft.dates.single.date,
+            conflictingId: 'existing-1',
+            conflictDate: draft.dates.single.date,
+          ),
+        ],
+      );
+    }
     return BatchSchedulingApplyResult(
       persistedCount: draft.dates.length,
       conflicts: const [],

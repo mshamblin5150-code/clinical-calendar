@@ -1118,6 +1118,44 @@ void main() {
     );
   });
 
+  testWidgets('planning refusal opens a problem Ticket with safe actions', (
+    tester,
+  ) async {
+    await _pumpAt(
+      tester,
+      const Size(390, 844),
+      ticketGateway: _UnavailableTicketGateway(),
+      ticketConnected: true,
+    );
+
+    await tester.ensureVisible(find.byKey(const Key('planning-tray-toggle')));
+    await tester.tap(find.byKey(const Key('planning-tray-toggle')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('batch-next')));
+    await tester.tap(find.byKey(const Key('batch-next')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('ticket-refusal-select_at_least_one_calendar_date')),
+    );
+    await tester.tap(
+      find.byKey(const Key('ticket-refusal-select_at_least_one_calendar_date')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('put-in-ticket-surface')), findsOneWidget);
+    expect(find.text("Something's wrong"), findsOneWidget);
+    expect(find.textContaining('opened Calendar'), findsOneWidget);
+    expect(find.textContaining('tapped Next'), findsOneWidget);
+    expect(
+      find.textContaining('refused: select_at_least_one_calendar_date'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Refusal code: select_at_least_one_calendar_date'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('calendar item opens contextual lifecycle surface', (
     tester,
   ) async {

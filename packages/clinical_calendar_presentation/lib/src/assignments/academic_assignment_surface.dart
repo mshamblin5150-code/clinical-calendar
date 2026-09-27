@@ -3,6 +3,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../date_input.dart';
+import '../tickets/ticket_surfaces.dart';
 import '../botanical_study_theme.dart';
 import '../coastal_light_theme.dart';
 import '../theme_contract.dart';
@@ -560,10 +561,21 @@ final class _AcademicAssignmentEditorState
               liveRegion: true,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  _error!,
-                  key: const Key('academic-assignment-error'),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _error!,
+                      key: const Key('academic-assignment-error'),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    const TicketRefusalOffer(
+                      screen: 'Academic Assignment editor',
+                      refusalCode: 'academic_assignment_change_refused',
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -812,10 +824,21 @@ final class _ClassCatalogManagerState extends State<ClassCatalogManager> {
               liveRegion: true,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  _error!,
-                  key: const Key('class-catalog-error'),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _error!,
+                      key: const Key('class-catalog-error'),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    const TicketRefusalOffer(
+                      screen: 'Class or Course manager',
+                      refusalCode: 'class_catalog_change_refused',
+                    ),
+                  ],
                 ),
               ),
             ),

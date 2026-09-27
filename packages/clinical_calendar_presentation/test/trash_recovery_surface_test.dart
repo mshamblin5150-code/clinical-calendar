@@ -1,5 +1,6 @@
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_presentation/src/recovery/trash_recovery_surface.dart';
+import 'package:clinical_calendar_presentation/src/tickets/ticket_surfaces.dart';
 import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,24 @@ import 'package:flutter_test/flutter_test.dart';
 final _now = DateTime.utc(2026, 8, 4, 12);
 
 void main() {
+  test('every recovery failure kind has an exact content-free code', () {
+    const expected = {
+      RecoveryFailureKind.notFound: 'recovery_not_found',
+      RecoveryFailureKind.expired: 'recovery_expired',
+      RecoveryFailureKind.confirmationRequired:
+          'recovery_confirmation_required',
+      RecoveryFailureKind.authenticationFailed:
+          'recovery_authentication_failed',
+      RecoveryFailureKind.invariantViolation: 'recovery_invariant_violation',
+      RecoveryFailureKind.concurrentModification:
+          'recovery_concurrent_modification',
+    };
+    expect(expected.keys, unorderedEquals(RecoveryFailureKind.values));
+    for (final entry in expected.entries) {
+      expect(recoveryRefusalCode(entry.key), entry.value);
+    }
+  });
+
   testWidgets('Trash restore and permanent delete are deliberate', (
     tester,
   ) async {
@@ -86,17 +105,19 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildVariantFTheme(),
-        home: TrashRecoverySurface(
-          loadTrash: () async => [_entry()],
-          restore: (_) async => throw const RecoveryException(
-            RecoveryFailureKind.concurrentModification,
-            safeMessage,
+        home: _ticketScope(
+          TrashRecoverySurface(
+            loadTrash: () async => [_entry()],
+            restore: (_) async => throw const RecoveryException(
+              RecoveryFailureKind.concurrentModification,
+              safeMessage,
+            ),
+            permanentlyDelete: (_) async {},
+            clearTrash: () async {},
+            loadSnapshots: () async => [],
+            previewSnapshot: (_) async => throw UnimplementedError(),
+            restoreSnapshot: (_, _) async {},
           ),
-          permanentlyDelete: (_) async {},
-          clearTrash: () async {},
-          loadSnapshots: () async => [],
-          previewSnapshot: (_) async => throw UnimplementedError(),
-          restoreSnapshot: (_, _) async {},
         ),
       ),
     );
@@ -106,6 +127,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(safeMessage), findsOneWidget);
+    expect(
+      find.byKey(const Key('ticket-refusal-recovery_concurrent_modification')),
+      findsOneWidget,
+    );
   });
 
   for (final size in [const Size(320, 568), const Size(1024, 768)]) {
@@ -171,4 +196,10 @@ OperationalSnapshotSummary _snapshot() => OperationalSnapshotSummary(
   snapshotDate: '2026-08-04',
   createdAtUtc: _now,
   expiresAtUtc: _now.add(const Duration(days: 30)),
+);
+
+Widget _ticketScope(Widget child) => TicketSupportScope(
+  actions: TicketActivityLog(),
+  onOpenRefusal: (_) async {},
+  child: child,
 );

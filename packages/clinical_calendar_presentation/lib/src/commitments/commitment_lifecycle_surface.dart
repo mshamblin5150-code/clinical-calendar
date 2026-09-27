@@ -2,10 +2,12 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
-import '../date_input.dart';
-import '../time_input.dart';
-import '../variant_f_theme.dart';
 import '../calendar/calendar_models.dart';
+import '../date_input.dart';
+import '../scheduling/scheduling_refusal_code.dart';
+import '../time_input.dart';
+import '../tickets/ticket_surfaces.dart';
+import '../variant_f_theme.dart';
 import 'commitment_lifecycle_controller.dart';
 
 final class CommitmentLifecycleSurface extends StatelessWidget {
@@ -45,12 +47,19 @@ final class CommitmentLifecycleSurface extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _SurfaceHeader(snapshot: snapshot, onClose: onClose),
-            if (controller.error != null)
+            if (controller.error != null) ...[
               _LifecycleMessage(
                 key: const Key('lifecycle-error'),
                 message: controller.error.toString(),
                 urgent: true,
               ),
+              TicketRefusalOffer(
+                screen: _lifecycleScreen(snapshot),
+                refusalCode: controller.conflicts.isEmpty
+                    ? schedulingUseCaseRefusalCode(controller.error!)
+                    : schedulingRefusalCode(controller.conflicts.first),
+              ),
+            ],
             if (controller.isBusy && snapshot == null)
               const Expanded(child: Center(child: CircularProgressIndicator()))
             else if (snapshot == null)
@@ -132,6 +141,7 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
   late final TextEditingController _end;
   String? _preceptorId;
   String? _validation;
+  bool _recordedOpen = false;
 
   @override
   void initState() {
@@ -152,6 +162,22 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
         _start = TextEditingController();
         _end = TextEditingController();
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_recordedOpen) return;
+    _recordedOpen = true;
+    TicketSupportScope.maybeOf(context)?.actions.record(
+      switch (widget.snapshot) {
+        WorkShiftLifecycleSnapshot() => TicketActivity.openedWorkShiftEditor,
+        ClinicalSessionLifecycleSnapshot() =>
+          TicketActivity.openedClinicalSessionEditor,
+        ProtectedDayLifecycleSnapshot() =>
+          TicketActivity.openedProtectedDayEditor,
+      },
+    );
   }
 
   void _initializeTimed(ZonedInterval interval) {
@@ -234,8 +260,13 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
         ),
         const SizedBox(height: 10),
         _durationPreview(),
-        if (_validation != null)
+        if (_validation != null) ...[
           _LifecycleMessage(message: _validation!, urgent: true),
+          const TicketRefusalOffer(
+            screen: 'Clinical Session editor',
+            refusalCode: 'invalid_clinical_session_details',
+          ),
+        ],
         const SizedBox(height: 16),
         if (session.state == ClinicalSessionState.awaitingConfirmation)
           FilledButton.icon(
@@ -307,8 +338,13 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
       _timeFields(),
       const SizedBox(height: 10),
       _durationPreview(),
-      if (_validation != null)
+      if (_validation != null) ...[
         _LifecycleMessage(message: _validation!, urgent: true),
+        TicketRefusalOffer(
+          screen: _lifecycleScreen(widget.snapshot),
+          refusalCode: 'invalid_commitment_details',
+        ),
+      ],
       const SizedBox(height: 16),
       FilledButton.icon(
         key: const Key('save-lifecycle-times-action'),
@@ -468,6 +504,9 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
   }
 
   Future<void> _saveCommitmentDetails() async {
+    TicketSupportScope.maybeOf(
+      context,
+    )?.actions.record(TicketActivity.tappedSave);
     try {
       setState(() => _validation = null);
       await widget.controller.saveCommitmentDetails(
@@ -484,6 +523,9 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
   }
 
   Future<void> _confirmSession() async {
+    TicketSupportScope.maybeOf(
+      context,
+    )?.actions.record(TicketActivity.tappedSave);
     try {
       setState(() => _validation = null);
       await widget.controller.confirmClinicalSession(
@@ -508,6 +550,9 @@ final class _LifecycleEditorState extends State<_LifecycleEditor> {
   }
 
   Future<void> _moveProtectedDay() async {
+    TicketSupportScope.maybeOf(
+      context,
+    )?.actions.record(TicketActivity.tappedSave);
     try {
       setState(() => _validation = null);
       await widget.controller.moveProtectedDay(parseCommitmentDate(_date.text));
@@ -764,3 +809,11 @@ String _minutesLabel(int minutes) {
   final remainder = minutes % 60;
   return remainder == 0 ? '$hours hr' : '$hours hr $remainder min';
 }
+
+String _lifecycleScreen(CommitmentLifecycleSnapshot? snapshot) =>
+    switch (snapshot) {
+      WorkShiftLifecycleSnapshot() => 'Work Shift editor',
+      ClinicalSessionLifecycleSnapshot() => 'Clinical Session editor',
+      ProtectedDayLifecycleSnapshot() => 'Protected Day editor',
+      null => 'Calendar entry editor',
+    };

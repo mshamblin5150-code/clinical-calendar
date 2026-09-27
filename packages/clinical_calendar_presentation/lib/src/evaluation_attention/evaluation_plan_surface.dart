@@ -3,6 +3,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../date_input.dart';
+import '../tickets/ticket_surfaces.dart';
 import '../responsive_shell.dart';
 import '../variant_f_theme.dart';
 import 'evaluation_attention_controller.dart';
@@ -31,6 +32,10 @@ final class EvaluationPlanSurface extends StatelessWidget {
           if (controller.error != null) ...[
             _ErrorBanner(
               message: 'The Evaluation Plan action could not be completed.',
+            ),
+            const TicketRefusalOffer(
+              screen: 'Evaluation Plan',
+              refusalCode: 'evaluation_plan_action_refused',
             ),
             const SizedBox(height: 10),
           ],
@@ -348,9 +353,13 @@ Future<void> _showDocumentationDialog(
   EvaluationAttentionController controller,
   EvaluationRequirement requirement,
 ) async {
+  final ticketSupport = TicketSupportScope.maybeOf(context);
   final documentation = await showDialog<EvaluationDocumentation>(
     context: context,
-    builder: (context) => _DocumentationDialog(requirement: requirement),
+    builder: (context) {
+      final dialog = _DocumentationDialog(requirement: requirement);
+      return ticketSupport?.wrap(dialog) ?? dialog;
+    },
   );
   if (documentation == null) return;
   await controller.documentRequirement(
@@ -426,11 +435,16 @@ class _DocumentationDialogState extends State<_DocumentationDialog> {
               hintText: 'Letters, numbers, and . / : # - only',
             ),
           ),
-          if (_validation != null)
+          if (_validation != null) ...[
             Text(
               _validation!,
               style: TextStyle(color: context.clinicalColors.urgent),
             ),
+            const TicketRefusalOffer(
+              screen: 'Evaluation documentation',
+              refusalCode: 'invalid_evaluation_documentation',
+            ),
+          ],
         ],
       ),
     ),

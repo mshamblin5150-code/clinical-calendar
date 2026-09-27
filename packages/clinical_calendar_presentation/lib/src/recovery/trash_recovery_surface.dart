@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 
 import '../date_input.dart';
+import '../tickets/ticket_surfaces.dart';
 import '../variant_f_theme.dart';
 
 final class TrashRecoverySurface extends StatefulWidget {
@@ -44,6 +45,7 @@ final class _TrashRecoverySurfaceState extends State<TrashRecoverySurface> {
   final _choices = <String, RecoveryConflictChoice>{};
   bool _busy = true;
   String? _message;
+  String? _refusalCode;
 
   @override
   void initState() {
@@ -72,6 +74,11 @@ final class _TrashRecoverySurfaceState extends State<TrashRecoverySurface> {
                     if (_message != null) ...[
                       const SizedBox(height: 12),
                       Text(_message!, key: const Key('recovery-message')),
+                      if (_refusalCode case final code?)
+                        TicketRefusalOffer(
+                          screen: 'Trash and Recovery',
+                          refusalCode: code,
+                        ),
                     ],
                     const SizedBox(height: 16),
                     if (constraints.maxWidth >= 760)
@@ -298,18 +305,31 @@ final class _TrashRecoverySurfaceState extends State<TrashRecoverySurface> {
     setState(() {
       _busy = true;
       if (clearMessage) _message = null;
+      if (clearMessage) _refusalCode = null;
     });
     try {
       await action();
     } on RecoveryException catch (error) {
       _message = error.safeMessage;
+      _refusalCode = recoveryRefusalCode(error.kind);
     } on Object {
       _message = 'Recovery could not be completed safely.';
+      _refusalCode = 'recovery_failed';
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 }
+
+String recoveryRefusalCode(RecoveryFailureKind kind) => switch (kind) {
+  RecoveryFailureKind.notFound => 'recovery_not_found',
+  RecoveryFailureKind.expired => 'recovery_expired',
+  RecoveryFailureKind.confirmationRequired => 'recovery_confirmation_required',
+  RecoveryFailureKind.authenticationFailed => 'recovery_authentication_failed',
+  RecoveryFailureKind.invariantViolation => 'recovery_invariant_violation',
+  RecoveryFailureKind.concurrentModification =>
+    'recovery_concurrent_modification',
+};
 
 final class _Panel extends StatelessWidget {
   const _Panel({required this.title, required this.child, this.trailing});

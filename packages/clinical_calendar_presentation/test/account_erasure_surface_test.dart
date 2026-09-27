@@ -1,11 +1,25 @@
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_presentation/src/identity/account_erasure_surface.dart';
 import 'package:clinical_calendar_presentation/src/identity/identity_devices_surface.dart';
+import 'package:clinical_calendar_presentation/src/tickets/ticket_surfaces.dart';
 import 'package:clinical_calendar_presentation/src/client_capabilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'identity refusal codes preserve owned codes and reject other input',
+    () {
+      expect(identityRefusalCode('invalid_otp'), 'invalid_otp');
+      expect(
+        identityRefusalCode('Server said Patient Jane'),
+        'account_erasure_refused',
+      );
+      expect(identityRefusalCode('patient_jane'), 'account_erasure_refused');
+      expect(identityRefusalCode('P0001'), 'account_erasure_refused');
+    },
+  );
+
   testWidgets('cancelled backup choice never requests deletion', (
     tester,
   ) async {
@@ -224,6 +238,46 @@ void main() {
     expect(find.byKey(const Key('begin-account-erasure')), findsNothing);
   });
 
+  testWidgets('invalid fresh code offers a Ticket with the identity code', (
+    tester,
+  ) async {
+    final gateway = _Gateway();
+    await _pump(tester, gateway: gateway);
+
+    await tester.tap(find.byKey(const Key('begin-account-erasure')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('continue-without-account-backup')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('send-erasure-code')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('account-erasure-otp')), '12');
+    await tester.tap(find.byKey(const Key('confirm-account-erasure')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('ticket-refusal-invalid_otp')), findsOneWidget);
+  });
+
+  testWidgets('untrusted identity text uses a content-free fallback code', (
+    tester,
+  ) async {
+    final gateway = _Gateway()
+      ..sendCodeFailure = const IdentityException('patient_jane');
+    await _pump(tester, gateway: gateway);
+
+    await tester.tap(find.byKey(const Key('begin-account-erasure')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('continue-without-account-backup')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('send-erasure-code')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('ticket-refusal-account_erasure_refused')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Patient Jane'), findsNothing);
+  });
+
   testWidgets('Connected Devices opens the distinct guarded deletion surface', (
     tester,
   ) async {
@@ -263,16 +317,20 @@ Future<void> _pump(
   final identity = _identity(gateway);
   await tester.pumpWidget(
     MaterialApp(
-      home: Scaffold(
-        body: AccountErasureSurface(
-          identity: identity,
-          email: 'student@example.com',
-          createBackup: createBackup,
-          backupHost: backupHost,
-          pendingRequest: pendingRequest,
-          onErasureRequested: onRequested,
-          onErasureCancelled: onCancelled,
-          onClose: () {},
+      home: TicketSupportScope(
+        actions: TicketActivityLog(),
+        onOpenRefusal: (_) async {},
+        child: Scaffold(
+          body: AccountErasureSurface(
+            identity: identity,
+            email: 'student@example.com',
+            createBackup: createBackup,
+            backupHost: backupHost,
+            pendingRequest: pendingRequest,
+            onErasureRequested: onRequested,
+            onErasureCancelled: onCancelled,
+            onClose: () {},
+          ),
         ),
       ),
     ),
@@ -294,13 +352,18 @@ PasswordlessIdentityService _identity(_Gateway gateway) =>
 
 final class _Gateway implements PasswordlessIdentityGateway {
   int sentCodes = 0;
+  IdentityException? sendCodeFailure;
   final verifiedCodes = <String>[];
   int erasureRequests = 0;
   int cancellations = 0;
   AccountErasureBackupChoice? backupChoice;
 
   @override
-  Future<void> sendSignInCode(String email) async => sentCodes++;
+  Future<void> sendSignInCode(String email) async {
+    sentCodes++;
+    final failure = sendCodeFailure;
+    if (failure != null) throw failure;
+  }
 
   @override
   Future<IdentitySession> verifySignInCode(String email, String code) async {

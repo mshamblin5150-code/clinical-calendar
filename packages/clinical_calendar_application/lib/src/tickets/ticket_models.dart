@@ -43,6 +43,8 @@ final class TicketContext {
     required this.device,
     required this.platform,
     required this.capturedAtUtc,
+    this.recentActions = const [],
+    this.refusalCode,
   });
 
   final String screen;
@@ -50,6 +52,8 @@ final class TicketContext {
   final String device;
   final String platform;
   final DateTime capturedAtUtc;
+  final List<String> recentActions;
+  final String? refusalCode;
 }
 
 final class TicketClientContext {
@@ -66,12 +70,16 @@ final class TicketClientContext {
   TicketContext capture({
     required String screen,
     required DateTime capturedAtUtc,
+    List<String> recentActions = const [],
+    String? refusalCode,
   }) => TicketContext(
     screen: screen,
     build: build,
     device: device,
     platform: platform,
     capturedAtUtc: capturedAtUtc,
+    recentActions: List.unmodifiable(recentActions),
+    refusalCode: refusalCode,
   );
 }
 

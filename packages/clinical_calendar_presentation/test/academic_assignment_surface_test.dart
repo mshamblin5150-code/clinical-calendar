@@ -228,20 +228,24 @@ void main() {
           ).copyWith(textScaler: const TextScaler.linear(2)),
           child: child!,
         ),
-        home: Scaffold(
-          body: AcademicAssignmentEditor(
-            catalogEntries: [_catalogRecord('course-1', 'NURS 702')],
-            onClose: () {},
-            onSave:
-                ({
-                  required title,
-                  required course,
-                  required courseId,
-                  required dueDate,
-                  required status,
-                }) async {
-                  saved = (title: title, course: course, dueDate: dueDate);
-                },
+        home: TicketSupportScope(
+          actions: TicketActivityLog(),
+          onOpenRefusal: (_) async {},
+          child: Scaffold(
+            body: AcademicAssignmentEditor(
+              catalogEntries: [_catalogRecord('course-1', 'NURS 702')],
+              onClose: () {},
+              onSave:
+                  ({
+                    required title,
+                    required course,
+                    required courseId,
+                    required dueDate,
+                    required status,
+                  }) async {
+                    saved = (title: title, course: course, dueDate: dueDate);
+                  },
+            ),
           ),
         ),
       ),
@@ -250,6 +254,12 @@ void main() {
     await tester.tap(find.byKey(const Key('save-academic-assignment')));
     await tester.pump();
     expect(find.byKey(const Key('academic-assignment-error')), findsOneWidget);
+    expect(
+      find.byKey(
+        const Key('ticket-refusal-academic_assignment_change_refused'),
+      ),
+      findsOneWidget,
+    );
 
     await tester.enterText(
       find.byKey(const Key('academic-assignment-title')),

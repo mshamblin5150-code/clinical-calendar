@@ -139,6 +139,10 @@ void main() {
       findsOneWidget,
     );
     expect(
+      find.byKey(const Key('ticket-refusal-schedule_conflict')),
+      findsOneWidget,
+    );
+    expect(
       harness.repositories.clinicalSessions
           .find(studentId: _studentId, id: _pastSessionId)!
           .value
@@ -296,6 +300,10 @@ void main() {
         findsOneWidget,
       );
       expect(
+        find.byKey(const Key('ticket-refusal-protected_day_violation')),
+        findsOneWidget,
+      );
+      expect(
         harness.repositories.protectedDays
             .find(studentId: _studentId, id: _protectedDayId)!
             .value
@@ -378,7 +386,11 @@ Future<void> _pump(WidgetTester tester, Widget child, Size size) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: buildVariantFTheme(),
-      home: Scaffold(body: SafeArea(child: child)),
+      home: TicketSupportScope(
+        actions: TicketActivityLog(),
+        onOpenRefusal: (_) async {},
+        child: Scaffold(body: SafeArea(child: child)),
+      ),
     ),
   );
   await tester.pump();
