@@ -1,18 +1,22 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
+import 'package:clinical_calendar_platform/clinical_calendar_web_identity_platform.dart';
+import 'package:clinical_calendar_presentation/clinical_calendar_identity_presentation.dart';
 import 'package:clinical_calendar_sync/web_build_version.dart';
 import 'package:flutter/material.dart';
-import 'package:web/web.dart' as web;
 
+import 'config/app_environment.dart';
 import 'sync_build_number.dart';
 import 'web_build_version_runtime.dart';
 import 'web_device_descriptor.dart';
+import 'web_identity_runtime.dart';
 
 export 'sync_build_number.dart';
 
 DeviceDescriptor currentWebDeviceDescriptor() =>
-    webDeviceDescriptor(web.window.navigator.userAgent);
+    webDeviceDescriptor(currentBrowserUserAgent());
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +27,13 @@ Widget buildWebRoot({
   WebBuildVersionCoordinator? buildVersionCoordinator,
   UnsentChangesProbe hasUnsentChanges = _noUnsentChanges,
   Stream<void> unsentChangesDrained = const Stream<void>.empty(),
+  AppEnvironment? environment,
+  SecureStorage? secureStorage,
+  IdentifierGenerator? identifiers,
+  Clock? clock,
+  PasswordlessIdentityGateway? identityGateway,
+  DeviceDescriptor? currentDevice,
+  LocalDeviceCopyController? localCopy,
 }) {
   final coordinator =
       buildVersionCoordinator ??
@@ -31,9 +42,29 @@ Widget buildWebRoot({
         hasUnsentChanges: hasUnsentChanges,
         unsentChangesDrained: unsentChangesDrained,
       );
+  final configuredEnvironment = environment ?? AppEnvironment.fromCompileTime();
+  final Widget content;
+  if (!configuredEnvironment.hasSynchronizationConfiguration) {
+    content = const _WebUnavailableApplication();
+  } else {
+    final identity = PasswordlessIdentityService(
+      gateway:
+          identityGateway ??
+          SupabasePasswordlessIdentityGateway(
+            projectUri: configuredEnvironment.synchronizationProjectUri!,
+            publishableKey: configuredEnvironment.supabasePublishableKey,
+          ),
+      secureStorage: secureStorage ?? createWebIdentityStorage(),
+      identifiers: identifiers ?? _WebIdentifierGenerator(),
+      clock: clock ?? const _WebClock(),
+      currentDevice: currentDevice ?? currentWebDeviceDescriptor(),
+      localCopy: localCopy ?? const _WebLocalDeviceCopyController(),
+    );
+    content = _WebIdentityApplication(identity: identity);
+  }
   return _BuildVersionLifecycle(
     onOpenOrResume: coordinator?.checkOnOpenOrResume,
-    child: const _WebUnavailableApplication(),
+    child: content,
   );
 }
 
@@ -78,6 +109,111 @@ final class _BuildVersionLifecycleState extends State<_BuildVersionLifecycle>
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+final class _WebIdentityApplication extends StatefulWidget {
+  const _WebIdentityApplication({required this.identity});
+
+  final PasswordlessIdentityService identity;
+
+  @override
+  State<_WebIdentityApplication> createState() =>
+      _WebIdentityApplicationState();
+}
+
+final class _WebIdentityApplicationState
+    extends State<_WebIdentityApplication> {
+  IdentitySession? _session;
+  bool _restoring = true;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_restore());
+  }
+
+  Future<void> _restore() async {
+    final session = await widget.identity.restoreForOfflineLaunch();
+    if (!mounted) return;
+    setState(() {
+      _session = session;
+      _restoring = false;
+    });
+  }
+
+  Widget _home() {
+    if (_restoring) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final session = _session;
+    if (session == null) {
+      return PasswordlessSignInSurface(
+        identity: widget.identity,
+        onSignedIn: (session) async {
+          if (mounted) setState(() => _session = session);
+        },
+      );
+    }
+    return Scaffold(
+      body: IdentityDevicesSurface(
+        identity: widget.identity,
+        email: session.email,
+        onLocalCopyRemoved: () async {
+          if (mounted) setState(() => _session = null);
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    debugShowCheckedModeBanner: false,
+    title: 'Clinical Calendar',
+    theme: ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF173A5E)),
+    ),
+    home: _home(),
+  );
+}
+
+final class _WebIdentifierGenerator implements IdentifierGenerator {
+  _WebIdentifierGenerator([Random? random])
+    : _random = random ?? Random.secure();
+
+  final Random _random;
+
+  @override
+  String nextIdentifier() {
+    final bytes = List<int>.generate(16, (_) => _random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    final hex = bytes
+        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join();
+    return '${hex.substring(0, 8)}-'
+        '${hex.substring(8, 12)}-'
+        '${hex.substring(12, 16)}-'
+        '${hex.substring(16, 20)}-'
+        '${hex.substring(20)}';
+  }
+}
+
+final class _WebClock implements Clock {
+  const _WebClock();
+
+  @override
+  DateTime nowUtc() => DateTime.now().toUtc();
+}
+
+final class _WebLocalDeviceCopyController implements LocalDeviceCopyController {
+  const _WebLocalDeviceCopyController();
+
+  @override
+  Future<LocalRemovalPreview> previewRemoval() async =>
+      const LocalRemovalPreview(pendingChangeCount: 0);
+
+  @override
+  Future<void> removeLocalCopy() async {}
 }
 
 final class _WebUnavailableApplication extends StatelessWidget {

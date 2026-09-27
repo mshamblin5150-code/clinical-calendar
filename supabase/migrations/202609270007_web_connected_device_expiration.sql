@@ -1,13 +1,17 @@
 -- Each browser is a Connected Device. Web sessions expire after 90 days
 -- without a successful synchronization; native Connected Devices do not.
 
+grant clinical_calendar_sync_executor to postgres;
+grant create on schema clinical_calendar_sync to clinical_calendar_sync_executor;
+grant create on schema public to clinical_calendar_sync_executor;
+
 alter table clinical_calendar_sync.connected_devices
   drop constraint connected_devices_platform_check;
 alter table clinical_calendar_sync.connected_devices
   add constraint connected_devices_platform_check
   check (platform in ('windows', 'ios', 'android', 'web'));
 
-create function clinical_calendar_sync.set_auth_session_not_after(
+create or replace function clinical_calendar_sync.set_auth_session_not_after(
   p_student_id uuid,
   p_session_id uuid,
   p_not_after_utc timestamptz
@@ -32,7 +36,7 @@ grant execute on function clinical_calendar_sync.set_auth_session_not_after(
   uuid, uuid, timestamptz
 ) to clinical_calendar_sync_executor;
 
-create function clinical_calendar_sync.delete_auth_session(
+create or replace function clinical_calendar_sync.delete_auth_session(
   p_student_id uuid,
   p_session_id uuid
 ) returns void
@@ -54,6 +58,29 @@ grant execute on function clinical_calendar_sync.delete_auth_session(uuid, uuid)
 
 set role clinical_calendar_sync_executor;
 
+create or replace function clinical_calendar_sync.device_is_within_web_idle_window(
+  p_platform text,
+  p_registered_at_utc timestamptz,
+  p_last_synchronized_at_utc timestamptz,
+  p_now_utc timestamptz
+) returns boolean
+language sql
+immutable
+security invoker
+set search_path = ''
+as $$
+  select p_platform <> 'web'
+    or coalesce(p_last_synchronized_at_utc, p_registered_at_utc)
+      > p_now_utc - interval '90 days'
+$$;
+
+revoke all on function clinical_calendar_sync.device_is_within_web_idle_window(
+  text, timestamptz, timestamptz, timestamptz
+) from public, anon, authenticated;
+grant execute on function clinical_calendar_sync.device_is_within_web_idle_window(
+  text, timestamptz, timestamptz, timestamptz
+) to clinical_calendar_sync_executor, postgres;
+
 create or replace function clinical_calendar_sync.current_device_is_active()
 returns boolean
 language sql
@@ -67,10 +94,9 @@ as $$
     where d.student_id = clinical_calendar_sync.current_student_id()
       and d.session_id = clinical_calendar_sync.current_session_id()
       and d.revoked_at_utc is null
-      and (
-        d.platform <> 'web'
-        or coalesce(d.last_synchronized_at_utc, d.registered_at_utc)
-          > clock_timestamp() - interval '90 days'
+      and clinical_calendar_sync.device_is_within_web_idle_window(
+        d.platform, d.registered_at_utc, d.last_synchronized_at_utc,
+        clock_timestamp()
       )
   )
 $$;
@@ -263,10 +289,8 @@ begin
   where student_id = v_student_id
     and session_id = v_session_id
     and revoked_at_utc is null
-    and (
-      platform <> 'web'
-      or coalesce(last_synchronized_at_utc, registered_at_utc)
-        > v_now - interval '90 days'
+    and clinical_calendar_sync.device_is_within_web_idle_window(
+      platform, registered_at_utc, last_synchronized_at_utc, v_now
     )
   returning platform into v_platform;
   if not found then return false; end if;
@@ -307,8 +331,10 @@ as $$
       d.platform = 'web'
       and (
         d.revoked_at_utc is not null
-        or coalesce(d.last_synchronized_at_utc, d.registered_at_utc)
-          <= clock_timestamp() - interval '90 days'
+        or not clinical_calendar_sync.device_is_within_web_idle_window(
+          d.platform, d.registered_at_utc, d.last_synchronized_at_utc,
+          clock_timestamp()
+        )
       )
     )
   order by (d.revoked_at_utc is null) desc,
@@ -324,7 +350,7 @@ reset role;
 -- Run from trusted server infrastructure. Deleting the matching Auth session
 -- invalidates its refresh tokens; the active-device predicate above closes the
 -- sync boundary even if this retention job is delayed.
-create function clinical_calendar_sync.revoke_inactive_web_devices(
+create or replace function clinical_calendar_sync.revoke_inactive_web_devices(
   p_now_utc timestamptz
 ) returns bigint
 language plpgsql
@@ -342,8 +368,9 @@ begin
     set revoked_at_utc = p_now_utc
     where platform = 'web'
       and revoked_at_utc is null
-      and coalesce(last_synchronized_at_utc, registered_at_utc)
-        <= p_now_utc - interval '90 days'
+      and not clinical_calendar_sync.device_is_within_web_idle_window(
+        platform, registered_at_utc, last_synchronized_at_utc, p_now_utc
+      )
     returning session_id
   ), deleted_sessions as (
     delete from auth.sessions s
@@ -372,3 +399,8 @@ grant execute on function public.register_current_device(uuid, text, text),
   public.revoke_connected_device(uuid),
   public.mark_current_device_synchronized()
   to authenticated;
+
+revoke create on schema clinical_calendar_sync
+  from clinical_calendar_sync_executor;
+revoke create on schema public from clinical_calendar_sync_executor;
+revoke clinical_calendar_sync_executor from postgres;

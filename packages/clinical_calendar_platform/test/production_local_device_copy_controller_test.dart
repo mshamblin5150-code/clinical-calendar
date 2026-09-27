@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_platform/clinical_calendar_identity_platform.dart';
 import 'package:flutter_test/flutter_test.dart';

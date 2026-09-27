@@ -2,6 +2,9 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 select plan(36);
+select minimum_sync_build as compatible_build
+from clinical_calendar_sync.sync_configuration
+where singleton \gset
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -145,7 +148,7 @@ select is(
 set local request.jwt.claim.session_id = '12000000-0000-4000-8000-000000000005';
 select is(
   public.apply_sync_operation(
-    46,
+    :compatible_build,
     '14000000-0000-4000-8000-000000000099',
     'settings', '11000000-0000-4000-8000-000000000001', 'upsert', 0,
     jsonb_build_object('student_id', '11000000-0000-4000-8000-000000000001')
@@ -191,7 +194,7 @@ select is(
 set local request.jwt.claim.session_id = '12000000-0000-4000-8000-000000000002';
 select is(
   public.apply_sync_operation(
-    46,
+    :compatible_build,
     '14000000-0000-4000-8000-000000000001',
     'settings', '11000000-0000-4000-8000-000000000001', 'upsert', 0,
     jsonb_build_object('student_id', '11000000-0000-4000-8000-000000000001')

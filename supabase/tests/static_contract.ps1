@@ -161,7 +161,7 @@ foreach ($pattern in $minimumBuildPatterns) {
 $webDevicePatterns = @(
   "platform in ('windows', 'ios', 'android', 'web')",
   "interval '90 days'",
-  'coalesce(d.last_synchronized_at_utc, d.registered_at_utc)',
+  'clinical_calendar_sync.device_is_within_web_idle_window(',
   'clinical_calendar_sync.set_auth_session_not_after(',
   'delete from auth.sessions',
   'clinical_calendar_sync.revoke_inactive_web_devices(',

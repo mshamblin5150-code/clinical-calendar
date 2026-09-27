@@ -14,7 +14,28 @@ void main() {
     expect(entrypoint, isNot(contains('dart:io')));
     expect(webStartup, isNot(contains('dart:io')));
     expect(webStartup, isNot(contains('clinical_calendar_local_data')));
-    expect(webStartup, isNot(contains('clinical_calendar_platform')));
+    expect(
+      webStartup,
+      isNot(
+        contains(
+          "package:clinical_calendar_platform/clinical_calendar_platform.dart",
+        ),
+      ),
+    );
+    expect(
+      webStartup,
+      isNot(
+        contains(
+          "package:clinical_calendar_platform/clinical_calendar_identity_platform.dart",
+        ),
+      ),
+    );
+    expect(
+      webStartup,
+      contains(
+        "package:clinical_calendar_platform/clinical_calendar_web_identity_platform.dart",
+      ),
+    );
   });
 
   test('web artifact build id matches the sync build number', () {

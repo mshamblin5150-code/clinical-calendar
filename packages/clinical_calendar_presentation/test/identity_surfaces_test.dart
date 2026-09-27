@@ -1,4 +1,3 @@
-import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_presentation/clinical_calendar_identity_presentation.dart';
 import 'package:flutter/material.dart';
