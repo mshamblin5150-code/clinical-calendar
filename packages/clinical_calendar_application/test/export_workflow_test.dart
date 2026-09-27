@@ -129,20 +129,20 @@ final class _Reauthentication implements ExportReauthenticationGate {
   }
 }
 
-final class _Saver implements NativeByteFileSaver {
+final class _Saver implements ByteFileSaver {
   _Saver(this.log, this.cancelled);
 
   final List<String> log;
   final bool cancelled;
 
   @override
-  Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request) async {
+  Future<FileSaveOutcome> save(FileSaveRequest request) async {
     log.add('picker');
-    if (cancelled) return NativeFileSaveOutcome.cancelled;
+    if (cancelled) return FileSaveOutcome.cancelled;
     expect(request.suggestedFileName, 'export.json');
     expect(request.mimeType, 'application/json');
     expect(request.bytes, [123, 125]);
     log.add('write');
-    return NativeFileSaveOutcome.saved;
+    return FileSaveOutcome.saved;
   }
 }

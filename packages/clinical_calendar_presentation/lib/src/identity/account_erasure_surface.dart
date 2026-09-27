@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:flutter/material.dart';
 
 import '../date_time_format.dart';
+import '../client_capabilities.dart';
 
 typedef AccountBackupCreator = Future<bool> Function(String passphrase);
 
@@ -11,6 +12,7 @@ final class AccountErasureSurface extends StatefulWidget {
     required this.email,
     required this.onClose,
     this.createBackup,
+    this.backupHost = ClientCapabilityHost.thisClient,
     this.pendingRequest,
     this.onErasureRequested,
     this.onErasureCancelled,
@@ -21,6 +23,7 @@ final class AccountErasureSurface extends StatefulWidget {
   final String email;
   final VoidCallback onClose;
   final AccountBackupCreator? createBackup;
+  final ClientCapabilityHost backupHost;
   final AccountErasureRequest? pendingRequest;
   final ValueChanged<AccountErasureRequest>? onErasureRequested;
   final VoidCallback? onErasureCancelled;
@@ -49,13 +52,20 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
   }
 
   Future<void> _chooseBackup() async {
+    final canCreateBackup = switch (widget.backupHost) {
+      ClientCapabilityHost.thisClient => true,
+      ClientCapabilityHost.installedApps => false,
+    };
     final choice = await showDialog<AccountErasureBackupChoice>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Before deleting your account'),
-        content: const Text(
-          'A portable backup is the only copy you control after the grace '
-          'period ends. Choose whether to create one before continuing.',
+        content: Text(
+          canCreateBackup
+              ? 'A portable backup is the only copy you control after the '
+                    'grace period ends. Choose whether to create one before '
+                    'continuing.'
+              : ClinicalCalendarClientCapabilities.installedAppBackupNote,
         ),
         actions: [
           TextButton(
@@ -70,12 +80,13 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
                 Navigator.pop(context, AccountErasureBackupChoice.skipped),
             child: const Text('Continue without backup'),
           ),
-          FilledButton(
-            key: const Key('create-account-backup-first'),
-            onPressed: () =>
-                Navigator.pop(context, AccountErasureBackupChoice.completed),
-            child: const Text('Create Backup First'),
-          ),
+          if (canCreateBackup)
+            FilledButton(
+              key: const Key('create-account-backup-first'),
+              onPressed: () =>
+                  Navigator.pop(context, AccountErasureBackupChoice.completed),
+              child: const Text('Create Backup First'),
+            ),
         ],
       ),
     );

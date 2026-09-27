@@ -1393,13 +1393,13 @@ final class _UtcBoundaryClock implements Clock {
   DateTime nowUtc() => DateTime.utc(2026, 8, 19, 0, 27);
 }
 
-final class _NativeSaver implements NativeByteFileSaver {
-  NativeFileSaveRequest? request;
+final class _NativeSaver implements ByteFileSaver {
+  FileSaveRequest? request;
 
   @override
-  Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request) async {
+  Future<FileSaveOutcome> save(FileSaveRequest request) async {
     this.request = request;
-    return NativeFileSaveOutcome.saved;
+    return FileSaveOutcome.saved;
   }
 }
 

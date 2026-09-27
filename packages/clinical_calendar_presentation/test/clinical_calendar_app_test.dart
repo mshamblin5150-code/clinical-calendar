@@ -954,6 +954,41 @@ void main() {
     expect(find.byKey(const Key('export-complete-json')), findsOneWidget);
   });
 
+  testWidgets('web destinations replace backup and reminder controls', (
+    tester,
+  ) async {
+    await _pumpAt(
+      tester,
+      const Size(1024, 768),
+      clientCapabilities: ClinicalCalendarClientCapabilities.web,
+    );
+
+    await tester.tap(find.byKey(const Key('application-menu-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Backup & Restore'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Backups are made from your installed apps.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('create-encrypted-backup')), findsNothing);
+    expect(find.byKey(const Key('choose-backup-file')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('back-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Reminders are delivered by your installed apps'),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('work-shift-notifications-setting')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('weekly-summary-setting')), findsNothing);
+  });
+
   testWidgets('menu exposes the production Trash and recovery destination', (
     tester,
   ) async {
@@ -2413,6 +2448,8 @@ Future<void> _pumpAt(
   String? identityEmail,
   Future<void> Function()? onLocalCopyRemoved,
   PortableBackupWorkflows? portableBackupWorkflows,
+  ClinicalCalendarClientCapabilities clientCapabilities =
+      const ClinicalCalendarClientCapabilities(),
   ExportWorkflowFactory? exportWorkflowFactory,
   ThemePreviewController? themePreviewController,
   EnhancedAccessibilityController? enhancedAccessibilityController,
@@ -2437,6 +2474,7 @@ Future<void> _pumpAt(
       identityEmail: identityEmail,
       onLocalCopyRemoved: onLocalCopyRemoved,
       portableBackupWorkflows: portableBackupWorkflows,
+      clientCapabilities: clientCapabilities,
       exportWorkflowFactory: exportWorkflowFactory,
       themePreviewController: themePreviewController,
       enhancedAccessibilityController: enhancedAccessibilityController,
@@ -2604,11 +2642,11 @@ final class _ExportEncoder implements ExportEncoder {
       throw UnimplementedError();
 }
 
-final class _ExportSaver implements NativeByteFileSaver {
+final class _ExportSaver implements ByteFileSaver {
   const _ExportSaver();
 
   @override
-  Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request) =>
+  Future<FileSaveOutcome> save(FileSaveRequest request) =>
       throw UnimplementedError();
 }
 

@@ -33,6 +33,9 @@ jobs:
         run: flutter pub get
       - name: Run shared quality gate
         run: dart run tool/quality.dart
+      - name: Run Chrome export acceptance
+        working-directory: packages/clinical_calendar_platform
+        run: flutter test --platform chrome test/web_export_file_saver_browser_test.dart
       - name: Build web release
         working-directory: apps/clinical_calendar
         run: flutter build web --release --base-href /clinical-calendar/

@@ -12,7 +12,7 @@ enum NativeSavePlatform { windows, android, ios }
 /// Windows uses the official Flutter `file_selector` save dialog. Android and
 /// iOS 16+ use `flutter_file_saver`, whose native implementations use
 /// `ACTION_CREATE_DOCUMENT` and `UIDocumentPickerViewController` respectively.
-final class NativeExportFileSaver implements NativeByteFileSaver {
+final class NativeExportFileSaver implements ByteFileSaver {
   factory NativeExportFileSaver({NativeSavePlatform? platform}) =>
       NativeExportFileSaver._(platform);
 
@@ -21,7 +21,7 @@ final class NativeExportFileSaver implements NativeByteFileSaver {
   final NativeSavePlatform? _platform;
 
   @override
-  Future<NativeFileSaveOutcome> save(NativeFileSaveRequest request) {
+  Future<FileSaveOutcome> save(FileSaveRequest request) {
     final platform = _platform ?? _currentPlatform();
     return switch (platform) {
       NativeSavePlatform.windows => _saveOnWindows(request),
@@ -30,9 +30,7 @@ final class NativeExportFileSaver implements NativeByteFileSaver {
     };
   }
 
-  Future<NativeFileSaveOutcome> _saveOnWindows(
-    NativeFileSaveRequest request,
-  ) async {
+  Future<FileSaveOutcome> _saveOnWindows(FileSaveRequest request) async {
     final extension = _extension(request.suggestedFileName);
     final location = await getSaveLocation(
       suggestedName: request.suggestedFileName,
@@ -43,26 +41,24 @@ final class NativeExportFileSaver implements NativeByteFileSaver {
         ),
       ],
     );
-    if (location == null) return NativeFileSaveOutcome.cancelled;
+    if (location == null) return FileSaveOutcome.cancelled;
     await XFile.fromData(
       Uint8List.fromList(request.bytes),
       name: request.suggestedFileName,
       mimeType: request.mimeType,
     ).saveTo(location.path);
-    return NativeFileSaveOutcome.saved;
+    return FileSaveOutcome.saved;
   }
 
-  Future<NativeFileSaveOutcome> _saveOnMobile(
-    NativeFileSaveRequest request,
-  ) async {
+  Future<FileSaveOutcome> _saveOnMobile(FileSaveRequest request) async {
     try {
       await FlutterFileSaver().writeFileAsBytes(
         fileName: request.suggestedFileName,
         bytes: Uint8List.fromList(request.bytes),
       );
-      return NativeFileSaveOutcome.saved;
+      return FileSaveOutcome.saved;
     } on FileSaverCancelledException {
-      return NativeFileSaveOutcome.cancelled;
+      return FileSaveOutcome.cancelled;
     }
   }
 }

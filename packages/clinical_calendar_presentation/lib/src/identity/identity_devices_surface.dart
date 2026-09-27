@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:flutter/material.dart';
 
 import '../date_time_format.dart';
+import '../client_capabilities.dart';
 import '../graphite_theme.dart';
 
 import 'account_erasure_surface.dart';
@@ -12,6 +13,7 @@ final class IdentityDevicesSurface extends StatefulWidget {
     required this.email,
     required this.onLocalCopyRemoved,
     this.createAccountBackup,
+    this.backupHost = ClientCapabilityHost.thisClient,
     this.pendingAccountErasure,
     this.onAccountErasureRequested,
     this.onAccountErasureCancelled,
@@ -22,6 +24,7 @@ final class IdentityDevicesSurface extends StatefulWidget {
   final String email;
   final Future<void> Function() onLocalCopyRemoved;
   final AccountBackupCreator? createAccountBackup;
+  final ClientCapabilityHost backupHost;
   final AccountErasureRequest? pendingAccountErasure;
   final ValueChanged<AccountErasureRequest>? onAccountErasureRequested;
   final VoidCallback? onAccountErasureCancelled;
@@ -176,6 +179,7 @@ final class _IdentityDevicesSurfaceState extends State<IdentityDevicesSurface> {
         identity: widget.identity,
         email: widget.email,
         createBackup: widget.createAccountBackup,
+        backupHost: widget.backupHost,
         pendingRequest: widget.pendingAccountErasure,
         onErasureRequested: widget.onAccountErasureRequested,
         onErasureCancelled: widget.onAccountErasureCancelled,

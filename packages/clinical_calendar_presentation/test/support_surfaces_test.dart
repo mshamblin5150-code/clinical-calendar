@@ -543,6 +543,48 @@ void main() {
     },
   );
 
+  testWidgets('web Settings explains that installed apps deliver reminders', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      SettingsTemplatesSurface(
+        settings: StudentSettings(),
+        scheduleTemplates: const [],
+        reminderHost: ClientCapabilityHost.installedApps,
+        newTemplateId: () => _id(32),
+        onSaveSettings: (_) async {},
+        onSaveTemplate: (_) async {},
+        onRemoveTemplate: (_) async {},
+      ),
+      size: const Size(768, 1024),
+    );
+
+    final scrollable = find.descendant(
+      of: find.byKey(const Key('settings-templates-surface')),
+      matching: find.byType(Scrollable),
+    );
+    await _bringIntoView(
+      tester,
+      find.byKey(const Key('reminder-availability-message')),
+      scrollable.first,
+    );
+
+    expect(
+      find.text('Reminders are delivered by your installed apps'),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('work-shift-notifications-setting')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('weekly-summary-setting')), findsNothing);
+    expect(
+      find.byKey(const Key('device-notification-delivery-setting')),
+      findsNothing,
+    );
+  });
+
   testWidgets('Settings rebases its saved theme after synchronized updates', (
     tester,
   ) async {
