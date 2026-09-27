@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_presentation/src/identity/account_erasure_surface.dart';
 import 'package:clinical_calendar_presentation/src/identity/identity_devices_surface.dart';
 import 'package:clinical_calendar_presentation/src/tickets/ticket_surfaces.dart';
+import 'package:clinical_calendar_presentation/src/client_capabilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -34,6 +35,30 @@ void main() {
     expect(gateway.sentCodes, 0);
     expect(find.text('Deletion pending'), findsNothing);
     expect(find.byKey(const Key('begin-account-erasure')), findsOneWidget);
+  });
+
+  testWidgets('web deletion replaces backup creation with installed-app note', (
+    tester,
+  ) async {
+    final gateway = _Gateway();
+    await _pump(
+      tester,
+      gateway: gateway,
+      backupHost: ClientCapabilityHost.installedApps,
+    );
+
+    await tester.tap(find.byKey(const Key('begin-account-erasure')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Backups are made from your installed apps.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('create-account-backup-first')), findsNothing);
+    expect(
+      find.byKey(const Key('continue-without-account-backup')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('failed backup neither advances nor claims deletion success', (
@@ -284,6 +309,7 @@ Future<void> _pump(
   WidgetTester tester, {
   required _Gateway gateway,
   Future<bool> Function(String passphrase)? createBackup,
+  ClientCapabilityHost backupHost = ClientCapabilityHost.thisClient,
   AccountErasureRequest? pendingRequest,
   ValueChanged<AccountErasureRequest>? onRequested,
   VoidCallback? onCancelled,
@@ -299,6 +325,7 @@ Future<void> _pump(
             identity: identity,
             email: 'student@example.com',
             createBackup: createBackup,
+            backupHost: backupHost,
             pendingRequest: pendingRequest,
             onErasureRequested: onRequested,
             onErasureCancelled: onCancelled,

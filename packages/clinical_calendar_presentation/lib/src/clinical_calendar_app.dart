@@ -12,6 +12,7 @@ import 'calendar/calendar_models.dart';
 import 'calendar/calendar_period_view.dart';
 import 'assignments/academic_assignment_surface.dart';
 import 'backup/backup_restore_surface.dart';
+import 'client_capabilities.dart';
 import 'code_only_presentation_recovery.dart';
 import 'commitments/commitment_lifecycle_controller.dart';
 import 'commitments/commitment_lifecycle_surface.dart';
@@ -147,6 +148,7 @@ final class ClinicalCalendarApp extends StatefulWidget {
     this.onLocalCopyRemoved,
     this.createAccountBackup,
     this.portableBackupWorkflows,
+    this.clientCapabilities = const ClinicalCalendarClientCapabilities(),
     this.exportWorkflowFactory,
     this.recoveryStore,
     this.recoveryService,
@@ -192,6 +194,7 @@ final class ClinicalCalendarApp extends StatefulWidget {
   final Future<void> Function()? onLocalCopyRemoved;
   final Future<bool> Function(String passphrase)? createAccountBackup;
   final PortableBackupWorkflows? portableBackupWorkflows;
+  final ClinicalCalendarClientCapabilities clientCapabilities;
   final ExportWorkflowFactory? exportWorkflowFactory;
   final RecoveryStore? recoveryStore;
   final RecoveryApplicationService? recoveryService;
@@ -467,6 +470,7 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
                 onLocalCopyRemoved: widget.onLocalCopyRemoved,
                 createAccountBackup: widget.createAccountBackup,
                 portableBackupWorkflows: widget.portableBackupWorkflows,
+                clientCapabilities: widget.clientCapabilities,
                 exportWorkflowFactory: widget.exportWorkflowFactory,
                 recoveryStore: widget.recoveryStore,
                 recoveryService: widget.recoveryService,
@@ -736,6 +740,7 @@ final class _ApplicationHost extends StatefulWidget {
     required this.onLocalCopyRemoved,
     required this.createAccountBackup,
     required this.portableBackupWorkflows,
+    required this.clientCapabilities,
     required this.exportWorkflowFactory,
     required this.recoveryStore,
     required this.recoveryService,
@@ -767,6 +772,7 @@ final class _ApplicationHost extends StatefulWidget {
   final Future<void> Function()? onLocalCopyRemoved;
   final Future<bool> Function(String passphrase)? createAccountBackup;
   final PortableBackupWorkflows? portableBackupWorkflows;
+  final ClinicalCalendarClientCapabilities clientCapabilities;
   final ExportWorkflowFactory? exportWorkflowFactory;
   final RecoveryStore? recoveryStore;
   final RecoveryApplicationService? recoveryService;
@@ -2122,6 +2128,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             await onLocalCopyRemoved();
           },
           createAccountBackup: widget.createAccountBackup,
+          backupHost: widget.clientCapabilities.backups,
         );
       case ClinicalCalendarDestination.trashRecovery:
         final store = widget.recoveryStore;
@@ -2201,6 +2208,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             onOpenWorkScheduleFeeds: widget.workScheduleFeedGateway == null
                 ? null
                 : _openWorkScheduleFeeds,
+            reminderHost: widget.clientCapabilities.reminders,
             deviceNotifications: devicePolicy == null
                 ? null
                 : DeviceNotificationPreferences(
@@ -2479,8 +2487,12 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   Widget _portableBackupSurface() {
     final workflows = widget.portableBackupWorkflows;
     if (workflows == null) {
-      return const _UnavailableAttentionWorkflow(
-        message: 'Portable backup is not available in this build.',
+      return _UnavailableAttentionWorkflow(
+        message:
+            widget.clientCapabilities.backups ==
+                ClientCapabilityHost.installedApps
+            ? ClinicalCalendarClientCapabilities.installedAppBackupNote
+            : 'Portable backup is not available in this build.',
       );
     }
     return BackupRestoreSurface(

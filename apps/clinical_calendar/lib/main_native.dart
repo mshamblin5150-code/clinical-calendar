@@ -103,7 +103,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   String? deviceTimeZoneId,
   NotificationDeviceClass? notificationDeviceClass,
   RecoveryReauthenticationGate? recoveryReauthentication,
-  NativeByteFileSaver? accountBackupFileSaver,
+  ByteFileSaver? accountBackupFileSaver,
   BackupByteFilePicker? portableBackupFilePicker,
   bool resolveAuthoritativeTheme = false,
   VoidCallback? onPresentationRestart,
@@ -332,13 +332,13 @@ Future<ClinicalCalendarApp> buildProductionApplication({
           );
           final date = createdAtUtc.toIso8601String().substring(0, 10);
           final outcome = await nativeFileSaver.save(
-            NativeFileSaveRequest(
+            FileSaveRequest(
               suggestedFileName: 'clinical-calendar-backup-$date.ccbackup',
               mimeType: 'application/octet-stream',
               bytes: bytes,
             ),
           );
-          return outcome == NativeFileSaveOutcome.saved;
+          return outcome == FileSaveOutcome.saved;
         }
       : null;
   PortableBackupWorkflows? portableBackupWorkflows;
