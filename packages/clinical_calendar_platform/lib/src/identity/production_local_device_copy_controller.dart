@@ -4,7 +4,6 @@ import 'dart:io';
 // Public constructor names describe capabilities; private field names do not.
 // ignore_for_file: prefer_initializing_formals
 
-import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 
 typedef LocalRemovalPreviewLoader = Future<LocalRemovalPreview> Function();

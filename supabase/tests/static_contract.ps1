@@ -18,6 +18,9 @@ $profileMigration = Get-Content -Raw (
 $minimumBuildMigration = Get-Content -Raw (
   Join-Path $PSScriptRoot '..\migrations\202609270006_minimum_sync_build.sql'
 )
+$webDeviceMigration = Get-Content -Raw (
+  Join-Path $PSScriptRoot '..\migrations\202609270007_web_connected_device_expiration.sql'
+)
 
 $requiredPatterns = @(
   'alter table clinical_calendar_sync.records force row level security',
@@ -155,6 +158,21 @@ foreach ($pattern in $minimumBuildPatterns) {
   }
 }
 
+$webDevicePatterns = @(
+  "platform in ('windows', 'ios', 'android', 'web')",
+  "interval '90 days'",
+  'clinical_calendar_sync.device_is_within_web_idle_window(',
+  'clinical_calendar_sync.set_auth_session_not_after(',
+  'delete from auth.sessions',
+  'clinical_calendar_sync.revoke_inactive_web_devices(',
+  'from public, anon, authenticated, clinical_calendar_sync_executor'
+)
+foreach ($pattern in $webDevicePatterns) {
+  if (-not $webDeviceMigration.Contains($pattern)) {
+    throw "Missing web Connected Device contract pattern: $pattern"
+  }
+}
+
 $minimumBuildAssertionCount = (
   Select-String -Path (Join-Path $PSScriptRoot 'minimum_sync_build_test.sql') `
     -Pattern '^select (ok|is|results_eq|throws_ok)\(' -CaseSensitive
@@ -175,8 +193,8 @@ $identityAssertionCount = (
   Select-String -Path (Join-Path $PSScriptRoot 'identity_devices_test.sql') `
     -Pattern '^select (ok|is|results_eq|throws_ok)\(' -CaseSensitive
 ).Count
-if ($identityAssertionCount -ne 25) {
-  throw "Identity/device pgTAP plan is 25 but found $identityAssertionCount assertions."
+if ($identityAssertionCount -ne 36) {
+  throw "Identity/device pgTAP plan is 36 but found $identityAssertionCount assertions."
 }
 
 $erasureAssertionCount = (

@@ -1,7 +1,7 @@
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:flutter/material.dart';
 
-import '../date_input.dart';
+import '../date_time_format.dart';
 import '../graphite_theme.dart';
 
 import 'account_erasure_surface.dart';
@@ -281,6 +281,7 @@ IconData _icon(DevicePlatform platform) => switch (platform) {
   DevicePlatform.windows => Icons.laptop_windows,
   DevicePlatform.ios => Icons.phone_iphone,
   DevicePlatform.android => Icons.tablet_android,
+  DevicePlatform.web => Icons.language,
 };
 
 String _lastSync(DateTime? value) =>

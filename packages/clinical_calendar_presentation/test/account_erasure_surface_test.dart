@@ -1,4 +1,3 @@
-import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_presentation/src/identity/account_erasure_surface.dart';
 import 'package:clinical_calendar_presentation/src/identity/identity_devices_surface.dart';

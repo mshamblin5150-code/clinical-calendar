@@ -880,6 +880,7 @@ String _deviceName() {
     DevicePlatform.windows => 'Windows device',
     DevicePlatform.ios => 'iPhone or iPad',
     DevicePlatform.android => 'Android device',
+    DevicePlatform.web => 'Browser',
   };
 }
 

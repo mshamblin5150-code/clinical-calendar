@@ -104,8 +104,8 @@ void main() {
           jsonEncode([
             {
               'device_id': _deviceId,
-              'device_name': 'Windows laptop',
-              'platform': 'windows',
+              'device_name': 'Chrome on Windows',
+              'platform': 'web',
               'last_synchronized_at_utc': '2026-08-03T12:00:00Z',
               'is_current': true,
               'is_revoked': false,
@@ -117,7 +117,8 @@ void main() {
 
       final devices = await gateway.listConnectedDevices('access');
 
-      expect(devices.single.name, 'Windows laptop');
+      expect(devices.single.name, 'Chrome on Windows');
+      expect(devices.single.platform, DevicePlatform.web);
       expect(devices.single.isCurrent, isTrue);
     },
   );

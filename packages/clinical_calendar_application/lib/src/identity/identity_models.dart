@@ -1,4 +1,4 @@
-enum DevicePlatform { windows, ios, android }
+enum DevicePlatform { windows, ios, android, web }
 
 final class DeviceDescriptor {
   DeviceDescriptor({required String name, required this.platform})
