@@ -39,6 +39,8 @@ final class SupabaseTicketGateway implements TicketGateway {
         'p_context_captured_at': context.capturedAtUtc
             .toUtc()
             .toIso8601String(),
+        'p_recent_actions': context.recentActions,
+        'p_refusal_code': context.refusalCode,
       });
     } on _TicketServerFailure catch (error) {
       final refusal = switch (error.code) {
@@ -85,10 +87,11 @@ final class SupabaseTicketGateway implements TicketGateway {
     const fields =
         'id,sender_id,kind,text,state,screen_context,build_context,'
         'device_context,platform_context,context_captured_at,created_at,seen_at';
+    const diagnosticFields = ',recent_actions,refusal_code';
     final response = await _request(
       'GET',
       '/rest/v1/tickets',
-      query: {'select': fields, 'order': 'created_at.desc'},
+      query: {'select': '$fields$diagnosticFields', 'order': 'created_at.desc'},
     );
     if (response is! List) throw const TicketUnavailable();
     try {
@@ -154,6 +157,10 @@ Ticket _ticket(Map<String, dynamic> row) => Ticket(
     device: row['device_context'] as String,
     platform: row['platform_context'] as String,
     capturedAtUtc: DateTime.parse(row['context_captured_at'] as String).toUtc(),
+    recentActions: List.unmodifiable(
+      (row['recent_actions'] as List).cast<String>(),
+    ),
+    refusalCode: row['refusal_code'] as String?,
   ),
   createdAtUtc: DateTime.parse(row['created_at'] as String).toUtc(),
   seenAtUtc: row['seen_at'] == null

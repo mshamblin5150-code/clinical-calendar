@@ -5,6 +5,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/src/conflict_resolution/conflict_resolution_controller.dart';
 import 'package:clinical_calendar_presentation/src/conflict_resolution/conflict_resolution_surface.dart';
+import 'package:clinical_calendar_presentation/src/tickets/ticket_surfaces.dart';
 import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,6 +45,10 @@ void main() {
     expect(find.text('Other device'), findsOneWidget);
     expect(find.textContaining('This Device'), findsOneWidget);
     expect(find.textContaining('Other Device'), findsOneWidget);
+    expect(
+      find.byKey(const Key('ticket-refusal-stale_revision')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const Key('choose-local-conflict-version')));
     await tester.pumpAndSettle();
@@ -195,13 +200,17 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: buildVariantFTheme(),
-            home: Scaffold(
-              body: SynchronizationConflictResolutionSurface(
-                controller: harness.controller,
-                onOpenRecordAction: (record, selectedAction) {
-                  opened = record;
-                  action = selectedAction;
-                },
+            home: TicketSupportScope(
+              actions: TicketActivityLog(),
+              onOpenRefusal: (_) async {},
+              child: Scaffold(
+                body: SynchronizationConflictResolutionSurface(
+                  controller: harness.controller,
+                  onOpenRecordAction: (record, selectedAction) {
+                    opened = record;
+                    action = selectedAction;
+                  },
+                ),
               ),
             ),
           ),
@@ -215,6 +224,11 @@ void main() {
       }
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
+
+      expect(
+        find.byKey(const Key('ticket-refusal-protected_day_violation')),
+        findsOneWidget,
+      );
 
       expect(find.text('Planning Incomplete'), findsOneWidget);
       expect(
@@ -264,8 +278,14 @@ Future<void> _pump(
   await tester.pumpWidget(
     MaterialApp(
       theme: buildVariantFTheme(),
-      home: Scaffold(
-        body: SynchronizationConflictResolutionSurface(controller: controller),
+      home: TicketSupportScope(
+        actions: TicketActivityLog(),
+        onOpenRefusal: (_) async {},
+        child: Scaffold(
+          body: SynchronizationConflictResolutionSurface(
+            controller: controller,
+          ),
+        ),
       ),
     ),
   );

@@ -34,6 +34,12 @@ void main() {
         'p_device_context': 'Surface Pro',
         'p_platform_context': 'windows',
         'p_context_captured_at': '2026-09-27T14:30:00.000Z',
+        'p_recent_actions': [
+          'opened Work Shift editor',
+          'tapped Save',
+          'refused: schedule_conflict',
+        ],
+        'p_refusal_code': 'schedule_conflict',
       });
     },
   );
@@ -53,6 +59,12 @@ void main() {
     final tickets = await gateway.readForMaintainer();
     expect(tickets.single.kind, TicketKind.problem);
     expect(tickets.single.status, TicketStatus.sent);
+    expect(tickets.single.context.recentActions, [
+      'opened Work Shift editor',
+      'tapped Save',
+      'refused: schedule_conflict',
+    ]);
+    expect(tickets.single.context.refusalCode, 'schedule_conflict');
     final opened = await gateway.openForMaintainer(_ticketId);
     expect(opened.status, TicketStatus.seen);
   });
@@ -95,6 +107,12 @@ final _context = TicketContext(
   device: 'Surface Pro',
   platform: 'windows',
   capturedAtUtc: DateTime.utc(2026, 9, 27, 14, 30),
+  recentActions: const [
+    'opened Work Shift editor',
+    'tapped Save',
+    'refused: schedule_conflict',
+  ],
+  refusalCode: 'schedule_conflict',
 );
 
 Map<String, Object?> _row(String status) => {
@@ -110,6 +128,12 @@ Map<String, Object?> _row(String status) => {
   'context_captured_at': '2026-09-27T14:30:00.000Z',
   'created_at': '2026-09-27T14:30:01.000Z',
   'seen_at': status == 'seen' ? '2026-09-27T14:31:00.000Z' : null,
+  'recent_actions': [
+    'opened Work Shift editor',
+    'tapped Save',
+    'refused: schedule_conflict',
+  ],
+  'refusal_code': 'schedule_conflict',
 };
 
 SupabaseTicketGateway _gateway(http.Client client) => SupabaseTicketGateway(

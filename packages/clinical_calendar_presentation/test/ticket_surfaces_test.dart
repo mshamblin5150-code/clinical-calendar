@@ -4,6 +4,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('recent Ticket actions are bounded and cannot capture entered text', () {
+    final actions = TicketActivityLog(limit: 3)
+      ..record(TicketActivity.openedBatchPlanner)
+      ..record(TicketActivity.tappedNext)
+      ..recordRefusal('select_at_least_one_calendar_date');
+
+    const enteredText = 'Patient Jane Doe at Memorial Hospital';
+    expect(actions.snapshot(), <String>[
+      'opened batch planner',
+      'tapped Next',
+      'refused: select_at_least_one_calendar_date',
+    ]);
+    expect(actions.snapshot().join(' '), isNot(contains(enteredText)));
+    expect(
+      () => actions.recordRefusal(enteredText),
+      throwsA(isA<ArgumentError>()),
+    );
+
+    actions.record(TicketActivity.tappedApplyBatch);
+    expect(actions.snapshot(), <String>[
+      'tapped Next',
+      'refused: select_at_least_one_calendar_date',
+      'tapped Apply batch',
+    ]);
+  });
+
   testWidgets('Student sees the privacy boundary and every attached field', (
     tester,
   ) async {
@@ -14,6 +40,12 @@ void main() {
       device: 'Surface Pro',
       platform: 'Windows',
       capturedAtUtc: DateTime.utc(2026, 9, 27, 14, 30),
+      recentActions: const [
+        'opened batch planner',
+        'tapped Next',
+        'refused: select_at_least_one_calendar_date',
+      ],
+      refusalCode: 'select_at_least_one_calendar_date',
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -27,6 +59,12 @@ void main() {
     expect(find.textContaining('0.1.0+46'), findsOne);
     expect(find.textContaining('Surface Pro'), findsOne);
     expect(find.textContaining('Windows'), findsOne);
+    expect(find.textContaining('opened batch planner'), findsOne);
+    expect(find.textContaining('tapped Next'), findsOne);
+    expect(
+      find.textContaining('select_at_least_one_calendar_date'),
+      findsWidgets,
+    );
 
     await tester.tap(find.byType(DropdownButtonFormField<TicketKind>));
     await tester.pumpAndSettle();
@@ -36,7 +74,12 @@ void main() {
       find.byKey(const Key('ticket-text')),
       'The save action stayed busy.',
     );
-    await tester.tap(find.widgetWithText(FilledButton, 'Send Ticket'));
+    await tester.drag(
+      find.byKey(const Key('put-in-ticket-surface')).last,
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('send-ticket-action')).last);
     await tester.pumpAndSettle();
 
     expect(gateway.submissions, hasLength(1));
@@ -130,6 +173,34 @@ void main() {
           .onTap,
       isNull,
     );
+  });
+
+  testWidgets('a refusal offer opens a problem Ticket with the stable code', (
+    tester,
+  ) async {
+    final actions = TicketActivityLog()..record(TicketActivity.tappedSave);
+    TicketRefusalContext? opened;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TicketSupportScope(
+          actions: actions,
+          onOpenRefusal: (refusal) async => opened = refusal,
+          child: const Scaffold(
+            body: TicketRefusalOffer(
+              screen: 'Work Shift editor',
+              refusalCode: 'schedule_conflict',
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Think this is wrong? Put in a Ticket'));
+    await tester.pump();
+
+    expect(opened?.screen, 'Work Shift editor');
+    expect(opened?.code, 'schedule_conflict');
+    expect(actions.snapshot(), ['tapped Save', 'refused: schedule_conflict']);
   });
 }
 

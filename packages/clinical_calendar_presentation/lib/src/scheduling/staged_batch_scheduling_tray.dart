@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../date_input.dart';
 import '../time_input.dart';
+import '../tickets/ticket_surfaces.dart';
 import '../variant_f_theme.dart';
 import 'batch_scheduling_controller.dart';
 
@@ -52,6 +53,10 @@ final class StagedBatchSchedulingTray extends StatelessWidget {
                 controller.inputError!,
                 key: const Key('batch-input-error'),
                 style: TextStyle(color: colors.urgent),
+              ),
+              TicketRefusalOffer(
+                screen: 'Batch planner',
+                refusalCode: _batchInputRefusalCode(controller.inputError!),
               ),
             ],
             if (controller.status != null) ...[
@@ -391,9 +396,20 @@ final class _ReviewStage extends StatelessWidget {
                 for (final conflict in item.conflicts)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      _conflictLabel(conflict),
-                      style: TextStyle(color: context.clinicalColors.urgent),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _conflictLabel(conflict),
+                          style: TextStyle(
+                            color: context.clinicalColors.urgent,
+                          ),
+                        ),
+                        TicketRefusalOffer(
+                          screen: 'Batch planner',
+                          refusalCode: _schedulingRefusalCode(conflict),
+                        ),
+                      ],
                     ),
                   ),
               ],
@@ -412,6 +428,7 @@ final class _TrayActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final touch = context.clinicalMetrics.minimumTouchTarget;
+    final ticketActions = TicketSupportScope.maybeOf(context)?.actions;
     return Wrap(
       alignment: WrapAlignment.end,
       spacing: 8,
@@ -439,9 +456,17 @@ final class _TrayActions extends StatelessWidget {
                 ? null
                 : controller.stage == BatchSchedulingStage.review
                 ? (controller.review?.canApply == true && !controller.applied
-                      ? controller.apply
+                      ? () {
+                          ticketActions?.record(
+                            TicketActivity.tappedApplyBatch,
+                          );
+                          controller.apply();
+                        }
                       : null)
-                : controller.next,
+                : () {
+                    ticketActions?.record(TicketActivity.tappedNext);
+                    controller.next();
+                  },
             icon: Icon(
               controller.stage == BatchSchedulingStage.review
                   ? Icons.check
@@ -499,4 +524,24 @@ String _conflictLabel(SchedulingError error) => switch (error.violation) {
         '${formatUsDate(error.conflictDate)}.',
   ScheduleInvariantViolation.multipleProtectedDaysInWeek =>
     'Schedule Conflict: that week already has a Protected Day.',
+};
+
+String _schedulingRefusalCode(SchedulingError error) =>
+    switch (error.violation) {
+      ScheduleInvariantViolation.commitmentOverlap => 'schedule_conflict',
+      ScheduleInvariantViolation.commitmentTouchesProtectedDay =>
+        'protected_day_violation',
+      ScheduleInvariantViolation.multipleProtectedDaysInWeek =>
+        'protected_day_already_selected',
+    };
+
+String _batchInputRefusalCode(String message) => switch (message) {
+  'Select at least one calendar date.' => 'select_at_least_one_calendar_date',
+  'Choose a Clinical Placement and attached Preceptor.' =>
+    'choose_clinical_placement_and_preceptor',
+  'Choose a Preceptor attached to the Clinical Placement.' =>
+    'choose_attached_preceptor',
+  'The batch could not be reviewed. Check its assignments.' =>
+    'batch_review_failed',
+  _ => 'invalid_schedule_time',
 };

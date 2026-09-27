@@ -794,6 +794,8 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   NotificationDevicePolicy? _notificationDevicePolicy;
   Timer? _profileOnboardingTimer;
   bool _profileOnboardingOpen = false;
+  final TicketActivityLog _ticketActions = TicketActivityLog()
+    ..record(TicketActivity.openedCalendar);
 
   @override
   void initState() {
@@ -953,6 +955,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       widget.scheduleDateFactory?.call(date) ?? _zonedScheduleDate(date);
 
   void _resetPlanning(BatchSchedulingReset reset) {
+    _ticketActions.record(TicketActivity.openedBatchPlanner);
     final controller = _batchController;
     if (controller == null) return;
     controller.reset(
@@ -1244,19 +1247,21 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       context: context,
       builder: (dialogContext) {
         final size = MediaQuery.sizeOf(dialogContext);
-        return Dialog(
-          insetPadding: const EdgeInsets.all(12),
-          child: SizedBox(
-            width: size.width < 720 ? size.width - 24 : 700,
-            height: size.height * .9,
-            child: CommitmentLifecycleSurface(
-              controller: _commitmentController,
-              studentId: widget.studentId,
-              twelveHourTime:
-                  (_support?.settings.value.timeDisplay ??
-                      TimeDisplayPreference.military) ==
-                  TimeDisplayPreference.twelveHour,
-              onClose: () => Navigator.pop(dialogContext),
+        return _withTicketSupport(
+          Dialog(
+            insetPadding: const EdgeInsets.all(12),
+            child: SizedBox(
+              width: size.width < 720 ? size.width - 24 : 700,
+              height: size.height * .9,
+              child: CommitmentLifecycleSurface(
+                controller: _commitmentController,
+                studentId: widget.studentId,
+                twelveHourTime:
+                    (_support?.settings.value.timeDisplay ??
+                        TimeDisplayPreference.military) ==
+                    TimeDisplayPreference.twelveHour,
+                onClose: () => Navigator.pop(dialogContext),
+              ),
             ),
           ),
         );
@@ -1312,6 +1317,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   }
 
   Future<void> _openSynchronization() async {
+    _ticketActions.record(TicketActivity.openedSynchronizationConflicts);
     await _conflictController.load();
     if (!mounted) return;
     await _openContextualRoute(
@@ -1700,6 +1706,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   Future<void> _openTicketRoute(
     TicketMenuAction action, {
     required String screenName,
+    String? refusalCode,
   }) async {
     final gateway = widget.ticketGateway;
     if (gateway == null || !mounted) return;
@@ -1714,7 +1721,10 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
           attachedContext: widget.ticketClientContext.capture(
             screen: screenName,
             capturedAtUtc: widget.dependencies.clock.nowUtc(),
+            recentActions: _ticketActions.snapshot(),
+            refusalCode: refusalCode,
           ),
+          initialKind: refusalCode == null ? null : TicketKind.problem,
         ),
       TicketMenuAction.putInTicket => const _UnavailableAttentionWorkflow(
         message: 'Connect to put in a Ticket.',
@@ -1749,6 +1759,22 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     );
   }
 
+  Future<void> _openRefusalTicket(TicketRefusalContext refusal) =>
+      _openTicketRoute(
+        TicketMenuAction.putInTicket,
+        screenName: refusal.screen,
+        refusalCode: refusal.code,
+      );
+
+  Widget _withTicketSupport(Widget child) {
+    if (widget.ticketGateway == null) return child;
+    return TicketSupportScope(
+      actions: _ticketActions,
+      onOpenRefusal: _openRefusalTicket,
+      child: child,
+    );
+  }
+
   void _openDirect(ClinicalCalendarDestination destination) {
     if (destination == ClinicalCalendarDestination.calendar) {
       setState(() => _destination = null);
@@ -1758,6 +1784,9 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       setState(() => _destination = null);
       _resetPlanning(BatchSchedulingReset.addSchedule);
       return;
+    }
+    if (destination == ClinicalCalendarDestination.synchronization) {
+      _ticketActions.record(TicketActivity.openedSynchronizationConflicts);
     }
     setState(() {
       _destination = destination;
@@ -1860,25 +1889,27 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             ),
           );
       if (widget.ticketGateway == null) return destinationSurface;
-      return Stack(
-        children: [
-          Positioned.fill(child: destinationSurface),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Material(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                shape: const CircleBorder(),
-                child: IconButton(
-                  key: const Key('destination-menu-action'),
-                  tooltip: 'Application menu',
-                  onPressed: _showMenu,
-                  icon: const Icon(Icons.menu),
+      return _withTicketSupport(
+        Stack(
+          children: [
+            Positioned.fill(child: destinationSurface),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Material(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    key: const Key('destination-menu-action'),
+                    tooltip: 'Application menu',
+                    onPressed: _showMenu,
+                    icon: const Icon(Icons.menu),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
@@ -1917,7 +1948,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
               ),
             ),
           );
-    return widget.themeBundle.shellRenderer.build(
+    final calendarSurface = widget.themeBundle.shellRenderer.build(
       environmentName: widget.environmentName,
       onOpenMenu: _showMenu,
       onOpenDestination: _openDirect,
@@ -1995,6 +2026,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         ),
       ),
     );
+    return _withTicketSupport(calendarSurface);
   }
 
   Widget _destinationBody(ClinicalCalendarDestination destination) {

@@ -7,6 +7,106 @@ import '../responsive_shell.dart';
 
 enum TicketMenuAction { putInTicket, tickets }
 
+enum TicketActivity {
+  openedCalendar('opened Calendar'),
+  openedBatchPlanner('opened batch planner'),
+  openedWorkShiftEditor('opened Work Shift editor'),
+  openedClinicalSessionEditor('opened Clinical Session editor'),
+  openedProtectedDayEditor('opened Protected Day editor'),
+  openedSynchronizationConflicts('opened Synchronization conflicts'),
+  tappedNext('tapped Next'),
+  tappedSave('tapped Save'),
+  tappedApplyBatch('tapped Apply batch');
+
+  const TicketActivity(this.label);
+
+  final String label;
+}
+
+/// A bounded, memory-only diagnostic trail whose public write API accepts
+/// developer-owned labels and stable refusal codes, never form values.
+final class TicketActivityLog {
+  TicketActivityLog({this.limit = 8}) : assert(limit > 0);
+
+  final int limit;
+  final List<String> _actions = [];
+
+  void record(TicketActivity action) => _add(action.label);
+
+  void recordRefusal(String code) {
+    if (!RegExp(r'^[a-z][a-z0-9_]{0,79}$').hasMatch(code)) {
+      throw ArgumentError.value(code, 'code', 'Must be a stable refusal code');
+    }
+    _add('refused: $code');
+  }
+
+  List<String> snapshot() => List.unmodifiable(_actions);
+
+  void _add(String action) {
+    if (_actions.lastOrNull == action) return;
+    _actions.add(action);
+    if (_actions.length > limit) _actions.removeAt(0);
+  }
+}
+
+final class TicketRefusalContext {
+  const TicketRefusalContext({required this.screen, required this.code});
+
+  final String screen;
+  final String code;
+}
+
+typedef OpenTicketFromRefusal =
+    Future<void> Function(TicketRefusalContext refusal);
+
+final class TicketSupportScope extends InheritedWidget {
+  const TicketSupportScope({
+    required this.actions,
+    required this.onOpenRefusal,
+    required super.child,
+    super.key,
+  });
+
+  final TicketActivityLog actions;
+  final OpenTicketFromRefusal onOpenRefusal;
+
+  static TicketSupportScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<TicketSupportScope>();
+
+  @override
+  bool updateShouldNotify(TicketSupportScope oldWidget) =>
+      actions != oldWidget.actions || onOpenRefusal != oldWidget.onOpenRefusal;
+}
+
+const putRefusalInTicketLabel = 'Think this is wrong? Put in a Ticket';
+
+final class TicketRefusalOffer extends StatelessWidget {
+  const TicketRefusalOffer({
+    required this.screen,
+    required this.refusalCode,
+    super.key,
+  });
+
+  final String screen;
+  final String refusalCode;
+
+  @override
+  Widget build(BuildContext context) {
+    final support = TicketSupportScope.maybeOf(context);
+    if (support == null) return const SizedBox.shrink();
+    return TextButton(
+      key: Key('ticket-refusal-$refusalCode'),
+      onPressed: () {
+        support.actions.recordRefusal(refusalCode);
+        support.onOpenRefusal(
+          TicketRefusalContext(screen: screen, code: refusalCode),
+        );
+      },
+      child: const Text(putRefusalInTicketLabel),
+    );
+  }
+}
+
 final class TicketApplicationMenu extends StatelessWidget {
   const TicketApplicationMenu({
     required this.onDestinationSelected,
@@ -66,11 +166,13 @@ final class PutInTicketSurface extends StatefulWidget {
   const PutInTicketSurface({
     required this.gateway,
     required this.attachedContext,
+    this.initialKind,
     super.key,
   });
 
   final TicketGateway gateway;
   final TicketContext attachedContext;
+  final TicketKind? initialKind;
 
   @override
   State<PutInTicketSurface> createState() => _PutInTicketSurfaceState();
@@ -79,9 +181,15 @@ final class PutInTicketSurface extends StatefulWidget {
 final class _PutInTicketSurfaceState extends State<PutInTicketSurface> {
   final _formKey = GlobalKey<FormState>();
   final _text = TextEditingController();
-  TicketKind? _kind;
+  late TicketKind? _kind;
   bool _sending = false;
   String? _message;
+
+  @override
+  void initState() {
+    super.initState();
+    _kind = widget.initialKind;
+  }
 
   @override
   void dispose() {
@@ -195,6 +303,7 @@ final class _PutInTicketSurfaceState extends State<PutInTicketSurface> {
           ],
           const SizedBox(height: 20),
           FilledButton(
+            key: const Key('send-ticket-action'),
             onPressed: _sending ? null : _send,
             child: Text(_sending ? 'Sending…' : 'Send Ticket'),
           ),
@@ -398,6 +507,11 @@ String ticketContextSummary(TicketContext context) => [
   'Device: ${context.device}',
   'Platform: ${context.platform}',
   'Captured: ${context.capturedAtUtc.toLocal()}',
+  if (context.recentActions.isNotEmpty) ...[
+    'Recent actions:',
+    for (final action in context.recentActions) '• $action',
+  ],
+  if (context.refusalCode case final code?) 'Refusal code: $code',
 ].join('\n');
 
 String _shortId(String value) =>

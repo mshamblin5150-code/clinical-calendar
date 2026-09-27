@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:flutter/material.dart';
 
 import '../date_input.dart';
+import '../tickets/ticket_surfaces.dart';
 
 import '../variant_f_theme.dart';
 import 'conflict_resolution_controller.dart';
@@ -230,6 +231,10 @@ final class _ConflictCard extends StatelessWidget {
           Text(
             'Detected ${_dateTime(item.record.detectedAtUtc)}. '
             'Nothing is discarded until you choose a resolution.',
+          ),
+          TicketRefusalOffer(
+            screen: 'Synchronization conflicts',
+            refusalCode: item.record.rejectionCode,
           ),
           const SizedBox(height: 14),
           if (item.workflow == SynchronizationConflictWorkflow.sameRecord ||

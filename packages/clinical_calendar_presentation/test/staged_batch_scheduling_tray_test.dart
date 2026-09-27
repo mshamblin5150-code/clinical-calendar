@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_application.dart
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:clinical_calendar_presentation/src/scheduling/batch_scheduling_controller.dart';
 import 'package:clinical_calendar_presentation/src/scheduling/staged_batch_scheduling_tray.dart';
+import 'package:clinical_calendar_presentation/src/tickets/ticket_surfaces.dart';
 import 'package:clinical_calendar_presentation/src/variant_f_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -200,6 +201,23 @@ void main() {
     expect(controller.preceptorId, 'preceptor-other');
   });
 
+  testWidgets('date-selection refusal offers a Ticket with its stable code', (
+    tester,
+  ) async {
+    final controller = _controller(selectedDates: const []);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_app(controller));
+
+    await tester.tap(find.byKey(const Key('batch-next')));
+    await tester.pump();
+
+    expect(find.text('Select at least one calendar date.'), findsOne);
+    expect(
+      find.byKey(const Key('ticket-refusal-select_at_least_one_calendar_date')),
+      findsOne,
+    );
+  });
+
   testWidgets('Review rows show and change each effective Preceptor', (
     tester,
   ) async {
@@ -252,6 +270,7 @@ void main() {
     await tester.tap(find.byKey(const Key('batch-next')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Schedule Conflict'), findsOne);
+    expect(find.byKey(const Key('ticket-refusal-schedule_conflict')), findsOne);
     expect(
       tester
           .widget<FilledButton>(find.byKey(const Key('batch-apply')))
@@ -448,14 +467,18 @@ Widget _app(
   TextScaler textScaler = TextScaler.noScaling,
 }) => MaterialApp(
   theme: buildVariantFTheme(),
-  home: Builder(
-    builder: (context) => MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: textScaler),
-      child: Scaffold(
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(8),
-            child: StagedBatchSchedulingTray(controller: controller),
+  home: TicketSupportScope(
+    actions: TicketActivityLog(),
+    onOpenRefusal: (_) async {},
+    child: Builder(
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+        child: Scaffold(
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(8),
+              child: StagedBatchSchedulingTray(controller: controller),
+            ),
           ),
         ),
       ),
