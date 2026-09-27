@@ -6,6 +6,7 @@ import '../date_input.dart';
 import '../time_input.dart';
 import '../tickets/ticket_surfaces.dart';
 import '../variant_f_theme.dart';
+import '../scheduling/scheduling_refusal_code.dart';
 import 'commitment_lifecycle_controller.dart';
 
 final class CommitmentLifecycleSurface extends StatelessWidget {
@@ -53,7 +54,7 @@ final class CommitmentLifecycleSurface extends StatelessWidget {
                 screen: _lifecycleScreen(snapshot),
                 refusalCode: controller.conflicts.isEmpty
                     ? 'commitment_change_refused'
-                    : _schedulingRefusalCode(controller.conflicts.first),
+                    : schedulingRefusalCode(controller.conflicts.first),
               ),
             ],
             if (controller.isBusy && snapshot == null)
@@ -779,13 +780,4 @@ String _lifecycleScreen(CommitmentLifecycleSnapshot? snapshot) =>
       ClinicalSessionLifecycleSnapshot() => 'Clinical Session editor',
       ProtectedDayLifecycleSnapshot() => 'Protected Day editor',
       null => 'Calendar entry editor',
-    };
-
-String _schedulingRefusalCode(SchedulingError error) =>
-    switch (error.violation) {
-      ScheduleInvariantViolation.commitmentOverlap => 'schedule_conflict',
-      ScheduleInvariantViolation.commitmentTouchesProtectedDay =>
-        'protected_day_violation',
-      ScheduleInvariantViolation.multipleProtectedDaysInWeek =>
-        'protected_day_already_selected',
     };

@@ -7,6 +7,7 @@ import '../time_input.dart';
 import '../tickets/ticket_surfaces.dart';
 import '../variant_f_theme.dart';
 import 'batch_scheduling_controller.dart';
+import 'scheduling_refusal_code.dart';
 
 final class StagedBatchSchedulingTray extends StatelessWidget {
   const StagedBatchSchedulingTray({required this.controller, super.key});
@@ -65,6 +66,8 @@ final class StagedBatchSchedulingTray extends StatelessWidget {
                 liveRegion: true,
                 child: Text(controller.status!, key: const Key('batch-status')),
               ),
+              if (_batchStatusRefusalCode(controller.status!) case final code?)
+                TicketRefusalOffer(screen: 'Batch planner', refusalCode: code),
             ],
             const SizedBox(height: 16),
             _TrayActions(controller: controller),
@@ -407,7 +410,7 @@ final class _ReviewStage extends StatelessWidget {
                         ),
                         TicketRefusalOffer(
                           screen: 'Batch planner',
-                          refusalCode: _schedulingRefusalCode(conflict),
+                          refusalCode: schedulingRefusalCode(conflict),
                         ),
                       ],
                     ),
@@ -526,15 +529,6 @@ String _conflictLabel(SchedulingError error) => switch (error.violation) {
     'Schedule Conflict: that week already has a Protected Day.',
 };
 
-String _schedulingRefusalCode(SchedulingError error) =>
-    switch (error.violation) {
-      ScheduleInvariantViolation.commitmentOverlap => 'schedule_conflict',
-      ScheduleInvariantViolation.commitmentTouchesProtectedDay =>
-        'protected_day_violation',
-      ScheduleInvariantViolation.multipleProtectedDaysInWeek =>
-        'protected_day_already_selected',
-    };
-
 String _batchInputRefusalCode(String message) => switch (message) {
   'Select at least one calendar date.' => 'select_at_least_one_calendar_date',
   'Choose a Clinical Placement and attached Preceptor.' =>
@@ -544,4 +538,12 @@ String _batchInputRefusalCode(String message) => switch (message) {
   'The batch could not be reviewed. Check its assignments.' =>
     'batch_review_failed',
   _ => 'invalid_schedule_time',
+};
+
+String? _batchStatusRefusalCode(String message) => switch (message) {
+  'The batch was not saved. Correct or remove every conflict.' =>
+    'batch_apply_conflict',
+  'The batch was not saved. Your staged entries are unchanged.' =>
+    'batch_apply_failed',
+  _ => null,
 };

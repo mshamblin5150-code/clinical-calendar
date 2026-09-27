@@ -353,6 +353,35 @@ void main() {
     expect(controller.selectedDates, hasLength(2));
     expect(controller.clinicalPlacementId, 'placement-active');
     expect(find.textContaining('staged entries are unchanged'), findsOne);
+    expect(
+      find.byKey(const Key('ticket-refusal-batch_apply_failed')),
+      findsOne,
+    );
+  });
+
+  testWidgets('apply-time conflict refusal offers a Ticket with its code', (
+    tester,
+  ) async {
+    final operations = _Operations(refuseApplyWithConflict: true);
+    final controller = _controller(
+      operations: operations,
+      selectedDates: [_date(3)],
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_app(controller));
+
+    await tester.tap(find.byKey(const Key('batch-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('batch-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('batch-apply')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Correct or remove every conflict'), findsOne);
+    expect(
+      find.byKey(const Key('ticket-refusal-batch_apply_conflict')),
+      findsOne,
+    );
   });
 
   testWidgets(
@@ -498,11 +527,13 @@ final class _Operations implements BatchSchedulingOperations {
     Set<LocalDate>? conflictingDates,
     this.conflictingPreceptorId,
     this.failApply = false,
+    this.refuseApplyWithConflict = false,
   }) : conflictingDates = conflictingDates ?? {};
 
   final Set<LocalDate> conflictingDates;
   final String? conflictingPreceptorId;
   final bool failApply;
+  final bool refuseApplyWithConflict;
   int applyCalls = 0;
   int reviewCalls = 0;
   BatchSchedulingDraft? lastAppliedDraft;
@@ -542,6 +573,20 @@ final class _Operations implements BatchSchedulingOperations {
     applyCalls++;
     lastAppliedDraft = draft;
     if (failApply) throw StateError('simulated persistence failure');
+    if (refuseApplyWithConflict) {
+      return BatchSchedulingApplyResult(
+        persistedCount: 0,
+        conflicts: [
+          SchedulingError(
+            violation: ScheduleInvariantViolation.commitmentOverlap,
+            proposedId: 'preview-0',
+            proposedDate: draft.dates.single.date,
+            conflictingId: 'existing-1',
+            conflictDate: draft.dates.single.date,
+          ),
+        ],
+      );
+    }
     return BatchSchedulingApplyResult(
       persistedCount: draft.dates.length,
       conflicts: const [],
