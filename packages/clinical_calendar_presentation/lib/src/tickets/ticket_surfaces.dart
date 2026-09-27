@@ -73,6 +73,12 @@ final class TicketSupportScope extends InheritedWidget {
   static TicketSupportScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<TicketSupportScope>();
 
+  Widget wrap(Widget child) => TicketSupportScope(
+    actions: actions,
+    onOpenRefusal: onOpenRefusal,
+    child: child,
+  );
+
   @override
   bool updateShouldNotify(TicketSupportScope oldWidget) =>
       actions != oldWidget.actions || onOpenRefusal != oldWidget.onOpenRefusal;

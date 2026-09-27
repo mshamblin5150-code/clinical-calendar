@@ -52,9 +52,18 @@ final class SynchronizationConflictResolutionSurface extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverToBoxAdapter(
-                child: Text(
-                  controller.error!,
-                  style: TextStyle(color: context.clinicalColors.urgent),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      controller.error!,
+                      style: TextStyle(color: context.clinicalColors.urgent),
+                    ),
+                    const TicketRefusalOffer(
+                      screen: 'Synchronization conflicts',
+                      refusalCode: 'conflict_resolution_refused',
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -69,12 +78,22 @@ final class SynchronizationConflictResolutionSurface extends StatelessWidget {
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
-                child: Text(
-                  conflictReported
-                      ? 'Synchronization reported a conflict, but its details '
-                            'could not be loaded. Refresh before continuing.'
-                      : 'No Sync Conflicts need attention.',
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      conflictReported
+                          ? 'Synchronization reported a conflict, but its details '
+                                'could not be loaded. Refresh before continuing.'
+                          : 'No Sync Conflicts need attention.',
+                      textAlign: TextAlign.center,
+                    ),
+                    if (conflictReported)
+                      const TicketRefusalOffer(
+                        screen: 'Synchronization conflicts',
+                        refusalCode: 'conflict_details_unavailable',
+                      ),
+                  ],
                 ),
               ),
             )
@@ -125,6 +144,10 @@ final class _ConflictLoadFailure extends StatelessWidget {
             'No records were changed. Retry before editing or moving '
             'affected records to Trash.',
             textAlign: TextAlign.center,
+          ),
+          const TicketRefusalOffer(
+            screen: 'Synchronization conflicts',
+            refusalCode: 'conflict_details_unavailable',
           ),
           const SizedBox(height: 16),
           FilledButton.icon(

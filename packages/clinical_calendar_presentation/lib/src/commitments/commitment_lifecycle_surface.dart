@@ -53,7 +53,7 @@ final class CommitmentLifecycleSurface extends StatelessWidget {
               TicketRefusalOffer(
                 screen: _lifecycleScreen(snapshot),
                 refusalCode: controller.conflicts.isEmpty
-                    ? 'commitment_change_refused'
+                    ? schedulingUseCaseRefusalCode(controller.error!)
                     : schedulingRefusalCode(controller.conflicts.first),
               ),
             ],

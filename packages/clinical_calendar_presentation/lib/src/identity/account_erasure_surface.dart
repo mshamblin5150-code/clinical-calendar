@@ -2,6 +2,7 @@ import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:flutter/material.dart';
 
 import '../date_time_format.dart';
+import '../tickets/ticket_surfaces.dart';
 
 typedef AccountBackupCreator = Future<bool> Function(String passphrase);
 
@@ -38,6 +39,7 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
   var _codeSent = false;
   var _busy = false;
   String? _error;
+  String? _refusalCode;
 
   @override
   void initState() {
@@ -126,6 +128,7 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
       _step = _ErasureStep.reauthenticate;
       _codeSent = false;
       _error = null;
+      _refusalCode = null;
     });
   }
 
@@ -193,12 +196,13 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
     setState(() {
       _busy = true;
       _error = null;
+      _refusalCode = null;
     });
     try {
       await widget.identity.sendSignInCode(widget.email);
       if (mounted) setState(() => _codeSent = true);
     } on IdentityException catch (error) {
-      if (mounted) setState(() => _error = _message(error));
+      _setIdentityRefusal(error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -212,6 +216,7 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
     setState(() {
       _busy = true;
       _error = null;
+      _refusalCode = null;
     });
     try {
       final request = await widget.identity.requestAccountErasure(
@@ -222,7 +227,10 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
       if (!mounted) return;
       if (request.status != AccountErasureRequestStatus.pending ||
           request.purgeAfterUtc == null) {
-        setState(() => _error = 'Account deletion was not requested.');
+        setState(() {
+          _error = 'Account deletion was not requested.';
+          _refusalCode = 'account_erasure_not_pending';
+        });
         return;
       }
       setState(() {
@@ -232,7 +240,7 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
       });
       widget.onErasureRequested?.call(request);
     } on IdentityException catch (error) {
-      if (mounted) setState(() => _error = _message(error));
+      _setIdentityRefusal(error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -242,6 +250,7 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
     setState(() {
       _busy = true;
       _error = null;
+      _refusalCode = null;
     });
     try {
       final status = await widget.identity.cancelAccountErasure(
@@ -258,18 +267,30 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
           });
           widget.onErasureCancelled?.call();
         case AccountErasureCancellationStatus.notPending:
-          setState(() => _error = 'No pending account deletion was found.');
+          setState(() {
+            _error = 'No pending account deletion was found.';
+            _refusalCode = 'account_erasure_not_pending';
+          });
         case AccountErasureCancellationStatus.graceExpired:
-          setState(
-            () => _error =
-                'The 30-day grace period has ended. Deletion can no longer be cancelled.',
-          );
+          setState(() {
+            _error =
+                'The 30-day grace period has ended. Deletion can no longer be cancelled.';
+            _refusalCode = 'account_erasure_grace_expired';
+          });
       }
     } on IdentityException catch (error) {
-      if (mounted) setState(() => _error = _message(error));
+      _setIdentityRefusal(error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _setIdentityRefusal(IdentityException error) {
+    if (!mounted) return;
+    setState(() {
+      _error = _message(error);
+      _refusalCode = error.code;
+    });
   }
 
   @override
@@ -355,6 +376,7 @@ final class _AccountErasureSurfaceState extends State<AccountErasureSurface> {
     busy: _busy,
     codeSent: _codeSent,
     error: _error,
+    refusalCode: _refusalCode,
     title: cancelling ? 'Cancel pending deletion' : 'Confirm account deletion',
     explanation: cancelling
         ? 'Request a fresh code to cancel before the purge date.'
@@ -436,6 +458,7 @@ final class _FreshCodeCard extends StatefulWidget {
     required this.busy,
     required this.codeSent,
     required this.error,
+    required this.refusalCode,
     required this.title,
     required this.explanation,
     required this.sendKey,
@@ -449,6 +472,7 @@ final class _FreshCodeCard extends StatefulWidget {
   final bool busy;
   final bool codeSent;
   final String? error;
+  final String? refusalCode;
   final String title;
   final String explanation;
   final Key sendKey;
@@ -507,6 +531,11 @@ final class _FreshCodeCardState extends State<_FreshCodeCard> {
               key: const Key('account-erasure-error'),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
+            if (widget.refusalCode case final code?)
+              TicketRefusalOffer(
+                screen: 'Delete Account and All Data',
+                refusalCode: code,
+              ),
           ],
         ],
       ),

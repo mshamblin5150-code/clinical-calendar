@@ -1,6 +1,7 @@
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_presentation/src/identity/account_erasure_surface.dart';
 import 'package:clinical_calendar_presentation/src/identity/identity_devices_surface.dart';
+import 'package:clinical_calendar_presentation/src/tickets/ticket_surfaces.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -199,6 +200,25 @@ void main() {
     expect(find.byKey(const Key('begin-account-erasure')), findsNothing);
   });
 
+  testWidgets('invalid fresh code offers a Ticket with the identity code', (
+    tester,
+  ) async {
+    final gateway = _Gateway();
+    await _pump(tester, gateway: gateway);
+
+    await tester.tap(find.byKey(const Key('begin-account-erasure')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('continue-without-account-backup')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('send-erasure-code')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('account-erasure-otp')), '12');
+    await tester.tap(find.byKey(const Key('confirm-account-erasure')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('ticket-refusal-invalid_otp')), findsOneWidget);
+  });
+
   testWidgets('Connected Devices opens the distinct guarded deletion surface', (
     tester,
   ) async {
@@ -237,15 +257,19 @@ Future<void> _pump(
   final identity = _identity(gateway);
   await tester.pumpWidget(
     MaterialApp(
-      home: Scaffold(
-        body: AccountErasureSurface(
-          identity: identity,
-          email: 'student@example.com',
-          createBackup: createBackup,
-          pendingRequest: pendingRequest,
-          onErasureRequested: onRequested,
-          onErasureCancelled: onCancelled,
-          onClose: () {},
+      home: TicketSupportScope(
+        actions: TicketActivityLog(),
+        onOpenRefusal: (_) async {},
+        child: Scaffold(
+          body: AccountErasureSurface(
+            identity: identity,
+            email: 'student@example.com',
+            createBackup: createBackup,
+            pendingRequest: pendingRequest,
+            onErasureRequested: onRequested,
+            onErasureCancelled: onCancelled,
+            onClose: () {},
+          ),
         ),
       ),
     ),

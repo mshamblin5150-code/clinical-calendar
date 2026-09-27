@@ -3,6 +3,7 @@ import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:flutter/material.dart';
 
 import '../date_input.dart';
+import '../tickets/ticket_surfaces.dart';
 import '../variant_f_theme.dart';
 import 'placement_progress_controller.dart';
 import 'placement_specialty_icon.dart';
@@ -143,8 +144,13 @@ final class PlacementManagementSurface extends StatelessWidget {
                 ],
               ),
               const Divider(height: 20),
-              if (controller.error != null)
+              if (controller.error != null) ...[
                 _ErrorBanner(message: controller.error.toString()),
+                const TicketRefusalOffer(
+                  screen: 'Clinical Placement management',
+                  refusalCode: 'placement_change_refused',
+                ),
+              ],
               Expanded(
                 child: wide
                     ? Row(
@@ -180,114 +186,127 @@ final class PlacementManagementSurface extends StatelessWidget {
     String? validation;
     final startController = TextEditingController();
     final deadlineController = TextEditingController();
+    final ticketSupport = TicketSupportScope.maybeOf(context);
     final accepted = await showDialog<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Clinical Placement'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  key: const Key('new-placement-name'),
-                  onChanged: (value) => name = value,
-                  decoration: const InputDecoration(
-                    labelText: 'Placement name',
-                  ),
-                ),
-                TextFormField(
-                  key: const Key('new-placement-target'),
-                  initialValue: target,
-                  onChanged: (value) => target = value,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Target Hours'),
-                ),
-                TextField(
-                  key: const Key('new-placement-start-date'),
-                  controller: startController,
-                  readOnly: true,
-                  onTap: () async {
-                    final selected = await pickUsDate(
-                      context,
-                      initialDate: start,
-                    );
-                    if (selected == null) return;
-                    setDialogState(() {
-                      start = selected;
-                      startController.text = formatUsDate(selected);
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    labelText: 'Start Date',
-                    hintText: 'MM-DD-YYYY',
-                    suffixIcon: Icon(Icons.calendar_today_outlined),
-                  ),
-                ),
-                TextField(
-                  key: const Key('new-placement-deadline'),
-                  controller: deadlineController,
-                  readOnly: true,
-                  onTap: () async {
-                    final selected = await pickUsDate(
-                      context,
-                      initialDate: deadline ?? start,
-                    );
-                    if (selected == null) return;
-                    setDialogState(() {
-                      deadline = selected;
-                      deadlineController.text = formatUsDate(selected);
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    labelText: 'Completion Deadline',
-                    hintText: 'MM-DD-YYYY',
-                    suffixIcon: Icon(Icons.calendar_today_outlined),
-                  ),
-                ),
-                TextField(
-                  onChanged: (value) => preceptor = value,
-                  decoration: const InputDecoration(
-                    labelText: 'Primary Preceptor',
-                  ),
-                ),
-                if (validation != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      validation!,
-                      style: TextStyle(color: context.clinicalColors.urgent),
+      builder: (context) {
+        final dialog = StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Add Clinical Placement'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    key: const Key('new-placement-name'),
+                    onChanged: (value) => name = value,
+                    decoration: const InputDecoration(
+                      labelText: 'Placement name',
                     ),
                   ),
-              ],
+                  TextFormField(
+                    key: const Key('new-placement-target'),
+                    initialValue: target,
+                    onChanged: (value) => target = value,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Target Hours',
+                    ),
+                  ),
+                  TextField(
+                    key: const Key('new-placement-start-date'),
+                    controller: startController,
+                    readOnly: true,
+                    onTap: () async {
+                      final selected = await pickUsDate(
+                        context,
+                        initialDate: start,
+                      );
+                      if (selected == null) return;
+                      setDialogState(() {
+                        start = selected;
+                        startController.text = formatUsDate(selected);
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Start Date',
+                      hintText: 'MM-DD-YYYY',
+                      suffixIcon: Icon(Icons.calendar_today_outlined),
+                    ),
+                  ),
+                  TextField(
+                    key: const Key('new-placement-deadline'),
+                    controller: deadlineController,
+                    readOnly: true,
+                    onTap: () async {
+                      final selected = await pickUsDate(
+                        context,
+                        initialDate: deadline ?? start,
+                      );
+                      if (selected == null) return;
+                      setDialogState(() {
+                        deadline = selected;
+                        deadlineController.text = formatUsDate(selected);
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Completion Deadline',
+                      hintText: 'MM-DD-YYYY',
+                      suffixIcon: Icon(Icons.calendar_today_outlined),
+                    ),
+                  ),
+                  TextField(
+                    onChanged: (value) => preceptor = value,
+                    decoration: const InputDecoration(
+                      labelText: 'Primary Preceptor',
+                    ),
+                  ),
+                  if (validation != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        validation!,
+                        style: TextStyle(color: context.clinicalColors.urgent),
+                      ),
+                    ),
+                    const TicketRefusalOffer(
+                      screen: 'Clinical Placement management',
+                      refusalCode: 'invalid_placement_details',
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              key: const Key('create-placement-action'),
-              onPressed: () {
-                try {
-                  _targetHours(target);
-                  if (start == null ||
-                      deadline == null ||
-                      name.trim().isEmpty ||
-                      preceptor.trim().isEmpty) {
-                    throw const FormatException('Required fields are missing.');
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                key: const Key('create-placement-action'),
+                onPressed: () {
+                  try {
+                    _targetHours(target);
+                    if (start == null ||
+                        deadline == null ||
+                        name.trim().isEmpty ||
+                        preceptor.trim().isEmpty) {
+                      throw const FormatException(
+                        'Required fields are missing.',
+                      );
+                    }
+                    Navigator.pop(context, true);
+                  } on Object catch (error) {
+                    setDialogState(() => validation = error.toString());
                   }
-                  Navigator.pop(context, true);
-                } on Object catch (error) {
-                  setDialogState(() => validation = error.toString());
-                }
-              },
-              child: const Text('Create Placement'),
-            ),
-          ],
-        ),
-      ),
+                },
+                child: const Text('Create Placement'),
+              ),
+            ],
+          ),
+        );
+        return ticketSupport?.wrap(dialog) ?? dialog;
+      },
     );
     startController.dispose();
     deadlineController.dispose();
@@ -551,7 +570,13 @@ final class _PlacementEditorState extends State<_PlacementEditor> {
           'Over-Target Hours, and documented review history.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        if (_validation != null) _ErrorBanner(message: _validation!),
+        if (_validation != null) ...[
+          _ErrorBanner(message: _validation!),
+          const TicketRefusalOffer(
+            screen: 'Clinical Placement management',
+            refusalCode: 'invalid_placement_details',
+          ),
+        ],
         const SizedBox(height: 14),
         if (!completed)
           FilledButton.icon(

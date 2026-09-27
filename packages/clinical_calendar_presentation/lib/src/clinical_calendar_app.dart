@@ -1136,50 +1136,52 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       context: context,
       builder: (dialogContext) {
         final size = MediaQuery.sizeOf(dialogContext);
-        return Dialog(
-          insetPadding: const EdgeInsets.all(12),
-          child: SizedBox(
-            width: size.width < 720 ? size.width - 24 : 620,
-            height: size.height * .9,
-            child: AcademicAssignmentEditor(
-              record: current,
-              catalogEntries: catalogEntries,
-              onClose: () => Navigator.pop(dialogContext),
-              onSave:
-                  ({
-                    required title,
-                    required course,
-                    required courseId,
-                    required dueDate,
-                    required status,
-                  }) async {
-                    if (current == null) {
-                      await _academicAssignmentService.create(
-                        title: title,
-                        courseId: courseId!,
-                        dueDate: dueDate,
-                      );
-                    } else {
-                      await _academicAssignmentService.update(
-                        assignmentId: current.value.id,
-                        expectedRevision: current.revision,
-                        title: title,
-                        courseId: courseId,
-                        dueDate: dueDate,
-                        status: status,
-                      );
-                    }
-                    if (dialogContext.mounted) Navigator.pop(dialogContext);
-                  },
-              onDelete: current == null
-                  ? null
-                  : () async {
-                      await _academicAssignmentService.delete(
-                        assignmentId: current.value.id,
-                        expectedRevision: current.revision,
-                      );
+        return _withTicketSupport(
+          Dialog(
+            insetPadding: const EdgeInsets.all(12),
+            child: SizedBox(
+              width: size.width < 720 ? size.width - 24 : 620,
+              height: size.height * .9,
+              child: AcademicAssignmentEditor(
+                record: current,
+                catalogEntries: catalogEntries,
+                onClose: () => Navigator.pop(dialogContext),
+                onSave:
+                    ({
+                      required title,
+                      required course,
+                      required courseId,
+                      required dueDate,
+                      required status,
+                    }) async {
+                      if (current == null) {
+                        await _academicAssignmentService.create(
+                          title: title,
+                          courseId: courseId!,
+                          dueDate: dueDate,
+                        );
+                      } else {
+                        await _academicAssignmentService.update(
+                          assignmentId: current.value.id,
+                          expectedRevision: current.revision,
+                          title: title,
+                          courseId: courseId,
+                          dueDate: dueDate,
+                          status: status,
+                        );
+                      }
                       if (dialogContext.mounted) Navigator.pop(dialogContext);
                     },
+                onDelete: current == null
+                    ? null
+                    : () async {
+                        await _academicAssignmentService.delete(
+                          assignmentId: current.value.id,
+                          expectedRevision: current.revision,
+                        );
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      },
+              ),
             ),
           ),
         );
@@ -1198,37 +1200,39 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       context: context,
       builder: (dialogContext) {
         final size = MediaQuery.sizeOf(dialogContext);
-        return Dialog(
-          insetPadding: const EdgeInsets.all(12),
-          child: SizedBox(
-            width: size.width < 720 ? size.width - 24 : 620,
-            height: size.height * .9,
-            child: ClassCatalogManager(
-              initialEntries: entries,
-              onClose: () => Navigator.pop(dialogContext),
-              onAdd: (name) async {
-                await _classCatalogService.create(name: name);
-                entries = await reload();
-                return entries;
-              },
-              onRename: (record, name) async {
-                await _classCatalogService.rename(
-                  entryId: record.value.id,
-                  expectedRevision: record.revision,
-                  name: name,
-                );
-                entries = await reload();
-                return entries;
-              },
-              onSetArchived: (record, archived) async {
-                await _classCatalogService.setArchived(
-                  entryId: record.value.id,
-                  expectedRevision: record.revision,
-                  archived: archived,
-                );
-                entries = await reload();
-                return entries;
-              },
+        return _withTicketSupport(
+          Dialog(
+            insetPadding: const EdgeInsets.all(12),
+            child: SizedBox(
+              width: size.width < 720 ? size.width - 24 : 620,
+              height: size.height * .9,
+              child: ClassCatalogManager(
+                initialEntries: entries,
+                onClose: () => Navigator.pop(dialogContext),
+                onAdd: (name) async {
+                  await _classCatalogService.create(name: name);
+                  entries = await reload();
+                  return entries;
+                },
+                onRename: (record, name) async {
+                  await _classCatalogService.rename(
+                    entryId: record.value.id,
+                    expectedRevision: record.revision,
+                    name: name,
+                  );
+                  entries = await reload();
+                  return entries;
+                },
+                onSetArchived: (record, archived) async {
+                  await _classCatalogService.setArchived(
+                    entryId: record.value.id,
+                    expectedRevision: record.revision,
+                    archived: archived,
+                  );
+                  entries = await reload();
+                  return entries;
+                },
+              ),
             ),
           ),
         );

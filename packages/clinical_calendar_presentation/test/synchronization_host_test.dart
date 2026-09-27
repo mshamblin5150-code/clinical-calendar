@@ -192,6 +192,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Reference: invalid_request.'), findsOneWidget);
+    expect(
+      find.byKey(const Key('ticket-refusal-invalid_request')),
+      findsOneWidget,
+    );
 
     synchronization.result = const SynchronizationResult(
       SynchronizationDisposition.deferred,
@@ -234,8 +238,12 @@ Future<void> _pumpSynchronization(
 ) => tester.pumpWidget(
   MaterialApp(
     theme: buildVariantFTheme(),
-    home: Scaffold(
-      body: SynchronizationAttentionSurface(synchronization: synchronization),
+    home: TicketSupportScope(
+      actions: TicketActivityLog(),
+      onOpenRefusal: (_) async {},
+      child: Scaffold(
+        body: SynchronizationAttentionSurface(synchronization: synchronization),
+      ),
     ),
   ),
 );
