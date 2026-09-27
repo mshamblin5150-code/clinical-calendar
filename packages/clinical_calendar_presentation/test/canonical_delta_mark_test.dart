@@ -96,9 +96,11 @@ void main() {
         );
       }
     }
-    expect(identicalAssets, [
-      canonicalDeltaMarkAsset,
-    ], reason: 'a renamed byte-for-byte delta copy is still a duplicate');
+    expect(
+      identicalAssets,
+      [canonicalDeltaMarkAsset],
+      reason: 'a renamed byte-for-byte delta copy is still a duplicate',
+    );
   });
 
   test(
