@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:test/test.dart';
 
@@ -389,4 +391,3 @@ final class _LocalCopy implements LocalDeviceCopyController {
   @override
   Future<void> removeLocalCopy() async => removed = true;
 }
-import 'dart:convert';

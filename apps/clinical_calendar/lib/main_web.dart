@@ -332,7 +332,7 @@ final class _WebIdentityGateState extends State<_WebIdentityGate> {
   }
 
   void _open(IdentitySession session) {
-    _application = buildWebApplication(
+    final application = buildWebApplication(
       session: session,
       identity: widget.identity,
       secureStorage: widget.secureStorage,
@@ -348,6 +348,12 @@ final class _WebIdentityGateState extends State<_WebIdentityGate> {
       onLocalCopyControllerReady: widget.localCopy.attach,
       onLocalCopyRemoved: _signedOut,
     );
+    // The build can fail before FutureBuilder subscribes (for example when
+    // the browser is offline during its mandatory initial download). Attach
+    // an error observer immediately while leaving the original future intact
+    // for FutureBuilder to render the startup failure surface.
+    unawaited(application.then<void>((_) {}, onError: (_, _) {}));
+    _application = application;
   }
 
   Future<void> _signedOut() async {

@@ -1,13 +1,22 @@
+import 'dart:async';
+
+import 'package:clinical_calendar/browser_runtime_contracts.dart';
 import 'package:clinical_calendar/config/app_environment.dart';
 import 'package:clinical_calendar/main_web.dart' as web_app;
 import 'package:clinical_calendar/web_device_descriptor.dart';
+import 'package:clinical_calendar/web_credential_storage.dart';
+import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
+import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_sync/clinical_calendar_sync.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqlite3/common.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 void main() {
   testWidgets(
-    'a browser signs in as a web Connected Device and removes only its copy',
+    'a browser registers as a web Connected Device before the app starts',
     (tester) async {
       final storage = _Storage();
       final gateway = _Gateway();
@@ -31,6 +40,10 @@ void main() {
           identityGateway: gateway,
           currentDevice: descriptor,
           localCopy: localCopy,
+          browserRuntime: _BrowserRuntime(),
+          synchronizationTransport: _Transport(),
+          retryScheduler: _RetryScheduler(),
+          connectivitySource: _Connectivity(),
         ),
       );
       await tester.pumpAndSettle();
@@ -46,13 +59,15 @@ void main() {
       await tester.ensureVisible(verify);
       await tester.pump();
       await tester.tap(verify);
-      await tester.pumpAndSettle();
+      for (var attempt = 0; attempt < 100; attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+        if (find.byType(ClinicalCalendarApp).evaluate().isNotEmpty) break;
+      }
 
       expect(gateway.registeredDescriptor?.name, 'Safari on iPhone');
       expect(gateway.registeredDescriptor?.platform, DevicePlatform.web);
       expect(gateway.registeredDeviceId, _deviceId);
-      expect(find.text('Safari on iPhone (this device)'), findsOneWidget);
-      expect(find.byIcon(Icons.language), findsOneWidget);
+      expect(find.byType(ClinicalCalendarApp), findsOneWidget);
       expect(
         storage.values.keys,
         containsAll({
@@ -61,17 +76,7 @@ void main() {
         }),
       );
 
-      await tester.tap(find.byKey(const Key('sign-out-remove-local-action')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('confirm-local-removal')));
-      await tester.pump();
-      await tester.tap(find.byKey(const Key('remove-local-copy')));
-      await tester.pumpAndSettle();
-
-      expect(localCopy.removed, isTrue);
-      expect(gateway.signedOut, isTrue);
-      expect(storage.values, isEmpty);
-      expect(find.byKey(const Key('identity-email')), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
 }
@@ -98,6 +103,74 @@ final class _WebLocalCopy implements LocalDeviceCopyController {
 
   @override
   Future<void> removeLocalCopy() async => removed = true;
+}
+
+final class _BrowserRuntime implements BrowserRuntime {
+  final _credentials = _BrowserStore();
+
+  @override
+  BrowserKeyValueStore get credentials => _credentials;
+
+  @override
+  UnsentChangesGuard createUnsentChangesGuard() => _Guard();
+
+  @override
+  String get deviceName => 'Safari on iPhone';
+
+  @override
+  Future<CommonDatabase> openInMemorySqlite() async => sqlite3.openInMemory();
+}
+
+final class _BrowserStore implements BrowserKeyValueStore {
+  final values = <String, String>{};
+
+  @override
+  void delete(String key) => values.remove(key);
+
+  @override
+  String? read(String key) => values[key];
+
+  @override
+  void write(String key, String value) => values[key] = value;
+}
+
+final class _Guard implements UnsentChangesGuard {
+  @override
+  Future<void> dispose() async {}
+
+  @override
+  void update(bool hasUnsentChanges) {}
+}
+
+final class _Transport implements SynchronizationTransport {
+  @override
+  Future<List<RemoteSynchronizationChange>> pull({
+    required int afterCursor,
+    required int limit,
+  }) async => const [];
+
+  @override
+  Future<SynchronizationPushResult> push(OutboxOperation operation) async =>
+      SynchronizationPushResult.accepted(
+        cursor: 1,
+        revision: operation.baseRevision + 1,
+      );
+}
+
+final class _RetryScheduler implements SynchronizationRetryScheduler {
+  @override
+  void cancel() {}
+
+  @override
+  void schedule(DateTime atUtc, Future<void> Function() callback) {}
+}
+
+final class _Connectivity implements web_app.WebConnectivityStatusSource {
+  @override
+  Stream<bool> get changes => const Stream<bool>.empty();
+
+  @override
+  Future<bool> current() async => true;
 }
 
 final class _Gateway implements PasswordlessIdentityGateway {

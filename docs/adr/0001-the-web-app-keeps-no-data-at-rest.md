@@ -16,5 +16,5 @@ The web app hosted on GitHub Pages is a full client, and it is the Student's iPh
 
 - Web requires sign-in. On native, a device can still be a standalone local copy with no account.
 - Offline edits live only in the in-memory outbox. The web app shows a "Not yet synced" banner, retries in the background, and asks before the tab closes while changes are unsent. If the tab closes offline, those changes are lost.
-- The one thing web keeps at rest is the sign-in session (refresh token), so the Student is not asked for a code on every open. This is the web section's documented exception in `docs/release-security-checklist.md`. It is bounded by revocation: every browser is its own Connected Device, and a web Connected Device is revoked automatically after 90 days without a sync.
+- Web keeps exactly two identity values at rest: the refresh token, so the Student is not asked for a code on every open, and the opaque device ID that binds that browser to its Connected Device record. Access tokens and every calendar, outbox, and synchronization value remain memory-only. This exception is bounded by revocation: every browser is its own Connected Device, and a web Connected Device is revoked automatically after 90 days without a sync.
 - Backups are not created or restored from web. Exports are browser downloads behind the same gates as native.

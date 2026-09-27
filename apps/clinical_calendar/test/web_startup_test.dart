@@ -94,9 +94,7 @@ void main() {
     );
     expect(
       jsonDecode(
-        browser
-            ._store
-            .values[PasswordlessIdentityService.sessionStorageKey]!,
+        browser._store.values[PasswordlessIdentityService.sessionStorageKey]!,
       ),
       {'refresh_token': 'refresh'},
     );
@@ -402,8 +400,7 @@ final class _IdentityGateway implements PasswordlessIdentityGateway {
   Future<bool> markCurrentDeviceSynchronized(String accessToken) async => true;
 
   @override
-  Future<IdentitySession> refreshSession(String refreshToken) async =>
-      _session;
+  Future<IdentitySession> refreshSession(String refreshToken) async => _session;
 
   @override
   Future<bool> registerCurrentDevice({

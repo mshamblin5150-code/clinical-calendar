@@ -115,7 +115,7 @@ final class PasswordlessIdentityService {
       if (refreshToken is! String || refreshToken.isEmpty) {
         throw const FormatException();
       }
-      return _refreshOnce(refreshToken);
+      return await _refreshOnce(refreshToken);
     } on FormatException {
       await _secureStorage.delete(sessionStorageKey);
       return null;

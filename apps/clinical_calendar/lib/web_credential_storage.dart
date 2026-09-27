@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
-import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 
 abstract interface class BrowserKeyValueStore {
   String? read(String key);
