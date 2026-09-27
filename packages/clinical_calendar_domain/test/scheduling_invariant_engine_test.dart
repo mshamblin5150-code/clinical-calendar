@@ -248,6 +248,32 @@ void main() {
       );
     });
 
+    test('refuses selecting a Protected Day occupied by an imported shift', () {
+      final result = engine.validateBatch(
+        existing: SchedulingState(
+          workShifts: [
+            WorkShift.imported(
+              id: 'imported-1',
+              plannedInterval: _interval(LocalDate(2026, 8, 3), '0800', '1200'),
+              workScheduleFeedId: 'feed-1',
+              workScheduleFeedName: 'ER Schedule',
+            ),
+          ],
+        ),
+        batch: SchedulingBatch(
+          protectedDays: [
+            ProtectedDay(id: 'protected-1', date: LocalDate(2026, 8, 3)),
+          ],
+        ),
+      );
+
+      expect(result.canCommit, isFalse);
+      expect(
+        result.errors.single.violation,
+        ScheduleInvariantViolation.commitmentTouchesProtectedDay,
+      );
+    });
+
     test('overnight activity touching the next date is rejected', () {
       final result = engine.validateBatch(
         existing: SchedulingState(

@@ -787,9 +787,14 @@ final Map<int, List<String>> _statements = {
   19: [
     '''ALTER TABLE commitments
       ADD COLUMN work_schedule_feed_id TEXT
-      CHECK (work_schedule_feed_id IS NULL OR length(trim(work_schedule_feed_id)) BETWEEN 1 AND 128)''',
+      CHECK (work_schedule_feed_id IS NULL OR
+             (commitment_type = 'work_shift' AND
+              length(trim(work_schedule_feed_id)) BETWEEN 1 AND 128))''',
     '''ALTER TABLE commitments
       ADD COLUMN work_schedule_feed_name TEXT
-      CHECK (work_schedule_feed_name IS NULL OR length(trim(work_schedule_feed_name)) BETWEEN 1 AND 128)''',
+      CHECK ((work_schedule_feed_id IS NULL AND work_schedule_feed_name IS NULL) OR
+             (work_schedule_feed_id IS NOT NULL AND
+              commitment_type = 'work_shift' AND
+              length(trim(work_schedule_feed_name)) BETWEEN 1 AND 128))''',
   ],
 };

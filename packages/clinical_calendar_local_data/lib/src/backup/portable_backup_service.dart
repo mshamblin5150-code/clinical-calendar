@@ -263,7 +263,7 @@ final class PortableBackupService {
     }
 
     try {
-      return database.transaction(() {
+      final result = database.transaction(() {
         final current = _readCurrentTables();
         final merged = {
           for (final table in _logicalTables)
@@ -345,6 +345,7 @@ final class PortableBackupService {
           unchanged: unchanged,
         );
       });
+      return result;
     } on PortableBackupException {
       rethrow;
     } on Object catch (error) {
