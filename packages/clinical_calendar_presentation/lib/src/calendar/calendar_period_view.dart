@@ -327,11 +327,7 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
     );
   }
 
-  void _activateDate(
-    LocalDate date,
-    List<CalendarEntry> entries, {
-    CalendarEntry? preferredEntry,
-  }) {
+  void _activateDate(LocalDate date, {CalendarEntry? preferredEntry}) {
     if (preferredEntry != null) {
       widget.onOpenItem?.call(
         CalendarItemReference(
@@ -607,11 +603,7 @@ final class _InstrumentLegendItem extends StatelessWidget {
 }
 
 typedef _ActivateDate =
-    void Function(
-      LocalDate date,
-      List<CalendarEntry> entries, {
-      CalendarEntry? preferredEntry,
-    });
+    void Function(LocalDate date, {CalendarEntry? preferredEntry});
 
 final class _CalendarToolbar extends StatelessWidget {
   const _CalendarToolbar({
@@ -1437,7 +1429,7 @@ final class _MonthDayCell extends StatelessWidget {
       button: true,
       selected: selected,
       label: _dateSemanticLabel(date, today: today, selected: selected),
-      onTap: () => onActivate(date, entries),
+      onTap: () => onActivate(date),
       child: CustomPaint(
         painter: _DayCellPainter(
           colors: context.clinicalColors,
@@ -1473,7 +1465,7 @@ final class _MonthDayCell extends StatelessWidget {
         ),
         child: InkWell(
           excludeFromSemantics: true,
-          onTap: () => onActivate(date, entries),
+          onTap: () => onActivate(date),
           child: Padding(
             padding: dense && tightDenseSpacing
                 ? const EdgeInsets.symmetric(horizontal: 5, vertical: 2)
@@ -1501,7 +1493,13 @@ final class _MonthDayCell extends StatelessWidget {
                   Expanded(
                     child: Align(
                       alignment: Alignment.bottomLeft,
-                      child: _CompactMarkers(entries: entries),
+                      child: _CompactMarkers(
+                        entries: entries,
+                        date: date,
+                        twelveHourTime: twelveHourTime,
+                        onOpen: (entry) =>
+                            onActivate(date, preferredEntry: entry),
+                      ),
                     ),
                   )
                 else if (compact ||
@@ -1512,15 +1510,19 @@ final class _MonthDayCell extends StatelessWidget {
                                 ?.denseMarkerStyle ==
                             CalendarDenseMarkerStyle.chip &&
                         enlargedText))
-                  _CompactMarkers(entries: entries)
+                  _CompactMarkers(
+                    entries: entries,
+                    date: date,
+                    twelveHourTime: twelveHourTime,
+                    onOpen: (entry) => onActivate(date, preferredEntry: entry),
+                  )
                 else if (dense &&
                     CalendarPeriodViewportPolicy.usesDenseMonthCards(context))
                   for (final entry in entries.take(1))
                     _DenseMonthEventCard(
                       entry: entry,
                       date: date,
-                      onTap: () =>
-                          onActivate(date, entries, preferredEntry: entry),
+                      onTap: () => onActivate(date, preferredEntry: entry),
                     )
                 else if (dense)
                   _DenseMonthMarker(
@@ -1538,11 +1540,8 @@ final class _MonthDayCell extends StatelessWidget {
                               entry: entry,
                               date: date,
                               twelveHourTime: twelveHourTime,
-                              onTap: () => onActivate(
-                                date,
-                                entries,
-                                preferredEntry: entry,
-                              ),
+                              onTap: () =>
+                                  onActivate(date, preferredEntry: entry),
                             ),
                           if (entries.length > 1)
                             Text(
@@ -2140,9 +2139,17 @@ final class _DayNumber extends StatelessWidget {
 }
 
 final class _CompactMarkers extends StatelessWidget {
-  const _CompactMarkers({required this.entries});
+  const _CompactMarkers({
+    required this.entries,
+    required this.date,
+    required this.twelveHourTime,
+    required this.onOpen,
+  });
 
   final List<CalendarEntry> entries;
+  final LocalDate date;
+  final bool twelveHourTime;
+  final ValueChanged<CalendarEntry> onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -2152,25 +2159,39 @@ final class _CompactMarkers extends StatelessWidget {
       runSpacing: 3,
       children: [
         for (final entry in entries.take(6))
-          if (usesAdditiveMarks)
-            ThemeSemanticMarkIcon(
-              key: Key('compact-${entry.kind.name}-${entry.id}'),
-              role: _entryRole(entry.kind),
-              size: 11,
-              color: _entryAccent(context, entry),
-            )
-          else
-            Container(
-              key: Key('compact-${entry.kind.name}-${entry.id}'),
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: _entryAccent(context, entry),
-                shape: entry.kind == CalendarEntryKind.protectedDay
-                    ? BoxShape.rectangle
-                    : BoxShape.circle,
-              ),
+          Semantics(
+            button: true,
+            label: _entrySemanticLabel(
+              entry,
+              date: date,
+              twelveHourTime: twelveHourTime,
             ),
+            onTap: () => onOpen(entry),
+            excludeSemantics: true,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              excludeFromSemantics: true,
+              onTap: () => onOpen(entry),
+              child: usesAdditiveMarks
+                  ? ThemeSemanticMarkIcon(
+                      key: Key('compact-${entry.kind.name}-${entry.id}'),
+                      role: _entryRole(entry.kind),
+                      size: 11,
+                      color: _entryAccent(context, entry),
+                    )
+                  : Container(
+                      key: Key('compact-${entry.kind.name}-${entry.id}'),
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: _entryAccent(context, entry),
+                        shape: entry.kind == CalendarEntryKind.protectedDay
+                            ? BoxShape.rectangle
+                            : BoxShape.circle,
+                      ),
+                    ),
+            ),
+          ),
       ],
     );
   }
@@ -2325,7 +2346,7 @@ final class _WeekDay extends StatelessWidget {
     button: true,
     selected: selected,
     label: _dateSemanticLabel(date, today: today, selected: selected),
-    onTap: () => onActivate(date, entries),
+    onTap: () => onActivate(date),
     child: Container(
       margin: const EdgeInsets.all(3),
       constraints: const BoxConstraints(minHeight: 120),
@@ -2348,7 +2369,7 @@ final class _WeekDay extends StatelessWidget {
       ),
       child: InkWell(
         excludeFromSemantics: true,
-        onTap: () => onActivate(date, entries),
+        onTap: () => onActivate(date),
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Column(
@@ -2385,7 +2406,7 @@ final class _WeekDay extends StatelessWidget {
                   entry: entry,
                   date: date,
                   twelveHourTime: twelveHourTime,
-                  onTap: () => onActivate(date, entries, preferredEntry: entry),
+                  onTap: () => onActivate(date, preferredEntry: entry),
                 ),
             ],
           ),
@@ -2443,13 +2464,9 @@ final class _AgendaView extends StatelessWidget {
                     selected: selectedDates.contains(row.date),
                     compact: compact,
                     twelveHourTime: twelveHourTime,
-                    onSelect: () =>
-                        onActivate(row.date, snapshot.entriesOn(row.date)),
-                    onOpen: () => onActivate(
-                      row.date,
-                      snapshot.entriesOn(row.date),
-                      preferredEntry: row.entry,
-                    ),
+                    onSelect: () => onActivate(row.date),
+                    onOpen: () =>
+                        onActivate(row.date, preferredEntry: row.entry),
                   ),
               ],
             ),
@@ -2479,80 +2496,87 @@ final class _AgendaRow extends StatelessWidget {
   final VoidCallback onOpen;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: _AgendaBackgroundPainter(
-      colors: context.clinicalColors,
-      visuals: Theme.of(
-        context,
-      ).extension<ClinicalCalendarPresentationPolicy>(),
-      kind: entry.kind,
-    ),
-    child: Container(
-      key: Key('agenda-row-${entry.kind.name}-${entry.id}-$date'),
-      constraints: const BoxConstraints(minHeight: 58),
-      decoration: _agendaDecoration(context, entry, selected: selected),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      child: compact
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _AgendaDateAndTime(
-                  date: date,
-                  entry: entry,
-                  today: today,
-                  selected: selected,
-                  twelveHourTime: twelveHourTime,
-                  onSelect: onSelect,
-                  onOpen: onOpen,
-                ),
-                const SizedBox(height: 4),
-                _AgendaEntryTarget(
-                  date: date,
-                  entry: entry,
-                  twelveHourTime: twelveHourTime,
-                  onOpen: onOpen,
-                  child: _AgendaAssignment(entry: entry),
-                ),
-              ],
-            )
-          : Row(
-              children: [
-                SizedBox(
-                  width: 130,
-                  child: _AgendaDateTarget(
-                    date: date,
-                    today: today,
-                    selected: selected,
-                    onSelect: onSelect,
-                    child: Text(
-                      '${_weekdayName(date.asUtcCalendarDate.weekday)}, '
-                      '${_monthAbbreviation(date.month)} ${date.day}',
+  Widget build(BuildContext context) => Semantics(
+    key: Key('agenda-day-$date'),
+    container: true,
+    explicitChildNodes: true,
+    button: true,
+    selected: selected,
+    label: _dateSemanticLabel(date, today: today, selected: selected),
+    onTap: onSelect,
+    child: CustomPaint(
+      painter: _AgendaBackgroundPainter(
+        colors: context.clinicalColors,
+        visuals: Theme.of(
+          context,
+        ).extension<ClinicalCalendarPresentationPolicy>(),
+        kind: entry.kind,
+      ),
+      child: InkWell(
+        excludeFromSemantics: true,
+        onTap: onSelect,
+        child: Container(
+          key: Key('agenda-row-${entry.kind.name}-${entry.id}-$date'),
+          constraints: const BoxConstraints(minHeight: 58),
+          decoration: _agendaDecoration(context, entry, selected: selected),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _AgendaDateAndTime(
+                      date: date,
+                      entry: entry,
+                      today: today,
+                      twelveHourTime: twelveHourTime,
+                      onOpen: onOpen,
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: _AgendaEntryTarget(
-                    date: date,
-                    entry: entry,
-                    twelveHourTime: twelveHourTime,
-                    onOpen: onOpen,
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 150,
-                          child: Text(
-                            entry.isContinuationOn(date)
-                                ? 'Continues from prior day'
-                                : entry.timeLabel(twelveHour: twelveHourTime),
-                          ),
+                    const SizedBox(height: 4),
+                    _AgendaEntryTarget(
+                      date: date,
+                      entry: entry,
+                      twelveHourTime: twelveHourTime,
+                      onOpen: onOpen,
+                      child: _AgendaAssignment(entry: entry),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    SizedBox(
+                      width: 130,
+                      child: Text(
+                        '${_weekdayName(date.asUtcCalendarDate.weekday)}, '
+                        '${_monthAbbreviation(date.month)} ${date.day}',
+                      ),
+                    ),
+                    Expanded(
+                      child: _AgendaEntryTarget(
+                        date: date,
+                        entry: entry,
+                        twelveHourTime: twelveHourTime,
+                        onOpen: onOpen,
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 150,
+                              child: Text(
+                                entry.isContinuationOn(date)
+                                    ? 'Continues from prior day'
+                                    : entry.timeLabel(
+                                        twelveHour: twelveHourTime,
+                                      ),
+                              ),
+                            ),
+                            Expanded(child: _AgendaAssignment(entry: entry)),
+                          ],
                         ),
-                        Expanded(child: _AgendaAssignment(entry: entry)),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+        ),
+      ),
     ),
   );
 }
@@ -2562,33 +2586,23 @@ final class _AgendaDateAndTime extends StatelessWidget {
     required this.date,
     required this.entry,
     required this.today,
-    required this.selected,
     required this.twelveHourTime,
-    required this.onSelect,
     required this.onOpen,
   });
 
   final LocalDate date;
   final CalendarEntry entry;
   final bool today;
-  final bool selected;
   final bool twelveHourTime;
-  final VoidCallback onSelect;
   final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) => Row(
     children: [
       Expanded(
-        child: _AgendaDateTarget(
-          date: date,
-          today: today,
-          selected: selected,
-          onSelect: onSelect,
-          child: Text(
-            '${_weekdayName(date.asUtcCalendarDate.weekday)}, '
-            '${_monthAbbreviation(date.month)} ${date.day}${today ? ' · Today' : ''}',
-          ),
+        child: Text(
+          '${_weekdayName(date.asUtcCalendarDate.weekday)}, '
+          '${_monthAbbreviation(date.month)} ${date.day}${today ? ' · Today' : ''}',
         ),
       ),
       const SizedBox(width: 8),
@@ -2605,33 +2619,6 @@ final class _AgendaDateAndTime extends StatelessWidget {
         ),
       ),
     ],
-  );
-}
-
-final class _AgendaDateTarget extends StatelessWidget {
-  const _AgendaDateTarget({
-    required this.date,
-    required this.today,
-    required this.selected,
-    required this.onSelect,
-    required this.child,
-  });
-
-  final LocalDate date;
-  final bool today;
-  final bool selected;
-  final VoidCallback onSelect;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    key: Key('agenda-day-$date'),
-    button: true,
-    selected: selected,
-    label: _dateSemanticLabel(date, today: today, selected: selected),
-    onTap: onSelect,
-    excludeSemantics: true,
-    child: InkWell(excludeFromSemantics: true, onTap: onSelect, child: child),
   );
 }
 

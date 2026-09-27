@@ -354,6 +354,54 @@ void main() {
   );
 
   testWidgets(
+    'compact Month keeps a full day target and opens its Clinical Session marker',
+    (tester) async {
+      final date = LocalDate(2026, 8, 6);
+      final selections = <Set<LocalDate>>[];
+      final opened = <CalendarItemReference>[];
+      await _pumpCalendar(
+        tester,
+        source: _MemoryCalendarDataSource(
+          CalendarSnapshot([
+            CalendarEntry(
+              id: 'clinical-06',
+              kind: CalendarEntryKind.clinicalSession,
+              startDate: date,
+              endDate: date,
+              startTime: LocalTime(9, 0),
+              endTime: LocalTime(17, 0),
+              title: 'Clinical Session',
+              assignment: 'Family Medicine · Jordan Lee',
+              statusLabel: 'Scheduled',
+            ),
+          ]),
+        ),
+        surfaceSize: const Size(390, 844),
+        initialAnchor: date,
+        onSelectionChanged: selections.add,
+        onOpenItem: opened.add,
+      );
+
+      final day = find.byKey(const Key('calendar-day-2026-08-06'));
+      expect(tester.getSize(day).width, greaterThanOrEqualTo(44));
+      expect(tester.getSize(day).height, greaterThanOrEqualTo(44));
+      await tester.tapAt(tester.getTopLeft(day) + const Offset(16, 16));
+      await tester.pump();
+
+      expect(selections.single, {date});
+      expect(opened, isEmpty);
+
+      await tester.tap(
+        find.byKey(const Key('compact-clinicalSession-clinical-06')),
+      );
+      await tester.pump();
+
+      expect(opened.single.kind, CalendarEntryKind.clinicalSession);
+      expect(opened.single.id, 'clinical-06');
+    },
+  );
+
+  testWidgets(
     'occupied Week days select from the date target and open Work Shift or Clinical Session entries',
     (tester) async {
       final cases = [
@@ -465,7 +513,9 @@ void main() {
             'agenda-row-${testCase.entry.kind.name}-${testCase.entry.id}-${testCase.date}',
           ),
         );
-        await tester.tapAt(tester.getTopLeft(row) + const Offset(48, 20));
+        final dayTarget = find.byKey(Key('agenda-day-${testCase.date}'));
+        expect(tester.getSize(dayTarget).height, greaterThanOrEqualTo(58));
+        await tester.tapAt(tester.getTopLeft(row) + const Offset(4, 4));
         await tester.pump();
 
         expect(selections.single, {testCase.date});
