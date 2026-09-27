@@ -57,6 +57,67 @@ void main() {
     expect(opened.status, TicketStatus.seen);
   });
 
+  test('close and reopen use the authenticated Ticket outcome RPCs', () async {
+    final requests = <http.Request>[];
+    final gateway = _gateway(
+      MockClient((request) async {
+        requests.add(request);
+        return http.Response(
+          jsonEncode(
+            _row(requests.length == 1 ? 'done' : 'seen', closed: true),
+          ),
+          200,
+        );
+      }),
+    );
+
+    final closed = await gateway.close(
+      _ticketId,
+      outcome: TicketStatus.done,
+      reason: 'The fix is live on the web app.',
+    );
+    final reopened = await gateway.reopen(
+      _ticketId,
+      note: 'The same failure happened again.',
+    );
+
+    expect(requests[0].url.path, '/rest/v1/rpc/close_ticket');
+    expect(jsonDecode(requests[0].body), {
+      'p_ticket_id': _ticketId,
+      'p_outcome': 'done',
+      'p_reason': 'The fix is live on the web app.',
+    });
+    expect(closed.status, TicketStatus.done);
+    expect(closed.closeReason, 'The fix is live on the web app.');
+    expect(requests[1].url.path, '/rest/v1/rpc/reopen_ticket');
+    expect(jsonDecode(requests[1].body), {
+      'p_ticket_id': _ticketId,
+      'p_note': 'The same failure happened again.',
+    });
+    expect(reopened.status, TicketStatus.seen);
+    expect(reopened.reopenNote, 'The same failure happened again.');
+  });
+
+  test('sender open uses the server reopening deadline verdict', () async {
+    late http.Request captured;
+    final gateway = _gateway(
+      MockClient((request) async {
+        captured = request;
+        return http.Response(
+          jsonEncode(_row('done', closed: true, canReopen: true)),
+          200,
+        );
+      }),
+    );
+
+    final ticket = await gateway.openForSender(_ticketId);
+
+    expect(captured.url.path, '/rest/v1/rpc/open_ticket_for_sender');
+    expect(jsonDecode(captured.body), {'p_ticket_id': _ticketId});
+    expect(ticket.canReopen, isTrue);
+    expect(ticket.reopenUntilUtc, DateTime.utc(2026, 10, 11, 14, 32));
+  });
+
   test(
     'stable rate-limit refusal is preserved without response text',
     () async {
@@ -97,7 +158,11 @@ final _context = TicketContext(
   capturedAtUtc: DateTime.utc(2026, 9, 27, 14, 30),
 );
 
-Map<String, Object?> _row(String status) => {
+Map<String, Object?> _row(
+  String status, {
+  bool closed = false,
+  bool canReopen = false,
+}) => {
   'id': _ticketId,
   'sender_id': '00000000-0000-4000-8000-000000000252',
   'kind': 'problem',
@@ -110,6 +175,14 @@ Map<String, Object?> _row(String status) => {
   'context_captured_at': '2026-09-27T14:30:00.000Z',
   'created_at': '2026-09-27T14:30:01.000Z',
   'seen_at': status == 'seen' ? '2026-09-27T14:31:00.000Z' : null,
+  'close_reason': closed ? 'The fix is live on the web app.' : null,
+  'closed_at': closed ? '2026-09-27T14:32:00.000Z' : null,
+  'reopened_at': status == 'seen' && closed ? '2026-09-27T14:33:00.000Z' : null,
+  'reopen_note': status == 'seen' && closed
+      ? 'The same failure happened again.'
+      : null,
+  'can_reopen': canReopen,
+  'reopen_until': closed ? '2026-10-11T14:32:00.000Z' : null,
 };
 
 SupabaseTicketGateway _gateway(http.Client client) => SupabaseTicketGateway(
