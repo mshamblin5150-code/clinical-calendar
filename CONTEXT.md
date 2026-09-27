@@ -1,11 +1,11 @@
 # Clinical Calendar
 
-This context describes a personal clinical-training calendar that helps one student schedule work and clinical activity while tracking required placement hours.
+This context describes a personal clinical-training calendar that helps a student schedule work and clinical activity while tracking required placement hours.
 
 ## Language
 
 **Student**:
-The sole person who uses the application and owns all data they enter. Preceptors, schools, and coordinators do not operate the MVP.
+The person who owns one account and every piece of data entered under it. Many Students may use the same hosted application, but each sees and edits only their own calendar; nothing is shared between Students. Preceptors, schools, and coordinators do not operate the application.
 _Avoid_: User, learner
 
 **Academic Assignment**:
@@ -81,12 +81,20 @@ An aggregate record of Clinical Placement hours completed before the Student beg
 _Avoid_: Imported session, manual adjustment
 
 **Protected Day**:
-One day selected independently for each calendar week and reserved for the Student's rest and preparation. It may remain temporarily unselected while a month is being planned, but a completed monthly plan requires one for every week; Work and clinical activity cannot touch it.
+One day selected independently for each calendar week and reserved for the Student's rest and preparation. It may remain temporarily unselected while a month is being planned, but a completed monthly plan requires one for every week. The Student cannot place Work Shifts or clinical activity on it; an Imported Work Shift that lands on it is a flagged Schedule Conflict.
 _Avoid_: Preferred day off, availability
 
 **Work Shift**:
-A time-zone-specific military-time calendar commitment representing the Student's employment schedule.
+A time-zone-specific military-time calendar commitment representing the Student's employment schedule. The Student either enters it by hand or receives it as an Imported Work Shift.
 _Avoid_: Work session, job event
+
+**Work Schedule Feed**:
+An optional private calendar subscription the Student connects so that an employer's scheduling system supplies their Work Shifts. Every event it publishes is treated as work; personal calendars are not Work Schedule Feeds.
+_Avoid_: Calendar sync, integration, import
+
+**Imported Work Shift**:
+A Work Shift that mirrors an event in a Work Schedule Feed. The feed is its only owner: it is read-only to the Student and, until it starts, changes or disappears when the feed does. Once it has started it is frozen as history, even if the feed later stops listing it.
+_Avoid_: Synced shift, copied shift
 
 **Clinical Session**:
 A time-zone-specific military-time calendar commitment assigned to one Clinical Placement and one Preceptor.
@@ -108,6 +116,18 @@ _Avoid_: Deleted session
 A Clinical Session the Student did not attend and that is retained in history without contributing hours.
 _Avoid_: Cancelled session
 
+**Connected Device**:
+One signed-in installation of the application registered to synchronize the Student's data: a Windows, iPhone, or Android app, or a single web browser. The Student can revoke it, after which it can no longer synchronize.
+_Avoid_: Session, login, client
+
+**Ticket**:
+What a Student puts in to tell the Maintainer something about the application: that something's wrong, an idea, or a question. It stays private between the sender and the Maintainer; publishing anything about it to the public issue tracker is a separate, deliberate act that never quotes it. The sender can follow it from sent, to seen, to done or won't do, and is told why when it closes.
+_Avoid_: Report (in clinical settings, report is the patient handover), feedback, bug, issue
+
+**Maintainer**:
+The person who builds the application and reads Tickets. Being the Maintainer is a grant on their own Student account, not a second account, and it gives no access to any Student's calendar data.
+_Avoid_: Admin, support, developer
+
 **Schedule Conflict**:
-An overlap between calendar commitments. The calendar prohibits conflicts and also prohibits commitments on a Protected Day.
+An overlap between calendar commitments, or a commitment on a Protected Day. The Student can never create one. An Imported Work Shift can reveal one, because the employer's schedule is a fact; the conflict then stays flagged until the Student resolves it.
 _Avoid_: Warning, double booking
