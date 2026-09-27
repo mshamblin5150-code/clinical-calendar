@@ -1360,6 +1360,8 @@ const _commitmentColumns = <String>[
   'lifecycle_state',
   'placement_id',
   'preceptor_id',
+  'work_schedule_feed_id',
+  'work_schedule_feed_name',
   'planned_start_date',
   'planned_end_date',
   'planned_start_minutes',

@@ -25,11 +25,13 @@ final class CalendarPeriodSnapshot {
     required Iterable<StoredDomainRecord<WorkShift>> workShifts,
     required Iterable<StoredDomainRecord<ClinicalSession>> clinicalSessions,
     required Iterable<StoredDomainRecord<ProtectedDay>> protectedDays,
+    required Iterable<ScheduleConflict> flaggedConflicts,
     required Map<String, CalendarClinicalAssignment>
     clinicalAssignmentsBySessionId,
   }) : workShifts = List.unmodifiable(workShifts),
        clinicalSessions = List.unmodifiable(clinicalSessions),
        protectedDays = List.unmodifiable(protectedDays),
+       flaggedConflicts = List.unmodifiable(flaggedConflicts),
        clinicalAssignmentsBySessionId = Map.unmodifiable(
          clinicalAssignmentsBySessionId,
        ) {
@@ -45,5 +47,6 @@ final class CalendarPeriodSnapshot {
   final List<StoredDomainRecord<WorkShift>> workShifts;
   final List<StoredDomainRecord<ClinicalSession>> clinicalSessions;
   final List<StoredDomainRecord<ProtectedDay>> protectedDays;
+  final List<ScheduleConflict> flaggedConflicts;
   final Map<String, CalendarClinicalAssignment> clinicalAssignmentsBySessionId;
 }

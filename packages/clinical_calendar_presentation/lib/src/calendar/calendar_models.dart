@@ -58,13 +58,46 @@ final class CalendarEntry {
 
 @immutable
 final class CalendarSnapshot {
-  CalendarSnapshot(Iterable<CalendarEntry> entries)
-    : entries = List.unmodifiable(entries);
+  CalendarSnapshot(
+    Iterable<CalendarEntry> entries, {
+    Iterable<CalendarScheduleConflictNotice> conflictNotices =
+        const <CalendarScheduleConflictNotice>[],
+  }) : entries = List.unmodifiable(entries),
+       conflictNotices = List.unmodifiable(conflictNotices);
 
   final List<CalendarEntry> entries;
+  final List<CalendarScheduleConflictNotice> conflictNotices;
 
   List<CalendarEntry> entriesOn(LocalDate date) =>
       entries.where((entry) => entry.touches(date)).toList(growable: false);
+
+  List<CalendarScheduleConflictNotice> conflictsForEntry(String entryId) =>
+      conflictNotices
+          .where((notice) => notice.entryId == entryId)
+          .toList(growable: false);
+
+  List<CalendarScheduleConflictNotice> conflictsForWeek(CalendarWeek week) =>
+      conflictNotices
+          .where(
+            (notice) =>
+                notice.protectedDayId != null && week.contains(notice.date),
+          )
+          .toList(growable: false);
+}
+
+@immutable
+final class CalendarScheduleConflictNotice {
+  const CalendarScheduleConflictNotice({
+    required this.date,
+    required this.message,
+    this.entryId,
+    this.protectedDayId,
+  });
+
+  final LocalDate date;
+  final String message;
+  final String? entryId;
+  final String? protectedDayId;
 }
 
 @immutable

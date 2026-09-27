@@ -7,6 +7,81 @@ void main() {
   );
 
   group('active commitment overlap', () {
+    test(
+      'accepts and flags an imported shift overlapping a Clinical Session',
+      () {
+        final existing = SchedulingState(
+          clinicalSessions: [
+            _session('clinical-1', ClinicalSessionState.scheduled),
+          ],
+        );
+        final imported = WorkShift.imported(
+          id: 'imported-1',
+          plannedInterval: _interval(LocalDate(2026, 8, 3), '1000', '1200'),
+          workScheduleFeedId: 'feed-1',
+          workScheduleFeedName: 'ER Schedule',
+        );
+
+        final result = engine.validateBatch(
+          existing: existing,
+          batch: SchedulingBatch(workShifts: [imported]),
+        );
+
+        expect(result.canCommit, isTrue);
+        expect(result.errors, isEmpty);
+        expect(result.flaggedConflicts, hasLength(1));
+        expect(
+          result.flaggedConflicts.single,
+          isA<ScheduleConflict>()
+              .having(
+                (conflict) => conflict.importedWorkShiftId,
+                'imported Work Shift',
+                'imported-1',
+              )
+              .having(
+                (conflict) => conflict.conflictingCommitmentId,
+                'Clinical Session',
+                'clinical-1',
+              )
+              .having(
+                (conflict) => conflict.workScheduleFeedName,
+                'Work Schedule Feed name',
+                'ER Schedule',
+              ),
+        );
+      },
+    );
+
+    test('moving the Clinical Session clears its imported-shift flag', () {
+      final imported = WorkShift.imported(
+        id: 'imported-1',
+        plannedInterval: _interval(LocalDate(2026, 8, 3), '1000', '1200'),
+        workScheduleFeedId: 'feed-1',
+        workScheduleFeedName: 'ER Schedule',
+      );
+      final conflicted = SchedulingState(
+        workShifts: [imported],
+        clinicalSessions: [
+          _session('clinical-1', ClinicalSessionState.scheduled),
+        ],
+      );
+      final resolved = SchedulingState(
+        workShifts: [imported],
+        clinicalSessions: [
+          ClinicalSession.restore(
+            id: 'clinical-1',
+            clinicalPlacementId: 'placement',
+            preceptorId: 'preceptor',
+            plannedInterval: _interval(LocalDate(2026, 8, 3), '1300', '1500'),
+            state: ClinicalSessionState.scheduled,
+          ),
+        ],
+      );
+
+      expect(engine.flaggedConflictsFor(conflicted), hasLength(1));
+      expect(engine.flaggedConflictsFor(resolved), isEmpty);
+    });
+
     test('rejects overlap but permits exact adjacency', () {
       final existing = SchedulingState(
         workShifts: [_work('existing', '2026-08-03', '0800', '1200')],
@@ -137,6 +212,42 @@ void main() {
   });
 
   group('Protected Day invariants', () {
+    test('accepts and flags an imported shift on a Protected Day', () {
+      final result = engine.validateBatch(
+        existing: SchedulingState(
+          protectedDays: [
+            ProtectedDay(id: 'protected-1', date: LocalDate(2026, 8, 3)),
+          ],
+        ),
+        batch: SchedulingBatch(
+          workShifts: [
+            WorkShift.imported(
+              id: 'imported-1',
+              plannedInterval: _interval(LocalDate(2026, 8, 3), '0800', '1200'),
+              workScheduleFeedId: 'feed-1',
+              workScheduleFeedName: 'ER Schedule',
+            ),
+          ],
+        ),
+      );
+
+      expect(result.canCommit, isTrue);
+      expect(
+        result.flaggedConflicts.single,
+        isA<ScheduleConflict>()
+            .having(
+              (conflict) => conflict.violation,
+              'violation',
+              ScheduleInvariantViolation.commitmentTouchesProtectedDay,
+            )
+            .having(
+              (conflict) => conflict.protectedDayId,
+              'Protected Day',
+              'protected-1',
+            ),
+      );
+    });
+
     test('overnight activity touching the next date is rejected', () {
       final result = engine.validateBatch(
         existing: SchedulingState(

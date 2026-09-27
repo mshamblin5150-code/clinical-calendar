@@ -149,6 +149,36 @@ void main() {
     },
   );
 
+  test('calendar period exposes Imported Work Shift conflicts', () async {
+    final imported = WorkShift.imported(
+      id: _id(68),
+      plannedInterval: _interval(12, 8, 12),
+      workScheduleFeedId: 'feed-1',
+      workScheduleFeedName: 'ER Schedule',
+    );
+    final session = ClinicalSession.schedule(
+      id: _id(69),
+      clinicalPlacementId: placement.id,
+      preceptorId: primary.id,
+      plannedInterval: _interval(12, 10, 14),
+      asOfUtc: _now,
+    );
+    registry.repositories.workShifts.seed(_studentId, imported);
+    registry.repositories.clinicalSessions.seed(_studentId, session);
+
+    final snapshot = await service.readCalendarPeriod(
+      studentId: _studentId,
+      firstDate: LocalDate(2026, 8, 12),
+      lastDate: LocalDate(2026, 8, 12),
+    );
+
+    expect(snapshot.flaggedConflicts, hasLength(1));
+    expect(
+      snapshot.flaggedConflicts.single.conflictingCommitmentId,
+      session.id,
+    );
+  });
+
   test(
     'one conflicting date reports all conflicts and writes no outbox',
     () async {

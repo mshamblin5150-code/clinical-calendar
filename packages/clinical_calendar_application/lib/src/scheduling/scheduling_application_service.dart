@@ -589,6 +589,9 @@ final class SchedulingApplicationService {
       protectedDays: repositories.protectedDays
           .list(studentId: studentId)
           .map((record) => record.value),
+      workShifts: repositories.workShifts
+          .list(studentId: studentId)
+          .map((record) => record.value),
     );
   });
 
@@ -738,6 +741,13 @@ final class SchedulingApplicationService {
         workShifts: workShifts,
         clinicalSessions: clinicalSessions,
         protectedDays: protectedDays,
+        flaggedConflicts: _invariants.flaggedConflictsFor(
+          SchedulingState(
+            workShifts: workShifts.map((record) => record.value),
+            clinicalSessions: clinicalSessions.map((record) => record.value),
+            protectedDays: protectedDays.map((record) => record.value),
+          ),
+        ),
         clinicalAssignmentsBySessionId: assignments,
       );
     });

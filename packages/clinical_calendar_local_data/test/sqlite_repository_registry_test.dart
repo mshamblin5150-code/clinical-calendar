@@ -1459,6 +1459,8 @@ Object? _domainSnapshot(Object value) => switch (value) {
   WorkShift(:final id, :final plannedInterval) => {
     'id': id,
     'plannedInterval': _intervalSnapshot(plannedInterval),
+    'workScheduleFeedId': value.workScheduleFeedId,
+    'workScheduleFeedName': value.workScheduleFeedName,
   },
   ClinicalSession(
     :final id,
@@ -1640,7 +1642,12 @@ final class _DomainFixture {
       primaryPreceptorId: preceptor.id,
       evaluationPlanId: evaluationPlan.id,
     );
-    workShift = WorkShift(id: _id(13), plannedInterval: _interval(7, 9));
+    workShift = WorkShift.imported(
+      id: _id(13),
+      plannedInterval: _interval(7, 9),
+      workScheduleFeedId: _id(130),
+      workScheduleFeedName: 'ER Schedule',
+    );
     clinicalSession = ClinicalSession.schedule(
       id: _id(14),
       clinicalPlacementId: placement.id,

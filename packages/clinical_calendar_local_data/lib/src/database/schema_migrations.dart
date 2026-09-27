@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 18;
+  static const latestVersion = 19;
 
   final MigrationTestHook? _testHook;
 
@@ -783,5 +783,13 @@ final Map<int, List<String>> _statements = {
       CHECK (resolution_base_revision >= 0)''',
     '''UPDATE sync_conflicts
       SET resolution_base_revision = remote_revision''',
+  ],
+  19: [
+    '''ALTER TABLE commitments
+      ADD COLUMN work_schedule_feed_id TEXT
+      CHECK (work_schedule_feed_id IS NULL OR length(trim(work_schedule_feed_id)) BETWEEN 1 AND 128)''',
+    '''ALTER TABLE commitments
+      ADD COLUMN work_schedule_feed_name TEXT
+      CHECK (work_schedule_feed_name IS NULL OR length(trim(work_schedule_feed_name)) BETWEEN 1 AND 128)''',
   ],
 };

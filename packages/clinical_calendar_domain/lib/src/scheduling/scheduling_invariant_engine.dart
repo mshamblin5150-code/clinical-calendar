@@ -33,6 +33,27 @@ final class SchedulingError {
   final String conflictingId;
 }
 
+/// A Schedule Conflict revealed by an Imported Work Shift.
+final class ScheduleConflict {
+  const ScheduleConflict({
+    required this.violation,
+    required this.importedWorkShiftId,
+    required this.workScheduleFeedId,
+    required this.workScheduleFeedName,
+    required this.conflictDate,
+    this.conflictingCommitmentId,
+    this.protectedDayId,
+  });
+
+  final ScheduleInvariantViolation violation;
+  final String importedWorkShiftId;
+  final String workScheduleFeedId;
+  final String workScheduleFeedName;
+  final LocalDate conflictDate;
+  final String? conflictingCommitmentId;
+  final String? protectedDayId;
+}
+
 /// A read-only schedule snapshot accepted or returned by the invariant engine.
 final class SchedulingState {
   SchedulingState({
@@ -65,10 +86,14 @@ final class SchedulingBatch {
 
 /// The complete result of validating a batch without mutating either input.
 final class BatchValidationResult {
-  BatchValidationResult._({required Iterable<SchedulingError> errors})
-    : errors = List.unmodifiable(errors);
+  BatchValidationResult._({
+    required Iterable<SchedulingError> errors,
+    required Iterable<ScheduleConflict> flaggedConflicts,
+  }) : errors = List.unmodifiable(errors),
+       flaggedConflicts = List.unmodifiable(flaggedConflicts);
 
   final List<SchedulingError> errors;
+  final List<ScheduleConflict> flaggedConflicts;
 
   bool get canCommit => errors.isEmpty;
 }
@@ -104,6 +129,7 @@ final class SchedulingInvariantEngine {
     required int year,
     required int month,
     required Iterable<ProtectedDay> protectedDays,
+    Iterable<WorkShift> workShifts = const <WorkShift>[],
   }) {
     final first = LocalDate(year, month, 1);
     final lastCalendarDate = DateTime.utc(year, month + 1, 0);
@@ -112,9 +138,17 @@ final class SchedulingInvariantEngine {
       lastCalendarDate.month,
       lastCalendarDate.day,
     );
+    final days = List<ProtectedDay>.unmodifiable(protectedDays);
+    final conflictedProtectedDayIds =
+        flaggedConflictsFor(
+              SchedulingState(workShifts: workShifts, protectedDays: days),
+            )
+            .where((conflict) => conflict.protectedDayId != null)
+            .map((conflict) => conflict.protectedDayId);
     final occupied = <CalendarWeek>{
-      for (final protectedDay in protectedDays)
-        weekContaining(protectedDay.date),
+      for (final protectedDay in days)
+        if (!conflictedProtectedDayIds.contains(protectedDay.id))
+          weekContaining(protectedDay.date),
     };
     final missing = <CalendarWeek>[];
     var week = weekContaining(first);
@@ -138,7 +172,8 @@ final class SchedulingInvariantEngine {
 
     for (final proposed in proposedCommitments) {
       for (final current in existingCommitments) {
-        if (intervalsOverlap(proposed.interval, current.interval)) {
+        if (!proposed.isImported &&
+            intervalsOverlap(proposed.interval, current.interval)) {
           errors.add(
             _commitmentError(
               ScheduleInvariantViolation.commitmentOverlap,
@@ -165,16 +200,18 @@ final class SchedulingInvariantEngine {
         final right = proposedCommitments[rightIndex];
         if (intervalsOverlap(left.interval, right.interval)) {
           final date = _overlapDate(left.interval, right.interval);
-          errors
-            ..add(
+          if (!left.isImported) {
+            errors.add(
               _commitmentError(
                 ScheduleInvariantViolation.commitmentOverlap,
                 left,
                 right.id,
                 date,
               ),
-            )
-            ..add(
+            );
+          }
+          if (!right.isImported) {
+            errors.add(
               _commitmentError(
                 ScheduleInvariantViolation.commitmentOverlap,
                 right,
@@ -182,6 +219,7 @@ final class SchedulingInvariantEngine {
                 _overlapDate(right.interval, left.interval),
               ),
             );
+          }
         }
       }
     }
@@ -192,10 +230,11 @@ final class SchedulingInvariantEngine {
     ];
     for (final proposed in proposedCommitments) {
       for (final protectedDay in allProtectedDays) {
-        if (commitmentTouchesProtectedDay(
-          proposed.interval,
-          protectedDay.date,
-        )) {
+        if (!proposed.isImported &&
+            commitmentTouchesProtectedDay(
+              proposed.interval,
+              protectedDay.date,
+            )) {
           errors.add(
             _commitmentError(
               ScheduleInvariantViolation.commitmentTouchesProtectedDay,
@@ -259,7 +298,71 @@ final class SchedulingInvariantEngine {
       }
     }
 
-    return BatchValidationResult._(errors: errors);
+    return BatchValidationResult._(
+      errors: errors,
+      flaggedConflicts: flaggedConflictsFor(
+        SchedulingState(
+          workShifts: <WorkShift>[...existing.workShifts, ...batch.workShifts],
+          clinicalSessions: <ClinicalSession>[
+            ...existing.clinicalSessions,
+            ...batch.clinicalSessions,
+          ],
+          protectedDays: <ProtectedDay>[
+            ...existing.protectedDays,
+            ...batch.protectedDays,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Derives current flags from schedule facts, so resolving a conflict clears it.
+  List<ScheduleConflict> flaggedConflictsFor(SchedulingState state) {
+    final commitments = _activeCommitments(state);
+    final conflicts = <ScheduleConflict>[];
+    for (var leftIndex = 0; leftIndex < commitments.length; leftIndex++) {
+      for (
+        var rightIndex = leftIndex + 1;
+        rightIndex < commitments.length;
+        rightIndex++
+      ) {
+        final left = commitments[leftIndex];
+        final right = commitments[rightIndex];
+        if (!intervalsOverlap(left.interval, right.interval)) continue;
+        final imported = left.isImported
+            ? left
+            : (right.isImported ? right : null);
+        if (imported == null) continue;
+        final other = identical(imported, left) ? right : left;
+        conflicts.add(
+          _scheduleConflict(
+            violation: ScheduleInvariantViolation.commitmentOverlap,
+            imported: imported,
+            conflictDate: _overlapDate(imported.interval, other.interval),
+            conflictingCommitmentId: other.id,
+          ),
+        );
+      }
+    }
+    for (final commitment in commitments.where((value) => value.isImported)) {
+      for (final protectedDay in state.protectedDays) {
+        if (!commitmentTouchesProtectedDay(
+          commitment.interval,
+          protectedDay.date,
+        )) {
+          continue;
+        }
+        conflicts.add(
+          _scheduleConflict(
+            violation: ScheduleInvariantViolation.commitmentTouchesProtectedDay,
+            imported: commitment,
+            conflictDate: protectedDay.date,
+            protectedDayId: protectedDay.id,
+          ),
+        );
+      }
+    }
+    return List.unmodifiable(conflicts);
   }
 
   /// Produces a new snapshot only when the whole batch is valid.
@@ -286,10 +389,19 @@ final class SchedulingInvariantEngine {
 }
 
 final class _ActiveCommitment {
-  const _ActiveCommitment({required this.id, required this.interval});
+  const _ActiveCommitment({
+    required this.id,
+    required this.interval,
+    this.workScheduleFeedId,
+    this.workScheduleFeedName,
+  });
 
   final String id;
   final ZonedInterval interval;
+  final String? workScheduleFeedId;
+  final String? workScheduleFeedName;
+
+  bool get isImported => workScheduleFeedId != null;
 }
 
 List<_ActiveCommitment> _activeCommitments(Object source) {
@@ -300,7 +412,12 @@ List<_ActiveCommitment> _activeCommitments(Object source) {
   };
   return <_ActiveCommitment>[
     for (final shift in workShifts)
-      _ActiveCommitment(id: shift.id, interval: shift.plannedInterval),
+      _ActiveCommitment(
+        id: shift.id,
+        interval: shift.plannedInterval,
+        workScheduleFeedId: shift.workScheduleFeedId,
+        workScheduleFeedName: shift.workScheduleFeedName,
+      ),
     for (final session in clinicalSessions)
       if (session.state != ClinicalSessionState.cancelled &&
           session.state != ClinicalSessionState.missed)
@@ -312,6 +429,22 @@ List<_ActiveCommitment> _activeCommitments(Object source) {
         ),
   ];
 }
+
+ScheduleConflict _scheduleConflict({
+  required ScheduleInvariantViolation violation,
+  required _ActiveCommitment imported,
+  required LocalDate conflictDate,
+  String? conflictingCommitmentId,
+  String? protectedDayId,
+}) => ScheduleConflict(
+  violation: violation,
+  importedWorkShiftId: imported.id,
+  workScheduleFeedId: imported.workScheduleFeedId!,
+  workScheduleFeedName: imported.workScheduleFeedName!,
+  conflictDate: conflictDate,
+  conflictingCommitmentId: conflictingCommitmentId,
+  protectedDayId: protectedDayId,
+);
 
 SchedulingError _commitmentError(
   ScheduleInvariantViolation violation,
