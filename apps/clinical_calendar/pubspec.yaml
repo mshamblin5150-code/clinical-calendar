@@ -23,6 +23,7 @@ dependencies:
   clinical_calendar_sync:
     path: ../../packages/clinical_calendar_sync
   connectivity_plus: ^7.3.1
+  sqlite3: ^3.5.0
   web: ^1.1.1
 
 dev_dependencies:

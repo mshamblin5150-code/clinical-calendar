@@ -5,7 +5,7 @@ import 'package:clinical_calendar/main_web.dart' as web;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('web entrypoint excludes the native startup graph', () {
+  test('web entrypoint excludes native-only startup dependencies', () {
     final entrypoint = File('lib/main.dart').readAsStringSync();
     final webStartup = File('lib/main_web.dart').readAsStringSync();
 
@@ -13,7 +13,7 @@ void main() {
     expect(entrypoint, contains("if (dart.library.io) 'main_native.dart'"));
     expect(entrypoint, isNot(contains('dart:io')));
     expect(webStartup, isNot(contains('dart:io')));
-    expect(webStartup, isNot(contains('clinical_calendar_local_data')));
+    expect(webStartup, contains('clinical_calendar_local_data'));
     expect(
       webStartup,
       isNot(
@@ -36,6 +36,9 @@ void main() {
         "package:clinical_calendar_platform/clinical_calendar_web_identity_platform.dart",
       ),
     );
+    expect(webStartup, contains('clinical_calendar_web_platform'));
+    expect(webStartup, isNot(contains('clinical_calendar_native_platform')));
+    expect(webStartup, isNot(contains('main_native')));
   });
 
   test('web artifact build id matches the sync build number', () {

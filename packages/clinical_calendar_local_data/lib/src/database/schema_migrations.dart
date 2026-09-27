@@ -1,8 +1,9 @@
-import 'package:sqlite3/sqlite3.dart';
+import 'package:sqlite3/common.dart' show CommonDatabase;
 
 import 'database_failure.dart';
 
-typedef MigrationTestHook = void Function(int targetVersion, Database database);
+typedef MigrationTestHook =
+    void Function(int targetVersion, CommonDatabase database);
 
 /// Runs the forward-only local schema migrations.
 ///
@@ -19,7 +20,7 @@ final class DatabaseMigrationRunner {
 
   final MigrationTestHook? _testHook;
 
-  void migrate(Database database, int currentVersion) {
+  void migrate(CommonDatabase database, int currentVersion) {
     for (
       var targetVersion = currentVersion + 1;
       targetVersion <= latestVersion;
@@ -29,7 +30,7 @@ final class DatabaseMigrationRunner {
     }
   }
 
-  void _runOne(Database database, int targetVersion) {
+  void _runOne(CommonDatabase database, int targetVersion) {
     database.execute('BEGIN IMMEDIATE');
     try {
       for (final statement in _statements[targetVersion]!) {

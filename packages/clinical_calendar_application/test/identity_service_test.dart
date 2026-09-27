@@ -69,6 +69,17 @@ void main() {
     },
   );
 
+  test('online launch exchanges a refresh-token-only credential', () async {
+    storage.values[PasswordlessIdentityService.sessionStorageKey] = jsonEncode({
+      'refresh_token': 'remembered-refresh',
+    });
+
+    final restored = await service.restoreForOnlineLaunch();
+
+    expect(restored?.accessToken, 'refreshed-access');
+    expect(gateway.refreshCount, 1);
+  });
+
   test('expired session refresh rotates secure credentials', () async {
     await service.verifySignInCode('student@example.com', '123456');
 
@@ -378,3 +389,4 @@ final class _LocalCopy implements LocalDeviceCopyController {
   @override
   Future<void> removeLocalCopy() async => removed = true;
 }
+import 'dart:convert';

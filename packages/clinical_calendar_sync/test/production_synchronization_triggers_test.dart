@@ -75,6 +75,25 @@ void main() {
     expect(target.afterLocalSaveCalls, 0);
   });
 
+  test('post-commit observer runs only after a successful mutation', () async {
+    final base = _Registry();
+    final target = _TriggerTarget();
+    var committed = 0;
+    final registry = SynchronizationTriggeringRepositoryRegistry(
+      base: base,
+      synchronization: target,
+      onTriggerFailure: (_, _) {},
+      onCommitted: () => committed++,
+    );
+
+    expect(await registry.mutate((_) => 1), 1);
+    expect(committed, 1);
+
+    base.failNextMutation = true;
+    await expectLater(registry.mutate((_) => 2), throwsStateError);
+    expect(committed, 1);
+  });
+
   test(
     'forwards Clinical Placement aggregate deletion and wakes after commit',
     () async {

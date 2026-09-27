@@ -89,6 +89,32 @@ void main() {
     await heldChanges.close();
   });
 
+  testWidgets('host counts changes that are not yet synchronized', (
+    tester,
+  ) async {
+    final pendingChanges = StreamController<int>.broadcast();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ClinicalCalendarLifecycleHost(
+          pendingSynchronizationCountChanges: pendingChanges.stream,
+          child: const SizedBox(key: Key('application-child')),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('not-yet-synced-banner')), findsNothing);
+
+    pendingChanges.add(2);
+    await tester.pump();
+    expect(find.text('Not yet synced – 2 changes'), findsOneWidget);
+
+    pendingChanges.add(0);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('not-yet-synced-banner')), findsNothing);
+    await pendingChanges.close();
+  });
+
   testWidgets('failed web build check does not suppress synchronization', (
     tester,
   ) async {

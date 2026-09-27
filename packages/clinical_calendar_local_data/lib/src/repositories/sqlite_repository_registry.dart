@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 // ignore: implementation_imports
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
-import 'package:sqlite3/sqlite3.dart';
+import 'package:sqlite3/common.dart';
 
 import '../backup/portable_backup_crypto.dart';
 import '../backup/portable_backup_models.dart';
