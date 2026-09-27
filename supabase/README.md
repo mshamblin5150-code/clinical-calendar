@@ -155,6 +155,9 @@ no live project or production credentials are required.
 - Retain permanent-purge markers and their content-free feed operations for as
   long as a supported offline or newly connected device could replay an older
   entity operation. Marker pruning requires a separate device-watermark policy.
-- Schedule both private retention operations from trusted infrastructure:
-  purge due accounts, then delete expired encrypted recovery snapshots. Do not
-  expose either function through PostgREST or a client-held service key.
+- Schedule all private retention operations from trusted infrastructure:
+  revoke inactive web Connected Devices, purge due accounts, then delete
+  expired encrypted recovery snapshots. Web Auth sessions also carry a
+  server-enforced 90-day deadline, so a delayed cleanup run cannot extend
+  browser access. Do not expose these functions through PostgREST or a
+  client-held service key.

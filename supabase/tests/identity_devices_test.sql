@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(25);
+select plan(36);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -14,6 +14,14 @@ insert into auth.users (
   ('00000000-0000-0000-0000-000000000000',
    '11000000-0000-4000-8000-000000000002', 'authenticated', 'authenticated',
    'identity-b@example.invalid', '', now(), now(), now(), '{}', '{}');
+
+insert into auth.sessions (id, user_id, created_at, updated_at, aal) values
+  ('12000000-0000-4000-8000-000000000001',
+   '11000000-0000-4000-8000-000000000001',
+   '2026-01-01 00:00:00+00', '2026-01-01 00:00:00+00', 'aal1'),
+  ('12000000-0000-4000-8000-000000000005',
+   '11000000-0000-4000-8000-000000000001',
+   '2026-01-01 00:00:00+00', '2026-01-01 00:00:00+00', 'aal1');
 
 set local role authenticated;
 set local request.jwt.claim.sub = '11000000-0000-4000-8000-000000000001';
@@ -62,6 +70,98 @@ select ok(
   'the persisted installation can bind back to another new session'
 );
 
+set local request.jwt.claim.session_id = '12000000-0000-4000-8000-000000000005';
+select ok(
+  public.register_current_device(
+    '13000000-0000-4000-8000-000000000004', 'Safari on iPhone', 'web'
+  ),
+  'registers a browser as a web Connected Device'
+);
+select ok(
+  public.mark_current_device_synchronized(),
+  'a web synchronization refreshes its server-enforced idle deadline'
+);
+
+reset role;
+select is(
+  (select s.not_after = d.last_synchronized_at_utc + interval '90 days'
+   from auth.sessions s
+   join clinical_calendar_sync.connected_devices d on d.session_id = s.id
+   where s.id = '12000000-0000-4000-8000-000000000005'),
+  true,
+  'the web Auth deadline is measured from the latest synchronization'
+);
+select is(
+  (select not_after is not null from auth.sessions
+   where id = '12000000-0000-4000-8000-000000000005'),
+  true,
+  'web registration gives the Auth session a server-enforced idle deadline'
+);
+select is(
+  (select not_after is null from auth.sessions
+   where id = '12000000-0000-4000-8000-000000000001'),
+  true,
+  'native registration never gives the Auth session an idle deadline'
+);
+update clinical_calendar_sync.connected_devices
+set registered_at_utc = '2026-01-01 00:00:00+00',
+    last_synchronized_at_utc = null
+where device_id = '13000000-0000-4000-8000-000000000004';
+update clinical_calendar_sync.connected_devices
+set registered_at_utc = '2025-01-01 00:00:00+00',
+    last_synchronized_at_utc = '2025-01-01 00:00:00+00'
+where device_id = '13000000-0000-4000-8000-000000000001';
+
+select is(
+  clinical_calendar_sync.revoke_inactive_web_devices(
+    '2026-04-02 00:00:00+00'
+  ),
+  1::bigint,
+  'revokes a web Connected Device after 90 days without a sync'
+);
+select is(
+  (select count(*) from auth.sessions
+   where id = '12000000-0000-4000-8000-000000000005'),
+  0::bigint,
+  'revocation removes the browser Auth session so it cannot refresh'
+);
+select is(
+  (select count(*) from clinical_calendar_sync.connected_devices
+   where device_id = '13000000-0000-4000-8000-000000000001'
+     and revoked_at_utc is null),
+  1::bigint,
+  'a native Connected Device stays active after more than 90 idle days'
+);
+
+set local role authenticated;
+set local request.jwt.claim.session_id = '12000000-0000-4000-8000-000000000001';
+select is(
+  (select count(*) from public.list_connected_devices()
+   where platform = 'web'),
+  0::bigint,
+  'an automatically revoked browser no longer appears in the device list'
+);
+
+set local request.jwt.claim.session_id = '12000000-0000-4000-8000-000000000005';
+select is(
+  public.apply_sync_operation(
+    46,
+    '14000000-0000-4000-8000-000000000099',
+    'settings', '11000000-0000-4000-8000-000000000001', 'upsert', 0,
+    jsonb_build_object('student_id', '11000000-0000-4000-8000-000000000001')
+  ) #>> '{rejection,code}',
+  'revoked_device',
+  'an automatically revoked browser cannot push'
+);
+select throws_ok(
+  $$ select * from public.pull_changes_after(0, 100) $$,
+  'PT403',
+  'revoked_device',
+  'an automatically revoked browser cannot pull'
+);
+
+set local request.jwt.claim.session_id = '12000000-0000-4000-8000-000000000001';
+
 set local request.jwt.claim.session_id = '12000000-0000-4000-8000-000000000002';
 select ok(
   public.register_current_device(
@@ -91,6 +191,7 @@ select is(
 set local request.jwt.claim.session_id = '12000000-0000-4000-8000-000000000002';
 select is(
   public.apply_sync_operation(
+    46,
     '14000000-0000-4000-8000-000000000001',
     'settings', '11000000-0000-4000-8000-000000000001', 'upsert', 0,
     jsonb_build_object('student_id', '11000000-0000-4000-8000-000000000001')

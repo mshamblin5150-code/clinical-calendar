@@ -75,7 +75,9 @@ void main() {
 
     expect(find.text('Windows laptop (this device)'), findsOneWidget);
     expect(find.text('Android tablet'), findsOneWidget);
-    await tester.tap(find.text('Revoke'));
+    expect(find.text('Safari on iPhone'), findsOneWidget);
+    expect(find.byIcon(Icons.language), findsOneWidget);
+    await tester.tap(find.text('Revoke').first);
     await tester.pumpAndSettle();
     expect(find.textContaining('cannot erase a copy'), findsOneWidget);
   });
@@ -206,6 +208,13 @@ final class _Gateway implements PasswordlessIdentityGateway {
       isCurrent: false,
       isRevoked: false,
     ),
+    ConnectedDevice(
+      id: _webDeviceId,
+      name: 'Safari on iPhone',
+      platform: DevicePlatform.web,
+      isCurrent: false,
+      isRevoked: false,
+    ),
   ];
   @override
   Future<String> revokeConnectedDevice(
@@ -275,3 +284,4 @@ const _studentId = '10000000-0000-4000-8000-000000000001';
 const _sessionId = '20000000-0000-4000-8000-000000000001';
 const _deviceId = '30000000-0000-4000-8000-000000000001';
 const _otherDeviceId = '30000000-0000-4000-8000-000000000002';
+const _webDeviceId = '30000000-0000-4000-8000-000000000003';

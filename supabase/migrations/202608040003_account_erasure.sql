@@ -681,6 +681,11 @@ begin
   if v_student_id is null or clinical_calendar_sync.current_session_id() is null then
     return false;
   end if;
+  if p_device_id is null or p_device_name is null or p_platform is null
+    or length(trim(p_device_name)) not between 1 and 120
+    or p_platform not in ('windows', 'ios', 'android', 'web') then
+    return false;
+  end if;
   perform pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended(v_student_id::text, 0)
   );

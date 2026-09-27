@@ -281,6 +281,7 @@ IconData _icon(DevicePlatform platform) => switch (platform) {
   DevicePlatform.windows => Icons.laptop_windows,
   DevicePlatform.ios => Icons.phone_iphone,
   DevicePlatform.android => Icons.tablet_android,
+  DevicePlatform.web => Icons.language,
 };
 
 String _lastSync(DateTime? value) =>

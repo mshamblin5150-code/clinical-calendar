@@ -1,12 +1,18 @@
 import 'dart:async';
 
+import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_sync/web_build_version.dart';
 import 'package:flutter/material.dart';
+import 'package:web/web.dart' as web;
 
 import 'sync_build_number.dart';
 import 'web_build_version_runtime.dart';
+import 'web_device_descriptor.dart';
 
 export 'sync_build_number.dart';
+
+DeviceDescriptor currentWebDeviceDescriptor() =>
+    webDeviceDescriptor(web.window.navigator.userAgent);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

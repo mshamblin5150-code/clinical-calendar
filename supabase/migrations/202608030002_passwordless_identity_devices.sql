@@ -54,7 +54,7 @@ create table clinical_calendar_sync.connected_devices (
   student_id uuid not null references auth.users(id) on delete cascade,
   session_id uuid not null,
   device_name text not null check (length(trim(device_name)) between 1 and 120),
-  platform text not null check (platform in ('windows', 'ios', 'android')),
+  platform text not null check (platform in ('windows', 'ios', 'android', 'web')),
   registered_at_utc timestamptz not null default clock_timestamp(),
   last_synchronized_at_utc timestamptz,
   revoked_at_utc timestamptz,
@@ -133,7 +133,7 @@ begin
   end if;
   if p_device_id is null or p_device_name is null or p_platform is null
     or length(trim(p_device_name)) not between 1 and 120
-    or p_platform not in ('windows', 'ios', 'android') then
+    or p_platform not in ('windows', 'ios', 'android', 'web') then
     return false;
   end if;
 
