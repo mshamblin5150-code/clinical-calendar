@@ -338,13 +338,19 @@ void main() {
 
     expect(find.byKey(const Key('application-menu')), findsOneWidget);
     for (final destination in applicationMenuDestinations) {
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('application-menu')),
-          matching: find.text(destination.label),
-        ),
-        findsOneWidget,
+      final label = find.descendant(
+        of: find.byKey(const Key('application-menu')),
+        matching: find.text(destination.label),
       );
+      await tester.scrollUntilVisible(
+        label,
+        80,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('application-menu')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(label, findsOneWidget);
     }
     expect(tester.takeException(), isNull);
   });
@@ -862,7 +868,12 @@ void main() {
   testWidgets('menu routes Settings to the settings and templates surface', (
     tester,
   ) async {
-    await _pumpAt(tester, const Size(1024, 768));
+    await _pumpAt(
+      tester,
+      const Size(1024, 768),
+      ticketGateway: _UnavailableTicketGateway(),
+      ticketConnected: true,
+    );
 
     await tester.tap(find.byKey(const Key('application-menu-action')));
     await tester.pumpAndSettle();
@@ -871,6 +882,11 @@ void main() {
 
     expect(find.byKey(const Key('settings-templates-surface')), findsOneWidget);
     expect(find.byKey(const Key('back-action')), findsOneWidget);
+    expect(
+      find.byKey(const Key('destination-menu-action')),
+      findsOneWidget,
+      reason: 'The application menu must remain available on every screen.',
+    );
   });
 
   testWidgets('closing Settings preserves staged Calendar planning state', (
@@ -1134,6 +1150,8 @@ void main() {
       tester,
       const Size(1024, 768),
       dependencies: _dependencies(repositories: repositories),
+      ticketGateway: _UnavailableTicketGateway(),
+      ticketConnected: true,
     );
 
     await tester.tap(find.byKey(const Key('application-menu-action')));
@@ -1164,13 +1182,15 @@ void main() {
     expect(find.text('Evaluation Plan'), findsWidgets);
     expect(find.text('Family Medicine'), findsWidgets);
     expect(find.byKey(const Key('contextual-back-action')), findsOneWidget);
+    expect(find.byKey(const Key('contextual-menu-action')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('contextual-back-action')));
+    await tester.tap(find.byKey(const Key('contextual-menu-action')));
     await tester.pumpAndSettle();
-    expect(
-      find.byKey(const Key('notification-center-surface')),
-      findsOneWidget,
-    );
+    await tester.ensureVisible(find.text('Settings'));
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('contextual-route-surface')), findsNothing);
+    expect(find.byKey(const Key('settings-templates-surface')), findsOneWidget);
   });
 
   testWidgets('synchronization attention exposes an honest Sync Now route', (
@@ -2397,6 +2417,8 @@ Future<void> _pumpAt(
   ThemePreviewController? themePreviewController,
   EnhancedAccessibilityController? enhancedAccessibilityController,
   CandidateThemePreflight? candidateThemePreflight,
+  TicketGateway? ticketGateway,
+  bool ticketConnected = false,
   String themeId = variantFThemeId,
 }) async {
   await tester.binding.setSurfaceSize(size);
@@ -2419,9 +2441,16 @@ Future<void> _pumpAt(
       themePreviewController: themePreviewController,
       enhancedAccessibilityController: enhancedAccessibilityController,
       candidateThemePreflight: candidateThemePreflight,
+      ticketGateway: ticketGateway,
+      ticketConnected: ticketConnected,
     ),
   );
   await tester.pumpAndSettle();
+}
+
+final class _UnavailableTicketGateway implements TicketGateway {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 final class _RecoveryStore implements RecoveryStore {

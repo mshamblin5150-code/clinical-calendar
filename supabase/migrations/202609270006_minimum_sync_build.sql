@@ -2,6 +2,8 @@
 -- was changed by a newer release. Pull remains available so an old client can
 -- stay current while its durable local pushes wait for an application update.
 
+-- The existing synchronization functions are owned by the narrow executor.
+-- Temporary membership permits this migration to rename and replace them.
 grant clinical_calendar_sync_executor to postgres;
 grant create on schema clinical_calendar_sync to clinical_calendar_sync_executor;
 grant create on schema public to clinical_calendar_sync_executor;

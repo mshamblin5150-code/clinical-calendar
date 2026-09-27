@@ -33,3 +33,4 @@ export 'src/scheduling/scheduling_requests.dart';
 export 'src/work_schedule_feeds/work_schedule_feed_application_service.dart';
 export 'src/support/support_application_service.dart';
 export 'src/support/support_models.dart';
+export 'src/tickets/ticket_models.dart';
