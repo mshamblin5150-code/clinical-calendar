@@ -1,0 +1,10 @@
+{
+  "tasks": {
+    "test:edge": "deno test supabase/functions/tests --allow-env --allow-net"
+  },
+  "fmt": {
+    "lineWidth": 100,
+    "semiColons": true,
+    "singleQuote": false
+  }
+}
