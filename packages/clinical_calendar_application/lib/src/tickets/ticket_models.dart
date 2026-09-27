@@ -30,6 +30,8 @@ enum TicketStatus {
     (status) => status.databaseValue == value,
     orElse: () => throw FormatException('Unknown Ticket status: $value'),
   );
+
+  bool get isClosed => this == done || this == wontDo;
 }
 
 final class TicketContext {
@@ -81,6 +83,12 @@ final class Ticket {
     required this.context,
     required this.createdAtUtc,
     this.seenAtUtc,
+    this.closeReason,
+    this.closedAtUtc,
+    this.reopenedAtUtc,
+    this.reopenNote,
+    this.canReopen = false,
+    this.reopenUntilUtc,
   });
 
   final String id;
@@ -91,10 +99,25 @@ final class Ticket {
   final TicketContext context;
   final DateTime createdAtUtc;
   final DateTime? seenAtUtc;
+  final String? closeReason;
+  final DateTime? closedAtUtc;
+  final DateTime? reopenedAtUtc;
+  final String? reopenNote;
+  final bool canReopen;
+  final DateTime? reopenUntilUtc;
 
   String get firstLine => text.split(RegExp(r'\r?\n')).first;
 
-  Ticket copyWith({TicketStatus? status, DateTime? seenAtUtc}) => Ticket(
+  Ticket copyWith({
+    TicketStatus? status,
+    DateTime? seenAtUtc,
+    String? closeReason,
+    DateTime? closedAtUtc,
+    DateTime? reopenedAtUtc,
+    String? reopenNote,
+    bool? canReopen,
+    DateTime? reopenUntilUtc,
+  }) => Ticket(
     id: id,
     senderId: senderId,
     kind: kind,
@@ -103,6 +126,12 @@ final class Ticket {
     context: context,
     createdAtUtc: createdAtUtc,
     seenAtUtc: seenAtUtc ?? this.seenAtUtc,
+    closeReason: closeReason ?? this.closeReason,
+    closedAtUtc: closedAtUtc ?? this.closedAtUtc,
+    reopenedAtUtc: reopenedAtUtc ?? this.reopenedAtUtc,
+    reopenNote: reopenNote ?? this.reopenNote,
+    canReopen: canReopen ?? this.canReopen,
+    reopenUntilUtc: reopenUntilUtc ?? this.reopenUntilUtc,
   );
 }
 
@@ -116,6 +145,20 @@ final class TicketSubmissionRejected implements Exception {
 
 final class TicketAccessRejected implements Exception {
   const TicketAccessRejected();
+}
+
+enum TicketMutationRefusal {
+  closingReasonRequired,
+  cannotClose,
+  reopeningNoteRequired,
+  cannotReopen,
+  reopenExpired,
+}
+
+final class TicketMutationRejected implements Exception {
+  const TicketMutationRejected(this.reason);
+
+  final TicketMutationRefusal reason;
 }
 
 final class TicketUnavailable implements Exception {
@@ -133,4 +176,11 @@ abstract interface class TicketGateway {
   Future<List<Ticket>> readMine();
   Future<List<Ticket>> readForMaintainer();
   Future<Ticket> openForMaintainer(String ticketId);
+  Future<Ticket> openForSender(String ticketId);
+  Future<Ticket> close(
+    String ticketId, {
+    required TicketStatus outcome,
+    required String reason,
+  });
+  Future<Ticket> reopen(String ticketId, {required String note});
 }

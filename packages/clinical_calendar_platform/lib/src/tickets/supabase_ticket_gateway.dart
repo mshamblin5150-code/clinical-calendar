@@ -81,10 +81,63 @@ final class SupabaseTicketGateway implements TicketGateway {
     }
   }
 
+  @override
+  Future<Ticket> openForSender(String ticketId) async {
+    try {
+      final response = await _rpc('open_ticket_for_sender', {
+        'p_ticket_id': ticketId,
+      });
+      if (response is! Map<String, dynamic>) {
+        throw const TicketUnavailable();
+      }
+      return _ticket(response);
+    } on _TicketServerFailure catch (error) {
+      if (error.code == 'P2860') throw const TicketUnavailable();
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Ticket> close(
+    String ticketId, {
+    required TicketStatus outcome,
+    required String reason,
+  }) => _mutate('close_ticket', {
+    'p_ticket_id': ticketId,
+    'p_outcome': outcome.databaseValue,
+    'p_reason': reason,
+  });
+
+  @override
+  Future<Ticket> reopen(String ticketId, {required String note}) =>
+      _mutate('reopen_ticket', {'p_ticket_id': ticketId, 'p_note': note});
+
+  Future<Ticket> _mutate(String function, Map<String, Object?> body) async {
+    try {
+      final response = await _rpc(function, body);
+      if (response is! Map<String, dynamic>) {
+        throw const TicketUnavailable();
+      }
+      return _ticket(response);
+    } on _TicketServerFailure catch (error) {
+      final refusal = switch (error.code) {
+        'P2855' => TicketMutationRefusal.closingReasonRequired,
+        'P2856' => TicketMutationRefusal.cannotClose,
+        'P2857' => TicketMutationRefusal.reopeningNoteRequired,
+        'P2858' => TicketMutationRefusal.cannotReopen,
+        'P2859' => TicketMutationRefusal.reopenExpired,
+        _ => null,
+      };
+      if (refusal != null) throw TicketMutationRejected(refusal);
+      rethrow;
+    }
+  }
+
   Future<List<Ticket>> _readTickets() async {
     const fields =
         'id,sender_id,kind,text,state,screen_context,build_context,'
-        'device_context,platform_context,context_captured_at,created_at,seen_at';
+        'device_context,platform_context,context_captured_at,created_at,seen_at,'
+        'close_reason,closed_at,reopened_at,reopen_note';
     final response = await _request(
       'GET',
       '/rest/v1/tickets',
@@ -159,6 +212,18 @@ Ticket _ticket(Map<String, dynamic> row) => Ticket(
   seenAtUtc: row['seen_at'] == null
       ? null
       : DateTime.parse(row['seen_at'] as String).toUtc(),
+  closeReason: row['close_reason'] as String?,
+  closedAtUtc: row['closed_at'] == null
+      ? null
+      : DateTime.parse(row['closed_at'] as String).toUtc(),
+  reopenedAtUtc: row['reopened_at'] == null
+      ? null
+      : DateTime.parse(row['reopened_at'] as String).toUtc(),
+  reopenNote: row['reopen_note'] as String?,
+  canReopen: row['can_reopen'] as bool? ?? false,
+  reopenUntilUtc: row['reopen_until'] == null
+      ? null
+      : DateTime.parse(row['reopen_until'] as String).toUtc(),
 );
 
 _TicketServerFailure _serverFailure(String responseBody) {
