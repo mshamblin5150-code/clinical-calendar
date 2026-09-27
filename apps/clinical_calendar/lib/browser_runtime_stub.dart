@@ -19,6 +19,9 @@ final class _StubBrowserRuntime implements BrowserRuntime {
   String get deviceName => 'Test browser';
 
   @override
+  String get timeZoneName => 'UTC';
+
+  @override
   Future<CommonDatabase> openInMemorySqlite() async => sqlite3.openInMemory();
 }
 

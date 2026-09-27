@@ -46,6 +46,7 @@ import 'theme_preview_control.dart';
 import 'theme_preview_controller.dart';
 import 'tickets/ticket_surfaces.dart';
 import 'variant_f_theme.dart';
+import 'work_schedule_feeds/work_schedule_feed_surface.dart';
 
 typedef ExportWorkflowFactory =
     ExportWorkflowService Function(ExportReauthenticationGate gate);
@@ -57,6 +58,12 @@ typedef TodayResolver = LocalDate Function(DateTime nowUtc);
 const _androidMemoryLifecycle = MethodChannel(
   'com.clinicalcalendar.clinical_calendar/memory_lifecycle',
 );
+
+@visibleForTesting
+bool workScheduleFeedRefreshDue({
+  required DateTime nowUtc,
+  required DateTime lastCheckedAtUtc,
+}) => nowUtc.difference(lastCheckedAtUtc) > const Duration(minutes: 60);
 
 @visibleForTesting
 List<AssetImage> inactiveThemeFrameProviders({
@@ -143,6 +150,8 @@ final class ClinicalCalendarApp extends StatefulWidget {
     this.recoveryStore,
     this.recoveryService,
     this.recoveryProofGate,
+    this.workScheduleFeedGateway,
+    this.workScheduleTimeZone,
     this.scheduleDateFactory,
     this.todayResolver,
     this.onPresentationRestart,
@@ -185,6 +194,8 @@ final class ClinicalCalendarApp extends StatefulWidget {
   final RecoveryStore? recoveryStore;
   final RecoveryApplicationService? recoveryService;
   final OneShotRecoveryReauthenticationGate? recoveryProofGate;
+  final WorkScheduleFeedRelayGateway? workScheduleFeedGateway;
+  final TimeZoneId? workScheduleTimeZone;
   final ScheduleDateFactory? scheduleDateFactory;
   final TodayResolver? todayResolver;
   final VoidCallback? onPresentationRestart;
@@ -376,6 +387,7 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
   Future<void> _launchOrResume() async {
     await widget.onLaunchOrResume?.call();
     await _applicationHostKey.currentState?.refreshAuthoritativeSettings();
+    await _applicationHostKey.currentState?.refreshDueWorkScheduleFeeds();
   }
 
   Future<void> _connectivityChanged(bool connected) async {
@@ -457,6 +469,8 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
                 recoveryStore: widget.recoveryStore,
                 recoveryService: widget.recoveryService,
                 recoveryProofGate: widget.recoveryProofGate,
+                workScheduleFeedGateway: widget.workScheduleFeedGateway,
+                workScheduleTimeZone: widget.workScheduleTimeZone,
                 notificationInteractions: widget.notificationInteractions,
                 notificationDevicePolicyStore:
                     widget.notificationDevicePolicyStore,
@@ -723,6 +737,8 @@ final class _ApplicationHost extends StatefulWidget {
     required this.recoveryStore,
     required this.recoveryService,
     required this.recoveryProofGate,
+    required this.workScheduleFeedGateway,
+    required this.workScheduleTimeZone,
     required this.notificationInteractions,
     required this.notificationDevicePolicyStore,
     required this.notificationDeviceClass,
@@ -751,6 +767,8 @@ final class _ApplicationHost extends StatefulWidget {
   final RecoveryStore? recoveryStore;
   final RecoveryApplicationService? recoveryService;
   final OneShotRecoveryReauthenticationGate? recoveryProofGate;
+  final WorkScheduleFeedRelayGateway? workScheduleFeedGateway;
+  final TimeZoneId? workScheduleTimeZone;
   final Stream<NotificationInteraction>? notificationInteractions;
   final NotificationDevicePolicyStore? notificationDevicePolicyStore;
   final NotificationDeviceClass? notificationDeviceClass;
@@ -776,6 +794,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   late final CommitmentLifecycleController _commitmentController;
   late final EvaluationAttentionController _attentionController;
   late final ConflictResolutionController _conflictController;
+  late final WorkScheduleFeedApplicationService _workScheduleFeedService;
   BatchSchedulingController? _batchController;
   final _planningRegionKey = GlobalKey<_PlanningRegionState>();
   final _destinationContentKey = GlobalKey();
@@ -788,6 +807,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   Set<LocalDate> _selectedDates = const {};
   int _calendarRevision = 0;
   SupportSnapshot? _support;
+  Future<List<WorkScheduleFeed>>? _workScheduleFeedsFuture;
   Object? _supportError;
   bool _supportLoading = true;
   StreamSubscription<NotificationInteraction>? _notificationSubscription;
@@ -858,6 +878,11 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
         studentId: widget.studentId,
         synchronization: dependencies.synchronization,
       ),
+    );
+    _workScheduleFeedService = WorkScheduleFeedApplicationService(
+      dependencies.repositories,
+      dependencies.clock,
+      dependencies.identifiers,
     );
     _supportService = SupportApplicationService(
       repositories: dependencies.repositories,
@@ -1246,7 +1271,23 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     required String id,
   }) async {
     await _commitmentController.open(kind: kind, id: id);
-    if (!mounted || _commitmentController.snapshot == null) return;
+    final lifecycleSnapshot = _commitmentController.snapshot;
+    if (!mounted || lifecycleSnapshot == null) return;
+    var conflictNotices = const <CalendarScheduleConflictNotice>[];
+    if (lifecycleSnapshot case ClinicalSessionLifecycleSnapshot(
+      :final record,
+    )) {
+      final session = record.value;
+      final date =
+          (session.actualInterval ?? session.plannedInterval).startDate;
+      final calendar = await _schedulingCalendarDataSource.load(
+        studentId: widget.studentId,
+        firstDate: date,
+        lastDate: date,
+      );
+      conflictNotices = calendar.conflictsForEntry(id);
+    }
+    if (!mounted) return;
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -1260,6 +1301,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
               child: CommitmentLifecycleSurface(
                 controller: _commitmentController,
                 studentId: widget.studentId,
+                conflictNotices: conflictNotices,
                 twelveHourTime:
                     (_support?.settings.value.timeDisplay ??
                         TimeDisplayPreference.military) ==
@@ -2150,6 +2192,9 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
             onSaveSettings: _saveSettings,
             onSaveTemplate: _saveTemplate,
             onRemoveTemplate: _removeTemplate,
+            onOpenWorkScheduleFeeds: widget.workScheduleFeedGateway == null
+                ? null
+                : _openWorkScheduleFeeds,
             deviceNotifications: devicePolicy == null
                 ? null
                 : DeviceNotificationPreferences(
@@ -2176,6 +2221,191 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       case ClinicalCalendarDestination.calendar:
       case ClinicalCalendarDestination.planning:
         return _PendingDestination(destination: destination);
+    }
+  }
+
+  Widget _workScheduleFeedBody() {
+    if (widget.workScheduleFeedGateway == null) {
+      return const _UnavailableAttentionWorkflow(
+        message: 'Sign in and connect to manage Work Schedule Feeds.',
+      );
+    }
+    return FutureBuilder<List<WorkScheduleFeed>>(
+      future: _workScheduleFeedsFuture ??= _workScheduleFeeds(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const _DestinationLoading(
+            label: 'Loading Work Schedule Feeds',
+          );
+        }
+        if (snapshot.hasError) {
+          return _DestinationFailure(
+            message: 'Work Schedule Feeds could not be loaded.',
+            onRetry: () async =>
+                setState(() => _workScheduleFeedsFuture = null),
+          );
+        }
+        return WorkScheduleFeedSurface(
+          initialFeeds: snapshot.data ?? const [],
+          onPreviewConnection: _previewWorkScheduleFeed,
+          onConfirmConnection: _workScheduleFeedService.confirmConnection,
+          onDiscardPreview: (feed) =>
+              widget.workScheduleFeedGateway!.discard(feedId: feed.id),
+          onRefresh: _refreshWorkScheduleFeed,
+          onUpdateSkipWords: _updateWorkScheduleFeedSkipWords,
+          onDisconnect: _disconnectWorkScheduleFeed,
+        );
+      },
+    );
+  }
+
+  Future<void> _openWorkScheduleFeeds() async {
+    _workScheduleFeedsFuture = null;
+    await _openContextualRoute(
+      title: 'Work Schedule Feeds',
+      child: _workScheduleFeedBody(),
+    );
+  }
+
+  Future<List<WorkScheduleFeed>> _workScheduleFeeds() =>
+      widget.dependencies.repositories.read((repositories) {
+        if (repositories case WorkScheduleFeedLocalReadRepositories feeds) {
+          return feeds.workScheduleFeeds
+              .list(studentId: widget.studentId)
+              .map((record) => record.value)
+              .toList(growable: false);
+        }
+        throw const RepositoryException(
+          RepositoryFailureKind.uninitialized,
+          'Work Schedule Feed storage is unavailable.',
+        );
+      });
+
+  Future<WorkScheduleFeedConnectionPreview> _previewWorkScheduleFeed(
+    String name,
+    Uri url,
+  ) async {
+    final gateway = widget.workScheduleFeedGateway!;
+    final feedId = widget.dependencies.identifiers.nextIdentifier();
+    try {
+      final ics = await gateway.stageAndFetch(feedId: feedId, url: url);
+      return await _workScheduleFeedService.previewConnection(
+        WorkScheduleFeedConnectionRequest(
+          studentId: widget.studentId,
+          name: name,
+          url: url,
+          ics: ics,
+          studentTimeZone: widget.workScheduleTimeZone ?? TimeZoneId('UTC'),
+          feedId: feedId,
+        ),
+      );
+    } on Object {
+      await gateway.discard(feedId: feedId).catchError((Object _) {});
+      rethrow;
+    }
+  }
+
+  Future<WorkScheduleFeedRefreshResult> _refreshWorkScheduleFeed(
+    WorkScheduleFeed feed, {
+    bool confirmEmpty = false,
+  }) async {
+    try {
+      final ics = await widget.workScheduleFeedGateway!.fetch(feedId: feed.id);
+      final result = await _workScheduleFeedService.refresh(
+        WorkScheduleFeedRefreshRequest(
+          studentId: widget.studentId,
+          feedId: feed.id,
+          ics: ics,
+          studentTimeZone: widget.workScheduleTimeZone ?? TimeZoneId('UTC'),
+          confirmEmpty: confirmEmpty,
+        ),
+      );
+      await _reloadSchedulingSurfaces();
+      return result;
+    } on Object {
+      final failed = await _workScheduleFeedService.recordFailedCheck(
+        studentId: widget.studentId,
+        feedId: feed.id,
+      );
+      return WorkScheduleFeedRefreshResult(
+        disposition: WorkScheduleFeedRefreshDisposition.failed,
+        feed: failed.value,
+        upcomingShifts: const [],
+      );
+    }
+  }
+
+  Future<WorkScheduleFeed> _updateWorkScheduleFeedSkipWords(
+    WorkScheduleFeed feed,
+    List<String> skipWords,
+  ) async {
+    final record = await _workScheduleFeedService.updateSkipWords(
+      studentId: widget.studentId,
+      feedId: feed.id,
+      skipWords: skipWords,
+    );
+    return record.value;
+  }
+
+  Future<void> _disconnectWorkScheduleFeed(WorkScheduleFeed feed) async {
+    await _workScheduleFeedService.disconnect(
+      studentId: widget.studentId,
+      feedId: feed.id,
+    );
+    await widget.workScheduleFeedGateway!.discard(feedId: feed.id);
+    await _reloadSchedulingSurfaces();
+  }
+
+  Future<void> refreshDueWorkScheduleFeeds() async {
+    final gateway = widget.workScheduleFeedGateway;
+    if (gateway == null) return;
+    final now = widget.dependencies.clock.nowUtc();
+    List<WorkScheduleFeed> feeds;
+    try {
+      feeds = await _workScheduleFeeds();
+    } on Object {
+      return;
+    }
+    for (final feed in feeds) {
+      if (!workScheduleFeedRefreshDue(
+        nowUtc: now,
+        lastCheckedAtUtc: feed.lastCheckedAtUtc,
+      )) {
+        continue;
+      }
+      try {
+        final result = await _refreshWorkScheduleFeed(feed);
+        if (result.disposition ==
+            WorkScheduleFeedRefreshDisposition.requiresEmptyConfirmation) {
+          if (!mounted) return;
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('No upcoming shifts were found'),
+              content: Text(
+                'Remove the upcoming Imported Work Shifts from ${feed.name}?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Keep shifts'),
+                ),
+                FilledButton(
+                  key: const Key('confirm-empty-feed-on-open-action'),
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Remove upcoming shifts'),
+                ),
+              ],
+            ),
+          );
+          if (confirmed == true) {
+            await _refreshWorkScheduleFeed(feed, confirmEmpty: true);
+          }
+        }
+      } on Object {
+        // Feed failures preserve every Imported Work Shift. The feed page
+        // reports the last successful update when the Student opens it.
+      }
     }
   }
 

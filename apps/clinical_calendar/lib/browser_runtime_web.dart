@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:js_interop';
 
 import 'package:sqlite3/wasm.dart';
 import 'package:web/web.dart' as web;
@@ -19,10 +20,24 @@ final class _WebBrowserRuntime implements BrowserRuntime {
   String get deviceName => _browserDeviceName(web.window.navigator.userAgent);
 
   @override
+  String get timeZoneName => _DateTimeFormat().resolvedOptions().timeZone;
+
+  @override
   Future<CommonDatabase> openInMemorySqlite() async {
     final sqlite = await WasmSqlite3.loadFromUrlString('sqlite3.wasm');
     return sqlite.openInMemory();
   }
+}
+
+@JS('Intl.DateTimeFormat')
+extension type _DateTimeFormat._(JSObject _) implements JSObject {
+  external factory _DateTimeFormat();
+
+  external _DateTimeFormatOptions resolvedOptions();
+}
+
+extension type _DateTimeFormatOptions._(JSObject _) implements JSObject {
+  external String get timeZone;
 }
 
 final class _LocalStorageStore implements BrowserKeyValueStore {

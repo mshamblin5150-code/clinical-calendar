@@ -25,10 +25,10 @@ foreach ($pattern in $requiredPatterns) {
 
 $assertionCount = (
   Select-String -Path (Join-Path $PSScriptRoot 'work_schedule_feed_relay_test.sql') `
-    -Pattern '^select (ok|is|results_eq|throws_ok)\(' -CaseSensitive
+    -Pattern '^select (ok|is|lives_ok|results_eq|throws_ok)\(' -CaseSensitive
 ).Count
-if ($assertionCount -ne 7) {
-  throw "Work Schedule Feed relay pgTAP plan is 7 but found $assertionCount assertions."
+if ($assertionCount -ne 10) {
+  throw "Work Schedule Feed relay pgTAP plan is 10 but found $assertionCount assertions."
 }
 
 Write-Output 'Work Schedule Feed relay static contract checks passed.'

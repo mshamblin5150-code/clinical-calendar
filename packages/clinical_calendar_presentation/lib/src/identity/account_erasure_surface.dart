@@ -553,7 +553,19 @@ String _message(IdentityException error) => switch (error.code) {
   _ => 'The request could not be completed. Try again.',
 };
 
+const _accountErasureIdentityRefusalCodes = {
+  'expired_otp',
+  'invalid_otp',
+  'rate_limited',
+  'network_unavailable',
+  'unauthenticated',
+  'server_unavailable',
+  'invalid_account_erasure_response',
+  'invalid_server_response',
+  'invalid_session_response',
+};
+
 String identityRefusalCode(String code) =>
-    RegExp(r'^[a-z][a-z0-9_]{0,79}$').hasMatch(code)
+    _accountErasureIdentityRefusalCodes.contains(code)
     ? code
     : 'account_erasure_refused';

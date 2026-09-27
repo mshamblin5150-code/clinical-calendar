@@ -450,6 +450,11 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                           onPeriod: _changePeriod,
                           archiveTreatment: showArchiveMonthLegend,
                         ),
+                        if (_period == CalendarPeriod.week &&
+                            calendar.conflictNotices.isNotEmpty)
+                          _ScheduleConflictBanner(
+                            notices: calendar.conflictNotices,
+                          ),
                         if (context
                             .accessibilityTokens
                             .persistentExpandedLegend)
@@ -487,6 +492,11 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
                         onPeriod: _changePeriod,
                         archiveTreatment: showArchiveMonthLegend,
                       ),
+                      if (_period == CalendarPeriod.week &&
+                          calendar.conflictNotices.isNotEmpty)
+                        _ScheduleConflictBanner(
+                          notices: calendar.conflictNotices,
+                        ),
                       if (context.accessibilityTokens.persistentExpandedLegend)
                         const _EnhancedCalendarLegend(),
                       if (((_period == CalendarPeriod.week ||
@@ -509,6 +519,52 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
         },
       );
     },
+  );
+}
+
+final class _ScheduleConflictBanner extends StatelessWidget {
+  const _ScheduleConflictBanner({required this.notices});
+
+  final List<CalendarScheduleConflictNotice> notices;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    liveRegion: true,
+    child: Container(
+      key: const Key('calendar-schedule-conflicts'),
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: context.clinicalColors.urgent.withValues(alpha: .12),
+        border: Border.all(color: context.clinicalColors.urgent),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            color: context.clinicalColors.urgent,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Schedule Conflict',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                for (final message
+                    in notices.map((notice) => notice.message).toSet())
+                  Text(message),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
   );
 }
 
@@ -2301,6 +2357,7 @@ final class _WeekView extends StatelessWidget {
           today: date == today,
           selected: selectedDates.contains(date),
           entries: snapshot.entriesOn(date),
+          conflicts: snapshot.conflictsForDate(date),
           twelveHourTime: twelveHourTime,
           onActivate: onActivate,
         ),
@@ -2327,6 +2384,7 @@ final class _WeekDay extends StatelessWidget {
     required this.today,
     required this.selected,
     required this.entries,
+    required this.conflicts,
     required this.twelveHourTime,
     required this.onActivate,
   });
@@ -2335,6 +2393,7 @@ final class _WeekDay extends StatelessWidget {
   final bool today;
   final bool selected;
   final List<CalendarEntry> entries;
+  final List<CalendarScheduleConflictNotice> conflicts;
   final bool twelveHourTime;
   final _ActivateDate onActivate;
 
@@ -2399,6 +2458,18 @@ final class _WeekDay extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
+              if (conflicts.isNotEmpty)
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    'Schedule Conflict: ${conflicts.map((notice) => notice.message).toSet().join('; ')}',
+                    key: Key('week-day-conflicts-$date'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.clinicalColors.urgent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               if (entries.isEmpty)
                 Text('Open day', style: Theme.of(context).textTheme.bodySmall),
               for (final entry in entries)

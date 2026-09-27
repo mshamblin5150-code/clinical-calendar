@@ -16,4 +16,6 @@ abstract interface class BrowserRuntime {
   Future<CommonDatabase> openInMemorySqlite();
 
   String get deviceName;
+
+  String get timeZoneName;
 }

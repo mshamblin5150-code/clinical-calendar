@@ -6,14 +6,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('identity refusal codes preserve stable codes and reject prose', () {
-    expect(identityRefusalCode('invalid_otp'), 'invalid_otp');
-    expect(
-      identityRefusalCode('Server said Patient Jane'),
-      'account_erasure_refused',
-    );
-    expect(identityRefusalCode('P0001'), 'account_erasure_refused');
-  });
+  test(
+    'identity refusal codes preserve owned codes and reject other input',
+    () {
+      expect(identityRefusalCode('invalid_otp'), 'invalid_otp');
+      expect(
+        identityRefusalCode('Server said Patient Jane'),
+        'account_erasure_refused',
+      );
+      expect(identityRefusalCode('patient_jane'), 'account_erasure_refused');
+      expect(identityRefusalCode('P0001'), 'account_erasure_refused');
+    },
+  );
 
   testWidgets('cancelled backup choice never requests deletion', (
     tester,
@@ -232,7 +236,7 @@ void main() {
     tester,
   ) async {
     final gateway = _Gateway()
-      ..sendCodeFailure = const IdentityException('Server said Patient Jane');
+      ..sendCodeFailure = const IdentityException('patient_jane');
     await _pump(tester, gateway: gateway);
 
     await tester.tap(find.byKey(const Key('begin-account-erasure')));

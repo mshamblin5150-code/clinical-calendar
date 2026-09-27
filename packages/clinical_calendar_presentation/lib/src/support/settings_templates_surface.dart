@@ -75,6 +75,7 @@ final class SettingsTemplatesSurface extends StatefulWidget {
     this.onSaveDeviceNotifications,
     this.authoritativeThemeId,
     this.onPreviewTheme,
+    this.onOpenWorkScheduleFeeds,
     super.key,
   }) : assert(
          (deviceNotifications == null) == (onSaveDeviceNotifications == null),
@@ -93,6 +94,7 @@ final class SettingsTemplatesSurface extends StatefulWidget {
   final SaveDeviceNotificationPreferences? onSaveDeviceNotifications;
   final String? authoritativeThemeId;
   final PreviewTheme? onPreviewTheme;
+  final VoidCallback? onOpenWorkScheduleFeeds;
 
   @override
   State<SettingsTemplatesSurface> createState() =>
@@ -217,6 +219,23 @@ final class _SettingsTemplatesSurfaceState
     key: const Key('settings-templates-surface'),
     padding: const EdgeInsets.all(16),
     children: [
+      if (widget.onOpenWorkScheduleFeeds != null) ...[
+        ShellPanel(
+          label: 'Work Schedule Feeds',
+          accent: context.clinicalColors.workMachinery,
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.event_repeat_outlined),
+            title: const Text('Connect or manage Work Schedule Feeds'),
+            subtitle: const Text(
+              'Import your personal employer schedule as read-only Work Shifts.',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: widget.onOpenWorkScheduleFeeds,
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
       ShellPanel(
         label: 'Settings',
         accent: context.clinicalColors.clinical,

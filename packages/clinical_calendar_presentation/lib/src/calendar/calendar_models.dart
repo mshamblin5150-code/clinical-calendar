@@ -76,6 +76,11 @@ final class CalendarSnapshot {
           .where((notice) => notice.entryId == entryId)
           .toList(growable: false);
 
+  List<CalendarScheduleConflictNotice> conflictsForDate(LocalDate date) =>
+      conflictNotices
+          .where((notice) => notice.date == date)
+          .toList(growable: false);
+
   List<CalendarScheduleConflictNotice> conflictsForWeek(CalendarWeek week) =>
       conflictNotices
           .where(
