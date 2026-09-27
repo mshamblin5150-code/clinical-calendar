@@ -107,5 +107,35 @@ void main() {
         isNot(contains(LocalDate(2026, 4, 27))),
       );
     });
+
+    test('a flagged Protected Day leaves its week incomplete', () {
+      final missing = engine.missingProtectedDayWeeksForMonth(
+        year: 2026,
+        month: 5,
+        protectedDays: [
+          ProtectedDay(id: 'protected-1', date: LocalDate(2026, 5, 13)),
+        ],
+        workShifts: [
+          WorkShift.imported(
+            id: 'imported-1',
+            plannedInterval: ZonedInterval(
+              startDate: LocalDate(2026, 5, 13),
+              startTime: LocalTime(8, 0),
+              endTime: LocalTime(12, 0),
+              timeZone: TimeZoneId('America/New_York'),
+              startOffset: UtcOffset.inMinutes(-240),
+              endOffset: UtcOffset.inMinutes(-240),
+            ),
+            workScheduleFeedId: 'feed-1',
+            workScheduleFeedName: 'ER Schedule',
+          ),
+        ],
+      );
+
+      expect(
+        missing.map((week) => week.start),
+        contains(LocalDate(2026, 5, 11)),
+      );
+    });
   });
 }

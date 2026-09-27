@@ -51,7 +51,10 @@ final class AcademicAssignmentCalendarDataSource implements CalendarDataSource {
           },
         ),
     ]..sort(_compareEntries);
-    return CalendarSnapshot(entries);
+    return CalendarSnapshot(
+      entries,
+      conflictNotices: baseSnapshot.conflictNotices,
+    );
   }
 }
 
@@ -91,9 +94,39 @@ final class SchedulingCalendarDataSource implements CalendarDataSource {
           statusLabel: 'Protected',
         ),
     ]..sort(_compareEntries);
-    return CalendarSnapshot(entries);
+    return CalendarSnapshot(
+      entries,
+      conflictNotices: projectScheduleConflictNotices(
+        conflicts: snapshot.flaggedConflicts,
+        clinicalSessionIds: snapshot.clinicalSessions
+            .map((record) => record.value.id)
+            .toSet(),
+      ),
+    );
   }
 }
+
+List<CalendarScheduleConflictNotice> projectScheduleConflictNotices({
+  required Iterable<ScheduleConflict> conflicts,
+  required Set<String> clinicalSessionIds,
+}) => List.unmodifiable([
+  for (final conflict in conflicts)
+    if (conflict.violation == ScheduleInvariantViolation.commitmentOverlap &&
+        clinicalSessionIds.contains(conflict.conflictingCommitmentId))
+      CalendarScheduleConflictNotice(
+        date: conflict.conflictDate,
+        entryId: conflict.conflictingCommitmentId,
+        message: 'Conflicts with your ${conflict.workScheduleFeedName} shift',
+      )
+    else if (conflict.violation ==
+            ScheduleInvariantViolation.commitmentTouchesProtectedDay &&
+        conflict.protectedDayId != null)
+      CalendarScheduleConflictNotice(
+        date: conflict.conflictDate,
+        protectedDayId: conflict.protectedDayId,
+        message: 'Protected Day now has a work shift – pick another',
+      ),
+]);
 
 CalendarEntry _workShiftEntry(WorkShift shift) => CalendarEntry(
   id: shift.id,

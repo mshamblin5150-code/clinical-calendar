@@ -330,6 +330,7 @@ final class SchedulingApplicationService {
       repositories.workShifts.find(studentId: studentId, id: id),
       'Work Shift',
     );
+    _requireHandEnteredWorkShift(current.value);
     final moved = WorkShift(id: id, plannedInterval: plannedInterval);
     final validation = _invariants.validateBatch(
       existing: _state(repositories, studentId, excludingId: id),
@@ -492,6 +493,7 @@ final class SchedulingApplicationService {
       ),
       'Work Shift',
     );
+    _requireHandEnteredWorkShift(current.value);
     return repositories.workShifts
         .tombstone(
           studentId: request.studentId,
@@ -587,6 +589,9 @@ final class SchedulingApplicationService {
       year: year,
       month: month,
       protectedDays: repositories.protectedDays
+          .list(studentId: studentId)
+          .map((record) => record.value),
+      workShifts: repositories.workShifts
           .list(studentId: studentId)
           .map((record) => record.value),
     );
@@ -738,6 +743,13 @@ final class SchedulingApplicationService {
         workShifts: workShifts,
         clinicalSessions: clinicalSessions,
         protectedDays: protectedDays,
+        flaggedConflicts: _invariants.flaggedConflictsFor(
+          SchedulingState(
+            workShifts: workShifts.map((record) => record.value),
+            clinicalSessions: clinicalSessions.map((record) => record.value),
+            protectedDays: protectedDays.map((record) => record.value),
+          ),
+        ),
         clinicalAssignmentsBySessionId: assignments,
       );
     });
@@ -801,6 +813,15 @@ final class SchedulingApplicationService {
     idempotencyKey: _identifiers.nextIdentifier(),
     occurredAtUtc: occurredAtUtc,
   );
+}
+
+void _requireHandEnteredWorkShift(WorkShift shift) {
+  if (shift.isImported) {
+    throw const SchedulingUseCaseException(
+      SchedulingUseCaseFailureKind.importedWorkShiftReadOnly,
+      'An Imported Work Shift can change only when its Work Schedule Feed changes.',
+    );
+  }
 }
 
 StoredDomainRecord<T> _required<T>(

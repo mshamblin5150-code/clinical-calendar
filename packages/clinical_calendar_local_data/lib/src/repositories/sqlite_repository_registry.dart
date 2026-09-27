@@ -2399,6 +2399,8 @@ Map<String, Object?> _encodeWorkShift(WorkShift value) => {
   'lifecycle_state': 'scheduled',
   'placement_id': null,
   'preceptor_id': null,
+  'work_schedule_feed_id': value.workScheduleFeedId,
+  'work_schedule_feed_name': value.workScheduleFeedName,
   ..._intervalColumns(value.plannedInterval, 'planned_'),
   'actual_start_date': null,
   'actual_end_date': null,
@@ -2414,10 +2416,20 @@ WorkShift _decodeWorkShift(Map<String, Object?> row) {
   if (_text(row, 'commitment_type') != 'work_shift') {
     throw const FormatException();
   }
-  return WorkShift(
-    id: _identifier(_text(row, 'id')),
-    plannedInterval: _interval(row, 'planned_'),
-  );
+  final feedId = _nullableText(row, 'work_schedule_feed_id');
+  final feedName = _nullableText(row, 'work_schedule_feed_name');
+  if ((feedId == null) != (feedName == null)) throw const FormatException();
+  return feedId == null
+      ? WorkShift(
+          id: _identifier(_text(row, 'id')),
+          plannedInterval: _interval(row, 'planned_'),
+        )
+      : WorkShift.imported(
+          id: _identifier(_text(row, 'id')),
+          plannedInterval: _interval(row, 'planned_'),
+          workScheduleFeedId: feedId,
+          workScheduleFeedName: feedName!,
+        );
 }
 
 Map<String, Object?> _encodeClinicalSession(ClinicalSession value) {
