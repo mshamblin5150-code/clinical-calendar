@@ -19,7 +19,7 @@ $minimumBuildMigration = Get-Content -Raw (
   Join-Path $PSScriptRoot '..\migrations\202609270006_minimum_sync_build.sql'
 )
 $webDeviceMigration = Get-Content -Raw (
-  Join-Path $PSScriptRoot '..\migrations\202609270007_web_connected_device_expiration.sql'
+  Join-Path $PSScriptRoot '..\migrations\202609270009_web_connected_device_expiration.sql'
 )
 $ticketMigration = Get-Content -Raw (
   Join-Path $PSScriptRoot '..\migrations\202609270008_private_tickets.sql'

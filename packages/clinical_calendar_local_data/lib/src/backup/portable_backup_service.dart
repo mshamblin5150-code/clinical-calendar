@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
-import 'package:sqlite3/sqlite3.dart';
+import 'package:sqlite3/common.dart';
 
+import 'backup_scratch_database.dart';
 import '../database/clinical_calendar_database.dart';
 import '../database/schema_migrations.dart';
 import 'portable_backup_crypto.dart';
@@ -438,7 +439,7 @@ final class PortableBackupService {
         'The backup table set is invalid.',
       );
     }
-    final validation = sqlite3.openInMemory();
+    final validation = openBackupScratchDatabase();
     try {
       DatabaseMigrationRunner().migrate(validation, 0);
       validation.execute('PRAGMA foreign_keys = ON');
@@ -483,7 +484,7 @@ final class PortableBackupService {
     }
   }
 
-  void _validateHardInvariants(Database db) {
+  void _validateHardInvariants(CommonDatabase db) {
     final profiles =
         db.select(
               'SELECT count(*) AS count FROM student_profiles WHERE student_id = ?',
@@ -545,7 +546,7 @@ final class PortableBackupService {
     }
   }
 
-  void _validatePlacementTrashAggregates(Database db) {
+  void _validatePlacementTrashAggregates(CommonDatabase db) {
     final rows = db.select(
       '''SELECT * FROM trash WHERE student_id = ?
          AND aggregate_mutation_id IS NOT NULL
@@ -892,7 +893,7 @@ void _replaceByIdentity(
   }
 }
 
-void _insert(Database db, String table, Map<String, Object?> row) {
+void _insert(CommonDatabase db, String table, Map<String, Object?> row) {
   final columns = row.keys.toList(growable: false);
   db.execute(
     'INSERT INTO $table (${columns.join(', ')}) VALUES (${List.filled(columns.length, '?').join(', ')})',

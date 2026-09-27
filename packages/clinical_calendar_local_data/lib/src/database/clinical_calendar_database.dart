@@ -1,9 +1,7 @@
-import 'dart:io';
-import 'dart:math';
-
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
-import 'package:sqlite3/sqlite3.dart';
+import 'package:sqlite3/common.dart';
 
+import 'database_open.dart';
 import 'database_failure.dart';
 import 'schema_migrations.dart';
 
@@ -17,7 +15,7 @@ final class ClinicalCalendarDatabase {
   static const encryptionKeyStorageKey = 'clinical_calendar_database_key_v1';
   static final RegExp _validKey = RegExp(r'^[0-9a-fA-F]{64}$');
 
-  final Database _database;
+  final CommonDatabase _database;
   final String path;
   final String cipherVersion;
   bool _closed = false;
@@ -29,57 +27,40 @@ final class ClinicalCalendarDatabase {
     required SecureStorage secureStorage,
     DatabaseMigrationRunner migrationRunner = const DatabaseMigrationRunner(),
   }) async {
-    final file = File(path);
-    final existed = await file.exists();
-    var key = await secureStorage.read(encryptionKeyStorageKey);
-    if (key == null) {
-      if (existed) {
-        throw ClinicalCalendarDatabaseException.missingEncryptionKey();
-      }
-      key = _generateHexKey();
-      await secureStorage.write(encryptionKeyStorageKey, key);
-    }
-    if (!_validKey.hasMatch(key)) {
-      throw ClinicalCalendarDatabaseException.invalidEncryptionKey();
-    }
+    final opened = await openEncryptedDatabase(
+      path: path,
+      secureStorage: secureStorage,
+      migrationRunner: migrationRunner,
+      encryptionKeyStorageKey: encryptionKeyStorageKey,
+      validKey: _validKey,
+    );
+    return ClinicalCalendarDatabase._(
+      opened.database,
+      path: path,
+      cipherVersion: opened.cipherVersion,
+    );
+  }
 
-    await file.parent.create(recursive: true);
-    final database = sqlite3.open(path);
+  /// Opens the production schema over a caller-owned, process-memory SQLite
+  /// connection. No encryption key or filesystem location is created because
+  /// the complete database disappears with the connection.
+  static ClinicalCalendarDatabase openInMemory(
+    CommonDatabase database, {
+    DatabaseMigrationRunner migrationRunner = const DatabaseMigrationRunner(),
+  }) {
     try {
-      // Hex is validated above, so no SQL syntax or data can be injected here.
-      database.execute('PRAGMA key = "x\'$key\'"');
-      final cipherRows = database.select('PRAGMA cipher_version');
-      final cipherVersion = cipherRows.isEmpty
-          ? ''
-          : (cipherRows.first.values.firstOrNull?.toString() ?? '').trim();
-      if (cipherVersion.isEmpty) {
-        throw ClinicalCalendarDatabaseException.sqlCipherUnavailable();
-      }
-
-      int currentVersion;
-      try {
-        // Force an authenticated page/schema read before any pragma that could
-        // write the database or create a journal sidecar.
-        database.select('SELECT count(*) FROM sqlite_schema').single;
-        currentVersion = database.userVersion;
-      } on SqliteException {
-        throw ClinicalCalendarDatabaseException.authenticationOrCorruption();
-      }
+      database
+        ..execute('PRAGMA foreign_keys = ON')
+        ..execute('PRAGMA secure_delete = ON');
+      final currentVersion = database.userVersion;
       if (currentVersion > DatabaseMigrationRunner.latestVersion) {
         throw ClinicalCalendarDatabaseException.unsupportedSchemaVersion();
       }
-
-      database
-        ..execute('PRAGMA foreign_keys = ON')
-        ..execute('PRAGMA secure_delete = ON')
-        ..execute('PRAGMA journal_mode = WAL')
-        ..execute('PRAGMA synchronous = FULL')
-        ..execute('PRAGMA busy_timeout = 5000');
       migrationRunner.migrate(database, currentVersion);
       return ClinicalCalendarDatabase._(
         database,
-        path: path,
-        cipherVersion: cipherVersion,
+        path: ':memory:',
+        cipherVersion: '',
       );
     } on ClinicalCalendarDatabaseException {
       database.close();
@@ -121,13 +102,5 @@ final class ClinicalCalendarDatabase {
 
   void _requireOpen() {
     if (_closed) throw StateError('The local database is closed.');
-  }
-
-  static String _generateHexKey() {
-    final random = Random.secure();
-    return List<int>.generate(
-      32,
-      (_) => random.nextInt(256),
-    ).map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 }

@@ -101,6 +101,27 @@ final class PasswordlessIdentityService {
     }
   }
 
+  /// Restores a browser session from its refresh-token-only credential.
+  ///
+  /// Web cannot safely persist the access token or Student/session metadata,
+  /// and it must contact the server before opening its memory-only database.
+  Future<IdentitySession?> restoreForOnlineLaunch() async {
+    final encoded = await _secureStorage.read(sessionStorageKey);
+    if (encoded == null) return null;
+    try {
+      final value = jsonDecode(encoded);
+      if (value is! Map<String, dynamic>) throw const FormatException();
+      final refreshToken = value['refresh_token'];
+      if (refreshToken is! String || refreshToken.isEmpty) {
+        throw const FormatException();
+      }
+      return await _refreshOnce(refreshToken);
+    } on FormatException {
+      await _secureStorage.delete(sessionStorageKey);
+      return null;
+    }
+  }
+
   Future<void> sendSignInCode(String email) =>
       _gateway.sendSignInCode(email.trim().toLowerCase());
 

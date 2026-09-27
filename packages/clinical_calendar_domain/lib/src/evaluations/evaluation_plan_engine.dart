@@ -377,7 +377,7 @@ void _sortRequirements(List<EvaluationRequirement> requirements) {
 int _boundaryOrder(EvaluationRequirementKind kind) => switch (kind) {
   EvaluationRequirementKind.initialSelfAssessment => -1,
   EvaluationRequirementKind.finalSelfAssessment ||
-  EvaluationRequirementKind.finalPlacementReview => 0x7fffffffffffffff,
+  EvaluationRequirementKind.finalPlacementReview => 9007199254740991,
   EvaluationRequirementKind.interimStudentReviewsPrimaryPreceptor ||
   EvaluationRequirementKind.interimPrimaryPreceptorReviewsStudent =>
     throw StateError('Interim Review order requires a threshold.'),

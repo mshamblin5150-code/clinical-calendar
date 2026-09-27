@@ -119,6 +119,8 @@ final class ClinicalCalendarApp extends StatefulWidget {
     this.onBuildVersionCheck,
     this.minimumSyncBuildRequired = false,
     this.minimumSyncBuildRequiredChanges,
+    this.pendingSynchronizationCount = 0,
+    this.pendingSynchronizationCountChanges,
     this.connectivityChanges,
     this.onConnectivityChanged,
     this.ticketGateway,
@@ -160,6 +162,8 @@ final class ClinicalCalendarApp extends StatefulWidget {
   final Future<void> Function()? onBuildVersionCheck;
   final bool minimumSyncBuildRequired;
   final Stream<bool>? minimumSyncBuildRequiredChanges;
+  final int pendingSynchronizationCount;
+  final Stream<int>? pendingSynchronizationCountChanges;
   final Stream<bool>? connectivityChanges;
   final Future<void> Function(bool connected)? onConnectivityChanged;
   final TicketGateway? ticketGateway;
@@ -425,6 +429,9 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
             minimumSyncBuildRequired: widget.minimumSyncBuildRequired,
             minimumSyncBuildRequiredChanges:
                 widget.minimumSyncBuildRequiredChanges,
+            pendingSynchronizationCount: widget.pendingSynchronizationCount,
+            pendingSynchronizationCountChanges:
+                widget.pendingSynchronizationCountChanges,
             connectivityChanges: widget.connectivityChanges,
             onConnectivityChanged: widget.onConnectivityChanged == null
                 ? null
@@ -515,6 +522,8 @@ final class ClinicalCalendarLifecycleHost extends StatefulWidget {
     this.onBuildVersionCheck,
     this.minimumSyncBuildRequired = false,
     this.minimumSyncBuildRequiredChanges,
+    this.pendingSynchronizationCount = 0,
+    this.pendingSynchronizationCountChanges,
     this.connectivityChanges,
     this.onConnectivityChanged,
     super.key,
@@ -525,6 +534,8 @@ final class ClinicalCalendarLifecycleHost extends StatefulWidget {
   final Future<void> Function()? onBuildVersionCheck;
   final bool minimumSyncBuildRequired;
   final Stream<bool>? minimumSyncBuildRequiredChanges;
+  final int pendingSynchronizationCount;
+  final Stream<int>? pendingSynchronizationCountChanges;
   final Stream<bool>? connectivityChanges;
   final Future<void> Function(bool connected)? onConnectivityChanged;
 
@@ -597,15 +608,30 @@ final class _ClinicalCalendarLifecycleHostState
     fit: StackFit.expand,
     children: [
       widget.child,
-      StreamBuilder<bool>(
-        initialData: widget.minimumSyncBuildRequired,
-        stream: widget.minimumSyncBuildRequiredChanges,
-        builder: (context, snapshot) => snapshot.data ?? false
-            ? const Align(
-                alignment: Alignment.topCenter,
-                child: _MinimumSyncBuildBanner(),
-              )
-            : const SizedBox.shrink(),
+      Align(
+        alignment: Alignment.topCenter,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            StreamBuilder<bool>(
+              initialData: widget.minimumSyncBuildRequired,
+              stream: widget.minimumSyncBuildRequiredChanges,
+              builder: (context, snapshot) => snapshot.data ?? false
+                  ? const _MinimumSyncBuildBanner()
+                  : const SizedBox.shrink(),
+            ),
+            StreamBuilder<int>(
+              initialData: widget.pendingSynchronizationCount,
+              stream: widget.pendingSynchronizationCountChanges,
+              builder: (context, snapshot) {
+                final count = snapshot.data ?? 0;
+                return count > 0
+                    ? _NotYetSyncedBanner(count: count)
+                    : const SizedBox.shrink();
+              },
+            ),
+          ],
+        ),
       ),
     ],
   );
@@ -640,6 +666,36 @@ final class _MinimumSyncBuildBanner extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _NotYetSyncedBanner extends StatelessWidget {
+  const _NotYetSyncedBanner({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      key: const Key('not-yet-synced-banner'),
+      color: colors.tertiaryContainer,
+      child: SafeArea(
+        top: false,
+        bottom: false,
+        child: Semantics(
+          container: true,
+          liveRegion: true,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Text(
+              'Not yet synced – $count ${count == 1 ? 'change' : 'changes'}',
+              style: TextStyle(color: colors.onTertiaryContainer),
             ),
           ),
         ),

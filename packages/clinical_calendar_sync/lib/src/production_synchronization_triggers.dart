@@ -30,11 +30,13 @@ final class SynchronizationTriggeringRepositoryRegistry
     required this.base,
     required this.synchronization,
     required this.onTriggerFailure,
+    this.onCommitted,
   });
 
   final RepositoryRegistry base;
   final SynchronizationTriggerTarget synchronization;
   final SynchronizationTriggerFailureObserver onTriggerFailure;
+  final void Function()? onCommitted;
 
   bool _scheduled = false;
   bool _running = false;
@@ -53,6 +55,7 @@ final class SynchronizationTriggeringRepositoryRegistry
     R Function(LocalWriteRepositories repositories) callback,
   ) async {
     final result = await base.mutate(callback);
+    onCommitted?.call();
     _wakeAfterCommit();
     return result;
   }
@@ -87,6 +90,7 @@ final class SynchronizationTriggeringRepositoryRegistry
       aggregateMutationId: aggregateMutationId,
       deletedAtUtc: deletedAtUtc,
     );
+    onCommitted?.call();
     _wakeAfterCommit();
   }
 
