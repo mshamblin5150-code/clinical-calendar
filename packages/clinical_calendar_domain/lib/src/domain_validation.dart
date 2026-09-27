@@ -8,11 +8,15 @@ final class DomainValidationException implements Exception {
   String toString() => 'DomainValidationException: $message';
 }
 
-String requireIdentifier(String value, String fieldName) {
+String requireIdentifier(
+  String value,
+  String fieldName, {
+  int maximumLength = 128,
+}) {
   final normalized = value.trim();
-  if (normalized.isEmpty || normalized.length > 128) {
+  if (normalized.isEmpty || normalized.length > maximumLength) {
     throw DomainValidationException(
-      '$fieldName must contain between 1 and 128 characters.',
+      '$fieldName must contain between 1 and $maximumLength characters.',
     );
   }
   if (normalized.codeUnits.any((unit) => unit < 0x20 || unit == 0x7f)) {

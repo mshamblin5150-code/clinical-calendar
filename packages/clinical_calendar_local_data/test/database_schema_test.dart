@@ -61,6 +61,7 @@ void main() {
         'preceptors',
         'placement_preceptors',
         'commitments',
+        'work_schedule_feeds',
         'protected_days',
         'historical_hours_entries',
         'evaluation_plans',

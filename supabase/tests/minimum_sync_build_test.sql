@@ -25,7 +25,7 @@ select public.register_current_device(
 
 select ok(
   (public.apply_sync_operation(
-    46,
+    47,
     '94000000-0000-4000-8000-000000000001',
     'preceptor', '95000000-0000-4000-8000-000000000001', 'upsert', 0,
     jsonb_build_object(
@@ -42,7 +42,7 @@ select ok(
 
 select is(
   public.apply_sync_operation(
-    45,
+    46,
     '94000000-0000-4000-8000-000000000002',
     'preceptor', '95000000-0000-4000-8000-000000000002', 'upsert', 0,
     jsonb_build_object(
@@ -60,17 +60,17 @@ select is(
 
 select is(
   public.apply_sync_operation(
-    45,
+    46,
     '94000000-0000-4000-8000-000000000003',
     'preceptor', '95000000-0000-4000-8000-000000000003', 'upsert', 0,
     '{}'::jsonb
   ) #>> '{rejection,minimum_build}',
-  '46',
+  '47',
   'the rejection tells the client which build is required'
 );
 
 select is(
-  (select count(*) from public.pull_changes_after(45, 0, 100)),
+  (select count(*) from public.pull_changes_after(46, 0, 100)),
   1::bigint,
   'a build below the minimum can still pull'
 );

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
 import 'package:test/test.dart';
@@ -11,6 +13,7 @@ void main() {
   late _MemoryRegistry registry;
   late _SequenceIdentifiers identifiers;
   late SchedulingApplicationService service;
+  late WorkScheduleFeedApplicationService feedService;
   late ClinicalPlacement placement;
   late Preceptor primary;
   late Preceptor alternate;
@@ -23,6 +26,11 @@ void main() {
       _FixedClock(_now),
       identifiers,
     );
+    feedService = WorkScheduleFeedApplicationService(
+      registry,
+      _FixedClock(_now),
+      identifiers,
+    );
     primary = Preceptor(id: _id(10), name: 'Primary');
     alternate = Preceptor(id: _id(11), name: 'Alternate');
     placement = _placement(primary.id, alternate.id);
@@ -30,6 +38,431 @@ void main() {
     registry.repositories.preceptors.seed(_studentId, alternate);
     registry.repositories.clinicalPlacements.seed(_studentId, placement);
   });
+
+  test(
+    'ER Schedule preview classifies events and replaces matching hand-entered shifts only after confirmation',
+    () async {
+      final matching = WorkShift(
+        id: _id(15),
+        plannedInterval: _interval(12, 7, 19),
+      );
+      final unrelated = WorkShift(
+        id: _id(16),
+        plannedInterval: _interval(18, 7, 19),
+      );
+      registry.repositories.workShifts.seed(_studentId, matching);
+      registry.repositories.workShifts.seed(_studentId, unrelated);
+
+      final preview = await feedService.previewConnection(
+        WorkScheduleFeedConnectionRequest(
+          studentId: _studentId,
+          name: 'ER Schedule',
+          url: Uri.parse('webcal://example.invalid/private/token.ics'),
+          ics: File(
+            'test/fixtures/work_schedule_feeds/er_schedule.ics',
+          ).readAsStringSync(),
+          studentTimeZone: _zone,
+        ),
+      );
+
+      expect(preview.upcomingShifts, hasLength(1));
+      expect(preview.matchingHandEnteredWorkShiftIds, [matching.id]);
+      expect(preview.notImported.map((event) => event.reason), [
+        WorkScheduleFeedNotImportedReason.allDay,
+        WorkScheduleFeedNotImportedReason.skipWord,
+      ]);
+      expect(preview.feed.skipWords, WorkScheduleFeed.defaultSkipWords);
+      expect(preview.feed.maskedUrl, 'webcal://example.invalid/…');
+      expect(registry.repositories.workShifts.values, [matching, unrelated]);
+      expect(registry.repositories.workScheduleFeeds.values, isEmpty);
+
+      await feedService.confirmConnection(preview);
+
+      expect(registry.repositories.workScheduleFeeds.values, [preview.feed]);
+      expect(
+        registry.repositories.workShifts.values.map((shift) => shift.id),
+        containsAll(<String>[unrelated.id, preview.upcomingShifts.single.id]),
+      );
+      expect(
+        registry.repositories.workShifts.values.map((shift) => shift.id),
+        isNot(contains(matching.id)),
+      );
+      expect(preview.upcomingShifts.single.sourceEventUid, 'shift-1');
+      expect(
+        preview.upcomingShifts.single.plannedInterval.startInstantUtc,
+        DateTime.utc(2026, 8, 12, 11),
+      );
+    },
+  );
+
+  test(
+    'changing vendor UIDs fall back to times and two devices converge without duplicates',
+    () async {
+      final preview = await feedService.previewConnection(
+        WorkScheduleFeedConnectionRequest(
+          studentId: _studentId,
+          name: 'ER Schedule',
+          url: Uri.parse('https://example.invalid/private/token.ics'),
+          ics: File(
+            'test/fixtures/work_schedule_feeds/er_schedule.ics',
+          ).readAsStringSync(),
+          studentTimeZone: _zone,
+        ),
+      );
+      await feedService.confirmConnection(preview);
+      final originalId = preview.upcomingShifts.single.id;
+
+      final secondRegistry = _MemoryRegistry();
+      final secondService = WorkScheduleFeedApplicationService(
+        secondRegistry,
+        _FixedClock(_now.add(const Duration(hours: 2))),
+        _SequenceIdentifiers(3000),
+      );
+      await secondService.confirmConnection(preview);
+      final changedUidIcs = File(
+        'test/fixtures/work_schedule_feeds/changing_uids.ics',
+      ).readAsStringSync();
+
+      final first = await feedService.refresh(
+        WorkScheduleFeedRefreshRequest(
+          studentId: _studentId,
+          feedId: preview.feed.id,
+          ics: changedUidIcs,
+          studentTimeZone: _zone,
+        ),
+      );
+      final second = await secondService.refresh(
+        WorkScheduleFeedRefreshRequest(
+          studentId: _studentId,
+          feedId: preview.feed.id,
+          ics: changedUidIcs,
+          studentTimeZone: _zone,
+        ),
+      );
+
+      expect(first.disposition, WorkScheduleFeedRefreshDisposition.updated);
+      expect(second.disposition, WorkScheduleFeedRefreshDisposition.updated);
+      expect(registry.repositories.workShifts.values, hasLength(1));
+      expect(secondRegistry.repositories.workShifts.values, hasLength(1));
+      expect(registry.repositories.workShifts.values.single.id, originalId);
+      expect(
+        secondRegistry.repositories.workShifts.values.single.id,
+        originalId,
+      );
+      expect(
+        registry.repositories.workShifts.values.single.sourceEventUid,
+        'vendor-regenerated-uid',
+      );
+    },
+  );
+
+  test('team feeds are refused on connect and held on refresh', () async {
+    final teamIcs = File(
+      'test/fixtures/work_schedule_feeds/team_feed.ics',
+    ).readAsStringSync();
+    await expectLater(
+      feedService.previewConnection(
+        WorkScheduleFeedConnectionRequest(
+          studentId: _studentId,
+          name: 'Department schedule',
+          url: Uri.parse('https://example.invalid/team.ics'),
+          ics: teamIcs,
+          studentTimeZone: _zone,
+        ),
+      ),
+      throwsA(isA<WorkScheduleFeedTeamFeedException>()),
+    );
+
+    final preview = await feedService.previewConnection(
+      WorkScheduleFeedConnectionRequest(
+        studentId: _studentId,
+        name: 'ER Schedule',
+        url: Uri.parse('https://example.invalid/private.ics'),
+        ics: File(
+          'test/fixtures/work_schedule_feeds/er_schedule.ics',
+        ).readAsStringSync(),
+        studentTimeZone: _zone,
+      ),
+    );
+    await feedService.confirmConnection(preview);
+    final previousSuccess = preview.feed.lastSuccessfulUpdateAtUtc;
+    final existingShift = registry.repositories.workShifts.values.single;
+
+    final held = await feedService.refresh(
+      WorkScheduleFeedRefreshRequest(
+        studentId: _studentId,
+        feedId: preview.feed.id,
+        ics: teamIcs,
+        studentTimeZone: _zone,
+      ),
+    );
+
+    expect(held.disposition, WorkScheduleFeedRefreshDisposition.heldTeamFeed);
+    expect(held.feed.heldReason, isNotEmpty);
+    expect(held.feed.lastSuccessfulUpdateAtUtc, previousSuccess);
+    expect(registry.repositories.workShifts.values.single, same(existingShift));
+  });
+
+  test(
+    'rolling windows freeze started shifts and mirror upcoming shifts',
+    () async {
+      final preview = await feedService.previewConnection(
+        WorkScheduleFeedConnectionRequest(
+          studentId: _studentId,
+          name: 'ER Schedule',
+          url: Uri.parse('https://example.invalid/private.ics'),
+          ics: File(
+            'test/fixtures/work_schedule_feeds/er_schedule.ics',
+          ).readAsStringSync(),
+          studentTimeZone: _zone,
+        ),
+      );
+      await feedService.confirmConnection(preview);
+      final started = preview.upcomingShifts.single;
+      final removedUpcoming = WorkShift.imported(
+        id: _id(99),
+        plannedInterval: _interval(18, 7, 19),
+        workScheduleFeedId: preview.feed.id,
+        workScheduleFeedName: preview.feed.name,
+        sourceEventUid: 'removed-upcoming',
+      );
+      registry.repositories.workShifts.seed(_studentId, removedUpcoming);
+
+      final laterService = WorkScheduleFeedApplicationService(
+        registry,
+        _FixedClock(DateTime.utc(2026, 8, 13, 0)),
+        _SequenceIdentifiers(4000),
+      );
+      await laterService.refresh(
+        WorkScheduleFeedRefreshRequest(
+          studentId: _studentId,
+          feedId: preview.feed.id,
+          ics: File(
+            'test/fixtures/work_schedule_feeds/rolling_window.ics',
+          ).readAsStringSync(),
+          studentTimeZone: _zone,
+        ),
+      );
+
+      final shifts = registry.repositories.workShifts.values;
+      expect(shifts.map((shift) => shift.id), contains(started.id));
+      expect(
+        shifts.map((shift) => shift.id),
+        isNot(contains(removedUpcoming.id)),
+      );
+      expect(
+        shifts.map((shift) => shift.sourceEventUid),
+        contains('new-window'),
+      );
+      expect(shifts, hasLength(2));
+    },
+  );
+
+  test(
+    'an empty feed requires confirmation before upcoming shifts are removed',
+    () async {
+      final preview = await feedService.previewConnection(
+        WorkScheduleFeedConnectionRequest(
+          studentId: _studentId,
+          name: 'ER Schedule',
+          url: Uri.parse('https://example.invalid/private.ics'),
+          ics: File(
+            'test/fixtures/work_schedule_feeds/er_schedule.ics',
+          ).readAsStringSync(),
+          studentTimeZone: _zone,
+        ),
+      );
+      await feedService.confirmConnection(preview);
+      final emptyIcs = File(
+        'test/fixtures/work_schedule_feeds/empty_feed.ics',
+      ).readAsStringSync();
+
+      final pending = await feedService.refresh(
+        WorkScheduleFeedRefreshRequest(
+          studentId: _studentId,
+          feedId: preview.feed.id,
+          ics: emptyIcs,
+          studentTimeZone: _zone,
+        ),
+      );
+
+      expect(
+        pending.disposition,
+        WorkScheduleFeedRefreshDisposition.requiresEmptyConfirmation,
+      );
+      expect(registry.repositories.workShifts.values, hasLength(1));
+      expect(
+        pending.feed.lastSuccessfulUpdateAtUtc,
+        preview.feed.lastSuccessfulUpdateAtUtc,
+      );
+
+      final confirmed = await feedService.refresh(
+        WorkScheduleFeedRefreshRequest(
+          studentId: _studentId,
+          feedId: preview.feed.id,
+          ics: emptyIcs,
+          studentTimeZone: _zone,
+          confirmEmpty: true,
+        ),
+      );
+      expect(confirmed.disposition, WorkScheduleFeedRefreshDisposition.updated);
+      expect(registry.repositories.workShifts.values, isEmpty);
+    },
+  );
+
+  test(
+    'TZID events keep their zone and floating events use the Student zone',
+    () async {
+      final preview = await feedService.previewConnection(
+        WorkScheduleFeedConnectionRequest(
+          studentId: _studentId,
+          name: 'Mixed zones',
+          url: Uri.parse('https://example.invalid/zones.ics'),
+          ics: File(
+            'test/fixtures/work_schedule_feeds/tzid_events.ics',
+          ).readAsStringSync(),
+          studentTimeZone: _zone,
+        ),
+      );
+
+      final byUid = {
+        for (final shift in preview.upcomingShifts)
+          shift.sourceEventUid!: shift,
+      };
+      expect(
+        byUid['chicago']!.plannedInterval.timeZone.value,
+        'America/Chicago',
+      );
+      expect(byUid['chicago']!.plannedInterval.startOffset.minutes, -300);
+      expect(byUid['chicago']!.plannedInterval.startTime, LocalTime(7, 0));
+      expect(byUid['floating']!.plannedInterval.timeZone, _zone);
+      expect(byUid['floating']!.plannedInterval.startOffset.minutes, -240);
+      expect(byUid['floating']!.plannedInterval.startTime, LocalTime(8, 30));
+    },
+  );
+
+  test('disconnect removes only that feed future and keeps its past', () async {
+    final preview = await feedService.previewConnection(
+      WorkScheduleFeedConnectionRequest(
+        studentId: _studentId,
+        name: 'ER Schedule',
+        url: Uri.parse('https://example.invalid/private.ics'),
+        ics: File(
+          'test/fixtures/work_schedule_feeds/er_schedule.ics',
+        ).readAsStringSync(),
+        studentTimeZone: _zone,
+      ),
+    );
+    await feedService.confirmConnection(preview);
+    final past = WorkShift.imported(
+      id: _id(96),
+      plannedInterval: _interval(8, 7, 19),
+      workScheduleFeedId: preview.feed.id,
+      workScheduleFeedName: preview.feed.name,
+      sourceEventUid: 'past',
+    );
+    final handEntered = WorkShift(
+      id: _id(97),
+      plannedInterval: _interval(18, 7, 19),
+    );
+    final otherFeed = WorkShift.imported(
+      id: _id(98),
+      plannedInterval: _interval(19, 7, 19),
+      workScheduleFeedId: 'other-feed',
+      workScheduleFeedName: 'Other Feed',
+      sourceEventUid: 'other',
+    );
+    registry.repositories.workShifts.seed(_studentId, past);
+    registry.repositories.workShifts.seed(_studentId, handEntered);
+    registry.repositories.workShifts.seed(_studentId, otherFeed);
+
+    await feedService.disconnect(
+      studentId: _studentId,
+      feedId: preview.feed.id,
+    );
+
+    expect(registry.repositories.workScheduleFeeds.values, isEmpty);
+    expect(
+      registry.repositories.workShifts.values.map((shift) => shift.id),
+      containsAll([past.id, handEntered.id, otherFeed.id]),
+    );
+    expect(
+      registry.repositories.workShifts.values.map((shift) => shift.id),
+      isNot(contains(preview.upcomingShifts.single.id)),
+    );
+  });
+
+  test('a shift is frozen at its exact start instant', () async {
+    final preview = await feedService.previewConnection(
+      WorkScheduleFeedConnectionRequest(
+        studentId: _studentId,
+        name: 'ER Schedule',
+        url: Uri.parse('https://example.invalid/private.ics'),
+        ics: File(
+          'test/fixtures/work_schedule_feeds/er_schedule.ics',
+        ).readAsStringSync(),
+        studentTimeZone: _zone,
+      ),
+    );
+    await feedService.confirmConnection(preview);
+    final shift = preview.upcomingShifts.single;
+    final atStart = WorkScheduleFeedApplicationService(
+      registry,
+      _FixedClock(shift.plannedInterval.startInstantUtc),
+      _SequenceIdentifiers(4500),
+    );
+
+    await atStart.disconnect(studentId: _studentId, feedId: preview.feed.id);
+
+    expect(registry.repositories.workShifts.values, [shift]);
+    expect(registry.repositories.workScheduleFeeds.values, isEmpty);
+  });
+
+  test(
+    'skip words are editable and malformed refreshes change nothing',
+    () async {
+      final preview = await feedService.previewConnection(
+        WorkScheduleFeedConnectionRequest(
+          studentId: _studentId,
+          name: 'ER Schedule',
+          url: Uri.parse('https://example.invalid/private.ics'),
+          ics: File(
+            'test/fixtures/work_schedule_feeds/er_schedule.ics',
+          ).readAsStringSync(),
+          studentTimeZone: _zone,
+        ),
+      );
+      await feedService.confirmConnection(preview);
+      final updated = await feedService.updateSkipWords(
+        studentId: _studentId,
+        feedId: preview.feed.id,
+        skipWords: ['PTO', 'Training', 'pto'],
+      );
+      expect(updated.value.skipWords, ['PTO', 'Training']);
+      final beforeFeed = registry.repositories.workScheduleFeeds.values.single;
+      final beforeShift = registry.repositories.workShifts.values.single;
+      final beforeMutations = registry.repositories.mutations.length;
+
+      await expectLater(
+        feedService.refresh(
+          WorkScheduleFeedRefreshRequest(
+            studentId: _studentId,
+            feedId: preview.feed.id,
+            ics: 'not a calendar',
+            studentTimeZone: _zone,
+          ),
+        ),
+        throwsA(isA<WorkScheduleFeedFormatException>()),
+      );
+
+      expect(
+        registry.repositories.workScheduleFeeds.values.single,
+        same(beforeFeed),
+      );
+      expect(registry.repositories.workShifts.values.single, same(beforeShift));
+      expect(registry.repositories.mutations, hasLength(beforeMutations));
+    },
+  );
 
   test('creates a mixed-Preceptor Clinical Session batch atomically', () async {
     final result = await service.createClinicalSessionBatch(
@@ -868,7 +1301,11 @@ final class _MemoryRegistry implements RepositoryRegistry {
   }
 }
 
-final class _MemoryRepositories implements LocalWriteRepositories {
+final class _MemoryRepositories
+    implements WorkScheduleFeedLocalWriteRepositories {
+  @override
+  final _MemoryRepository<WorkScheduleFeed> workScheduleFeeds =
+      _MemoryRepository((value) => value.id);
   @override
   final _MemoryRepository<WorkShift> workShifts = _MemoryRepository(
     (value) => value.id,
@@ -915,6 +1352,7 @@ final class _MemoryRepositories implements LocalWriteRepositories {
   }
 
   List<_MemoryRepository<Object>> get _all => [
+    workScheduleFeeds,
     workShifts,
     clinicalSessions,
     protectedDays,

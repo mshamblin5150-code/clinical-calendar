@@ -660,6 +660,11 @@ final class SqliteSynchronizationRepository
           ...common,
           for (final key in _commitmentColumns) key: value[key],
         });
+      case 'work_schedule_feed':
+        _upsert('work_schedule_feeds', {
+          ...common,
+          for (final key in _workScheduleFeedColumns) key: value[key],
+        });
       case 'protected_day':
         _upsert('protected_days', {
           ...common,
@@ -723,6 +728,7 @@ final class SqliteSynchronizationRepository
     Map<String, dynamic> envelope,
   ) {
     final table = switch (entityType) {
+      'work_schedule_feed' => 'work_schedule_feeds',
       'work_shift' || 'clinical_session' => 'commitments',
       'protected_day' => 'protected_days',
       'schedule_template' => 'schedule_templates',
@@ -1362,6 +1368,7 @@ const _commitmentColumns = <String>[
   'preceptor_id',
   'work_schedule_feed_id',
   'work_schedule_feed_name',
+  'source_event_uid',
   'planned_start_date',
   'planned_end_date',
   'planned_start_minutes',
@@ -1379,6 +1386,16 @@ const _commitmentColumns = <String>[
   'actual_end_offset_minutes',
   'actual_start_utc',
   'actual_end_utc',
+];
+
+const _workScheduleFeedColumns = <String>[
+  'name',
+  'feed_url',
+  'skip_words_json',
+  'last_checked_at_utc',
+  'last_successful_update_at_utc',
+  'not_imported_json',
+  'held_reason',
 ];
 
 const _templateColumns = <String>[
@@ -1424,6 +1441,7 @@ const _academicAssignmentColumns = <String>[
 const _classCatalogEntryColumns = <String>['name', 'archived'];
 
 String _tableFor(String entityType) => switch (entityType) {
+  'work_schedule_feed' => 'work_schedule_feeds',
   'student_profile' => 'student_profiles',
   'preceptor' => 'preceptors',
   'clinical_placement' => 'clinical_placements',

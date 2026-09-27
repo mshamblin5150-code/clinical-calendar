@@ -15,7 +15,7 @@ final class DatabaseMigrationRunner {
   const DatabaseMigrationRunner.forTesting(MigrationTestHook hook)
     : _testHook = hook;
 
-  static const latestVersion = 19;
+  static const latestVersion = 20;
 
   final MigrationTestHook? _testHook;
 
@@ -796,5 +796,27 @@ final Map<int, List<String>> _statements = {
              (work_schedule_feed_id IS NOT NULL AND
               commitment_type = 'work_shift' AND
               length(trim(work_schedule_feed_name)) BETWEEN 1 AND 128))''',
+  ],
+  20: [
+    '''CREATE TABLE work_schedule_feeds (
+      $_syncColumns,
+      name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 128),
+      feed_url TEXT NOT NULL CHECK (length(trim(feed_url)) BETWEEN 1 AND 4096),
+      skip_words_json TEXT NOT NULL CHECK (json_valid(skip_words_json)),
+      last_checked_at_utc TEXT NOT NULL,
+      last_successful_update_at_utc TEXT NOT NULL,
+      not_imported_json TEXT NOT NULL CHECK (json_valid(not_imported_json)),
+      held_reason TEXT,
+      PRIMARY KEY (id),
+      UNIQUE (id, student_id),
+      FOREIGN KEY (student_id) REFERENCES student_profiles(student_id),
+      CHECK (last_successful_update_at_utc <= last_checked_at_utc)
+    ) STRICT''',
+    '''ALTER TABLE commitments
+      ADD COLUMN source_event_uid TEXT
+      CHECK (source_event_uid IS NULL OR
+             (commitment_type = 'work_shift' AND
+              work_schedule_feed_id IS NOT NULL AND
+              length(trim(source_event_uid)) BETWEEN 1 AND 1024))''',
   ],
 };

@@ -647,6 +647,18 @@ abstract interface class LocalWriteRepositories
   ActivePlacementSelectionRepository get activePlacementSelection;
 }
 
+/// Optional synchronized Work Schedule Feed capability.
+abstract interface class WorkScheduleFeedLocalReadRepositories
+    implements LocalReadRepositories {
+  ReadRepository<WorkScheduleFeed> get workScheduleFeeds;
+}
+
+abstract interface class WorkScheduleFeedLocalWriteRepositories
+    implements LocalWriteRepositories, WorkScheduleFeedLocalReadRepositories {
+  @override
+  MutableRepository<WorkScheduleFeed> get workScheduleFeeds;
+}
+
 /// Optional support capability kept separate so existing use-case fakes remain
 /// source-compatible while support surfaces are integrated incrementally.
 abstract interface class SupportLocalReadRepositories
