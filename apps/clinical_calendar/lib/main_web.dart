@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_platform/clinical_calendar_web_identity_platform.dart';
@@ -55,8 +54,8 @@ Widget buildWebRoot({
             publishableKey: configuredEnvironment.supabasePublishableKey,
           ),
       secureStorage: secureStorage ?? createWebIdentityStorage(),
-      identifiers: identifiers ?? _WebIdentifierGenerator(),
-      clock: clock ?? const _WebClock(),
+      identifiers: identifiers ?? ProcessIdentifierGenerator(),
+      clock: clock ?? const SystemClock(),
       currentDevice: currentDevice ?? currentWebDeviceDescriptor(),
       localCopy: localCopy ?? const _WebLocalDeviceCopyController(),
     );
@@ -174,35 +173,6 @@ final class _WebIdentityApplicationState
     ),
     home: _home(),
   );
-}
-
-final class _WebIdentifierGenerator implements IdentifierGenerator {
-  _WebIdentifierGenerator([Random? random])
-    : _random = random ?? Random.secure();
-
-  final Random _random;
-
-  @override
-  String nextIdentifier() {
-    final bytes = List<int>.generate(16, (_) => _random.nextInt(256));
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    final hex = bytes
-        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
-        .join();
-    return '${hex.substring(0, 8)}-'
-        '${hex.substring(8, 12)}-'
-        '${hex.substring(12, 16)}-'
-        '${hex.substring(16, 20)}-'
-        '${hex.substring(20)}';
-  }
-}
-
-final class _WebClock implements Clock {
-  const _WebClock();
-
-  @override
-  DateTime nowUtc() => DateTime.now().toUtc();
 }
 
 final class _WebLocalDeviceCopyController implements LocalDeviceCopyController {

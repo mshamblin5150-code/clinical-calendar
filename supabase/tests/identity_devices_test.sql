@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(36);
+select plan(38);
 select minimum_sync_build as compatible_build
 from clinical_calendar_sync.sync_configuration
 where singleton \gset
@@ -105,6 +105,25 @@ select is(
    where id = '12000000-0000-4000-8000-000000000001'),
   true,
   'native registration never gives the Auth session an idle deadline'
+);
+update clinical_calendar_sync.connected_devices
+set last_synchronized_at_utc = clock_timestamp() - interval '80 days'
+where device_id = '13000000-0000-4000-8000-000000000004';
+set local role authenticated;
+select ok(
+  public.register_current_device(
+    '13000000-0000-4000-8000-000000000004', 'Safari on iPhone', 'web'
+  ),
+  'an idle browser can reauthenticate before its deadline'
+);
+reset role;
+select is(
+  (select s.not_after = d.last_synchronized_at_utc + interval '90 days'
+   from auth.sessions s
+   join clinical_calendar_sync.connected_devices d on d.session_id = s.id
+   where s.id = '12000000-0000-4000-8000-000000000005'),
+  true,
+  'reauthentication cannot extend the browser deadline past its last sync'
 );
 update clinical_calendar_sync.connected_devices
 set registered_at_utc = '2026-01-01 00:00:00+00',

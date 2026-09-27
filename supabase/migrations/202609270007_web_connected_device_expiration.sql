@@ -122,6 +122,7 @@ declare
   v_student_id uuid := clinical_calendar_sync.current_student_id();
   v_session_id uuid := clinical_calendar_sync.current_session_id();
   v_now timestamptz := clock_timestamp();
+  v_web_deadline_utc timestamptz;
 begin
   if v_student_id is null or v_session_id is null then
     return false;
@@ -143,28 +144,25 @@ begin
       registered_at_utc = v_now,
       revoked_at_utc = null
   where student_id = v_student_id and device_id = p_device_id
-    and (session_id <> v_session_id or revoked_at_utc is null);
-  if found then
-    if p_platform = 'web' then
-      perform clinical_calendar_sync.set_auth_session_not_after(
-        v_student_id, v_session_id, v_now + interval '90 days'
-      );
-    end if;
-    return clinical_calendar_sync.current_device_is_active();
-  end if;
-
-  insert into clinical_calendar_sync.connected_devices (
-    device_id, student_id, session_id, device_name, platform, registered_at_utc
-  ) values (
-    p_device_id, v_student_id, v_session_id, trim(p_device_name), p_platform,
-    v_now
-  );
-
-  if p_platform = 'web' then
-    perform clinical_calendar_sync.set_auth_session_not_after(
-      v_student_id, v_session_id, v_now + interval '90 days'
+    and (session_id <> v_session_id or revoked_at_utc is null)
+  returning coalesce(last_synchronized_at_utc, registered_at_utc)
+    + interval '90 days'
+  into v_web_deadline_utc;
+  if not found then
+    insert into clinical_calendar_sync.connected_devices (
+      device_id, student_id, session_id, device_name, platform, registered_at_utc
+    ) values (
+      p_device_id, v_student_id, v_session_id, trim(p_device_name), p_platform,
+      v_now
     );
+    v_web_deadline_utc := v_now + interval '90 days';
   end if;
+
+  perform clinical_calendar_sync.set_auth_session_not_after(
+    v_student_id,
+    v_session_id,
+    case when p_platform = 'web' then v_web_deadline_utc else null end
+  );
   return clinical_calendar_sync.current_device_is_active();
 exception when unique_violation then
   return false;
