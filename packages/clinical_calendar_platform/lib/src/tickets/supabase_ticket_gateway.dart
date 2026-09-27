@@ -66,33 +66,29 @@ final class SupabaseTicketGateway implements TicketGateway {
   Future<List<Ticket>> readForMaintainer() => _readTickets();
 
   @override
-  Future<Ticket> openForMaintainer(String ticketId) async {
-    try {
-      final response = await _rpc('open_ticket_for_maintainer', {
-        'p_ticket_id': ticketId,
-      });
-      if (response is! Map<String, dynamic>) {
-        throw const TicketUnavailable();
-      }
-      return _ticket(response);
-    } on _TicketServerFailure catch (error) {
-      if (error.code == 'P2854') throw const TicketUnavailable();
-      rethrow;
-    }
-  }
+  Future<Ticket> openForMaintainer(String ticketId) => _openTicket(
+    'open_ticket_for_maintainer',
+    ticketId,
+    notFoundCode: 'P2854',
+  );
 
   @override
-  Future<Ticket> openForSender(String ticketId) async {
+  Future<Ticket> openForSender(String ticketId) =>
+      _openTicket('open_ticket_for_sender', ticketId, notFoundCode: 'P2860');
+
+  Future<Ticket> _openTicket(
+    String rpcName,
+    String ticketId, {
+    required String notFoundCode,
+  }) async {
     try {
-      final response = await _rpc('open_ticket_for_sender', {
-        'p_ticket_id': ticketId,
-      });
+      final response = await _rpc(rpcName, {'p_ticket_id': ticketId});
       if (response is! Map<String, dynamic>) {
         throw const TicketUnavailable();
       }
       return _ticket(response);
     } on _TicketServerFailure catch (error) {
-      if (error.code == 'P2860') throw const TicketUnavailable();
+      if (error.code == notFoundCode) throw const TicketUnavailable();
       rethrow;
     }
   }
@@ -102,7 +98,7 @@ final class SupabaseTicketGateway implements TicketGateway {
     String ticketId, {
     required TicketStatus outcome,
     required String reason,
-  }) => _mutate('close_ticket', {
+  }) => _runTicketMutationRpc('close_ticket', {
     'p_ticket_id': ticketId,
     'p_outcome': outcome.databaseValue,
     'p_reason': reason,
@@ -110,11 +106,17 @@ final class SupabaseTicketGateway implements TicketGateway {
 
   @override
   Future<Ticket> reopen(String ticketId, {required String note}) =>
-      _mutate('reopen_ticket', {'p_ticket_id': ticketId, 'p_note': note});
+      _runTicketMutationRpc('reopen_ticket', {
+        'p_ticket_id': ticketId,
+        'p_note': note,
+      });
 
-  Future<Ticket> _mutate(String function, Map<String, Object?> body) async {
+  Future<Ticket> _runTicketMutationRpc(
+    String rpcName,
+    Map<String, Object?> body,
+  ) async {
     try {
-      final response = await _rpc(function, body);
+      final response = await _rpc(rpcName, body);
       if (response is! Map<String, dynamic>) {
         throw const TicketUnavailable();
       }
