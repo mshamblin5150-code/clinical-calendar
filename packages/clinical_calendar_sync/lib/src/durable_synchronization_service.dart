@@ -53,6 +53,9 @@ final class DurableSynchronizationService
 
   bool _connected;
   bool _shutDown = false;
+  bool _minimumSyncBuildRequired = false;
+  final _minimumSyncBuildRequiredChanges = StreamController<bool>.broadcast();
+  final _outboxDrained = StreamController<void>.broadcast();
   SynchronizationTrigger? _pendingRerunTrigger;
   Future<SynchronizationResult>? _active;
 
@@ -61,6 +64,13 @@ final class DurableSynchronizationService
       repositories,
     ).inspect(studentId: _studentId, remoteScope: remoteScope),
   );
+
+  bool get minimumSyncBuildRequired => _minimumSyncBuildRequired;
+
+  Stream<bool> get minimumSyncBuildRequiredChanges =>
+      _minimumSyncBuildRequiredChanges.stream;
+
+  Stream<void> get outboxDrained => _outboxDrained.stream;
 
   @override
   Future<SynchronizationResult> synchronize() =>
@@ -128,6 +138,8 @@ final class DurableSynchronizationService
     _pendingRerunTrigger = null;
     _retryScheduler.cancel();
     await _active;
+    await _minimumSyncBuildRequiredChanges.close();
+    await _outboxDrained.close();
   }
 
   Future<SynchronizationResult> _drain(
@@ -163,6 +175,7 @@ final class DurableSynchronizationService
     );
 
     String? terminalFailure;
+    var minimumBuildHeld = false;
     while (true) {
       final pending = await _repositories.read(
         (repositories) => repositories.outbox.pending(
@@ -190,6 +203,11 @@ final class DurableSynchronizationService
         }
         if (result.disposition == _PushDisposition.terminalFailure) {
           terminalFailure = result.rejectionCode ?? 'terminal_rejection';
+          stopPush = true;
+          break;
+        }
+        if (result.disposition == _PushDisposition.minimumBuildHeld) {
+          minimumBuildHeld = true;
           stopPush = true;
           break;
         }
@@ -222,6 +240,7 @@ final class DurableSynchronizationService
 
     final completedAt = _now();
     final snapshot = await health();
+    if (snapshot.pendingCount == 0) _outboxDrained.add(null);
     final disposition = snapshot.unresolvedConflictCount > 0
         ? SynchronizationHealthDisposition.conflictNeedsAttention
         : terminalFailure != null
@@ -243,7 +262,9 @@ final class DurableSynchronizationService
     if (snapshot.pendingCount > 0 && snapshot.nextRetryAtUtc != null) {
       _scheduleRetry(snapshot.nextRetryAtUtc!);
     }
-    final publicReference = snapshot.unresolvedConflictCount > 0
+    final publicReference = minimumBuildHeld
+        ? PublicSynchronizationFailureReference.minimumSyncBuildRequired
+        : snapshot.unresolvedConflictCount > 0
         ? PublicSynchronizationFailureReference.conflictNeedsAttention
         : terminalFailure != null
         ? PublicSynchronizationFailureReference.terminalRejection
@@ -289,11 +310,17 @@ final class DurableSynchronizationService
           acknowledgedAtUtc: _now(),
         ),
       );
+      _setMinimumSyncBuildRequired(false);
       _boundary.reached(SynchronizationBoundary.afterPushLocalCommit);
       return const _PushOutcome(_PushDisposition.accepted);
     }
 
     final code = response.rejectionCode ?? 'invalid_push_response';
+    if (code == 'minimum_sync_build_required') {
+      await _recordOperationFailure(operation, code, false);
+      _setMinimumSyncBuildRequired(true);
+      return const _PushOutcome(_PushDisposition.minimumBuildHeld);
+    }
     if (code == 'unauthenticated') {
       await _recordOperationFailure(operation, code, false);
       return const _PushOutcome(_PushDisposition.retryScheduled);
@@ -504,6 +531,12 @@ final class DurableSynchronizationService
     if (!value.isUtc) throw StateError('Clock must return UTC.');
     return value;
   }
+
+  void _setMinimumSyncBuildRequired(bool value) {
+    if (_minimumSyncBuildRequired == value) return;
+    _minimumSyncBuildRequired = value;
+    _minimumSyncBuildRequiredChanges.add(value);
+  }
 }
 
 String _cursorOrPayloadFailureReference(
@@ -538,7 +571,13 @@ SynchronizationTrigger _coalesceTrigger(
   return incoming;
 }
 
-enum _PushDisposition { accepted, conflict, terminalFailure, retryScheduled }
+enum _PushDisposition {
+  accepted,
+  conflict,
+  terminalFailure,
+  retryScheduled,
+  minimumBuildHeld,
+}
 
 final class _PushOutcome {
   const _PushOutcome(

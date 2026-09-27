@@ -115,6 +115,9 @@ final class ClinicalCalendarApp extends StatefulWidget {
     this.themePreviewController,
     this.candidateThemePreflight,
     this.onLaunchOrResume,
+    this.onBuildVersionCheck,
+    this.minimumSyncBuildRequired = false,
+    this.minimumSyncBuildRequiredChanges,
     this.connectivityChanges,
     this.onConnectivityChanged,
     this.onRealtimeHint,
@@ -146,6 +149,9 @@ final class ClinicalCalendarApp extends StatefulWidget {
   final ThemePreviewController? themePreviewController;
   final CandidateThemePreflight? candidateThemePreflight;
   final Future<void> Function()? onLaunchOrResume;
+  final Future<void> Function()? onBuildVersionCheck;
+  final bool minimumSyncBuildRequired;
+  final Stream<bool>? minimumSyncBuildRequiredChanges;
   final Stream<bool>? connectivityChanges;
   final Future<void> Function(bool connected)? onConnectivityChanged;
 
@@ -399,6 +405,10 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
           ),
           home: ClinicalCalendarLifecycleHost(
             onLaunchOrResume: _launchOrResume,
+            onBuildVersionCheck: widget.onBuildVersionCheck,
+            minimumSyncBuildRequired: widget.minimumSyncBuildRequired,
+            minimumSyncBuildRequiredChanges:
+                widget.minimumSyncBuildRequiredChanges,
             connectivityChanges: widget.connectivityChanges,
             onConnectivityChanged: widget.onConnectivityChanged == null
                 ? null
@@ -483,6 +493,9 @@ final class ClinicalCalendarLifecycleHost extends StatefulWidget {
   const ClinicalCalendarLifecycleHost({
     required this.child,
     this.onLaunchOrResume,
+    this.onBuildVersionCheck,
+    this.minimumSyncBuildRequired = false,
+    this.minimumSyncBuildRequiredChanges,
     this.connectivityChanges,
     this.onConnectivityChanged,
     super.key,
@@ -490,6 +503,9 @@ final class ClinicalCalendarLifecycleHost extends StatefulWidget {
 
   final Widget child;
   final Future<void> Function()? onLaunchOrResume;
+  final Future<void> Function()? onBuildVersionCheck;
+  final bool minimumSyncBuildRequired;
+  final Stream<bool>? minimumSyncBuildRequiredChanges;
   final Stream<bool>? connectivityChanges;
   final Future<void> Function(bool connected)? onConnectivityChanged;
 
@@ -508,7 +524,7 @@ final class _ClinicalCalendarLifecycleHostState
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _subscribeConnectivity();
-    _invoke(widget.onLaunchOrResume);
+    _invoke(_launchOrResume);
   }
 
   @override
@@ -523,7 +539,7 @@ final class _ClinicalCalendarLifecycleHostState
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _invoke(widget.onLaunchOrResume);
+      _invoke(_launchOrResume);
     }
   }
 
@@ -548,8 +564,69 @@ final class _ClinicalCalendarLifecycleHostState
     unawaited(callback().catchError((Object _) {}));
   }
 
+  Future<void> _launchOrResume() async {
+    try {
+      await widget.onBuildVersionCheck?.call();
+    } on Object {
+      // A version endpoint failure must not suppress ordinary synchronization.
+    }
+    await widget.onLaunchOrResume?.call();
+  }
+
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      widget.child,
+      StreamBuilder<bool>(
+        initialData: widget.minimumSyncBuildRequired,
+        stream: widget.minimumSyncBuildRequiredChanges,
+        builder: (context, snapshot) => snapshot.data ?? false
+            ? const Align(
+                alignment: Alignment.topCenter,
+                child: _MinimumSyncBuildBanner(),
+              )
+            : const SizedBox.shrink(),
+      ),
+    ],
+  );
+}
+
+final class _MinimumSyncBuildBanner extends StatelessWidget {
+  const _MinimumSyncBuildBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      key: const Key('minimum-sync-build-banner'),
+      color: colors.errorContainer,
+      child: SafeArea(
+        bottom: false,
+        child: Semantics(
+          container: true,
+          liveRegion: true,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.system_update_alt, color: colors.onErrorContainer),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    'Update this app to keep syncing – '
+                    'your changes are safe on this device.',
+                    style: TextStyle(color: colors.onErrorContainer),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 final class _ApplicationHost extends StatefulWidget {

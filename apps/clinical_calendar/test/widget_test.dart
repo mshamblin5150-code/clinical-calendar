@@ -16,6 +16,53 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('sync build number matches the application package build', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+
+    expect(app.currentSyncBuildNumber, 46);
+    expect(pubspec, contains('version: 0.1.0+${app.currentSyncBuildNumber}'));
+  });
+
+  test(
+    'production composition forwards web build checks to lifecycle',
+    () async {
+      var deployedBuildChecks = 0;
+      WebBuildVersionCoordinator? coordinator;
+      var productionFactoryCalls = 0;
+
+      final root = await app.buildProductionApplication(
+        secureStorage: _MemorySecureStorage(),
+        identifiers: const _Identifiers(_identityStudentId),
+        repositoryBootstrap: (_, _, _) async => _Repositories(),
+        webBuildVersionCoordinatorFactory:
+            ({
+              required currentBuildNumber,
+              required hasUnsentChanges,
+              required unsentChangesDrained,
+            }) {
+              productionFactoryCalls++;
+              coordinator = WebBuildVersionCoordinator(
+                currentBuildNumber: currentBuildNumber,
+                deployedBuildNumber: () async {
+                  deployedBuildChecks++;
+                  return currentBuildNumber;
+                },
+                hasUnsentChanges: hasUnsentChanges,
+                unsentChangesDrained: unsentChangesDrained,
+                reload: () async => fail('the current build must not reload'),
+              );
+              return coordinator;
+            },
+      );
+
+      expect(productionFactoryCalls, 1);
+      expect(root.onBuildVersionCheck, isNotNull);
+      await root.onBuildVersionCheck!();
+      expect(deployedBuildChecks, 1);
+      await coordinator!.dispose();
+    },
+  );
+
   test(
     'production composition uses one secure Student owner everywhere',
     () async {

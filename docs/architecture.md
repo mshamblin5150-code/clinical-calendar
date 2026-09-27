@@ -32,6 +32,23 @@ Run the complete baseline with `dart run tool/quality.dart`. Device integration
 and native platform suites remain explicit because CI may not have target
 hardware.
 
+## Synchronized record compatibility
+
+Every synchronization RPC carries the client build number. The server refuses
+pushes below `clinical_calendar_sync.sync_configuration.minimum_sync_build`
+with `minimum_sync_build_required`, while pull remains available. A refused
+push stays in the encrypted native outbox until the Student updates the app.
+
+Any change to the shape of a synchronized record must raise the minimum sync
+build in the same migration or configuration change. The application build
+number and `CLINICAL_CALENDAR_BUILD_NUMBER` used for web builds must be at
+least that new minimum before the migration is deployed.
+
+The deployed web artifact exposes an uncached `build-id.json` beside the app
+entry point. Its payload is `{ "build_number": <positive integer> }`. Web
+clients compare that value on open and foreground, then reload only after the
+local outbox is empty.
+
 ## Configuration and secrets
 
 `AppEnvironment` accepts only an environment label and public synchronization
