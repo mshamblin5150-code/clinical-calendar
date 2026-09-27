@@ -24,6 +24,9 @@ $webDeviceMigration = Get-Content -Raw (
 $ticketMigration = Get-Content -Raw (
   Join-Path $PSScriptRoot '..\migrations\202609270008_private_tickets.sql'
 )
+$ticketOutcomeMigration = Get-Content -Raw (
+  Join-Path $PSScriptRoot '..\migrations\202609270010_ticket_outcomes.sql'
+)
 
 $requiredPatterns = @(
   'alter table clinical_calendar_sync.records force row level security',
@@ -196,12 +199,25 @@ foreach ($pattern in $ticketPatterns) {
   }
 }
 
+$ticketOutcomePatterns = @(
+  'public.close_ticket(',
+  'public.reopen_ticket(',
+  'public.open_ticket_for_sender(',
+  'close_reason',
+  "interval '14 days'"
+)
+foreach ($pattern in $ticketOutcomePatterns) {
+  if (-not $ticketOutcomeMigration.Contains($pattern)) {
+    throw "Missing Ticket outcome contract pattern: $pattern"
+  }
+}
+
 $ticketAssertionCount = (
   Select-String -Path (Join-Path $PSScriptRoot 'tickets_test.sql') `
     -Pattern '^select (ok|is|results_eq|throws_ok|lives_ok)\(' -CaseSensitive
 ).Count
-if ($ticketAssertionCount -ne 21) {
-  throw "Private-Ticket pgTAP plan is 21 but found $ticketAssertionCount assertions."
+if ($ticketAssertionCount -ne 34) {
+  throw "Private-Ticket pgTAP plan is 34 but found $ticketAssertionCount assertions."
 }
 
 $minimumBuildAssertionCount = (

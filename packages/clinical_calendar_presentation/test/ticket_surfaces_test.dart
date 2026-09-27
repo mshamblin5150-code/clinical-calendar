@@ -145,6 +145,102 @@ void main() {
     expect(menuOpens, 1);
   });
 
+  testWidgets('Maintainer closes Done with a sender-visible reason', (
+    tester,
+  ) async {
+    final seen = _ticket(status: TicketStatus.seen);
+    final done = _ticket(
+      status: TicketStatus.done,
+      closeReason: 'The fix is live on the web app.',
+      closedAtUtc: DateTime.now().toUtc(),
+    );
+    final gateway = _TicketGateway(
+      maintainer: true,
+      all: [seen],
+      opened: seen,
+      closed: done,
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: TicketsSurface(gateway: gateway)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ticket-ticket-251')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Close as Done'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('live on the web app'), findsOne);
+    await tester.enterText(
+      find.byKey(const Key('ticket-close-reason')),
+      'The fix is live on the web app.',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Close Ticket'));
+    await tester.pumpAndSettle();
+
+    expect(gateway.closes.single.outcome, TicketStatus.done);
+    expect(gateway.closes.single.reason, 'The fix is live on the web app.');
+    expect(find.text('Done'), findsOne);
+    expect(find.text('The fix is live on the web app.'), findsOne);
+  });
+
+  testWidgets('sender sees the reason and reopens within 14 days', (
+    tester,
+  ) async {
+    final done = _ticket(
+      status: TicketStatus.done,
+      closeReason: 'The fix is live now.',
+      closedAtUtc: DateTime.now().toUtc().subtract(const Duration(days: 13)),
+      canReopen: true,
+    );
+    final reopened = done.copyWith(
+      status: TicketStatus.seen,
+      reopenedAtUtc: DateTime.now().toUtc(),
+      reopenNote: 'The same failure happened again.',
+    );
+    final gateway = _TicketGateway(own: [done], reopened: reopened);
+    await tester.pumpWidget(
+      MaterialApp(home: TicketsSurface(gateway: gateway)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ticket-ticket-251')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('The fix is live now.'), findsOne);
+    await tester.tap(find.text('Reopen Ticket'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('ticket-reopen-note')),
+      'The same failure happened again.',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Reopen'));
+    await tester.pumpAndSettle();
+
+    expect(gateway.reopens.single, 'The same failure happened again.');
+    expect(find.text('Reopened'), findsOne);
+  });
+
+  testWidgets('sender is directed to a new Ticket after 14 days', (
+    tester,
+  ) async {
+    final closed = _ticket(
+      status: TicketStatus.wontDo,
+      closeReason: 'This change would make the calendar harder to read.',
+      closedAtUtc: DateTime.now().toUtc().subtract(const Duration(days: 15)),
+    );
+    final gateway = _TicketGateway(own: [closed]);
+    await tester.pumpWidget(
+      MaterialApp(home: TicketsSurface(gateway: gateway)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ticket-ticket-251')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reopen Ticket'), findsNothing);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('put in a new Ticket'), findsOne);
+  });
+
   testWidgets('offline menu explains why putting in a Ticket is unavailable', (
     tester,
   ) async {
@@ -204,7 +300,12 @@ void main() {
   });
 }
 
-Ticket _ticket({required TicketStatus status}) => Ticket(
+Ticket _ticket({
+  required TicketStatus status,
+  String? closeReason,
+  DateTime? closedAtUtc,
+  bool canReopen = false,
+}) => Ticket(
   id: 'ticket-251',
   senderId: 'student-251',
   kind: TicketKind.problem,
@@ -218,7 +319,17 @@ Ticket _ticket({required TicketStatus status}) => Ticket(
     capturedAtUtc: DateTime.utc(2026, 9, 27, 14, 30),
   ),
   createdAtUtc: DateTime.utc(2026, 9, 27, 14, 30),
+  closeReason: closeReason,
+  closedAtUtc: closedAtUtc,
+  canReopen: canReopen,
 );
+
+final class _Close {
+  const _Close(this.outcome, this.reason);
+
+  final TicketStatus outcome;
+  final String reason;
+}
 
 final class _Submission {
   const _Submission(this.kind, this.text, this.context);
@@ -233,14 +344,30 @@ final class _TicketGateway implements TicketGateway {
     this.own = const [],
     this.all = const [],
     this.opened,
+    this.closed,
+    this.reopened,
   });
 
   final bool maintainer;
   final List<Ticket> own;
   final List<Ticket> all;
   final Ticket? opened;
+  final Ticket? closed;
+  final Ticket? reopened;
   final submissions = <_Submission>[];
   final openedIds = <String>[];
+  final closes = <_Close>[];
+  final reopens = <String>[];
+
+  @override
+  Future<Ticket> close(
+    String ticketId, {
+    required TicketStatus outcome,
+    required String reason,
+  }) async {
+    closes.add(_Close(outcome, reason));
+    return closed!;
+  }
 
   @override
   Future<bool> hasMaintainerGrant() async => maintainer;
@@ -250,6 +377,10 @@ final class _TicketGateway implements TicketGateway {
     openedIds.add(ticketId);
     return opened!;
   }
+
+  @override
+  Future<Ticket> openForSender(String ticketId) async =>
+      own.singleWhere((ticket) => ticket.id == ticketId);
 
   @override
   Future<void> putIn({
@@ -263,4 +394,10 @@ final class _TicketGateway implements TicketGateway {
 
   @override
   Future<List<Ticket>> readMine() async => own;
+
+  @override
+  Future<Ticket> reopen(String ticketId, {required String note}) async {
+    reopens.add(note);
+    return reopened!;
+  }
 }

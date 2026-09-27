@@ -440,6 +440,8 @@ final class _TicketDetailPage extends StatefulWidget {
 final class _TicketDetailPageState extends State<_TicketDetailPage> {
   Ticket? _ticket;
   Object? _error;
+  bool _working = false;
+  String? _message;
 
   @override
   void initState() {
@@ -451,10 +453,92 @@ final class _TicketDetailPageState extends State<_TicketDetailPage> {
     try {
       final ticket = widget.maintainer
           ? await widget.gateway.openForMaintainer(widget.initialTicket.id)
-          : widget.initialTicket;
+          : await widget.gateway.openForSender(widget.initialTicket.id);
       if (mounted) setState(() => _ticket = ticket);
     } catch (error) {
       if (mounted) setState(() => _error = error);
+    }
+  }
+
+  Future<void> _close(TicketStatus outcome) async {
+    final reason = await _ticketTextDialog(
+      context,
+      title: outcome == TicketStatus.done
+          ? 'Close as Done'
+          : "Close as Won't do",
+      guidance: outcome == TicketStatus.done
+          ? 'Done means the change is already live on the web app, not merely merged.'
+          : 'Tell the sender why this Ticket will not be done.',
+      label: 'Reason the sender will see',
+      fieldKey: const Key('ticket-close-reason'),
+      action: 'Close Ticket',
+      maxLength: 1000,
+    );
+    if (reason == null) return;
+    await _mutate(
+      () => widget.gateway.close(
+        widget.initialTicket.id,
+        outcome: outcome,
+        reason: reason,
+      ),
+      'Ticket closed.',
+    );
+  }
+
+  Future<void> _reopen() async {
+    final note = await _ticketTextDialog(
+      context,
+      title: 'Reopen Ticket',
+      guidance: 'Tell the Maintainer what happened again.',
+      label: 'What happened again?',
+      fieldKey: const Key('ticket-reopen-note'),
+      action: 'Reopen',
+      maxLength: 500,
+    );
+    if (note == null) return;
+    await _mutate(
+      () => widget.gateway.reopen(widget.initialTicket.id, note: note),
+      'Ticket reopened.',
+    );
+  }
+
+  Future<void> _mutate(
+    Future<Ticket> Function() mutation,
+    String success,
+  ) async {
+    setState(() {
+      _working = true;
+      _message = null;
+    });
+    try {
+      final ticket = await mutation();
+      if (!mounted) return;
+      setState(() {
+        _ticket = ticket;
+        _message = success;
+      });
+    } on TicketMutationRejected catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _message = switch (error.reason) {
+          TicketMutationRefusal.closingReasonRequired =>
+            'Write a reason for the sender.',
+          TicketMutationRefusal.cannotClose =>
+            'This Ticket can no longer be closed.',
+          TicketMutationRefusal.reopeningNoteRequired =>
+            'Write what happened again.',
+          TicketMutationRefusal.cannotReopen =>
+            'This Ticket cannot be reopened.',
+          TicketMutationRefusal.reopenExpired =>
+            'This Ticket can no longer be reopened. Put in a new Ticket instead.',
+        };
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _message = 'This Ticket could not be updated.');
+      }
+    } finally {
+      if (mounted) setState(() => _working = false);
     }
   }
 
@@ -485,8 +569,27 @@ final class _TicketDetailPageState extends State<_TicketDetailPage> {
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 Text(_ticket!.status.label),
+                if (_ticket!.reopenedAtUtc != null) const Text('Reopened'),
                 if (widget.maintainer)
                   Text('Student ${_shortId(_ticket!.senderId)}'),
+                if (_ticket!.closeReason case final reason?) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Closing reason',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(reason),
+                ],
+                if (_ticket!.reopenNote case final note?) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Reopening note',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(note),
+                ],
                 const SizedBox(height: 20),
                 Text(
                   'Ticket text',
@@ -501,9 +604,103 @@ final class _TicketDetailPageState extends State<_TicketDetailPage> {
                 ),
                 const SizedBox(height: 6),
                 Text(ticketContextSummary(_ticket!.context)),
+                if (widget.maintainer && !_ticket!.status.isClosed) ...[
+                  const SizedBox(height: 20),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton(
+                        onPressed: _working
+                            ? null
+                            : () => _close(TicketStatus.done),
+                        child: const Text('Close as Done'),
+                      ),
+                      OutlinedButton(
+                        onPressed: _working
+                            ? null
+                            : () => _close(TicketStatus.wontDo),
+                        child: const Text("Close as Won't do"),
+                      ),
+                    ],
+                  ),
+                ] else if (!widget.maintainer && _ticket!.status.isClosed) ...[
+                  const SizedBox(height: 20),
+                  if (_ticket!.canReopen)
+                    FilledButton.tonal(
+                      onPressed: _working ? null : _reopen,
+                      child: const Text('Reopen Ticket'),
+                    )
+                  else
+                    const Text(
+                      'This Ticket can no longer be reopened. Please put in a new Ticket if you still need help.',
+                    ),
+                ],
+                if (_message case final message?) ...[
+                  const SizedBox(height: 12),
+                  Semantics(liveRegion: true, child: Text(message)),
+                ],
               ],
             ),
           ),
+  );
+}
+
+Future<String?> _ticketTextDialog(
+  BuildContext context, {
+  required String title,
+  required String guidance,
+  required String label,
+  required Key fieldKey,
+  required String action,
+  required int maxLength,
+}) async {
+  final formKey = GlobalKey<FormState>();
+  var value = '';
+  return showDialog<String>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(title),
+      content: SingleChildScrollView(
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(guidance),
+              const SizedBox(height: 12),
+              TextFormField(
+                key: fieldKey,
+                autofocus: true,
+                maxLength: maxLength,
+                minLines: 3,
+                maxLines: 6,
+                decoration: InputDecoration(labelText: label),
+                onChanged: (next) => value = next,
+                validator: (next) => next == null || next.trim().isEmpty
+                    ? 'Write a response.'
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (formKey.currentState!.validate()) {
+              Navigator.pop(dialogContext, value.trim());
+            }
+          },
+          child: Text(action),
+        ),
+      ],
+    ),
   );
 }
 
