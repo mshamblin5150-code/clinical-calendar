@@ -24,6 +24,11 @@ jobs:
         run: |
           ./tool/windows/windows_release_contract_test.ps1
           ./tool/windows/verify_release_bundle_test.ps1
+      - name: Verify web release contract
+        shell: pwsh
+        run: |
+          ./tool/web/pages_workflow_contract_test.ps1
+          ./tool/web/build_pages_contract_test.ps1
       - name: Resolve workspace
         run: flutter pub get
       - name: Run shared quality gate

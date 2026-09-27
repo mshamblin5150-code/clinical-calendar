@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(34);
 
 insert into auth.users(id, email) values
   ('00000000-0000-4000-8000-000000000251', 'maintainer-251@example.test'),
@@ -110,6 +110,87 @@ select throws_ok($$select public.put_in_ticket(
   'Surface Pro', 'windows', clock_timestamp())$$,
   'P2852', 'Ticket text must be between 1 and 2000 characters',
   'blank Ticket text has a stable refusal code');
+select throws_ok($$select public.close_ticket(
+  (select id from public.tickets
+   where text = 'The Save button did not work.'),
+  'done', 'This caller is not the Maintainer.')$$,
+  '42501', 'Only the Maintainer can close Tickets',
+  'an ordinary Student cannot close a Ticket');
+
+select set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000251', true);
+select throws_ok($$select public.close_ticket(
+  (select id from public.tickets
+   where text = 'The Save button did not work.'),
+  'done', '   ')$$,
+  'P2855', 'A closing reason is required',
+  'the Maintainer must give the sender a closing reason');
+select lives_ok($$select public.close_ticket(
+  (select id from public.tickets
+   where text = 'The Save button did not work.'),
+  'done', 'The fix is live on the web app.')$$,
+  'the Maintainer closes a Ticket as Done');
+select is((select state from public.tickets
+  where text = 'The Save button did not work.'), 'done',
+  'closing records the Done outcome');
+
+select set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000253', true);
+select throws_ok($$select public.reopen_ticket(
+  (select id from public.tickets
+   where text = 'The Save button did not work.'),
+  'This Ticket does not belong to me.')$$,
+  'P2858', 'This Ticket cannot be reopened',
+  'another Student cannot reopen the sender''s Ticket');
+
+select set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000252', true);
+select is((select close_reason from public.tickets
+  where text = 'The Save button did not work.'),
+  'The fix is live on the web app.',
+  'the sender sees the closing reason');
+select is((public.open_ticket_for_sender(
+  (select id from public.tickets
+   where text = 'The Save button did not work.')
+  )->>'can_reopen')::boolean, true,
+  'the sender receives the server reopening verdict');
+select lives_ok($$select public.reopen_ticket(
+  (select id from public.tickets
+   where text = 'The Save button did not work.'),
+  'The same failure happened again.')$$,
+  'the sender reopens a closed Ticket within 14 days');
+select is((select state from public.tickets
+  where text = 'The Save button did not work.'), 'seen',
+  'reopening returns the Ticket to Seen');
+select is((select reopen_note from public.tickets
+  where text = 'The Save button did not work.'),
+  'The same failure happened again.',
+  'reopening records what happened again');
+
+select set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000251', true);
+select lives_ok($$select public.close_ticket(
+  (select id from public.tickets
+   where text = 'The Save button did not work.'),
+  'wont_do', 'This change would make the calendar harder to read.')$$,
+  'the Maintainer can close a reopened Ticket as Won''t do');
+select is((select state from public.tickets
+  where text = 'The Save button did not work.'), 'wont_do',
+  'closing records the Won''t do outcome');
+
+set local role postgres;
+update public.tickets
+set closed_at = clock_timestamp() - interval '14 days 1 second'
+where text = 'The Save button did not work.';
+set local role authenticated;
+select set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000252', true);
+select throws_ok($$select public.reopen_ticket(
+  (select id from public.tickets
+   where text = 'The Save button did not work.'),
+  'It happened after the deadline.')$$,
+  'P2859', 'This Ticket can no longer be reopened',
+  'reopening is refused after 14 days');
 
 select * from finish();
 rollback;
