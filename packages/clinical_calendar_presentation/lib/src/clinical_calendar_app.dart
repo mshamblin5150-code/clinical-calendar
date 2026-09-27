@@ -115,6 +115,7 @@ final class ClinicalCalendarApp extends StatefulWidget {
     this.themePreviewController,
     this.candidateThemePreflight,
     this.onLaunchOrResume,
+    this.onBuildVersionCheck,
     this.minimumSyncBuildRequired = false,
     this.minimumSyncBuildRequiredChanges,
     this.connectivityChanges,
@@ -148,6 +149,7 @@ final class ClinicalCalendarApp extends StatefulWidget {
   final ThemePreviewController? themePreviewController;
   final CandidateThemePreflight? candidateThemePreflight;
   final Future<void> Function()? onLaunchOrResume;
+  final Future<void> Function()? onBuildVersionCheck;
   final bool minimumSyncBuildRequired;
   final Stream<bool>? minimumSyncBuildRequiredChanges;
   final Stream<bool>? connectivityChanges;
@@ -403,6 +405,7 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
           ),
           home: ClinicalCalendarLifecycleHost(
             onLaunchOrResume: _launchOrResume,
+            onBuildVersionCheck: widget.onBuildVersionCheck,
             minimumSyncBuildRequired: widget.minimumSyncBuildRequired,
             minimumSyncBuildRequiredChanges:
                 widget.minimumSyncBuildRequiredChanges,
@@ -490,6 +493,7 @@ final class ClinicalCalendarLifecycleHost extends StatefulWidget {
   const ClinicalCalendarLifecycleHost({
     required this.child,
     this.onLaunchOrResume,
+    this.onBuildVersionCheck,
     this.minimumSyncBuildRequired = false,
     this.minimumSyncBuildRequiredChanges,
     this.connectivityChanges,
@@ -499,6 +503,7 @@ final class ClinicalCalendarLifecycleHost extends StatefulWidget {
 
   final Widget child;
   final Future<void> Function()? onLaunchOrResume;
+  final Future<void> Function()? onBuildVersionCheck;
   final bool minimumSyncBuildRequired;
   final Stream<bool>? minimumSyncBuildRequiredChanges;
   final Stream<bool>? connectivityChanges;
@@ -519,7 +524,7 @@ final class _ClinicalCalendarLifecycleHostState
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _subscribeConnectivity();
-    _invoke(widget.onLaunchOrResume);
+    _invoke(_launchOrResume);
   }
 
   @override
@@ -534,7 +539,7 @@ final class _ClinicalCalendarLifecycleHostState
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _invoke(widget.onLaunchOrResume);
+      _invoke(_launchOrResume);
     }
   }
 
@@ -557,6 +562,15 @@ final class _ClinicalCalendarLifecycleHostState
   void _invoke(Future<void> Function()? callback) {
     if (callback == null) return;
     unawaited(callback().catchError((Object _) {}));
+  }
+
+  Future<void> _launchOrResume() async {
+    try {
+      await widget.onBuildVersionCheck?.call();
+    } on Object {
+      // A version endpoint failure must not suppress ordinary synchronization.
+    }
+    await widget.onLaunchOrResume?.call();
   }
 
   @override

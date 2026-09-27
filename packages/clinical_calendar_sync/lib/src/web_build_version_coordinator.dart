@@ -13,11 +13,13 @@ final class WebBuildVersionCoordinator {
     required int currentBuildNumber,
     required DeployedBuildNumberLoader deployedBuildNumber,
     required UnsentChangesProbe hasUnsentChanges,
+    required Stream<void> unsentChangesDrained,
     required WebApplicationReloader reload,
   }) => WebBuildVersionCoordinator._(
     currentBuildNumber: currentBuildNumber,
     deployedBuildNumber: deployedBuildNumber,
     hasUnsentChanges: hasUnsentChanges,
+    unsentChangesDrained: unsentChangesDrained,
     reload: reload,
   );
 
@@ -25,6 +27,7 @@ final class WebBuildVersionCoordinator {
     required this.currentBuildNumber,
     required this._deployedBuildNumber,
     required this._hasUnsentChanges,
+    required this._unsentChangesDrained,
     required this._reload,
   }) {
     if (currentBuildNumber <= 0) {
@@ -39,21 +42,42 @@ final class WebBuildVersionCoordinator {
   final int currentBuildNumber;
   final DeployedBuildNumberLoader _deployedBuildNumber;
   final UnsentChangesProbe _hasUnsentChanges;
+  final Stream<void> _unsentChangesDrained;
   final WebApplicationReloader _reload;
 
   Future<void>? _activeCheck;
+  StreamSubscription<void>? _drainSubscription;
+  bool _newerBuildDetected = false;
   bool _reloadStarted = false;
+  bool _disposed = false;
 
   Future<void> checkOnOpenOrResume() {
-    if (_reloadStarted) return Future.value();
+    if (_disposed || _reloadStarted) return Future.value();
     return _activeCheck ??= _check().whenComplete(() => _activeCheck = null);
   }
 
   Future<void> _check() async {
-    final deployedBuildNumber = await _deployedBuildNumber();
-    if (deployedBuildNumber <= currentBuildNumber) return;
-    if (await _hasUnsentChanges()) return;
+    if (!_newerBuildDetected) {
+      final deployedBuildNumber = await _deployedBuildNumber();
+      if (deployedBuildNumber <= currentBuildNumber) return;
+      _newerBuildDetected = true;
+    }
+    if (await _hasUnsentChanges()) {
+      _drainSubscription ??= _unsentChangesDrained.listen((_) {
+        unawaited(checkOnOpenOrResume().catchError((Object _) {}));
+      });
+      return;
+    }
+    await _drainSubscription?.cancel();
+    _drainSubscription = null;
     _reloadStarted = true;
     await _reload();
+  }
+
+  Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
+    await _drainSubscription?.cancel();
+    _drainSubscription = null;
   }
 }

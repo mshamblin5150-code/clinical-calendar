@@ -104,6 +104,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   authoritativePresentationSettingsLoader,
   GraphiteAssetPreflight? graphiteAssetPreflight,
   int buildNumber = currentSyncBuildNumber,
+  WebBuildVersionCoordinator? webBuildVersionCoordinator,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
   final identifierGenerator = identifiers ?? ProcessIdentifierGenerator();
@@ -450,6 +451,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     enhancedAccessibility: enhancedAccessibility,
     onPresentationRestart: onPresentationRestart,
     onLaunchOrResume: onLaunchOrResume,
+    onBuildVersionCheck: webBuildVersionCoordinator?.checkOnOpenOrResume,
     minimumSyncBuildRequired: minimumSyncBuildRequired,
     minimumSyncBuildRequiredChanges: minimumSyncBuildRequiredChanges,
     connectivityChanges: connectivityChanges,

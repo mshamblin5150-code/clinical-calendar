@@ -11,12 +11,14 @@ void main() {
   ) async {
     final connectivity = StreamController<bool>.broadcast();
     var launchOrResumeCalls = 0;
+    var buildVersionChecks = 0;
     final connectivityValues = <bool>[];
 
     await tester.pumpWidget(
       MaterialApp(
         home: ClinicalCalendarLifecycleHost(
           onLaunchOrResume: () async => launchOrResumeCalls++,
+          onBuildVersionCheck: () async => buildVersionChecks++,
           connectivityChanges: connectivity.stream,
           onConnectivityChanged: (connected) async {
             connectivityValues.add(connected);
@@ -27,11 +29,13 @@ void main() {
     );
     await tester.pump();
     expect(launchOrResumeCalls, 1);
+    expect(buildVersionChecks, 1);
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
     expect(launchOrResumeCalls, 2);
+    expect(buildVersionChecks, 2);
 
     connectivity.add(false);
     connectivity.add(true);
@@ -83,6 +87,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('minimum-sync-build-banner')), findsNothing);
     await heldChanges.close();
+  });
+
+  testWidgets('failed web build check does not suppress synchronization', (
+    tester,
+  ) async {
+    var launchOrResumeCalls = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ClinicalCalendarLifecycleHost(
+          onBuildVersionCheck: () async => throw StateError('offline'),
+          onLaunchOrResume: () async => launchOrResumeCalls++,
+          child: const SizedBox(),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(launchOrResumeCalls, 1);
   });
 
   testWidgets('Sync Now reports successful and offline outcomes', (
