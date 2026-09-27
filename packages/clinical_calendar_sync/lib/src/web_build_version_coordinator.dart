@@ -66,7 +66,7 @@ final class WebBuildVersionCoordinator {
       _drainSubscription ??= _unsentChangesDrained.listen((_) {
         unawaited(checkOnOpenOrResume().catchError((Object _) {}));
       });
-      return;
+      if (await _hasUnsentChanges()) return;
     }
     await _drainSubscription?.cancel();
     _drainSubscription = null;

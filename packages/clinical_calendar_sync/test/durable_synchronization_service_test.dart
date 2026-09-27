@@ -409,8 +409,12 @@ void main() {
       );
       final service = _service(first, server, clock);
       final updateStates = <bool>[];
+      var outboxDrainedEvents = 0;
       final subscription = service.minimumSyncBuildRequiredChanges.listen(
         updateStates.add,
+      );
+      final drainedSubscription = service.outboxDrained.listen(
+        (_) => outboxDrainedEvents++,
       );
       server.rejectForMinimumBuild = true;
 
@@ -433,7 +437,9 @@ void main() {
       expect(await _pendingCount(first.registry, clock.nowUtc()), 0);
       expect(server.feed, hasLength(1));
       expect(updateStates, [true, false]);
+      expect(outboxDrainedEvents, 1);
       await subscription.cancel();
+      await drainedSubscription.cancel();
     },
   );
 

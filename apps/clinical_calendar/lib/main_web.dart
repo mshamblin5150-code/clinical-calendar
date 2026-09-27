@@ -1,11 +1,36 @@
+import 'package:clinical_calendar_presentation/clinical_calendar_presentation.dart';
+import 'package:clinical_calendar_sync/clinical_calendar_sync.dart';
 import 'package:flutter/material.dart';
+
+import 'sync_build_number.dart';
+import 'web_build_version_runtime.dart';
+
+export 'sync_build_number.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(buildWebRoot());
 }
 
-Widget buildWebRoot() => const _WebUnavailableApplication();
+Widget buildWebRoot({
+  WebBuildVersionCoordinator? buildVersionCoordinator,
+  UnsentChangesProbe hasUnsentChanges = _noUnsentChanges,
+  Stream<void> unsentChangesDrained = const Stream<void>.empty(),
+}) {
+  final coordinator =
+      buildVersionCoordinator ??
+      createProductionWebBuildVersionCoordinator(
+        currentBuildNumber: currentSyncBuildNumber,
+        hasUnsentChanges: hasUnsentChanges,
+        unsentChangesDrained: unsentChangesDrained,
+      );
+  return ClinicalCalendarLifecycleHost(
+    onBuildVersionCheck: coordinator?.checkOnOpenOrResume,
+    child: const _WebUnavailableApplication(),
+  );
+}
+
+Future<bool> _noUnsentChanges() async => false;
 
 final class _WebUnavailableApplication extends StatelessWidget {
   const _WebUnavailableApplication();

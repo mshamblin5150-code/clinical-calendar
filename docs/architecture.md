@@ -44,6 +44,11 @@ build in the same migration or configuration change. The application build
 number and `CLINICAL_CALENDAR_BUILD_NUMBER` used for web builds must be at
 least that new minimum before the migration is deployed.
 
+The deployed web artifact exposes an uncached `build-id.json` beside the app
+entry point. Its payload is `{ "build_number": <positive integer> }`. Web
+clients compare that value on open and foreground, then reload only after the
+local outbox is empty.
+
 ## Configuration and secrets
 
 `AppEnvironment` accepts only an environment label and public synchronization

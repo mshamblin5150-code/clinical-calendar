@@ -55,6 +55,7 @@ final class DurableSynchronizationService
   bool _shutDown = false;
   bool _minimumSyncBuildRequired = false;
   final _minimumSyncBuildRequiredChanges = StreamController<bool>.broadcast();
+  final _outboxDrained = StreamController<void>.broadcast();
   SynchronizationTrigger? _pendingRerunTrigger;
   Future<SynchronizationResult>? _active;
 
@@ -68,6 +69,8 @@ final class DurableSynchronizationService
 
   Stream<bool> get minimumSyncBuildRequiredChanges =>
       _minimumSyncBuildRequiredChanges.stream;
+
+  Stream<void> get outboxDrained => _outboxDrained.stream;
 
   @override
   Future<SynchronizationResult> synchronize() =>
@@ -136,6 +139,7 @@ final class DurableSynchronizationService
     _retryScheduler.cancel();
     await _active;
     await _minimumSyncBuildRequiredChanges.close();
+    await _outboxDrained.close();
   }
 
   Future<SynchronizationResult> _drain(
@@ -236,6 +240,7 @@ final class DurableSynchronizationService
 
     final completedAt = _now();
     final snapshot = await health();
+    if (snapshot.pendingCount == 0) _outboxDrained.add(null);
     final disposition = snapshot.unresolvedConflictCount > 0
         ? SynchronizationHealthDisposition.conflictNeedsAttention
         : terminalFailure != null

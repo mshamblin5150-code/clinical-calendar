@@ -17,6 +17,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'config/app_environment.dart';
+import 'sync_build_number.dart';
+import 'web_build_version_runtime.dart';
+
+export 'sync_build_number.dart';
 
 typedef ProductionRepositoryBootstrap =
     Future<RepositoryRegistry> Function(
@@ -35,10 +39,12 @@ typedef AuthoritativePresentationSettingsLoader =
 
 typedef GraphiteAssetPreflight = Future<void> Function();
 
-const currentSyncBuildNumber = int.fromEnvironment(
-  'CLINICAL_CALENDAR_BUILD_NUMBER',
-  defaultValue: 46,
-);
+typedef ProductionWebBuildVersionCoordinatorFactory =
+    WebBuildVersionCoordinator? Function({
+      required int currentBuildNumber,
+      required UnsentChangesProbe hasUnsentChanges,
+      required Stream<void> unsentChangesDrained,
+    });
 
 abstract interface class ConnectivityStatusSource {
   Future<bool> current();
@@ -105,6 +111,9 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   GraphiteAssetPreflight? graphiteAssetPreflight,
   int buildNumber = currentSyncBuildNumber,
   WebBuildVersionCoordinator? webBuildVersionCoordinator,
+  ProductionWebBuildVersionCoordinatorFactory
+      webBuildVersionCoordinatorFactory =
+      createProductionWebBuildVersionCoordinator,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
   final identifierGenerator = identifiers ?? ProcessIdentifierGenerator();
@@ -443,6 +452,25 @@ Future<ClinicalCalendarApp> buildProductionApplication({
       ),
     );
   }
+  final resolvedWebBuildVersionCoordinator =
+      webBuildVersionCoordinator ??
+      webBuildVersionCoordinatorFactory(
+        currentBuildNumber: buildNumber,
+        hasUnsentChanges: () => baseRepositories.read(
+          (repositories) => repositories.outbox
+              .pending(
+                studentId: studentId,
+                asOfUtc: applicationClock.nowUtc(),
+                policy: const OutboxPendingPolicy(
+                  retryEligibility: OutboxRetryEligibility.includeDeferred,
+                ),
+                limit: 1,
+              )
+              .isNotEmpty,
+        ),
+        unsentChangesDrained:
+            durableSynchronization?.outboxDrained ?? const Stream<void>.empty(),
+      );
   return ClinicalCalendarApp(
     dependencies: dependencies,
     environmentName: configuredEnvironment.name,
@@ -451,7 +479,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     enhancedAccessibility: enhancedAccessibility,
     onPresentationRestart: onPresentationRestart,
     onLaunchOrResume: onLaunchOrResume,
-    onBuildVersionCheck: webBuildVersionCoordinator?.checkOnOpenOrResume,
+    onBuildVersionCheck:
+        resolvedWebBuildVersionCoordinator?.checkOnOpenOrResume,
     minimumSyncBuildRequired: minimumSyncBuildRequired,
     minimumSyncBuildRequiredChanges: minimumSyncBuildRequiredChanges,
     connectivityChanges: connectivityChanges,

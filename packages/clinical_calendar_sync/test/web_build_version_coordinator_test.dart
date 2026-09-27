@@ -50,4 +50,31 @@ void main() {
     expect(reloads, 0);
     await coordinator.dispose();
   });
+
+  test('drain between the probe and subscription still reloads', () async {
+    final drained = StreamController<void>.broadcast(sync: true);
+    var unsentProbes = 0;
+    var reloads = 0;
+    final coordinator = WebBuildVersionCoordinator(
+      currentBuildNumber: 46,
+      deployedBuildNumber: () async => 47,
+      hasUnsentChanges: () async {
+        unsentProbes++;
+        if (unsentProbes == 1) {
+          drained.add(null);
+          return true;
+        }
+        return false;
+      },
+      unsentChangesDrained: drained.stream,
+      reload: () async => reloads++,
+    );
+
+    await coordinator.checkOnOpenOrResume();
+
+    expect(unsentProbes, 2);
+    expect(reloads, 1);
+    await coordinator.dispose();
+    await drained.close();
+  });
 }

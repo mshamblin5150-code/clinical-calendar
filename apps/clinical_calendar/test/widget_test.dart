@@ -27,28 +27,39 @@ void main() {
     'production composition forwards web build checks to lifecycle',
     () async {
       var deployedBuildChecks = 0;
-      final coordinator = WebBuildVersionCoordinator(
-        currentBuildNumber: app.currentSyncBuildNumber,
-        deployedBuildNumber: () async {
-          deployedBuildChecks++;
-          return app.currentSyncBuildNumber;
-        },
-        hasUnsentChanges: () async => false,
-        unsentChangesDrained: const Stream<void>.empty(),
-        reload: () async => fail('the current build must not reload'),
-      );
+      WebBuildVersionCoordinator? coordinator;
+      var productionFactoryCalls = 0;
 
       final root = await app.buildProductionApplication(
         secureStorage: _MemorySecureStorage(),
         identifiers: const _Identifiers(_identityStudentId),
         repositoryBootstrap: (_, _, _) async => _Repositories(),
-        webBuildVersionCoordinator: coordinator,
+        webBuildVersionCoordinatorFactory:
+            ({
+              required currentBuildNumber,
+              required hasUnsentChanges,
+              required unsentChangesDrained,
+            }) {
+              productionFactoryCalls++;
+              coordinator = WebBuildVersionCoordinator(
+                currentBuildNumber: currentBuildNumber,
+                deployedBuildNumber: () async {
+                  deployedBuildChecks++;
+                  return currentBuildNumber;
+                },
+                hasUnsentChanges: hasUnsentChanges,
+                unsentChangesDrained: unsentChangesDrained,
+                reload: () async => fail('the current build must not reload'),
+              );
+              return coordinator;
+            },
       );
 
+      expect(productionFactoryCalls, 1);
       expect(root.onBuildVersionCheck, isNotNull);
       await root.onBuildVersionCheck!();
       expect(deployedBuildChecks, 1);
-      await coordinator.dispose();
+      await coordinator!.dispose();
     },
   );
 
