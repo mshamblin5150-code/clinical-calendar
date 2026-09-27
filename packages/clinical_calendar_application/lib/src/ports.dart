@@ -87,3 +87,25 @@ abstract interface class FileService {
 
   Future<void> write(Uri location, List<int> bytes);
 }
+
+/// Authenticated delivery boundary for a Student-owned Work Schedule Feed.
+///
+/// The gateway stages a credential under the generated feed identity before a
+/// first preview, so the relay never accepts an arbitrary URL. A rejected or
+/// cancelled preview is discarded; a confirmed feed keeps the staged row.
+abstract interface class WorkScheduleFeedRelayGateway {
+  Future<String> stageAndFetch({required String feedId, required Uri url});
+
+  Future<String> fetch({required String feedId});
+
+  Future<void> discard({required String feedId});
+}
+
+final class WorkScheduleFeedRelayException implements Exception {
+  const WorkScheduleFeedRelayException(this.code);
+
+  final String code;
+
+  @override
+  String toString() => 'WorkScheduleFeedRelayException: $code';
+}

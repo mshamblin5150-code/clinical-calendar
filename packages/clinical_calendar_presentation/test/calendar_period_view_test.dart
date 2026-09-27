@@ -18,6 +18,35 @@ const _studentId = '00000000-0000-4000-8000-000000000001';
 final _today = LocalDate(2026, 8, 3);
 
 void main() {
+  testWidgets('flagged Schedule Conflicts are visible on week and day', (
+    tester,
+  ) async {
+    final snapshot = CalendarSnapshot(
+      _snapshot().entries,
+      conflictNotices: [
+        CalendarScheduleConflictNotice(
+          date: LocalDate(2026, 8, 6),
+          entryId: 'clinical-06',
+          message: 'Conflicts with your ER Schedule shift',
+        ),
+      ],
+    );
+    await _pumpCalendar(
+      tester,
+      source: _MemoryCalendarDataSource(snapshot),
+      initialPeriod: CalendarPeriod.month,
+    );
+
+    expect(find.text('Schedule Conflict'), findsNothing);
+    await tester.tap(find.text('Week'));
+    await tester.pumpAndSettle();
+    expect(find.text('Schedule Conflict'), findsOneWidget);
+    expect(
+      find.byKey(const Key('week-day-conflicts-2026-08-06')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('Protected Day decoration stays inside its date cell', (
     tester,
   ) async {
@@ -973,6 +1002,10 @@ final class _MemoryCalendarDataSource implements CalendarDataSource {
         (entry) =>
             !entry.endDate.isBefore(firstDate) &&
             !entry.startDate.isAfter(lastDate),
+      ),
+      conflictNotices: snapshot.conflictNotices.where(
+        (notice) =>
+            !notice.date.isBefore(firstDate) && !notice.date.isAfter(lastDate),
       ),
     );
   }

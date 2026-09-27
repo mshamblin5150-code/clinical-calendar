@@ -15,6 +15,7 @@ final class WorkScheduleFeedConnectionRequest {
     required this.url,
     required this.ics,
     required this.studentTimeZone,
+    this.feedId,
   });
 
   final String studentId;
@@ -22,6 +23,7 @@ final class WorkScheduleFeedConnectionRequest {
   final Uri url;
   final String ics;
   final TimeZoneId studentTimeZone;
+  final String? feedId;
 }
 
 final class WorkScheduleFeedConnectionPreview {
@@ -60,6 +62,7 @@ enum WorkScheduleFeedRefreshDisposition {
   updated,
   requiresEmptyConfirmation,
   heldTeamFeed,
+  failed,
 }
 
 final class WorkScheduleFeedRefreshResult {
@@ -111,7 +114,7 @@ final class WorkScheduleFeedApplicationService {
     WorkScheduleFeedConnectionRequest request,
   ) async {
     final now = _clock.nowUtc();
-    final feedId = _identifiers.nextIdentifier();
+    final feedId = request.feedId ?? _identifiers.nextIdentifier();
     final parsed = _parse(
       request.ics,
       feedId: feedId,
@@ -157,39 +160,43 @@ final class WorkScheduleFeedApplicationService {
     });
   }
 
-  Future<void> confirmConnection(WorkScheduleFeedConnectionPreview preview) =>
-      _repositories.mutate((repositories) {
-        final feedRepositories = _feedRepositories(repositories);
-        final now = _clock.nowUtc();
-        feedRepositories.workScheduleFeeds.put(
+  Future<void> confirmConnection(
+    WorkScheduleFeedConnectionPreview preview, {
+    bool replaceMatching = true,
+  }) => _repositories.mutate((repositories) {
+    final feedRepositories = _feedRepositories(repositories);
+    final now = _clock.nowUtc();
+    feedRepositories.workScheduleFeeds.put(
+      studentId: preview.studentId,
+      value: preview.feed,
+      expectedRevision: 0,
+      mutation: _mutation(now),
+    );
+    if (replaceMatching) {
+      for (final id in preview.matchingHandEnteredWorkShiftIds) {
+        final current = repositories.workShifts.find(
           studentId: preview.studentId,
-          value: preview.feed,
-          expectedRevision: 0,
-          mutation: _mutation(now),
+          id: id,
         );
-        for (final id in preview.matchingHandEnteredWorkShiftIds) {
-          final current = repositories.workShifts.find(
+        if (current != null && !current.value.isImported) {
+          repositories.workShifts.tombstone(
             studentId: preview.studentId,
             id: id,
-          );
-          if (current != null && !current.value.isImported) {
-            repositories.workShifts.tombstone(
-              studentId: preview.studentId,
-              id: id,
-              expectedRevision: current.revision,
-              mutation: _mutation(now),
-            );
-          }
-        }
-        for (final shift in preview.upcomingShifts) {
-          repositories.workShifts.put(
-            studentId: preview.studentId,
-            value: shift,
-            expectedRevision: 0,
+            expectedRevision: current.revision,
             mutation: _mutation(now),
           );
         }
-      });
+      }
+    }
+    for (final shift in preview.upcomingShifts) {
+      repositories.workShifts.put(
+        studentId: preview.studentId,
+        value: shift,
+        expectedRevision: 0,
+        mutation: _mutation(now),
+      );
+    }
+  });
 
   Future<WorkScheduleFeedRefreshResult> refresh(
     WorkScheduleFeedRefreshRequest request,
@@ -430,6 +437,35 @@ final class WorkScheduleFeedApplicationService {
         .put(
           studentId: studentId,
           value: current.value.copyWith(skipWords: skipWords),
+          expectedRevision: current.revision,
+          mutation: _mutation(now),
+        )
+        .record;
+  });
+
+  Future<StoredDomainRecord<WorkScheduleFeed>> recordFailedCheck({
+    required String studentId,
+    required String feedId,
+  }) => _repositories.mutate((repositories) {
+    final feeds = _feedRepositories(repositories);
+    final current = feeds.workScheduleFeeds.find(
+      studentId: studentId,
+      id: feedId,
+    );
+    if (current == null) {
+      throw const RepositoryException(
+        RepositoryFailureKind.notFound,
+        'Work Schedule Feed was not found.',
+      );
+    }
+    final now = _clock.nowUtc();
+    return feeds.workScheduleFeeds
+        .put(
+          studentId: studentId,
+          value: current.value.copyWith(
+            lastCheckedAtUtc: now,
+            heldReason: 'The feed could not be fetched.',
+          ),
           expectedRevision: current.revision,
           mutation: _mutation(now),
         )

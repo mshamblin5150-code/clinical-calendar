@@ -12,6 +12,7 @@ const _detachedId = '30000000-0000-4000-8000-000000000003';
 const _pastSessionId = '40000000-0000-4000-8000-000000000001';
 const _futureSessionId = '40000000-0000-4000-8000-000000000002';
 const _workShiftId = '50000000-0000-4000-8000-000000000001';
+const _importedWorkShiftId = '50000000-0000-4000-8000-000000000003';
 const _protectedDayId = '60000000-0000-4000-8000-000000000001';
 
 void main() {
@@ -219,6 +220,59 @@ void main() {
     expect(harness.controller.snapshot, isNull);
   });
 
+  testWidgets('Imported Work Shift detail is read-only and names its feed', (
+    tester,
+  ) async {
+    final harness = _Harness();
+    await harness.controller.open(
+      kind: CommitmentLifecycleKind.workShift,
+      id: _importedWorkShiftId,
+    );
+    await _pump(tester, harness.surface(), const Size(640, 720));
+
+    expect(find.text('Imported Work Shift'), findsOneWidget);
+    expect(find.text('From ER Schedule'), findsOneWidget);
+    expect(find.textContaining('This shift is read-only.'), findsOneWidget);
+    expect(find.byKey(const Key('lifecycle-date-field')), findsNothing);
+    expect(find.byKey(const Key('save-lifecycle-times-action')), findsNothing);
+    expect(
+      find.byKey(const Key('delete-erroneous-entry-action')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('Clinical Session detail shows its flagged schedule conflict', (
+    tester,
+  ) async {
+    final harness = _Harness();
+    await harness.controller.open(
+      kind: CommitmentLifecycleKind.clinicalSession,
+      id: _futureSessionId,
+    );
+    await _pump(
+      tester,
+      harness.surface(
+        conflictNotices: [
+          CalendarScheduleConflictNotice(
+            date: LocalDate(2026, 8, 14),
+            entryId: _futureSessionId,
+            message: 'Conflicts with your ER Schedule shift',
+          ),
+        ],
+      ),
+      const Size(640, 720),
+    );
+
+    expect(
+      find.byKey(const Key('clinical-session-schedule-conflict')),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Schedule Conflict: Conflicts with your ER Schedule shift'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
     'Protected Day rejects occupied move then removal recalculates planning',
     (tester) async {
@@ -349,10 +403,13 @@ final class _Harness {
   late final CommitmentLifecycleController controller;
   int changed = 0;
 
-  Widget surface() => SizedBox.expand(
+  Widget surface({
+    List<CalendarScheduleConflictNotice> conflictNotices = const [],
+  }) => SizedBox.expand(
     child: CommitmentLifecycleSurface(
       controller: controller,
       studentId: _studentId,
+      conflictNotices: conflictNotices,
     ),
   );
 
@@ -403,6 +460,15 @@ final class _Harness {
         WorkShift(
           id: '50000000-0000-4000-8000-000000000002',
           plannedInterval: _interval(11, 8, 0, 12, 0),
+        ),
+      )
+      ..seed(
+        WorkShift.imported(
+          id: _importedWorkShiftId,
+          plannedInterval: _interval(14, 7, 0, 15, 0),
+          workScheduleFeedId: '80000000-0000-4000-8000-000000000001',
+          workScheduleFeedName: 'ER Schedule',
+          sourceEventUid: 'er-13',
         ),
       );
     repositories.protectedDays.seed(

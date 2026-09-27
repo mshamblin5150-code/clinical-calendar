@@ -95,6 +95,32 @@ void main() {
     },
   );
 
+  test('connecting can keep matching hand-entered shifts', () async {
+    final matching = WorkShift(
+      id: _id(17),
+      plannedInterval: _interval(12, 7, 19),
+    );
+    registry.repositories.workShifts.seed(_studentId, matching);
+    final preview = await feedService.previewConnection(
+      WorkScheduleFeedConnectionRequest(
+        studentId: _studentId,
+        name: 'ER Schedule',
+        url: Uri.parse('https://example.invalid/private.ics'),
+        ics: File(
+          'test/fixtures/work_schedule_feeds/er_schedule.ics',
+        ).readAsStringSync(),
+        studentTimeZone: _zone,
+      ),
+    );
+
+    await feedService.confirmConnection(preview, replaceMatching: false);
+
+    expect(
+      registry.repositories.workShifts.values.map((shift) => shift.id),
+      containsAll([matching.id, preview.upcomingShifts.single.id]),
+    );
+  });
+
   test(
     'changing vendor UIDs fall back to times and two devices converge without duplicates',
     () async {
@@ -276,8 +302,13 @@ void main() {
       final emptyIcs = File(
         'test/fixtures/work_schedule_feeds/empty_feed.ics',
       ).readAsStringSync();
+      final laterFeedService = WorkScheduleFeedApplicationService(
+        registry,
+        _FixedClock(_now.add(const Duration(hours: 2))),
+        _SequenceIdentifiers(3500),
+      );
 
-      final pending = await feedService.refresh(
+      final pending = await laterFeedService.refresh(
         WorkScheduleFeedRefreshRequest(
           studentId: _studentId,
           feedId: preview.feed.id,
@@ -295,8 +326,9 @@ void main() {
         pending.feed.lastSuccessfulUpdateAtUtc,
         preview.feed.lastSuccessfulUpdateAtUtc,
       );
+      expect(pending.feed.lastCheckedAtUtc, _now.add(const Duration(hours: 2)));
 
-      final confirmed = await feedService.refresh(
+      final confirmed = await laterFeedService.refresh(
         WorkScheduleFeedRefreshRequest(
           studentId: _studentId,
           feedId: preview.feed.id,

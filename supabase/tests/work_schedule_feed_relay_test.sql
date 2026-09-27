@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(7);
+select plan(10);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -25,6 +25,31 @@ insert into clinical_calendar_sync.work_schedule_feeds (
 
 set local role authenticated;
 set local request.jwt.claim.sub = '10000000-0000-4000-8000-000000000002';
+
+select lives_ok(
+  $$select public.stage_work_schedule_feed_preview(
+    '20000000-0000-4000-8000-000000000002',
+    'webcal://calendar.example/student-b.ics'
+  )$$,
+  'a Student can stage a credential before preview'
+);
+
+select throws_ok(
+  $$select public.stage_work_schedule_feed_preview(
+    '20000000-0000-4000-8000-000000000001',
+    'webcal://calendar.example/stolen.ics'
+  )$$,
+  'P2841',
+  'feed_not_owned',
+  'a Student cannot replace another Student''s staged credential'
+);
+
+select lives_ok(
+  $$select public.discard_work_schedule_feed(
+    '20000000-0000-4000-8000-000000000002'
+  )$$,
+  'a rejected preview can discard its staged credential'
+);
 
 select is(
   public.claim_work_schedule_feed_relay(
