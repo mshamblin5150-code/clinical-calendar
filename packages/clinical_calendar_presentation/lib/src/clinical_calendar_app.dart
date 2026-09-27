@@ -131,6 +131,7 @@ final class ClinicalCalendarApp extends StatefulWidget {
     this.connectivityChanges,
     this.onConnectivityChanged,
     this.ticketGateway,
+    this.ticketDiagnosticBuilder,
     this.ticketConnected = false,
     this.ticketClientContext = const TicketClientContext(
       build: 'unknown',
@@ -176,6 +177,7 @@ final class ClinicalCalendarApp extends StatefulWidget {
   final Stream<bool>? connectivityChanges;
   final Future<void> Function(bool connected)? onConnectivityChanged;
   final TicketGateway? ticketGateway;
+  final TicketDiagnosticBuilderCallback? ticketDiagnosticBuilder;
   final bool ticketConnected;
   final TicketClientContext ticketClientContext;
 
@@ -478,6 +480,7 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
                 scheduleDateFactory: widget.scheduleDateFactory,
                 todayResolver: widget.todayResolver,
                 ticketGateway: widget.ticketGateway,
+                ticketDiagnosticBuilder: widget.ticketDiagnosticBuilder,
                 ticketConnected: _ticketConnected,
                 ticketClientContext: widget.ticketClientContext,
               ),
@@ -745,6 +748,7 @@ final class _ApplicationHost extends StatefulWidget {
     required this.scheduleDateFactory,
     required this.todayResolver,
     required this.ticketGateway,
+    required this.ticketDiagnosticBuilder,
     required this.ticketConnected,
     required this.ticketClientContext,
     super.key,
@@ -775,6 +779,7 @@ final class _ApplicationHost extends StatefulWidget {
   final ScheduleDateFactory? scheduleDateFactory;
   final TodayResolver? todayResolver;
   final TicketGateway? ticketGateway;
+  final TicketDiagnosticBuilderCallback? ticketDiagnosticBuilder;
   final bool ticketConnected;
   final TicketClientContext ticketClientContext;
 
@@ -1763,6 +1768,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       ),
       TicketMenuAction.tickets when widget.ticketConnected => TicketsSurface(
         gateway: gateway,
+        diagnosticBuilder: widget.ticketDiagnosticBuilder,
         onOpenApplicationMenu: () =>
             _showMenu(screenName: 'Ticket', returnToApplicationRoot: true),
       ),

@@ -1,3 +1,5 @@
+import 'ticket_diagnostic.dart';
+
 enum TicketKind {
   problem("Something's wrong", 'problem'),
   idea('An idea', 'idea'),
@@ -82,6 +84,7 @@ final class Ticket {
     required this.status,
     required this.context,
     required this.createdAtUtc,
+    this.questionCount = 0,
     this.seenAtUtc,
     this.closeReason,
     this.closedAtUtc,
@@ -98,6 +101,7 @@ final class Ticket {
   final TicketStatus status;
   final TicketContext context;
   final DateTime createdAtUtc;
+  final int questionCount;
   final DateTime? seenAtUtc;
   final String? closeReason;
   final DateTime? closedAtUtc;
@@ -110,6 +114,7 @@ final class Ticket {
 
   Ticket copyWith({
     TicketStatus? status,
+    int? questionCount,
     DateTime? seenAtUtc,
     String? closeReason,
     DateTime? closedAtUtc,
@@ -125,6 +130,7 @@ final class Ticket {
     status: status ?? this.status,
     context: context,
     createdAtUtc: createdAtUtc,
+    questionCount: questionCount ?? this.questionCount,
     seenAtUtc: seenAtUtc ?? this.seenAtUtc,
     closeReason: closeReason ?? this.closeReason,
     closedAtUtc: closedAtUtc ?? this.closedAtUtc,
@@ -133,6 +139,62 @@ final class Ticket {
     canReopen: canReopen ?? this.canReopen,
     reopenUntilUtc: reopenUntilUtc ?? this.reopenUntilUtc,
   );
+}
+
+enum TicketThreadAuthor { maintainer, sender }
+
+enum TicketThreadEntryKind {
+  question('question'),
+  answer('answer'),
+  diagnosticRequest('diagnostic_request'),
+  diagnosticAttached('diagnostic_attached'),
+  diagnosticDeclined('diagnostic_declined');
+
+  const TicketThreadEntryKind(this.databaseValue);
+
+  final String databaseValue;
+
+  static TicketThreadEntryKind fromDatabase(String value) => values.firstWhere(
+    (kind) => kind.databaseValue == value,
+    orElse: () => throw FormatException('Unknown Ticket thread kind: $value'),
+  );
+}
+
+final class TicketThreadEntry {
+  const TicketThreadEntry({
+    required this.id,
+    required this.ticketId,
+    required this.author,
+    required this.kind,
+    required this.createdAtUtc,
+    this.text,
+    this.replyToId,
+    this.diagnostic,
+  });
+
+  final String id;
+  final String ticketId;
+  final TicketThreadAuthor author;
+  final TicketThreadEntryKind kind;
+  final String? text;
+  final String? replyToId;
+  final TicketDiagnosticSnapshot? diagnostic;
+  final DateTime createdAtUtc;
+}
+
+enum TicketThreadRefusal {
+  questionInvalid,
+  ticketNotReady,
+  answerInvalid,
+  responseNotWaiting,
+  questionLimitReached,
+  diagnosticInvalid,
+}
+
+final class TicketThreadRejected implements Exception {
+  const TicketThreadRejected(this.reason);
+
+  final TicketThreadRefusal reason;
 }
 
 enum TicketSubmissionRefusal { textInvalid, contextIncomplete, rateLimited }
@@ -183,4 +245,18 @@ abstract interface class TicketGateway {
     required String reason,
   });
   Future<Ticket> reopen(String ticketId, {required String note});
+  Future<List<TicketThreadEntry>> readThread(String ticketId);
+  Future<Ticket> askQuestion(String ticketId, {required String question});
+  Future<Ticket> answerQuestion(
+    String ticketId,
+    String questionId, {
+    required String answer,
+  });
+  Future<Ticket> requestDiagnostic(String ticketId);
+  Future<Ticket> attachDiagnostic(
+    String ticketId,
+    String requestId,
+    TicketDiagnosticSnapshot diagnostic,
+  );
+  Future<Ticket> declineDiagnostic(String ticketId, String requestId);
 }
