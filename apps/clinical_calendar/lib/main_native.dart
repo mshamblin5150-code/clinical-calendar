@@ -139,6 +139,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   Future<void> Function()? onRealtimeHint;
   Stream<bool>? connectivityChanges;
   DurableSynchronizationService? durableSynchronization;
+  TicketGateway? ticketGateway;
+  var initiallyConnected = false;
   var minimumSyncBuildRequired = false;
   Stream<bool>? minimumSyncBuildRequiredChanges;
 
@@ -148,7 +150,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   );
   if (hasSession) {
     final source = connectivitySource ?? ConnectivityPlusStatusSource();
-    final initiallyConnected = await _initialConnectivity(source);
+    initiallyConnected = await _initialConnectivity(source);
     final transport =
         synchronizationTransport ??
         SupabaseRpcSynchronizationTransport(
@@ -187,6 +189,11 @@ Future<ClinicalCalendarApp> buildProductionApplication({
       await coordinator.onRealtimeHint();
     };
     connectivityChanges = source.changes;
+    ticketGateway = SupabaseTicketGateway(
+      projectUri: configuredEnvironment.synchronizationProjectUri!,
+      publishableKey: configuredEnvironment.supabasePublishableKey,
+      accessTokenProvider: accessTokenProvider!,
+    );
   }
 
   final resolvedDeviceClass =
@@ -485,6 +492,9 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     minimumSyncBuildRequiredChanges: minimumSyncBuildRequiredChanges,
     connectivityChanges: connectivityChanges,
     onConnectivityChanged: onConnectivityChanged,
+    ticketGateway: ticketGateway,
+    ticketConnected: initiallyConnected,
+    ticketClientContext: _ticketClientContext(buildNumber),
     onRealtimeHint: onRealtimeHint,
     identity: identity,
     identityEmail: identityEmail,
@@ -870,6 +880,22 @@ DevicePlatform _devicePlatform() {
   if (Platform.isAndroid) return DevicePlatform.android;
   throw UnsupportedError(
     'Clinical Calendar supports Windows, iOS, and Android.',
+  );
+}
+
+TicketClientContext _ticketClientContext(int buildNumber) {
+  if (Platform.isWindows || Platform.isIOS || Platform.isAndroid) {
+    return TicketClientContext(
+      build: buildNumber.toString(),
+      device: _deviceName(),
+      platform: _devicePlatform().name,
+    );
+  }
+  final host = Platform.localHostname.trim();
+  return TicketClientContext(
+    build: buildNumber.toString(),
+    device: host.isEmpty ? '${Platform.operatingSystem} host' : host,
+    platform: Platform.operatingSystem,
   );
 }
 

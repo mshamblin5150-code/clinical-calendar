@@ -59,6 +59,7 @@ export 'src/theme_contract.dart';
 export 'src/theme_gallery.dart';
 export 'src/theme_preview_controller.dart';
 export 'src/theme_preview_control.dart';
+export 'src/tickets/ticket_surfaces.dart';
 export 'src/tactical_frame.dart';
 export 'src/mechanical_pixel_tiles.dart';
 export 'src/time_input.dart';

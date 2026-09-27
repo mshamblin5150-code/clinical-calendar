@@ -44,6 +44,7 @@ import 'support/support_help_surface.dart';
 import 'theme_contract.dart';
 import 'theme_preview_control.dart';
 import 'theme_preview_controller.dart';
+import 'tickets/ticket_surfaces.dart';
 import 'variant_f_theme.dart';
 
 typedef ExportWorkflowFactory =
@@ -120,6 +121,13 @@ final class ClinicalCalendarApp extends StatefulWidget {
     this.minimumSyncBuildRequiredChanges,
     this.connectivityChanges,
     this.onConnectivityChanged,
+    this.ticketGateway,
+    this.ticketConnected = false,
+    this.ticketClientContext = const TicketClientContext(
+      build: 'unknown',
+      device: 'unknown device',
+      platform: 'unknown',
+    ),
     this.onRealtimeHint,
     this.notificationInteractions,
     this.notificationDevicePolicyStore,
@@ -154,6 +162,9 @@ final class ClinicalCalendarApp extends StatefulWidget {
   final Stream<bool>? minimumSyncBuildRequiredChanges;
   final Stream<bool>? connectivityChanges;
   final Future<void> Function(bool connected)? onConnectivityChanged;
+  final TicketGateway? ticketGateway;
+  final bool ticketConnected;
+  final TicketClientContext ticketClientContext;
 
   /// Reserved for the realtime subscription owned by the authentication
   /// integration. Realtime is only a wake hint; durable pull remains truth.
@@ -188,12 +199,14 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
   late bool _ownsEnhancedAccessibility;
   bool _useImmediateTheme = false;
   int _themeChangeGeneration = 0;
+  late bool _ticketConnected;
 
   @override
   void initState() {
     super.initState();
     _adoptThemePreviewController();
     _adoptEnhancedAccessibilityController();
+    _ticketConnected = widget.ticketConnected;
   }
 
   @override
@@ -363,6 +376,9 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
 
   Future<void> _connectivityChanged(bool connected) async {
     await widget.onConnectivityChanged?.call(connected);
+    if (mounted && _ticketConnected != connected) {
+      setState(() => _ticketConnected = connected);
+    }
     await _applicationHostKey.currentState?.refreshAuthoritativeSettings();
   }
 
@@ -440,6 +456,9 @@ final class _ClinicalCalendarAppState extends State<ClinicalCalendarApp> {
                 notificationDeviceClass: widget.notificationDeviceClass,
                 scheduleDateFactory: widget.scheduleDateFactory,
                 todayResolver: widget.todayResolver,
+                ticketGateway: widget.ticketGateway,
+                ticketConnected: _ticketConnected,
+                ticketClientContext: widget.ticketClientContext,
               ),
             ),
           ),
@@ -653,6 +672,9 @@ final class _ApplicationHost extends StatefulWidget {
     required this.notificationDeviceClass,
     required this.scheduleDateFactory,
     required this.todayResolver,
+    required this.ticketGateway,
+    required this.ticketConnected,
+    required this.ticketClientContext,
     super.key,
   });
 
@@ -678,6 +700,9 @@ final class _ApplicationHost extends StatefulWidget {
   final NotificationDeviceClass? notificationDeviceClass;
   final ScheduleDateFactory? scheduleDateFactory;
   final TodayResolver? todayResolver;
+  final TicketGateway? ticketGateway;
+  final bool ticketConnected;
+  final TicketClientContext ticketClientContext;
 
   @override
   State<_ApplicationHost> createState() => _ApplicationHostState();
@@ -1268,8 +1293,14 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     if (!mounted) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (context) =>
-            _ContextualRouteSurface(title: title, child: child),
+        builder: (context) => _ContextualRouteSurface(
+          title: title,
+          onOpenApplicationMenu: widget.ticketGateway == null
+              ? null
+              : () =>
+                    _showMenu(screenName: title, returnToApplicationRoot: true),
+          child: child,
+        ),
       ),
     );
   }
@@ -1563,27 +1594,103 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
     _replaceBatchController();
   }
 
-  Future<void> _showMenu() async {
-    final destination = await showModalBottomSheet<ClinicalCalendarDestination>(
+  Future<void> _showMenu({
+    String? screenName,
+    bool returnToApplicationRoot = false,
+  }) async {
+    final originDestination = _destination;
+    final selection = await showModalBottomSheet<Object>(
       context: context,
       backgroundColor: context.clinicalColors.structureRaised,
       isScrollControlled: true,
       constraints: const BoxConstraints(maxWidth: 560, maxHeight: 560),
       builder: (context) => SafeArea(
-        child: ApplicationMenu(
-          onSelected: (destination) => Navigator.pop(context, destination),
-          enhancedAccessibilityController:
-              widget.enhancedAccessibilityController,
-          onPersistEnhancedAccessibility: _persistEnhancedAccessibility,
-        ),
+        child: widget.ticketGateway == null
+            ? ApplicationMenu(
+                onSelected: (destination) =>
+                    Navigator.pop(context, destination),
+                enhancedAccessibilityController:
+                    widget.enhancedAccessibilityController,
+                onPersistEnhancedAccessibility: _persistEnhancedAccessibility,
+              )
+            : TicketApplicationMenu(
+                onDestinationSelected: (destination) =>
+                    Navigator.pop(context, destination),
+                onTicketSelected: (action) => Navigator.pop(context, action),
+                enhancedAccessibilityController:
+                    widget.enhancedAccessibilityController,
+                onPersistEnhancedAccessibility: _persistEnhancedAccessibility,
+                ticketSubmissionAvailable: widget.ticketConnected,
+              ),
       ),
     );
-    if (destination != null && mounted) {
+    if (!mounted) return;
+    if (selection != null && returnToApplicationRoot) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+    if (selection case final ClinicalCalendarDestination destination) {
       setState(() {
         _destination = destination;
         _entry = DestinationEntry.applicationMenu;
       });
+    } else if (selection case final TicketMenuAction action) {
+      await _openTicketRoute(
+        action,
+        screenName: screenName ?? originDestination?.label ?? 'Calendar',
+      );
     }
+  }
+
+  Future<void> _openTicketRoute(
+    TicketMenuAction action, {
+    required String screenName,
+  }) async {
+    final gateway = widget.ticketGateway;
+    if (gateway == null || !mounted) return;
+    final title = switch (action) {
+      TicketMenuAction.putInTicket => 'Put in a Ticket',
+      TicketMenuAction.tickets => 'Tickets',
+    };
+    final body = switch (action) {
+      TicketMenuAction.putInTicket when widget.ticketConnected =>
+        PutInTicketSurface(
+          gateway: gateway,
+          attachedContext: widget.ticketClientContext.capture(
+            screen: screenName,
+            capturedAtUtc: widget.dependencies.clock.nowUtc(),
+          ),
+        ),
+      TicketMenuAction.putInTicket => const _UnavailableAttentionWorkflow(
+        message: 'Connect to put in a Ticket.',
+      ),
+      TicketMenuAction.tickets when widget.ticketConnected => TicketsSurface(
+        gateway: gateway,
+        onOpenApplicationMenu: () =>
+            _showMenu(screenName: 'Ticket', returnToApplicationRoot: true),
+      ),
+      TicketMenuAction.tickets => const _UnavailableAttentionWorkflow(
+        message: 'Connect to view Tickets.',
+      ),
+    };
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Text(title),
+            actions: [
+              IconButton(
+                key: const Key('ticket-route-menu-action'),
+                tooltip: 'Application menu',
+                onPressed: () =>
+                    _showMenu(screenName: title, returnToApplicationRoot: true),
+                icon: const Icon(Icons.menu),
+              ),
+            ],
+          ),
+          body: SafeArea(child: body),
+        ),
+      ),
+    );
   }
 
   void _openDirect(ClinicalCalendarDestination destination) {
@@ -1686,14 +1793,36 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
   Widget build(BuildContext context) {
     final destination = _destination;
     if (destination != null) {
-      return widget.themeBundle.shellRenderer.buildDestination(
-        destination: destination,
-        entry: _entry,
-        onExit: _exitDestination,
-        child: KeyedSubtree(
-          key: _destinationContentKey,
-          child: _destinationBody(destination),
-        ),
+      final destinationSurface = widget.themeBundle.shellRenderer
+          .buildDestination(
+            destination: destination,
+            entry: _entry,
+            onExit: _exitDestination,
+            child: KeyedSubtree(
+              key: _destinationContentKey,
+              child: _destinationBody(destination),
+            ),
+          );
+      if (widget.ticketGateway == null) return destinationSurface;
+      return Stack(
+        children: [
+          Positioned.fill(child: destinationSurface),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Material(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  key: const Key('destination-menu-action'),
+                  tooltip: 'Application menu',
+                  onPressed: _showMenu,
+                  icon: const Icon(Icons.menu),
+                ),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -2445,9 +2574,14 @@ final class _DestinationFailure extends StatelessWidget {
 }
 
 final class _ContextualRouteSurface extends StatelessWidget {
-  const _ContextualRouteSurface({required this.title, required this.child});
+  const _ContextualRouteSurface({
+    required this.title,
+    required this.onOpenApplicationMenu,
+    required this.child,
+  });
 
   final String title;
+  final VoidCallback? onOpenApplicationMenu;
   final Widget child;
 
   @override
@@ -2463,6 +2597,15 @@ final class _ContextualRouteSurface extends StatelessWidget {
         label: const Text('Back'),
       ),
       title: Text(title),
+      actions: [
+        if (onOpenApplicationMenu case final onOpen?)
+          IconButton(
+            key: const Key('contextual-menu-action'),
+            tooltip: 'Application menu',
+            onPressed: onOpen,
+            icon: const Icon(Icons.menu),
+          ),
+      ],
     ),
     body: SafeArea(child: child),
   );

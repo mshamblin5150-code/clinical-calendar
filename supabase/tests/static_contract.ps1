@@ -21,6 +21,9 @@ $minimumBuildMigration = Get-Content -Raw (
 $webDeviceMigration = Get-Content -Raw (
   Join-Path $PSScriptRoot '..\migrations\202609270007_web_connected_device_expiration.sql'
 )
+$ticketMigration = Get-Content -Raw (
+  Join-Path $PSScriptRoot '..\migrations\202609270008_private_tickets.sql'
+)
 
 $requiredPatterns = @(
   'alter table clinical_calendar_sync.records force row level security',
@@ -173,6 +176,34 @@ foreach ($pattern in $webDevicePatterns) {
   }
 }
 
+$ticketPatterns = @(
+  'create table clinical_calendar_tickets.maintainer_grants',
+  'create table public.tickets',
+  'alter table public.tickets enable row level security',
+  'Sender reads own Tickets',
+  'Maintainer reads every Ticket',
+  'public.has_ticket_maintainer_grant()',
+  'public.put_in_ticket(',
+  'public.open_ticket_for_maintainer(',
+  "interval '5 minutes'",
+  "interval '1 hour'",
+  "interval '24 hours'",
+  'from public, anon, authenticated'
+)
+foreach ($pattern in $ticketPatterns) {
+  if (-not $ticketMigration.Contains($pattern)) {
+    throw "Missing private-Ticket contract pattern: $pattern"
+  }
+}
+
+$ticketAssertionCount = (
+  Select-String -Path (Join-Path $PSScriptRoot 'tickets_test.sql') `
+    -Pattern '^select (ok|is|results_eq|throws_ok|lives_ok)\(' -CaseSensitive
+).Count
+if ($ticketAssertionCount -ne 21) {
+  throw "Private-Ticket pgTAP plan is 21 but found $ticketAssertionCount assertions."
+}
+
 $minimumBuildAssertionCount = (
   Select-String -Path (Join-Path $PSScriptRoot 'minimum_sync_build_test.sql') `
     -Pattern '^select (ok|is|results_eq|throws_ok)\(' -CaseSensitive
@@ -193,8 +224,8 @@ $identityAssertionCount = (
   Select-String -Path (Join-Path $PSScriptRoot 'identity_devices_test.sql') `
     -Pattern '^select (ok|is|results_eq|throws_ok)\(' -CaseSensitive
 ).Count
-if ($identityAssertionCount -ne 36) {
-  throw "Identity/device pgTAP plan is 36 but found $identityAssertionCount assertions."
+if ($identityAssertionCount -ne 38) {
+  throw "Identity/device pgTAP plan is 38 but found $identityAssertionCount assertions."
 }
 
 $erasureAssertionCount = (
