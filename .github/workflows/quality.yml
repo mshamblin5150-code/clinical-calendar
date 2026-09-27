@@ -28,3 +28,6 @@ jobs:
         run: flutter pub get
       - name: Run shared quality gate
         run: dart run tool/quality.dart
+      - name: Build web release
+        working-directory: apps/clinical_calendar
+        run: flutter build web --release --base-href /clinical-calendar/

@@ -7,5 +7,6 @@ green highlighted date.
 
 Run `tool/branding/generate_app_icons.py` with the bundled workspace Python to
 regenerate Android launcher PNGs, the Windows multi-resolution ICO and MSIX
-PNGs, and the deferred iPhone/iPad AppIcon set. Do not resize platform files by
-hand or reintroduce the `AXIION` wordmark into small launcher icons.
+PNGs, the deferred iPhone/iPad AppIcon set, and the web/PWA icons. Do not resize
+platform files by hand or reintroduce the `AXIION` wordmark into small launcher
+icons.

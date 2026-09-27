@@ -3,6 +3,18 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('web entrypoint excludes the native startup graph', () {
+    final entrypoint = File('lib/main.dart').readAsStringSync();
+    final webStartup = File('lib/main_web.dart').readAsStringSync();
+
+    expect(entrypoint, contains("import 'main_web.dart'"));
+    expect(entrypoint, contains("if (dart.library.io) 'main_native.dart'"));
+    expect(entrypoint, isNot(contains('dart:io')));
+    expect(webStartup, isNot(contains('dart:io')));
+    expect(webStartup, isNot(contains('clinical_calendar_local_data')));
+    expect(webStartup, isNot(contains('clinical_calendar_platform')));
+  });
+
   test('inner packages do not import outer boundaries', () {
     final repositoryRoot = Directory.current.parent.parent;
     final forbiddenByPackage = <String, List<String>>{
