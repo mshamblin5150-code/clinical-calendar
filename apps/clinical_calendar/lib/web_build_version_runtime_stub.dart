@@ -1,4 +1,4 @@
-import 'package:clinical_calendar_sync/clinical_calendar_sync.dart';
+import 'package:clinical_calendar_sync/web_build_version.dart';
 
 WebBuildVersionCoordinator? createProductionWebBuildVersionCoordinator({
   required int currentBuildNumber,

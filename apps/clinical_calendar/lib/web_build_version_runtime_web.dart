@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:js_interop';
 
-import 'package:clinical_calendar_sync/clinical_calendar_sync.dart';
+import 'package:clinical_calendar_sync/web_build_version.dart';
 import 'package:web/web.dart' as web;
 
 WebBuildVersionCoordinator createProductionWebBuildVersionCoordinator({
