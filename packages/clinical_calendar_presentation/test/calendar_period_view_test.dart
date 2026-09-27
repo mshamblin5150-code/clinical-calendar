@@ -222,10 +222,7 @@ void main() {
 
       expect(
         find.bySemanticsLabel(
-          RegExp(
-            r'Monday, August 3, 2026, Today, Work Shift, 07:00–15:00, '
-            r'Scheduled, Selected; tap to deselect',
-          ),
+          RegExp(r'Monday, August 3, 2026, Today, Selected; tap to deselect'),
         ),
         findsOneWidget,
       );
@@ -254,9 +251,15 @@ void main() {
 
       expect(
         find.bySemanticsLabel(
+          RegExp(r'Friday, August 14, 2026, Tap to select'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(
           RegExp(
-            r'Friday, August 14, 2026, Evidence review, NURS 702, Due date, '
-            r'Pending, Tap to open Evidence review',
+            r'Evidence review, NURS 702, Due date, Pending, '
+            r'Tap to open Evidence review',
           ),
         ),
         findsOneWidget,
@@ -282,7 +285,50 @@ void main() {
   );
 
   testWidgets(
-    'selected occupied date deselects before opening its Work Shift',
+    'occupied Month day selects from the date target and opens its Academic Assignment from the entry target',
+    (tester) async {
+      final date = LocalDate(2026, 8, 14);
+      final selections = <Set<LocalDate>>[];
+      final opened = <CalendarItemReference>[];
+      await _pumpCalendar(
+        tester,
+        source: _MemoryCalendarDataSource(
+          CalendarSnapshot([
+            CalendarEntry(
+              id: 'assignment-14',
+              kind: CalendarEntryKind.academicAssignment,
+              startDate: date,
+              endDate: date,
+              title: 'Evidence review',
+              course: 'NURS 702',
+              statusLabel: 'Pending',
+            ),
+          ]),
+        ),
+        initialAnchor: date,
+        onSelectionChanged: selections.add,
+        onOpenItem: opened.add,
+      );
+
+      final day = find.byKey(const Key('calendar-day-2026-08-14'));
+      await tester.tapAt(tester.getTopLeft(day) + const Offset(16, 16));
+      await tester.pump();
+
+      expect(selections.single, {date});
+      expect(opened, isEmpty);
+
+      await tester.tap(
+        find.byKey(const Key('month-entry-assignment-14-2026-08-14')),
+      );
+      await tester.pump();
+
+      expect(opened.single.kind, CalendarEntryKind.academicAssignment);
+      expect(opened.single.id, 'assignment-14');
+    },
+  );
+
+  testWidgets(
+    'selected occupied Month date deselects from the date target and opens its Work Shift from the entry target',
     (tester) async {
       final selections = <Set<LocalDate>>[];
       final opened = <CalendarItemReference>[];
@@ -294,15 +340,193 @@ void main() {
         onOpenItem: opened.add,
       );
 
-      await tester.tap(find.byKey(const Key('calendar-day-2026-08-03')));
+      final day = find.byKey(const Key('calendar-day-2026-08-03'));
+      await tester.tapAt(tester.getTopLeft(day) + const Offset(16, 16));
       await tester.pump();
       expect(selections.single, isEmpty);
       expect(opened, isEmpty);
 
-      await tester.tap(find.byKey(const Key('calendar-day-2026-08-03')));
+      await tester.tap(find.byKey(const Key('month-entry-work-03-2026-08-03')));
       await tester.pump();
       expect(opened.single.kind, CalendarEntryKind.workShift);
       expect(opened.single.id, 'work-03');
+    },
+  );
+
+  testWidgets(
+    'compact Month keeps a full day target and opens its Clinical Session marker',
+    (tester) async {
+      final date = LocalDate(2026, 8, 6);
+      final selections = <Set<LocalDate>>[];
+      final opened = <CalendarItemReference>[];
+      await _pumpCalendar(
+        tester,
+        source: _MemoryCalendarDataSource(
+          CalendarSnapshot([
+            CalendarEntry(
+              id: 'clinical-06',
+              kind: CalendarEntryKind.clinicalSession,
+              startDate: date,
+              endDate: date,
+              startTime: LocalTime(9, 0),
+              endTime: LocalTime(17, 0),
+              title: 'Clinical Session',
+              assignment: 'Family Medicine · Jordan Lee',
+              statusLabel: 'Scheduled',
+            ),
+          ]),
+        ),
+        surfaceSize: const Size(390, 844),
+        initialAnchor: date,
+        onSelectionChanged: selections.add,
+        onOpenItem: opened.add,
+      );
+
+      final day = find.byKey(const Key('calendar-day-2026-08-06'));
+      expect(tester.getSize(day).width, greaterThanOrEqualTo(44));
+      expect(tester.getSize(day).height, greaterThanOrEqualTo(44));
+      await tester.tapAt(tester.getTopLeft(day) + const Offset(16, 16));
+      await tester.pump();
+
+      expect(selections.single, {date});
+      expect(opened, isEmpty);
+
+      await tester.tap(
+        find.byKey(const Key('compact-clinicalSession-clinical-06')),
+      );
+      await tester.pump();
+
+      expect(opened.single.kind, CalendarEntryKind.clinicalSession);
+      expect(opened.single.id, 'clinical-06');
+    },
+  );
+
+  testWidgets(
+    'occupied Week days select from the date target and open Work Shift or Clinical Session entries',
+    (tester) async {
+      final cases = [
+        (
+          date: LocalDate(2026, 8, 3),
+          entry: CalendarEntry(
+            id: 'work-03',
+            kind: CalendarEntryKind.workShift,
+            startDate: LocalDate(2026, 8, 3),
+            endDate: LocalDate(2026, 8, 3),
+            startTime: LocalTime(7, 0),
+            endTime: LocalTime(15, 0),
+            title: 'Work Shift',
+            statusLabel: 'Scheduled',
+          ),
+        ),
+        (
+          date: LocalDate(2026, 8, 6),
+          entry: CalendarEntry(
+            id: 'clinical-06',
+            kind: CalendarEntryKind.clinicalSession,
+            startDate: LocalDate(2026, 8, 6),
+            endDate: LocalDate(2026, 8, 6),
+            startTime: LocalTime(9, 0),
+            endTime: LocalTime(17, 0),
+            title: 'Clinical Session',
+            assignment: 'Family Medicine · Jordan Lee',
+            statusLabel: 'Scheduled',
+          ),
+        ),
+      ];
+
+      for (final testCase in cases) {
+        final selections = <Set<LocalDate>>[];
+        final opened = <CalendarItemReference>[];
+        await _pumpCalendar(
+          tester,
+          source: _MemoryCalendarDataSource(CalendarSnapshot([testCase.entry])),
+          initialAnchor: testCase.date,
+          initialPeriod: CalendarPeriod.week,
+          onSelectionChanged: selections.add,
+          onOpenItem: opened.add,
+        );
+
+        final day = find.byKey(Key('week-day-${testCase.date}'));
+        await tester.tapAt(tester.getTopLeft(day) + const Offset(24, 24));
+        await tester.pump();
+
+        expect(selections.single, {testCase.date});
+        expect(opened, isEmpty);
+
+        await tester.tap(find.textContaining(testCase.entry.title));
+        await tester.pump();
+
+        expect(opened.single.kind, testCase.entry.kind);
+        expect(opened.single.id, testCase.entry.id);
+      }
+    },
+  );
+
+  testWidgets(
+    'occupied compact Agenda days select from the date target and open Work Shift or Clinical Session entries',
+    (tester) async {
+      final cases = [
+        (
+          date: LocalDate(2026, 8, 3),
+          entry: CalendarEntry(
+            id: 'work-03',
+            kind: CalendarEntryKind.workShift,
+            startDate: LocalDate(2026, 8, 3),
+            endDate: LocalDate(2026, 8, 3),
+            startTime: LocalTime(7, 0),
+            endTime: LocalTime(15, 0),
+            title: 'Work Shift',
+            statusLabel: 'Scheduled',
+          ),
+        ),
+        (
+          date: LocalDate(2026, 8, 6),
+          entry: CalendarEntry(
+            id: 'clinical-06',
+            kind: CalendarEntryKind.clinicalSession,
+            startDate: LocalDate(2026, 8, 6),
+            endDate: LocalDate(2026, 8, 6),
+            startTime: LocalTime(9, 0),
+            endTime: LocalTime(17, 0),
+            title: 'Clinical Session',
+            assignment: 'Family Medicine · Jordan Lee',
+            statusLabel: 'Scheduled',
+          ),
+        ),
+      ];
+
+      for (final testCase in cases) {
+        final selections = <Set<LocalDate>>[];
+        final opened = <CalendarItemReference>[];
+        await _pumpCalendar(
+          tester,
+          source: _MemoryCalendarDataSource(CalendarSnapshot([testCase.entry])),
+          surfaceSize: const Size(390, 844),
+          initialAnchor: testCase.date,
+          initialPeriod: CalendarPeriod.agenda,
+          onSelectionChanged: selections.add,
+          onOpenItem: opened.add,
+        );
+
+        final row = find.byKey(
+          Key(
+            'agenda-row-${testCase.entry.kind.name}-${testCase.entry.id}-${testCase.date}',
+          ),
+        );
+        final dayTarget = find.byKey(Key('agenda-day-${testCase.date}'));
+        expect(tester.getSize(dayTarget).height, greaterThanOrEqualTo(58));
+        await tester.tapAt(tester.getTopLeft(row) + const Offset(4, 4));
+        await tester.pump();
+
+        expect(selections.single, {testCase.date});
+        expect(opened, isEmpty);
+
+        await tester.tap(find.textContaining(testCase.entry.title));
+        await tester.pump();
+
+        expect(opened.single.kind, testCase.entry.kind);
+        expect(opened.single.id, testCase.entry.id);
+      }
     },
   );
 

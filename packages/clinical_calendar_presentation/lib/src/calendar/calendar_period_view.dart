@@ -327,21 +327,20 @@ final class _CalendarPeriodViewState extends State<CalendarPeriodView> {
     );
   }
 
-  void _activateDate(
-    LocalDate date,
-    List<CalendarEntry> entries, {
-    CalendarEntry? preferredEntry,
-  }) {
+  void _activateDate(LocalDate date, {CalendarEntry? preferredEntry}) {
+    if (preferredEntry != null) {
+      widget.onOpenItem?.call(
+        CalendarItemReference(
+          kind: preferredEntry.kind,
+          id: preferredEntry.id,
+          date: date,
+        ),
+      );
+      return;
+    }
     if (_selectedDates.remove(date)) {
       setState(() {});
       widget.onSelectionChanged?.call(Set.unmodifiable(_selectedDates));
-      return;
-    }
-    final entry = preferredEntry ?? (entries.isEmpty ? null : entries.first);
-    if (entry != null) {
-      widget.onOpenItem?.call(
-        CalendarItemReference(kind: entry.kind, id: entry.id, date: date),
-      );
       return;
     }
     setState(() => _selectedDates.add(date));
@@ -604,11 +603,7 @@ final class _InstrumentLegendItem extends StatelessWidget {
 }
 
 typedef _ActivateDate =
-    void Function(
-      LocalDate date,
-      List<CalendarEntry> entries, {
-      CalendarEntry? preferredEntry,
-    });
+    void Function(LocalDate date, {CalendarEntry? preferredEntry});
 
 final class _CalendarToolbar extends StatelessWidget {
   const _CalendarToolbar({
@@ -1418,13 +1413,6 @@ final class _MonthDayCell extends StatelessWidget {
     final work = entries.any(
       (entry) => entry.kind == CalendarEntryKind.workShift,
     );
-    final semanticLabel = _dateSemanticLabel(
-      date,
-      today: today,
-      selected: selected,
-      entries: entries,
-      twelveHourTime: twelveHourTime,
-    );
     final instrumentChrome = CalendarPeriodViewportPolicy.usesInstrumentChrome(
       context,
     );
@@ -1436,11 +1424,12 @@ final class _MonthDayCell extends StatelessWidget {
         CalendarPeriodViewportPolicy.usesArchiveEntryVisuals(context);
     return Semantics(
       key: Key('calendar-day-$date'),
+      container: true,
+      explicitChildNodes: true,
       button: true,
       selected: selected,
-      label: semanticLabel,
-      excludeSemantics: true,
-      onTap: () => onActivate(date, entries),
+      label: _dateSemanticLabel(date, today: today, selected: selected),
+      onTap: () => onActivate(date),
       child: CustomPaint(
         painter: _DayCellPainter(
           colors: context.clinicalColors,
@@ -1475,7 +1464,8 @@ final class _MonthDayCell extends StatelessWidget {
           monthCellMetrics: monthCellMetrics,
         ),
         child: InkWell(
-          onTap: () => onActivate(date, entries),
+          excludeFromSemantics: true,
+          onTap: () => onActivate(date),
           child: Padding(
             padding: dense && tightDenseSpacing
                 ? const EdgeInsets.symmetric(horizontal: 5, vertical: 2)
@@ -1503,7 +1493,13 @@ final class _MonthDayCell extends StatelessWidget {
                   Expanded(
                     child: Align(
                       alignment: Alignment.bottomLeft,
-                      child: _CompactMarkers(entries: entries),
+                      child: _CompactMarkers(
+                        entries: entries,
+                        date: date,
+                        twelveHourTime: twelveHourTime,
+                        onOpen: (entry) =>
+                            onActivate(date, preferredEntry: entry),
+                      ),
                     ),
                   )
                 else if (compact ||
@@ -1514,15 +1510,19 @@ final class _MonthDayCell extends StatelessWidget {
                                 ?.denseMarkerStyle ==
                             CalendarDenseMarkerStyle.chip &&
                         enlargedText))
-                  _CompactMarkers(entries: entries)
+                  _CompactMarkers(
+                    entries: entries,
+                    date: date,
+                    twelveHourTime: twelveHourTime,
+                    onOpen: (entry) => onActivate(date, preferredEntry: entry),
+                  )
                 else if (dense &&
                     CalendarPeriodViewportPolicy.usesDenseMonthCards(context))
                   for (final entry in entries.take(1))
                     _DenseMonthEventCard(
                       entry: entry,
                       date: date,
-                      onTap: () =>
-                          onActivate(date, entries, preferredEntry: entry),
+                      onTap: () => onActivate(date, preferredEntry: entry),
                     )
                 else if (dense)
                   _DenseMonthMarker(
@@ -1540,11 +1540,8 @@ final class _MonthDayCell extends StatelessWidget {
                               entry: entry,
                               date: date,
                               twelveHourTime: twelveHourTime,
-                              onTap: () => onActivate(
-                                date,
-                                entries,
-                                preferredEntry: entry,
-                              ),
+                              onTap: () =>
+                                  onActivate(date, preferredEntry: entry),
                             ),
                           if (entries.length > 1)
                             Text(
@@ -1582,40 +1579,47 @@ final class _DenseMonthEventCard extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: FractionallySizedBox(
-          widthFactor: .83,
-          child: Container(
-            key: Key('month-entry-${entry.id}-$date'),
-            height: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            decoration: BoxDecoration(
-              color: accent,
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: Row(
-              children: [
-                ThemeSemanticMarkIcon(
-                  role: _entryRole(entry.kind),
-                  size: 13,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 3),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.clip,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: .3,
+      excludeFromSemantics: true,
+      child: Semantics(
+        button: true,
+        label: _entrySemanticLabel(entry, date: date, twelveHourTime: false),
+        onTap: onTap,
+        excludeSemantics: true,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: FractionallySizedBox(
+            widthFactor: .83,
+            child: Container(
+              key: Key('month-entry-${entry.id}-$date'),
+              height: 24,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: accent,
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: Row(
+                children: [
+                  ThemeSemanticMarkIcon(
+                    role: _entryRole(entry.kind),
+                    size: 13,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: .3,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -2135,9 +2139,17 @@ final class _DayNumber extends StatelessWidget {
 }
 
 final class _CompactMarkers extends StatelessWidget {
-  const _CompactMarkers({required this.entries});
+  const _CompactMarkers({
+    required this.entries,
+    required this.date,
+    required this.twelveHourTime,
+    required this.onOpen,
+  });
 
   final List<CalendarEntry> entries;
+  final LocalDate date;
+  final bool twelveHourTime;
+  final ValueChanged<CalendarEntry> onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -2147,25 +2159,39 @@ final class _CompactMarkers extends StatelessWidget {
       runSpacing: 3,
       children: [
         for (final entry in entries.take(6))
-          if (usesAdditiveMarks)
-            ThemeSemanticMarkIcon(
-              key: Key('compact-${entry.kind.name}-${entry.id}'),
-              role: _entryRole(entry.kind),
-              size: 11,
-              color: _entryAccent(context, entry),
-            )
-          else
-            Container(
-              key: Key('compact-${entry.kind.name}-${entry.id}'),
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: _entryAccent(context, entry),
-                shape: entry.kind == CalendarEntryKind.protectedDay
-                    ? BoxShape.rectangle
-                    : BoxShape.circle,
-              ),
+          Semantics(
+            button: true,
+            label: _entrySemanticLabel(
+              entry,
+              date: date,
+              twelveHourTime: twelveHourTime,
             ),
+            onTap: () => onOpen(entry),
+            excludeSemantics: true,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              excludeFromSemantics: true,
+              onTap: () => onOpen(entry),
+              child: usesAdditiveMarks
+                  ? ThemeSemanticMarkIcon(
+                      key: Key('compact-${entry.kind.name}-${entry.id}'),
+                      role: _entryRole(entry.kind),
+                      size: 11,
+                      color: _entryAccent(context, entry),
+                    )
+                  : Container(
+                      key: Key('compact-${entry.kind.name}-${entry.id}'),
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: _entryAccent(context, entry),
+                        shape: entry.kind == CalendarEntryKind.protectedDay
+                            ? BoxShape.rectangle
+                            : BoxShape.circle,
+                      ),
+                    ),
+            ),
+          ),
       ],
     );
   }
@@ -2187,46 +2213,57 @@ final class _MonthEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final continuation = entry.isContinuationOn(date);
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return Semantics(
+      button: true,
+      label: _entrySemanticLabel(
+        entry,
+        date: date,
+        twelveHourTime: twelveHourTime,
+      ),
       onTap: onTap,
-      child: Container(
-        key: Key('month-entry-${entry.id}-$date'),
-        margin: const EdgeInsets.only(bottom: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-        decoration: _entryDecoration(context, entry),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              continuation
-                  ? '${entry.title} continues'
-                  : entry.timeLabel(twelveHour: twelveHourTime),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 10),
-            ),
-            Row(
-              children: [
-                if (_usesAdditiveMarks(context)) ...[
-                  ThemeSemanticMarkIcon(
-                    role: _entryRole(entry.kind),
-                    size: 11,
-                    color: _entryAccent(context, entry),
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onTap,
+        child: Container(
+          key: Key('month-entry-${entry.id}-$date'),
+          margin: const EdgeInsets.only(bottom: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+          decoration: _entryDecoration(context, entry),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                continuation
+                    ? '${entry.title} continues'
+                    : entry.timeLabel(twelveHour: twelveHourTime),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 10),
+              ),
+              Row(
+                children: [
+                  if (_usesAdditiveMarks(context)) ...[
+                    ThemeSemanticMarkIcon(
+                      role: _entryRole(entry.kind),
+                      size: 11,
+                      color: _entryAccent(context, entry),
+                    ),
+                    const SizedBox(width: 3),
+                  ],
+                  Expanded(
+                    child: Text(
+                      entry.supportingLabel ?? entry.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 10),
+                    ),
                   ),
-                  const SizedBox(width: 3),
                 ],
-                Expanded(
-                  child: Text(
-                    entry.supportingLabel ?? entry.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -2304,16 +2341,12 @@ final class _WeekDay extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     key: Key('week-day-$date'),
+    container: true,
+    explicitChildNodes: true,
     button: true,
     selected: selected,
-    label: _dateSemanticLabel(
-      date,
-      today: today,
-      selected: selected,
-      entries: entries,
-      twelveHourTime: twelveHourTime,
-    ),
-    excludeSemantics: true,
+    label: _dateSemanticLabel(date, today: today, selected: selected),
+    onTap: () => onActivate(date),
     child: Container(
       margin: const EdgeInsets.all(3),
       constraints: const BoxConstraints(minHeight: 120),
@@ -2335,7 +2368,8 @@ final class _WeekDay extends StatelessWidget {
         ),
       ),
       child: InkWell(
-        onTap: () => onActivate(date, entries),
+        excludeFromSemantics: true,
+        onTap: () => onActivate(date),
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Column(
@@ -2372,7 +2406,7 @@ final class _WeekDay extends StatelessWidget {
                   entry: entry,
                   date: date,
                   twelveHourTime: twelveHourTime,
-                  onTap: () => onActivate(date, entries, preferredEntry: entry),
+                  onTap: () => onActivate(date, preferredEntry: entry),
                 ),
             ],
           ),
@@ -2430,11 +2464,9 @@ final class _AgendaView extends StatelessWidget {
                     selected: selectedDates.contains(row.date),
                     compact: compact,
                     twelveHourTime: twelveHourTime,
-                    onTap: () => onActivate(
-                      row.date,
-                      snapshot.entriesOn(row.date),
-                      preferredEntry: row.entry,
-                    ),
+                    onSelect: () => onActivate(row.date),
+                    onOpen: () =>
+                        onActivate(row.date, preferredEntry: row.entry),
                   ),
               ],
             ),
@@ -2450,7 +2482,8 @@ final class _AgendaRow extends StatelessWidget {
     required this.selected,
     required this.compact,
     required this.twelveHourTime,
-    required this.onTap,
+    required this.onSelect,
+    required this.onOpen,
   });
 
   final LocalDate date;
@@ -2459,31 +2492,29 @@ final class _AgendaRow extends StatelessWidget {
   final bool selected;
   final bool compact;
   final bool twelveHourTime;
-  final VoidCallback onTap;
+  final VoidCallback onSelect;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) => Semantics(
-    key: Key('agenda-${entry.id}-$date'),
+    key: Key('agenda-day-$date'),
+    container: true,
+    explicitChildNodes: true,
     button: true,
     selected: selected,
-    label: _dateSemanticLabel(
-      date,
-      today: today,
-      selected: selected,
-      entries: [entry],
-      twelveHourTime: twelveHourTime,
-    ),
-    excludeSemantics: true,
-    child: InkWell(
-      onTap: onTap,
-      child: CustomPaint(
-        painter: _AgendaBackgroundPainter(
-          colors: context.clinicalColors,
-          visuals: Theme.of(
-            context,
-          ).extension<ClinicalCalendarPresentationPolicy>(),
-          kind: entry.kind,
-        ),
+    label: _dateSemanticLabel(date, today: today, selected: selected),
+    onTap: onSelect,
+    child: CustomPaint(
+      painter: _AgendaBackgroundPainter(
+        colors: context.clinicalColors,
+        visuals: Theme.of(
+          context,
+        ).extension<ClinicalCalendarPresentationPolicy>(),
+        kind: entry.kind,
+      ),
+      child: InkWell(
+        excludeFromSemantics: true,
+        onTap: onSelect,
         child: Container(
           key: Key('agenda-row-${entry.kind.name}-${entry.id}-$date'),
           constraints: const BoxConstraints(minHeight: 58),
@@ -2498,9 +2529,16 @@ final class _AgendaRow extends StatelessWidget {
                       entry: entry,
                       today: today,
                       twelveHourTime: twelveHourTime,
+                      onOpen: onOpen,
                     ),
                     const SizedBox(height: 4),
-                    _AgendaAssignment(entry: entry),
+                    _AgendaEntryTarget(
+                      date: date,
+                      entry: entry,
+                      twelveHourTime: twelveHourTime,
+                      onOpen: onOpen,
+                      child: _AgendaAssignment(entry: entry),
+                    ),
                   ],
                 )
               : Row(
@@ -2512,15 +2550,29 @@ final class _AgendaRow extends StatelessWidget {
                         '${_monthAbbreviation(date.month)} ${date.day}',
                       ),
                     ),
-                    SizedBox(
-                      width: 150,
-                      child: Text(
-                        entry.isContinuationOn(date)
-                            ? 'Continues from prior day'
-                            : entry.timeLabel(twelveHour: twelveHourTime),
+                    Expanded(
+                      child: _AgendaEntryTarget(
+                        date: date,
+                        entry: entry,
+                        twelveHourTime: twelveHourTime,
+                        onOpen: onOpen,
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 150,
+                              child: Text(
+                                entry.isContinuationOn(date)
+                                    ? 'Continues from prior day'
+                                    : entry.timeLabel(
+                                        twelveHour: twelveHourTime,
+                                      ),
+                              ),
+                            ),
+                            Expanded(child: _AgendaAssignment(entry: entry)),
+                          ],
+                        ),
                       ),
                     ),
-                    Expanded(child: _AgendaAssignment(entry: entry)),
                   ],
                 ),
         ),
@@ -2535,12 +2587,14 @@ final class _AgendaDateAndTime extends StatelessWidget {
     required this.entry,
     required this.today,
     required this.twelveHourTime,
+    required this.onOpen,
   });
 
   final LocalDate date;
   final CalendarEntry entry;
   final bool today;
   final bool twelveHourTime;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -2552,13 +2606,48 @@ final class _AgendaDateAndTime extends StatelessWidget {
         ),
       ),
       const SizedBox(width: 8),
-      Text(
-        entry.isContinuationOn(date)
-            ? 'Continues'
-            : entry.timeLabel(twelveHour: twelveHourTime),
-        style: Theme.of(context).textTheme.bodySmall,
+      _AgendaEntryTarget(
+        date: date,
+        entry: entry,
+        twelveHourTime: twelveHourTime,
+        onOpen: onOpen,
+        child: Text(
+          entry.isContinuationOn(date)
+              ? 'Continues'
+              : entry.timeLabel(twelveHour: twelveHourTime),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
       ),
     ],
+  );
+}
+
+final class _AgendaEntryTarget extends StatelessWidget {
+  const _AgendaEntryTarget({
+    required this.date,
+    required this.entry,
+    required this.twelveHourTime,
+    required this.onOpen,
+    required this.child,
+  });
+
+  final LocalDate date;
+  final CalendarEntry entry;
+  final bool twelveHourTime;
+  final VoidCallback onOpen;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: _entrySemanticLabel(
+      entry,
+      date: date,
+      twelveHourTime: twelveHourTime,
+    ),
+    onTap: onOpen,
+    excludeSemantics: true,
+    child: InkWell(excludeFromSemantics: true, onTap: onOpen, child: child),
   );
 }
 
@@ -2610,46 +2699,57 @@ final class _PeriodEntryRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: _entrySemanticLabel(
+      entry,
+      date: date,
+      twelveHourTime: twelveHourTime,
+    ),
     onTap: onTap,
-    child: Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(7),
-      decoration: _entryDecoration(context, entry),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            entry.isContinuationOn(date)
-                ? 'Continues from ${formatUsDate(entry.startDate)}'
-                : entry.timeLabel(twelveHour: twelveHourTime),
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          Row(
-            children: [
-              if (_usesAdditiveMarks(context)) ...[
-                ThemeSemanticMarkIcon(
-                  role: _entryRole(entry.kind),
-                  size: 16,
-                  color: _entryAccent(context, entry),
-                ),
-                const SizedBox(width: 5),
-              ],
-              Expanded(
-                child: Text(
-                  entry.title,
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ),
-            ],
-          ),
-          if (entry.supportingLabel != null)
+    excludeSemantics: true,
+    child: GestureDetector(
+      excludeFromSemantics: true,
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(7),
+        decoration: _entryDecoration(context, entry),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
-              entry.supportingLabel!,
+              entry.isContinuationOn(date)
+                  ? 'Continues from ${formatUsDate(entry.startDate)}'
+                  : entry.timeLabel(twelveHour: twelveHourTime),
               style: Theme.of(context).textTheme.bodySmall,
             ),
-          _CalendarStatusLabel(entry: entry),
-        ],
+            Row(
+              children: [
+                if (_usesAdditiveMarks(context)) ...[
+                  ThemeSemanticMarkIcon(
+                    role: _entryRole(entry.kind),
+                    size: 16,
+                    color: _entryAccent(context, entry),
+                  ),
+                  const SizedBox(width: 5),
+                ],
+                Expanded(
+                  child: Text(
+                    entry.title,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+              ],
+            ),
+            if (entry.supportingLabel != null)
+              Text(
+                entry.supportingLabel!,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            _CalendarStatusLabel(entry: entry),
+          ],
+        ),
       ),
     ),
   );
@@ -3180,30 +3280,29 @@ String _dateSemanticLabel(
   LocalDate date, {
   required bool today,
   required bool selected,
-  required List<CalendarEntry> entries,
-  required bool twelveHourTime,
 }) {
   final parts = <String>[
     '${_weekdayName(date.asUtcCalendarDate.weekday)}, '
         '${_monthName(date.month)} ${date.day}, ${date.year}',
     if (today) 'Today',
-    for (final entry in entries) ...[
-      entry.title,
-      if (entry.supportingLabel != null) entry.supportingLabel!,
-      entry.isContinuationOn(date)
-          ? 'continues from ${formatUsDate(entry.startDate)}'
-          : entry.timeLabel(twelveHour: twelveHourTime),
-      entry.statusLabel,
-    ],
-    if (selected)
-      'Selected; tap to deselect'
-    else if (entries.isNotEmpty)
-      'Tap to open ${entries.first.title}'
-    else
-      'Tap to select',
+    if (selected) 'Selected; tap to deselect' else 'Tap to select',
   ];
   return parts.join(', ');
 }
+
+String _entrySemanticLabel(
+  CalendarEntry entry, {
+  required LocalDate date,
+  required bool twelveHourTime,
+}) => <String>[
+  entry.title,
+  if (entry.supportingLabel != null) entry.supportingLabel!,
+  entry.isContinuationOn(date)
+      ? 'continues from ${formatUsDate(entry.startDate)}'
+      : entry.timeLabel(twelveHour: twelveHourTime),
+  entry.statusLabel,
+  'Tap to open ${entry.title}',
+].join(', ');
 
 List<LocalDate> _monthDates(
   LocalDate anchor,
