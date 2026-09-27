@@ -399,6 +399,45 @@ void main() {
   });
 
   test(
+    'minimum build rejection holds the outbox until a compatible update',
+    () async {
+      await _putPreceptor(
+        first.registry,
+        'Held For Update',
+        62,
+        clock.nowUtc(),
+      );
+      final service = _service(first, server, clock);
+      final updateStates = <bool>[];
+      final subscription = service.minimumSyncBuildRequiredChanges.listen(
+        updateStates.add,
+      );
+      server.rejectForMinimumBuild = true;
+
+      final held = await service.syncNow();
+
+      expect(held.disposition, SynchronizationDisposition.deferred);
+      expect(
+        held.detail,
+        PublicSynchronizationFailureReference.minimumSyncBuildRequired,
+      );
+      expect(service.minimumSyncBuildRequired, isTrue);
+      expect((await service.health()).pendingCount, 1);
+      expect(server.feed, isEmpty);
+
+      server.rejectForMinimumBuild = false;
+      final afterUpdate = await service.syncNow();
+
+      expect(afterUpdate.disposition, SynchronizationDisposition.synchronized);
+      expect(service.minimumSyncBuildRequired, isFalse);
+      expect(await _pendingCount(first.registry, clock.nowUtc()), 0);
+      expect(server.feed, hasLength(1));
+      expect(updateStates, [true, false]);
+      await subscription.cancel();
+    },
+  );
+
+  test(
     'explicit Sync Now retries queued changes before backoff expires',
     () async {
       await _putPreceptor(first.registry, 'Retry Now', 60, clock.nowUtc());
@@ -983,6 +1022,7 @@ final class _ServerTransport implements SynchronizationTransport {
   SynchronizationTransportException? nextPushError;
   bool reversePull = false;
   bool deliverDuplicates = false;
+  bool rejectForMinimumBuild = false;
   int pushCalls = 0;
 
   @override
@@ -991,6 +1031,15 @@ final class _ServerTransport implements SynchronizationTransport {
     final error = nextPushError;
     nextPushError = null;
     if (error != null) throw error;
+    if (rejectForMinimumBuild) {
+      return SynchronizationPushResult.rejected(
+        code: 'minimum_sync_build_required',
+        rejectionJson: jsonEncode({
+          'code': 'minimum_sync_build_required',
+          'minimum_build': 47,
+        }),
+      );
+    }
     final prior = receipts[operation.mutation.idempotencyKey];
     if (prior != null) return prior;
     final key = '${operation.entityType}/${operation.entityId}';

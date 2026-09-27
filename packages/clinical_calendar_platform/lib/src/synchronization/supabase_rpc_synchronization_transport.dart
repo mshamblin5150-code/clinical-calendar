@@ -11,16 +11,19 @@ final class SupabaseRpcSynchronizationTransport
   SupabaseRpcSynchronizationTransport({
     required this._projectUri,
     required String publishableKey,
+    required int buildNumber,
     required this._accessTokenProvider,
     Future<void> Function()? onSuccessfulServerAccess,
     http.Client? client,
   }) : _publishableKey = _required(publishableKey, 'publishableKey'),
+       _buildNumber = _requiredBuildNumber(buildNumber),
        // ignore: prefer_initializing_formals, preserves the public name.
        _onSuccessfulServerAccess = onSuccessfulServerAccess,
        _client = client ?? http.Client();
 
   final Uri _projectUri;
   final String _publishableKey;
+  final int _buildNumber;
   final SynchronizationAccessTokenProvider _accessTokenProvider;
   final Future<void> Function()? _onSuccessfulServerAccess;
   final http.Client _client;
@@ -34,6 +37,7 @@ final class SupabaseRpcSynchronizationTransport
       'p_operation_type': _operationType(operation.type),
       'p_base_revision': operation.baseRevision,
       'p_payload': jsonDecode(operation.payloadJson),
+      'p_build_number': _buildNumber,
     });
     if (response is! Map<String, dynamic> || response['accepted'] is! bool) {
       throw const SynchronizationTransportException(
@@ -88,6 +92,7 @@ final class SupabaseRpcSynchronizationTransport
     final response = await _post('pull_changes_after', {
       'p_after_cursor': afterCursor,
       'p_limit': limit,
+      'p_build_number': _buildNumber,
     });
     if (response is! List) {
       throw const SynchronizationTransportException(
@@ -203,4 +208,11 @@ String _required(String value, String name) {
     throw ArgumentError.value(value, name, 'must not be empty');
   }
   return normalized;
+}
+
+int _requiredBuildNumber(int value) {
+  if (value <= 0) {
+    throw ArgumentError.value(value, 'buildNumber', 'must be positive');
+  }
+  return value;
 }

@@ -16,6 +16,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('sync build number matches the application package build', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+
+    expect(app.currentSyncBuildNumber, 46);
+    expect(pubspec, contains('version: 0.1.0+${app.currentSyncBuildNumber}'));
+  });
+
   test(
     'production composition uses one secure Student owner everywhere',
     () async {

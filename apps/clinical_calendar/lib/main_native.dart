@@ -35,6 +35,11 @@ typedef AuthoritativePresentationSettingsLoader =
 
 typedef GraphiteAssetPreflight = Future<void> Function();
 
+const currentSyncBuildNumber = int.fromEnvironment(
+  'CLINICAL_CALENDAR_BUILD_NUMBER',
+  defaultValue: 46,
+);
+
 abstract interface class ConnectivityStatusSource {
   Future<bool> current();
 
@@ -98,6 +103,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   AuthoritativePresentationSettingsLoader?
   authoritativePresentationSettingsLoader,
   GraphiteAssetPreflight? graphiteAssetPreflight,
+  int buildNumber = currentSyncBuildNumber,
 }) async {
   final storage = secureStorage ?? const FlutterSecureStorageService();
   final identifierGenerator = identifiers ?? ProcessIdentifierGenerator();
@@ -123,6 +129,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
   Future<void> Function()? onRealtimeHint;
   Stream<bool>? connectivityChanges;
   DurableSynchronizationService? durableSynchronization;
+  var minimumSyncBuildRequired = false;
+  Stream<bool>? minimumSyncBuildRequiredChanges;
 
   final hasSession = await _hasCurrentSynchronizationSession(
     configuredEnvironment,
@@ -136,6 +144,7 @@ Future<ClinicalCalendarApp> buildProductionApplication({
         SupabaseRpcSynchronizationTransport(
           projectUri: configuredEnvironment.synchronizationProjectUri!,
           publishableKey: configuredEnvironment.supabasePublishableKey,
+          buildNumber: buildNumber,
           accessTokenProvider: accessTokenProvider!,
           onSuccessfulServerAccess: onSuccessfulSynchronization,
         );
@@ -148,6 +157,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
       initiallyConnected: initiallyConnected,
     );
     durableSynchronization = durable;
+    minimumSyncBuildRequired = durable.minimumSyncBuildRequired;
+    minimumSyncBuildRequiredChanges = durable.minimumSyncBuildRequiredChanges;
     final coordinator = SynchronizationTriggerCoordinator(durable);
     applicationRepositories = SynchronizationTriggeringRepositoryRegistry(
       base: baseRepositories,
@@ -439,6 +450,8 @@ Future<ClinicalCalendarApp> buildProductionApplication({
     enhancedAccessibility: enhancedAccessibility,
     onPresentationRestart: onPresentationRestart,
     onLaunchOrResume: onLaunchOrResume,
+    minimumSyncBuildRequired: minimumSyncBuildRequired,
+    minimumSyncBuildRequiredChanges: minimumSyncBuildRequiredChanges,
     connectivityChanges: connectivityChanges,
     onConnectivityChanged: onConnectivityChanged,
     onRealtimeHint: onRealtimeHint,

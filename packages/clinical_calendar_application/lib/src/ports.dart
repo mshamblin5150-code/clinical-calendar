@@ -13,6 +13,7 @@ abstract final class PublicSynchronizationFailureReference {
   static const pullTransportFailure = 'pull_transport_failure';
   static const conflictNeedsAttention = 'conflict_needs_attention';
   static const terminalRejection = 'terminal_rejection';
+  static const minimumSyncBuildRequired = 'minimum_sync_build_required';
   static const pendingAfterCycle = 'pending_after_cycle';
   static const cursorOrPayloadFailure = 'cursor_or_payload_failure';
   static const cursorOrPayloadNotFound = 'cursor_or_payload_not_found';
@@ -33,6 +34,7 @@ abstract final class PublicSynchronizationFailureReference {
     pullTransportFailure,
     conflictNeedsAttention,
     terminalRejection,
+    minimumSyncBuildRequired,
     pendingAfterCycle,
     cursorOrPayloadFailure,
     cursorOrPayloadNotFound,

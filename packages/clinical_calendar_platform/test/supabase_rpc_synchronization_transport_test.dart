@@ -40,6 +40,7 @@ void main() {
     expect(body['p_entity_id'], _entityId);
     expect(body['p_operation_type'], 'upsert');
     expect(body['p_base_revision'], 0);
+    expect(body['p_build_number'], 46);
     expect(
       (body['p_payload'] as Map<String, dynamic>)['student_id'],
       _studentId,
@@ -115,7 +116,11 @@ void main() {
           );
         }
         final requestBody = jsonDecode(request.body) as Map<String, dynamic>;
-        expect(requestBody, {'p_after_cursor': 7, 'p_limit': 100});
+        expect(requestBody, {
+          'p_after_cursor': 7,
+          'p_limit': 100,
+          'p_build_number': 46,
+        });
         return http.Response(
           jsonEncode([
             {
@@ -147,6 +152,7 @@ void main() {
     final unauthenticated = SupabaseRpcSynchronizationTransport(
       projectUri: Uri.parse('https://project.supabase.co'),
       publishableKey: 'publishable-key',
+      buildNumber: 46,
       accessTokenProvider: () async => null,
       client: MockClient((_) async => http.Response('{}', 200)),
     );
@@ -205,6 +211,7 @@ SupabaseRpcSynchronizationTransport _transport(http.Client client) =>
     SupabaseRpcSynchronizationTransport(
       projectUri: Uri.parse('https://project.supabase.co'),
       publishableKey: 'publishable-key',
+      buildNumber: 46,
       accessTokenProvider: () async => 'access-token',
       client: client,
     );

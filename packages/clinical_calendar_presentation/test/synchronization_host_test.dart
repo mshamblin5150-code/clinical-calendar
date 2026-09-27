@@ -47,6 +47,44 @@ void main() {
     await connectivity.close();
   });
 
+  testWidgets('host shows the minimum sync build update banner while held', (
+    tester,
+  ) async {
+    final heldChanges = StreamController<bool>.broadcast();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ClinicalCalendarLifecycleHost(
+          minimumSyncBuildRequiredChanges: heldChanges.stream,
+          child: const SizedBox(key: Key('application-child')),
+        ),
+      ),
+    );
+    expect(
+      find.text(
+        'Update this app to keep syncing – '
+        'your changes are safe on this device.',
+      ),
+      findsNothing,
+    );
+
+    heldChanges.add(true);
+    await tester.pump();
+
+    expect(
+      find.text(
+        'Update this app to keep syncing – '
+        'your changes are safe on this device.',
+      ),
+      findsOneWidget,
+    );
+
+    heldChanges.add(false);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('minimum-sync-build-banner')), findsNothing);
+    await heldChanges.close();
+  });
+
   testWidgets('Sync Now reports successful and offline outcomes', (
     tester,
   ) async {

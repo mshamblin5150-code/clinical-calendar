@@ -15,6 +15,9 @@ $reminderMigration = Get-Content -Raw (
 $profileMigration = Get-Content -Raw (
   Join-Path $PSScriptRoot '..\migrations\202608040005_synchronized_student_profile.sql'
 )
+$minimumBuildMigration = Get-Content -Raw (
+  Join-Path $PSScriptRoot '..\migrations\202609270006_minimum_sync_build.sql'
+)
 
 $requiredPatterns = @(
   'alter table clinical_calendar_sync.records force row level security',
@@ -134,6 +137,30 @@ foreach ($pattern in $profilePatterns) {
   if (-not $profileMigration.Contains($pattern)) {
     throw "Missing synchronized-profile contract pattern: $pattern"
   }
+}
+
+$minimumBuildPatterns = @(
+  'create table clinical_calendar_sync.sync_configuration',
+  'minimum_sync_build integer not null',
+  "'minimum_sync_build_required'",
+  "'minimum_build', v_minimum_sync_build",
+  'p_build_number integer',
+  'p_build_number < v_minimum_sync_build',
+  'public.pull_changes_after(integer, bigint, integer)',
+  'from public, anon, authenticated'
+)
+foreach ($pattern in $minimumBuildPatterns) {
+  if (-not $minimumBuildMigration.Contains($pattern)) {
+    throw "Missing minimum-sync-build contract pattern: $pattern"
+  }
+}
+
+$minimumBuildAssertionCount = (
+  Select-String -Path (Join-Path $PSScriptRoot 'minimum_sync_build_test.sql') `
+    -Pattern '^select (ok|is|results_eq|throws_ok)\(' -CaseSensitive
+).Count
+if ($minimumBuildAssertionCount -ne 4) {
+  throw "Minimum-sync-build pgTAP plan is 4 but found $minimumBuildAssertionCount assertions."
 }
 
 $assertionCount = (
