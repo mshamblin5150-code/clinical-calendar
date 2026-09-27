@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -1558,6 +1559,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       registry: ClinicalCalendarThemeBundleRegistry.standard,
       activeThemeId: activeThemeId,
     );
+    if (kIsWeb) return;
     try {
       await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
       // Raster cleanup is asynchronous in the engine. A second pressure pass
@@ -1581,6 +1583,7 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       activeThemeId: activeThemeId,
       clearLiveImages: false,
     );
+    if (kIsWeb) return;
     try {
       await _androidMemoryLifecycle.invokeMethod<void>('trimGallery');
     } on MissingPluginException {
