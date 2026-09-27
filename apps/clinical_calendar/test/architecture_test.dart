@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:clinical_calendar/main_web.dart' as web;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -13,6 +15,12 @@ void main() {
     expect(webStartup, isNot(contains('dart:io')));
     expect(webStartup, isNot(contains('clinical_calendar_local_data')));
     expect(webStartup, isNot(contains('clinical_calendar_platform')));
+  });
+
+  test('web artifact build id matches the sync build number', () {
+    final payload = jsonDecode(File('web/build-id.json').readAsStringSync());
+
+    expect(payload, {'build_number': web.currentSyncBuildNumber});
   });
 
   test('inner packages do not import outer boundaries', () {
