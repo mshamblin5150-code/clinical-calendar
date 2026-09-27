@@ -62,6 +62,16 @@ def generate_windows(source: Image.Image) -> None:
     save_png(source, resource_root / "app_icon_150.png", 150)
 
 
+def generate_web(source: Image.Image) -> None:
+    web_root = APP_ROOT / "web"
+    save_png(source, web_root / "favicon.png", 32)
+    save_png(source, web_root / "apple-touch-icon.png", 180)
+    save_png(source, web_root / "icons" / "Icon-192.png", 192)
+    save_png(source, web_root / "icons" / "Icon-512.png", 512)
+    save_png(source, web_root / "icons" / "Icon-maskable-192.png", 192)
+    save_png(source, web_root / "icons" / "Icon-maskable-512.png", 512)
+
+
 def main() -> None:
     with Image.open(MASTER_PATH) as image:
         source = image.convert("RGB")
@@ -72,6 +82,7 @@ def main() -> None:
         generate_android(source)
         generate_ios(source)
         generate_windows(source)
+        generate_web(source)
     print(f"Generated app icons from {MASTER_PATH}")
 
 

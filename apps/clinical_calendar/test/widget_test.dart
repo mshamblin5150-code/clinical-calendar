@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:clinical_calendar/main.dart' as app;
 import 'package:clinical_calendar/config/app_environment.dart';
+import 'package:clinical_calendar/main_native.dart' as app;
 import 'package:clinical_calendar_application/clinical_calendar_application.dart';
 import 'package:clinical_calendar_application/clinical_calendar_identity.dart';
 import 'package:clinical_calendar_domain/clinical_calendar_domain.dart';
