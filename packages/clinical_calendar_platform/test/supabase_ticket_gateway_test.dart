@@ -146,6 +146,98 @@ void main() {
       );
     },
   );
+
+  test(
+    'private thread round-trip and diagnostic choices use narrow RPCs',
+    () async {
+      final requests = <http.Request>[];
+      var call = 0;
+      final gateway = _gateway(
+        MockClient((request) async {
+          requests.add(request);
+          call++;
+          return switch (call) {
+            1 => http.Response(jsonEncode([_threadRow('question')]), 200),
+            2 || 3 || 4 || 5 || 6 => http.Response(
+              jsonEncode(
+                _row(call == 2 || call == 4 ? 'waiting_on_sender' : 'seen'),
+              ),
+              200,
+            ),
+            _ => throw StateError('Unexpected request'),
+          };
+        }),
+      );
+
+      final thread = await gateway.readThread(_ticketId);
+      expect(thread.single.kind, TicketThreadEntryKind.question);
+
+      expect(
+        (await gateway.askQuestion(
+          _ticketId,
+          question: 'Which action was still busy?',
+        )).status,
+        TicketStatus.waitingOnYou,
+      );
+      expect(
+        (await gateway.answerQuestion(
+          _ticketId,
+          '20000000-0000-4000-8000-000000000253',
+          answer: 'Saving a Clinical Session.',
+        )).status,
+        TicketStatus.seen,
+      );
+      expect(
+        (await gateway.requestDiagnostic(_ticketId)).status,
+        TicketStatus.waitingOnYou,
+      );
+
+      final diagnostic = TicketDiagnosticSnapshot.fromJson({
+        'snapshot_version': 1,
+        'build': '253',
+        'time_zone': 'America/New_York',
+      });
+      expect(
+        (await gateway.attachDiagnostic(
+          _ticketId,
+          '20000000-0000-4000-8000-000000000254',
+          diagnostic,
+        )).status,
+        TicketStatus.seen,
+      );
+      expect(
+        (await gateway.declineDiagnostic(
+          _ticketId,
+          '20000000-0000-4000-8000-000000000254',
+        )).status,
+        TicketStatus.seen,
+      );
+
+      expect(requests[0].url.path, '/rest/v1/ticket_thread_entries');
+      expect(requests[1].url.path, '/rest/v1/rpc/ask_ticket_question');
+      expect(jsonDecode(requests[1].body), {
+        'p_ticket_id': _ticketId,
+        'p_question': 'Which action was still busy?',
+      });
+      expect(requests[2].url.path, '/rest/v1/rpc/answer_ticket_question');
+      expect(requests[3].url.path, '/rest/v1/rpc/request_ticket_diagnostic');
+      expect(requests[4].url.path, '/rest/v1/rpc/respond_ticket_diagnostic');
+      expect(jsonDecode(requests[4].body), {
+        'p_ticket_id': _ticketId,
+        'p_request_id': '20000000-0000-4000-8000-000000000254',
+        'p_snapshot': {
+          'snapshot_version': 1,
+          'build': '253',
+          'time_zone': 'America/New_York',
+        },
+      });
+      expect(jsonDecode(requests[5].body), {
+        'p_ticket_id': _ticketId,
+        'p_request_id': '20000000-0000-4000-8000-000000000254',
+        'p_snapshot': null,
+      });
+    },
+  );
 }
 
 const _ticketId = '10000000-0000-4000-8000-000000000251';
@@ -183,6 +275,17 @@ Map<String, Object?> _row(
       : null,
   'can_reopen': canReopen,
   'reopen_until': closed ? '2026-10-11T14:32:00.000Z' : null,
+};
+
+Map<String, Object?> _threadRow(String kind) => {
+  'id': '20000000-0000-4000-8000-000000000253',
+  'ticket_id': _ticketId,
+  'author': 'maintainer',
+  'kind': kind,
+  'text': 'Which action was still busy?',
+  'reply_to_id': null,
+  'diagnostic_snapshot': null,
+  'created_at': '2026-09-27T14:32:00.000Z',
 };
 
 SupabaseTicketGateway _gateway(http.Client client) => SupabaseTicketGateway(

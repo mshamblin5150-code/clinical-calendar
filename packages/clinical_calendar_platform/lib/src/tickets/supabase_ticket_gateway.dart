@@ -135,11 +135,102 @@ final class SupabaseTicketGateway implements TicketGateway {
     }
   }
 
+  @override
+  Future<List<TicketThreadEntry>> readThread(String ticketId) async {
+    final response = await _request(
+      'GET',
+      '/rest/v1/ticket_thread_entries',
+      query: {
+        'select':
+            'id,ticket_id,author,kind,text,reply_to_id,diagnostic_snapshot,'
+            'created_at',
+        'ticket_id': 'eq.$ticketId',
+        'order': 'created_at.asc,id.asc',
+      },
+    );
+    if (response is! List) throw const TicketUnavailable();
+    try {
+      return [
+        for (final row in response) _threadEntry(row as Map<String, dynamic>),
+      ];
+    } on Object {
+      throw const TicketUnavailable();
+    }
+  }
+
+  @override
+  Future<Ticket> askQuestion(String ticketId, {required String question}) =>
+      _threadMutation('ask_ticket_question', {
+        'p_ticket_id': ticketId,
+        'p_question': question,
+      });
+
+  @override
+  Future<Ticket> answerQuestion(
+    String ticketId,
+    String questionId, {
+    required String answer,
+  }) => _threadMutation('answer_ticket_question', {
+    'p_ticket_id': ticketId,
+    'p_question_id': questionId,
+    'p_answer': answer,
+  });
+
+  @override
+  Future<Ticket> requestDiagnostic(String ticketId) =>
+      _threadMutation('request_ticket_diagnostic', {'p_ticket_id': ticketId});
+
+  @override
+  Future<Ticket> attachDiagnostic(
+    String ticketId,
+    String requestId,
+    TicketDiagnosticSnapshot diagnostic,
+  ) => _respondToDiagnostic(ticketId, requestId, diagnostic.values);
+
+  @override
+  Future<Ticket> declineDiagnostic(String ticketId, String requestId) =>
+      _respondToDiagnostic(ticketId, requestId, null);
+
+  Future<Ticket> _respondToDiagnostic(
+    String ticketId,
+    String requestId,
+    Map<String, Object>? diagnostic,
+  ) => _threadMutation('respond_ticket_diagnostic', {
+    'p_ticket_id': ticketId,
+    'p_request_id': requestId,
+    'p_snapshot': diagnostic,
+  });
+
+  Future<Ticket> _threadMutation(
+    String function,
+    Map<String, Object?> body,
+  ) async {
+    try {
+      final response = await _rpc(function, body);
+      if (response is! Map<String, dynamic>) {
+        throw const TicketUnavailable();
+      }
+      return _ticket(response);
+    } on _TicketServerFailure catch (error) {
+      final reason = switch (error.code) {
+        'P2861' => TicketThreadRefusal.questionInvalid,
+        'P2862' => TicketThreadRefusal.ticketNotReady,
+        'P2863' => TicketThreadRefusal.answerInvalid,
+        'P2864' => TicketThreadRefusal.responseNotWaiting,
+        'P2865' => TicketThreadRefusal.questionLimitReached,
+        'P2866' => TicketThreadRefusal.diagnosticInvalid,
+        _ => null,
+      };
+      if (reason != null) throw TicketThreadRejected(reason);
+      rethrow;
+    }
+  }
+
   Future<List<Ticket>> _readTickets() async {
     const fields =
         'id,sender_id,kind,text,state,screen_context,build_context,'
         'device_context,platform_context,context_captured_at,created_at,seen_at,'
-        'close_reason,closed_at,reopened_at,reopen_note';
+        'close_reason,closed_at,reopened_at,reopen_note,question_count';
     final response = await _request(
       'GET',
       '/rest/v1/tickets',
@@ -211,6 +302,7 @@ Ticket _ticket(Map<String, dynamic> row) => Ticket(
     capturedAtUtc: DateTime.parse(row['context_captured_at'] as String).toUtc(),
   ),
   createdAtUtc: DateTime.parse(row['created_at'] as String).toUtc(),
+  questionCount: row['question_count'] as int? ?? 0,
   seenAtUtc: row['seen_at'] == null
       ? null
       : DateTime.parse(row['seen_at'] as String).toUtc(),
@@ -226,6 +318,25 @@ Ticket _ticket(Map<String, dynamic> row) => Ticket(
   reopenUntilUtc: row['reopen_until'] == null
       ? null
       : DateTime.parse(row['reopen_until'] as String).toUtc(),
+);
+
+TicketThreadEntry _threadEntry(Map<String, dynamic> row) => TicketThreadEntry(
+  id: row['id'] as String,
+  ticketId: row['ticket_id'] as String,
+  author: switch (row['author'] as String) {
+    'maintainer' => TicketThreadAuthor.maintainer,
+    'sender' => TicketThreadAuthor.sender,
+    final value => throw FormatException('Unknown Ticket author: $value'),
+  },
+  kind: TicketThreadEntryKind.fromDatabase(row['kind'] as String),
+  text: row['text'] as String?,
+  replyToId: row['reply_to_id'] as String?,
+  diagnostic: row['diagnostic_snapshot'] == null
+      ? null
+      : TicketDiagnosticSnapshot.fromJson(
+          row['diagnostic_snapshot'] as Map<String, dynamic>,
+        ),
+  createdAtUtc: DateTime.parse(row['created_at'] as String).toUtc(),
 );
 
 _TicketServerFailure _serverFailure(String responseBody) {
