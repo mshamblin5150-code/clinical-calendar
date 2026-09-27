@@ -1,0 +1,66 @@
+name: Deploy to GitHub Pages
+
+on:
+  workflow_run:
+    workflows: [Quality]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (github.event.workflow_run.event == 'push' &&
+         github.event.workflow_run.head_branch == 'main' &&
+         github.event.workflow_run.conclusion == 'success')
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: github-pages
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+
+      - name: Resolve workspace
+        run: flutter pub get
+
+      - name: Build validated Pages release
+        shell: pwsh
+        env:
+          CLINICAL_CALENDAR_ENVIRONMENT: ${{ vars.CLINICAL_CALENDAR_ENVIRONMENT }}
+          CLINICAL_CALENDAR_SUPABASE_URL: ${{ vars.CLINICAL_CALENDAR_SUPABASE_URL }}
+          CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CLINICAL_CALENDAR_SUPABASE_PUBLISHABLE_KEY }}
+        run: ./tool/web/build_pages.ps1 -FlutterExecutable (Get-Command flutter).Source
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/clinical_calendar/build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
