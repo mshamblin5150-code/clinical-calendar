@@ -1989,6 +1989,51 @@ void main() {
     expect(preview.isPreviewing, isFalse);
   });
 
+  testWidgets('application menu exposes the guarded sign-out flow', (
+    tester,
+  ) async {
+    final localCopy = _LocalCopyController();
+    final identity = PasswordlessIdentityService(
+      gateway: _RecoveryOtpGateway(),
+      secureStorage: _IdentitySecureStorage(),
+      identifiers: _Identifiers(),
+      clock: _Clock(),
+      currentDevice: DeviceDescriptor(
+        name: 'Test browser',
+        platform: DevicePlatform.web,
+      ),
+      localCopy: localCopy,
+    );
+    await identity.verifySignInCode('student@example.com', '123456');
+    var removed = false;
+    await _pumpAt(
+      tester,
+      const Size(390, 844),
+      dependencies: _themeDependencies(graphiteThemeId),
+      identity: identity,
+      identityEmail: 'student@example.com',
+      onLocalCopyRemoved: () async => removed = true,
+      themeId: graphiteThemeId,
+    );
+
+    await tester.tap(find.byKey(const Key('application-menu-action')));
+    await tester.pumpAndSettle();
+    final signOut = find.byKey(const Key('application-menu-sign-out-action'));
+    expect(signOut, findsOneWidget);
+    await tester.tap(signOut);
+    await tester.pumpAndSettle();
+
+    expect(find.text("Sign Out and Remove This Device's Copy"), findsOneWidget);
+    expect(find.text('There are no pending local changes.'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-local-removal')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('remove-local-copy')));
+    await tester.pumpAndSettle();
+
+    expect(removed, isTrue);
+    expect(localCopy.removed, isTrue);
+  });
+
   testWidgets('Variant F exposes semantic colors and shallow metrics', (
     tester,
   ) async {

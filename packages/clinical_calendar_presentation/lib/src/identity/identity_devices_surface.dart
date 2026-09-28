@@ -7,6 +7,68 @@ import '../graphite_theme.dart';
 
 import 'account_erasure_surface.dart';
 
+Future<void> signOutAndRemoveLocalCopy(
+  BuildContext context, {
+  required PasswordlessIdentityService identity,
+  required Future<void> Function() onLocalCopyRemoved,
+}) async {
+  final preview = await identity.previewLocalRemoval();
+  if (!context.mounted) return;
+  var confirmed = false;
+  final remove = await showDialog<bool>(
+    context: context,
+    barrierColor: GraphiteColors.canvas,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setDialogState) => Theme(
+        data: buildGraphiteTheme(),
+        child: AlertDialog(
+          title: const Text("Sign Out and Remove This Device's Copy"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                preview.hasPendingChanges
+                    ? '${preview.pendingChangeCount} pending change(s) have not reached the server and will be lost from this device.'
+                    : 'There are no pending local changes.',
+                key: const Key('pending-removal-report'),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Only this device copy is removed. Your account and other '
+                'connected devices remain intact.',
+              ),
+              CheckboxListTile(
+                key: const Key('confirm-local-removal'),
+                value: confirmed,
+                onChanged: (value) =>
+                    setDialogState(() => confirmed = value ?? false),
+                title: const Text('I understand this removes this device copy'),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: const Key('remove-local-copy'),
+              onPressed: confirmed ? () => Navigator.pop(context, true) : null,
+              child: const Text('Sign out and remove'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+  if (remove != true) return;
+  await identity.signOutAndRemoveLocalCopy(confirmed: true);
+  await onLocalCopyRemoved();
+}
+
 final class IdentityDevicesSurface extends StatefulWidget {
   const IdentityDevicesSurface({
     required this.identity,
@@ -111,65 +173,11 @@ final class _IdentityDevicesSurfaceState extends State<IdentityDevicesSurface> {
   }
 
   Future<void> _removeLocalCopy() async {
-    final preview = await widget.identity.previewLocalRemoval();
-    if (!mounted) return;
-    var confirmed = false;
-    final remove = await showDialog<bool>(
-      context: context,
-      barrierColor: GraphiteColors.canvas,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => Theme(
-          data: buildGraphiteTheme(),
-          child: AlertDialog(
-            title: const Text("Sign Out and Remove This Device's Copy"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  preview.hasPendingChanges
-                      ? '${preview.pendingChangeCount} pending change(s) have not reached the server and will be lost from this device.'
-                      : 'There are no pending local changes.',
-                  key: const Key('pending-removal-report'),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Only this device copy is removed. Your account and other '
-                  'connected devices remain intact.',
-                ),
-                CheckboxListTile(
-                  key: const Key('confirm-local-removal'),
-                  value: confirmed,
-                  onChanged: (value) =>
-                      setDialogState(() => confirmed = value ?? false),
-                  title: const Text(
-                    'I understand this removes this device copy',
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                key: const Key('remove-local-copy'),
-                onPressed: confirmed
-                    ? () => Navigator.pop(context, true)
-                    : null,
-                child: const Text('Sign out and remove'),
-              ),
-            ],
-          ),
-        ),
-      ),
+    await signOutAndRemoveLocalCopy(
+      context,
+      identity: widget.identity,
+      onLocalCopyRemoved: widget.onLocalCopyRemoved,
     );
-    if (remove != true) return;
-    await widget.identity.signOutAndRemoveLocalCopy(confirmed: true);
-    await widget.onLocalCopyRemoved();
   }
 
   @override
