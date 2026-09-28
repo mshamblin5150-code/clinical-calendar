@@ -56,6 +56,8 @@ typedef CandidateThemePreflight =
     Future<void> Function(ClinicalCalendarThemeBundle candidate);
 typedef TodayResolver = LocalDate Function(DateTime nowUtc);
 
+enum _ApplicationMenuAction { signOut }
+
 const _androidMemoryLifecycle = MethodChannel(
   'com.clinicalcalendar.clinical_calendar/memory_lifecycle',
 );
@@ -1724,23 +1726,44 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       isScrollControlled: true,
       constraints: const BoxConstraints(maxWidth: 560, maxHeight: 560),
       builder: (context) => SafeArea(
-        child: widget.ticketGateway == null
-            ? ApplicationMenu(
-                onSelected: (destination) =>
-                    Navigator.pop(context, destination),
-                enhancedAccessibilityController:
-                    widget.enhancedAccessibilityController,
-                onPersistEnhancedAccessibility: _persistEnhancedAccessibility,
-              )
-            : TicketApplicationMenu(
-                onDestinationSelected: (destination) =>
-                    Navigator.pop(context, destination),
-                onTicketSelected: (action) => Navigator.pop(context, action),
-                enhancedAccessibilityController:
-                    widget.enhancedAccessibilityController,
-                onPersistEnhancedAccessibility: _persistEnhancedAccessibility,
-                ticketSubmissionAvailable: widget.ticketConnected,
+        child: Column(
+          children: [
+            Expanded(
+              child: widget.ticketGateway == null
+                  ? ApplicationMenu(
+                      onSelected: (destination) =>
+                          Navigator.pop(context, destination),
+                      enhancedAccessibilityController:
+                          widget.enhancedAccessibilityController,
+                      onPersistEnhancedAccessibility:
+                          _persistEnhancedAccessibility,
+                    )
+                  : TicketApplicationMenu(
+                      onDestinationSelected: (destination) =>
+                          Navigator.pop(context, destination),
+                      onTicketSelected: (action) =>
+                          Navigator.pop(context, action),
+                      enhancedAccessibilityController:
+                          widget.enhancedAccessibilityController,
+                      onPersistEnhancedAccessibility:
+                          _persistEnhancedAccessibility,
+                      ticketSubmissionAvailable: widget.ticketConnected,
+                    ),
+            ),
+            if (widget.identity != null &&
+                widget.onLocalCopyRemoved != null) ...[
+              const Divider(height: 1),
+              ListTile(
+                key: const Key('application-menu-sign-out-action'),
+                leading: const Icon(Icons.logout_outlined),
+                title: const Text('Sign Out'),
+                subtitle: const Text('Remove this device copy'),
+                onTap: () =>
+                    Navigator.pop(context, _ApplicationMenuAction.signOut),
               ),
+            ],
+          ],
+        ),
       ),
     );
     if (!mounted) return;
@@ -1756,6 +1779,15 @@ final class _ApplicationHostState extends State<_ApplicationHost> {
       await _openTicketRoute(
         action,
         screenName: screenName ?? originDestination?.label ?? 'Calendar',
+      );
+    } else if (selection == _ApplicationMenuAction.signOut) {
+      await signOutAndRemoveLocalCopy(
+        context,
+        identity: widget.identity!,
+        onLocalCopyRemoved: () async {
+          widget.themePreviewController.revert();
+          await widget.onLocalCopyRemoved!();
+        },
       );
     }
   }
