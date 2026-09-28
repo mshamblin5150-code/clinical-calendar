@@ -1,3 +1,5 @@
+-- This follows the private Ticket migrations; its original 202609270008
+-- version collided with the already-applied private Tickets migration.
 -- Stage a Student-owned credential for the authenticated relay without
 -- accepting an arbitrary URL at the Edge Function boundary.
 
