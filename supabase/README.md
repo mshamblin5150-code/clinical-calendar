@@ -94,6 +94,7 @@ supabase test db .\supabase\tests\sync_backend_test.sql --local
 supabase test db .\supabase\tests\identity_devices_test.sql --local
 supabase test db .\supabase\tests\account_erasure_test.sql --local
 supabase test db .\supabase\tests\permanent_purge_test.sql --local
+supabase test db .\supabase\tests\unconfirmed_auth_cleanup_test.sql --local
 supabase db lint --local --schema public,clinical_calendar_sync --level error --fail-on error
 ```
 
@@ -138,6 +139,15 @@ same committed OTP template for manual end-to-end GoTrue verification; hosted
 email delivery and provider configuration remain deployment checks rather than
 database tests.
 
+Abandoned passwordless sign-in identities are removed by a private PostgreSQL
+job every day at 03:00 UTC. It deletes only Auth accounts created more than
+seven days earlier whose email has never been confirmed, which have never
+signed in, and which have no Connected Device. A confirmed Student remains
+ineligible while changing email because the original email confirmation stays
+recorded. The cleanup function is owned by `postgres` in the non-exposed
+`clinical_calendar_sync` schema; neither `anon` nor `authenticated` can invoke
+it.
+
 These checks run locally through Docker Desktop and the Supabase containers;
 no live project or production credentials are required.
 
@@ -156,8 +166,9 @@ no live project or production credentials are required.
   long as a supported offline or newly connected device could replay an older
   entity operation. Marker pruning requires a separate device-watermark policy.
 - Schedule all private retention operations from trusted infrastructure:
-  revoke inactive web Connected Devices, purge due accounts, then delete
-  expired encrypted recovery snapshots. Web Auth sessions also carry a
+  delete abandoned never-confirmed Auth accounts, revoke inactive web Connected
+  Devices, purge due accounts, then delete expired encrypted recovery snapshots.
+  Web Auth sessions also carry a
   server-enforced 90-day deadline, so a delayed cleanup run cannot extend
   browser access. Do not expose these functions through PostgREST or a
   client-held service key.
