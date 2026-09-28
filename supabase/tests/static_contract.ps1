@@ -27,6 +27,9 @@ $ticketMigration = Get-Content -Raw (
 $ticketOutcomeMigration = Get-Content -Raw (
   Join-Path $PSScriptRoot '..\migrations\202609270010_ticket_outcomes.sql'
 )
+$ticketRetentionMigration = Get-Content -Raw (
+  Join-Path $PSScriptRoot '..\migrations\202609270015_ticket_text_retention.sql'
+)
 
 $requiredPatterns = @(
   'alter table clinical_calendar_sync.records force row level security',
@@ -212,12 +215,37 @@ foreach ($pattern in $ticketOutcomePatterns) {
   }
 }
 
+$ticketRetentionPatterns = @(
+  "create type public.ticket_text_removal as enum ('maintainer', 'retention')",
+  'public.erase_expired_ticket_text()',
+  "interval '90 days'",
+  'diagnostic_snapshot = null',
+  'public.redact_ticket_text(',
+  'public.redact_ticket_thread_entry(',
+  'create extension if not exists pg_cron',
+  "'erase-expired-ticket-text'",
+  'from public, anon, authenticated, service_role'
+)
+foreach ($pattern in $ticketRetentionPatterns) {
+  if (-not $ticketRetentionMigration.Contains($pattern)) {
+    throw "Missing Ticket retention contract pattern: $pattern"
+  }
+}
+
 $ticketAssertionCount = (
   Select-String -Path (Join-Path $PSScriptRoot 'tickets_test.sql') `
     -Pattern '^select (ok|is|results_eq|throws_ok|lives_ok)\(' -CaseSensitive
 ).Count
 if ($ticketAssertionCount -ne 34) {
   throw "Private-Ticket pgTAP plan is 34 but found $ticketAssertionCount assertions."
+}
+
+$ticketRetentionAssertionCount = (
+  Select-String -Path (Join-Path $PSScriptRoot 'ticket_text_retention_test.sql') `
+    -Pattern '^select (ok|is|throws_ok|lives_ok)\(' -CaseSensitive
+).Count
+if ($ticketRetentionAssertionCount -ne 27) {
+  throw "Ticket-retention pgTAP plan is 27 but found $ticketRetentionAssertionCount assertions."
 }
 
 $minimumBuildAssertionCount = (
@@ -248,8 +276,8 @@ $erasureAssertionCount = (
   Select-String -Path (Join-Path $PSScriptRoot 'account_erasure_test.sql') `
     -Pattern '^select (ok|is|results_eq|throws_ok)\(' -CaseSensitive
 ).Count
-if ($erasureAssertionCount -ne 36) {
-  throw "Account-erasure pgTAP plan is 36 but found $erasureAssertionCount assertions."
+if ($erasureAssertionCount -ne 38) {
+  throw "Account-erasure pgTAP plan is 38 but found $erasureAssertionCount assertions."
 }
 
 $permanentPurgeAssertionCount = (

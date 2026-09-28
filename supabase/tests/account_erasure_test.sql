@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(36);
+select plan(38);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -191,6 +191,18 @@ insert into clinical_calendar_sync.account_recovery_snapshots (
   decode(repeat('01', 12), 'hex'), decode(repeat('ab', 32), 'hex'),
   clock_timestamp() - interval '1 day', clock_timestamp() + interval '50 days'
 );
+insert into public.tickets (
+  sender_id, kind, text, screen_context, build_context,
+  device_context, platform_context, context_captured_at, recent_actions
+) values
+  ('81000000-0000-4000-8000-000000000001', 'problem',
+   'Erase this Student Ticket with the account.', 'Settings', '256',
+   'Windows laptop', 'windows', clock_timestamp(),
+   array['account erasure test']),
+  ('81000000-0000-4000-8000-000000000002', 'question',
+   'Keep the other Student Ticket.', 'Tickets', '256',
+   'Android tablet', 'android', clock_timestamp(),
+   array['account erasure test']);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000001', true);
@@ -245,6 +257,18 @@ select is(
    where student_id = '81000000-0000-4000-8000-000000000001'),
   0::bigint,
   'purge deletes every Connected Device registration'
+);
+select is(
+  (select count(*) from public.tickets
+   where sender_id = '81000000-0000-4000-8000-000000000001'),
+  0::bigint,
+  'account erasure removes every Ticket put in by the Student'
+);
+select is(
+  (select count(*) from public.tickets
+   where sender_id = '81000000-0000-4000-8000-000000000002'),
+  1::bigint,
+  'account erasure leaves another Student''s Tickets intact'
 );
 select is(
   (select count(*) from clinical_calendar_sync.account_recovery_snapshots

@@ -65,12 +65,14 @@ select ok(not public.has_ticket_maintainer_grant(),
 set local role postgres;
 insert into public.tickets(
   sender_id, kind, text, state, screen_context, build_context,
-  device_context, platform_context, context_captured_at, created_at
+  device_context, platform_context, context_captured_at, created_at,
+  recent_actions
 )
 select '00000000-0000-4000-8000-000000000254', 'question',
   'Daily Ticket ' || n::text, 'sent', 'Calendar', '0.1.0+46',
   'Android tablet', 'android', clock_timestamp(),
-  clock_timestamp() - n * interval '65 minutes'
+  clock_timestamp() - n * interval '65 minutes',
+  array['ticket test seed']
 from generate_series(1, 20) n;
 set local role authenticated;
 select set_config('request.jwt.claim.sub',
