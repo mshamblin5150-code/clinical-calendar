@@ -47,6 +47,17 @@ void main() {
     expect(payload, {'build_number': web.currentSyncBuildNumber});
   });
 
+  test('web SQLite registers a memory-only default VFS before opening', () {
+    final runtime = File('lib/browser_runtime_web.dart').readAsStringSync();
+    final registerVfs = runtime.indexOf('registerVirtualFileSystem(');
+    final openDatabase = runtime.indexOf('openInMemory()');
+
+    expect(registerVfs, greaterThanOrEqualTo(0));
+    expect(runtime, contains('InMemoryFileSystem()'));
+    expect(runtime, contains('makeDefault: true'));
+    expect(openDatabase, greaterThan(registerVfs));
+  });
+
   test('inner packages do not import outer boundaries', () {
     final repositoryRoot = Directory.current.parent.parent;
     final forbiddenByPackage = <String, List<String>>{
