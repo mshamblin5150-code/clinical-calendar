@@ -81,7 +81,7 @@ An aggregate record of Clinical Placement hours completed before the Student beg
 _Avoid_: Imported session, manual adjustment
 
 **Protected Day**:
-One day selected independently for each calendar week and reserved for the Student's rest and preparation. It may remain temporarily unselected while a month is being planned, but a completed monthly plan requires one for every week. The Student cannot place Work Shifts or clinical activity on it; an Imported Work Shift that lands on it is a flagged Schedule Conflict.
+One day selected independently for each calendar week and reserved for the Student's rest and preparation. It may remain temporarily unselected while a month is being planned, but a completed monthly plan requires one for every week. The Student cannot place Work Shifts or clinical activity on it, though Personal Commitments are welcome there; an Imported Work Shift that lands on it is a flagged Schedule Conflict.
 _Avoid_: Preferred day off, availability
 
 **Work Shift**:
@@ -89,12 +89,28 @@ A time-zone-specific military-time calendar commitment representing the Student'
 _Avoid_: Work session, job event
 
 **Work Schedule Feed**:
-An optional private calendar subscription the Student connects so that an employer's scheduling system supplies their Work Shifts. Every event it publishes is treated as work; personal calendars are not Work Schedule Feeds.
+An optional private calendar subscription the Student connects so that an employer's scheduling system supplies their Work Shifts. Every event it publishes is treated as work; a personal calendar is connected as a Personal Calendar Feed instead. A feed is one or the other for as long as it stays connected.
 _Avoid_: Calendar sync, integration, import
 
 **Imported Work Shift**:
 A Work Shift that mirrors an event in a Work Schedule Feed. The feed is its only owner: it is read-only to the Student and, until it starts, changes or disappears when the feed does. Once it has started it is frozen as history, even if the feed later stops listing it.
 _Avoid_: Synced shift, copied shift
+
+**Personal Commitment**:
+A time-zone-specific calendar commitment from the Student's life outside employment and clinical training, such as a dentist appointment. It is part of the schedule the Student plans around, not a note beside it. It either has start and end times or covers whole days in the Student's time zone, such as a week away. It shapes where Clinical Placement hours can go but never counts toward any hours. The Student either enters it by hand or receives it from a Personal Calendar Feed.
+_Avoid_: Personal event, appointment, busy block
+
+**Personal Commitment Series**:
+A repeating pattern the Student enters by hand, such as weekly therapy, whose every occurrence is a Personal Commitment. One occurrence can be skipped or given different times without leaving the series, which is how the Student fits a series around clinical and work time. Changing or ending a series affects only its upcoming occurrences; past ones stay as history. Only Personal Commitments form series; a recurring event in a Personal Calendar Feed belongs to the feed, not to a Personal Commitment Series.
+_Avoid_: Recurring event, repeat, recurrence
+
+**Personal Calendar Feed**:
+An optional private calendar subscription the Student connects so that their own calendar supplies Personal Commitments. Every event it publishes is treated as personal; a calendar that mixes work and personal events cannot be both. Only events the calendar marks as busy become Personal Commitments; free, tentative and cancelled events are listed but never imported.
+_Avoid_: Calendar sync, personal Work Schedule Feed
+
+**Imported Personal Commitment**:
+A Personal Commitment that mirrors an event, or one occurrence of a recurring event, in a Personal Calendar Feed. The feed is its only owner: it is read-only to the Student and, until it starts, changes or disappears when the feed does. It keeps only the event's title and times. Once it has started it is frozen as history, even if the feed later stops listing it.
+_Avoid_: Synced event, copied appointment
 
 **Clinical Session**:
 A time-zone-specific military-time calendar commitment assigned to one Clinical Placement and one Preceptor.
@@ -129,5 +145,5 @@ The person who builds the application and reads Tickets. Being the Maintainer is
 _Avoid_: Admin, support, developer
 
 **Schedule Conflict**:
-An overlap between calendar commitments, or a commitment on a Protected Day. The Student can never create one. An Imported Work Shift can reveal one, because the employer's schedule is a fact; the conflict then stays flagged until the Student resolves it.
+An overlap between calendar commitments, or a Work Shift or clinical activity on a Protected Day; two Personal Commitments overlapping each other is not one. The Student can never create one. An Imported Work Shift or Imported Personal Commitment can reveal one, because the employer's schedule and the Student's own busy calendar are facts; the conflict then stays flagged until the Student resolves it.
 _Avoid_: Warning, double booking
