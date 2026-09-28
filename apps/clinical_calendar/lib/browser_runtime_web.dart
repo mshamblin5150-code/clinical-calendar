@@ -25,6 +25,7 @@ final class _WebBrowserRuntime implements BrowserRuntime {
   @override
   Future<CommonDatabase> openInMemorySqlite() async {
     final sqlite = await WasmSqlite3.loadFromUrlString('sqlite3.wasm');
+    sqlite.registerVirtualFileSystem(InMemoryFileSystem(), makeDefault: true);
     return sqlite.openInMemory();
   }
 }
