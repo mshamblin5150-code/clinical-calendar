@@ -1,8 +1,9 @@
 # Release Security Checklist
 
-Use this checklist for every private Windows, Android, or iPhone build. Record
-the completed evidence with the packaging ticket; never paste a secret value
-into the checklist, issue tracker, logs, or artifact metadata.
+Use this checklist for every public web release and every private Windows,
+Android, or iPhone build. Record the completed evidence with the owning release
+or packaging issue; never paste a secret value into the checklist, issue
+tracker, logs, or artifact metadata.
 
 ## Data and privacy
 
@@ -41,6 +42,42 @@ into the checklist, issue tracker, logs, or artifact metadata.
   idempotency receipts, exports, logs, and support diagnostics.
 - Verify full account erasure removes Auth, synchronized data, devices, and
   sync state, while encrypted recovery snapshots expire on schedule.
+
+## Web release
+
+Exercise this section against the deployed HTTPS site with invented,
+non-patient data. Record the deployed commit, Pages run, browser and version,
+date, and results on the owning release issue.
+
+- Confirm the production URL is HTTPS, HTTP redirects to HTTPS, and every
+  non-loopback identity, synchronization, and work-schedule-feed request uses
+  HTTPS.
+- Sign in, create and synchronize a unique calendar sentinel, and inspect the
+  site's Local Storage, IndexedDB, Origin Private File System (OPFS), and Cache
+  Storage. Calendar records, synchronization records, the outbox, access
+  tokens, and exported data must not be at rest in any of them. Close or reload
+  the tab and confirm the calendar is downloaded again rather than restored
+  from browser storage.
+- Permit only the documented remembered-session exception: the refresh token
+  and opaque Connected Device ID may remain in Local Storage. Confirm revoking
+  that Connected Device blocks further refresh, pull, and push. Confirm the
+  server auto-revokes a web Connected Device after 90 days without a sync.
+- Confirm public hosting exposes only the application assets and Supabase
+  publishable key. Verify no service-role or secret key, private key, database
+  key, backup passphrase, access or refresh token, test credential, or calendar
+  fixture is present in the deployed bundle. Confirm row-level security blocks
+  cross-Student reads and writes.
+- Exercise PDF and CSV exports and verify the privacy warning, intended fields,
+  and spreadsheet-formula neutralization. Exercise complete JSON export and
+  verify fresh one-time-code reauthentication is required before the browser
+  download begins. Cancel or fail reauthentication and confirm no download is
+  produced.
+- Open **Backup & Restore** and confirm the web client says backups are made
+  from installed apps. No create, restore, file-picker, or automatic-backup
+  control may be available on web.
+- Confirm the external-sharing gate in
+  [the web release guide](web-release.md) is satisfied before sharing the URL
+  outside the Supabase organization.
 
 ## Support boundary and residual risk
 
