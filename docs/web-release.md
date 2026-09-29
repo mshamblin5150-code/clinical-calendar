@@ -7,11 +7,14 @@ calendar public. The bundle contains only a Supabase publishable key. Sign-in
 and row-level security protect synchronized data.
 
 > [!IMPORTANT]
-> Do not share the web-app link with anyone outside the Supabase organization
-> until the custom sign-in-code sender in
+> Before sharing the web-app link with anyone outside the Supabase
+> organization, verify that custom SMTP is enabled, the sender and a modest
+> project email cap are recorded on
 > [issue #241](https://github.com/mshamblin5150-code/clinical-calendar/issues/241)
-> is configured and its external-address delivery check passes. The built-in
-> Supabase sender is sufficient only for maintainer use.
+> without exposing credentials, and the owning release issue records a passed
+> external-address delivery check. Do not fall back to the built-in Supabase
+> sender. Repeat the delivery check before sharing a different deployment or
+> after changing the sender, SMTP provider, or email rate cap.
 
 ## One-time GitHub configuration
 
