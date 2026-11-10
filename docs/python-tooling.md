@@ -10,7 +10,7 @@ Use a working Python 3.12+ installation. On this workstation the Windows `python
 
 ```powershell
 $envDir = "$HOME\.venvs\clinical-calendar-quality"
-& C:\codeing\python\python\python.exe -m venv $envDir
+& C:\codeing\python\python\python.exe -I -m venv $envDir
 $python = "$envDir\Scripts\python.exe"
 & $python -I -m pip install --index-url https://pypi.org/simple --upgrade pip
 & $python -I -m pip install --index-url https://pypi.org/simple --group python-quality
@@ -21,7 +21,7 @@ Use an external environment to keep dependencies and caches out of the repositor
 ## Nonmutating checks
 
 ```powershell
-& $python -I -m ruff check --no-cache tool/branding
+& $python -I -m ruff check --no-cache tool/branding .claude/skills/ticket-sweep/evals
 & $python -I -m mypy --cache-dir "$envDir\mypy-cache"
 ```
 
@@ -29,7 +29,7 @@ Run these from the repository root. Ruff uses its baseline correctness rules; my
 
 ## Initial baseline (2026-11-10)
 
-Python 3.12.8, Ruff 0.17.4 and mypy 1.20.2. Ruff passed; mypy passed (1 source file). TOML parsing and git diff --check passed. Full Flutter/product suites were not run.
+Python 3.12.8, Ruff 0.17.4 and mypy 1.20.2. Ruff passed across both maintained Python scripts. Mypy checked 2 source files and reported 1 existing error, intentionally left visible: `.claude/skills/ticket-sweep/evals/check_dry_run.py:28` accesses `.group` on a possibly absent regex match. This expanded baseline used exact remote-main source files at `11e786659b94349828490c959bcfe03799e4095d` in an isolated temporary fixture; no scripts were executed. TOML parsing and git diff --check passed. Full Flutter/product suites were not run.
 
 
-Use Python isolated mode (`-I`) for checks and installs: this workstation has an ambient PYTHONPATH pointing at unrelated tortoise-tts code. Both environments passed `python -I -m pip check`; system site packages are disabled.
+Use Python isolated mode (`-I`) for checks and installs: this prevents ambient PYTHONPATH settings from affecting the environment. Both environments passed `python -I -m pip check`; system site packages are disabled.
