@@ -142,4 +142,3 @@ final class _CapturedDownload {
   final String mimeType;
   final List<int> bytes;
 }
-
