@@ -10,7 +10,7 @@ select = ["E4", "E7", "E9", "F"]
 
 [tool.mypy]
 python_version = "3.12"
-files = ["tool/branding"]
+files = ["tool/branding", ".claude/skills/ticket-sweep/evals"]
 check_untyped_defs = true
 warn_unused_ignores = true
 warn_redundant_casts = true
